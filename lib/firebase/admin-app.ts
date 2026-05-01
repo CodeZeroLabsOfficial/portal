@@ -2,6 +2,12 @@ import { applicationDefault, cert, getApps, initializeApp, type App } from "fire
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { getServerEnv } from "@/lib/env/server";
+import { logError } from "@/lib/logging";
+
+function getExplicitProjectId(): string | undefined {
+  const projectId = process.env.FIREBASE_PROJECT_ID ?? process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+  return typeof projectId === "string" && projectId.length > 0 ? projectId : undefined;
+}
 
 /**
  * Firebase Admin for server routes, Server Actions, and middleware session verification.
@@ -18,6 +24,7 @@ export function getFirebaseAdminApp(): App | null {
   }
 
   const env = getServerEnv();
+  const projectId = getExplicitProjectId();
   if (env.FIREBASE_SERVICE_ACCOUNT_JSON) {
     try {
       const serviceAccount = JSON.parse(env.FIREBASE_SERVICE_ACCOUNT_JSON) as Record<
@@ -26,8 +33,12 @@ export function getFirebaseAdminApp(): App | null {
       >;
       return initializeApp({
         credential: cert(serviceAccount),
+        projectId,
       });
-    } catch {
+    } catch (error) {
+      logError("firebase_admin_init_json_failed", {
+        message: error instanceof Error ? error.message : "unknown",
+      });
       return null;
     }
   }
@@ -35,8 +46,14 @@ export function getFirebaseAdminApp(): App | null {
   try {
     return initializeApp({
       credential: applicationDefault(),
+      projectId,
     });
-  } catch {
+  } catch (error) {
+    logError("firebase_admin_init_default_failed", {
+      message: error instanceof Error ? error.message : "unknown",
+      hasGoogleApplicationCredentials: Boolean(process.env.GOOGLE_APPLICATION_CREDENTIALS),
+      projectId,
+    });
     return null;
   }
 }

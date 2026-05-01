@@ -81,9 +81,16 @@ export async function POST(request: Request) {
     logInfo("auth_session_created", { uid });
     return NextResponse.json({ ok: true });
   } catch (error) {
+    const message = error instanceof Error ? error.message : "unknown";
     logError("auth_session_create_failed", {
-      message: error instanceof Error ? error.message : "unknown",
+      message,
     });
-    return NextResponse.json({ error: "Unable to create authenticated session." }, { status: 401 });
+    const isDevelopment = process.env.NODE_ENV !== "production";
+    return NextResponse.json(
+      {
+        error: isDevelopment ? `Unable to create authenticated session: ${message}` : "Unable to create authenticated session.",
+      },
+      { status: 401 },
+    );
   }
 }
