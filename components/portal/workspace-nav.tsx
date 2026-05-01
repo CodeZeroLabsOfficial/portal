@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LifeBuoy, LayoutDashboard, Settings2, type LucideIcon } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { PORTAL_ROUTE_DEFINITIONS, type PortalRouteDefinition } from "@/lib/portal-routes";
 
@@ -19,7 +19,11 @@ const sectionLabels = {
   support: "Support",
 } as const;
 
-export function WorkspaceNav() {
+interface WorkspaceNavProps {
+  collapsed?: boolean;
+}
+
+export function WorkspaceNav({ collapsed = false }: WorkspaceNavProps) {
   const pathname = usePathname();
 
   const sectionedRoutes = PORTAL_ROUTE_DEFINITIONS.reduce<
@@ -37,43 +41,64 @@ export function WorkspaceNav() {
   );
 
   return (
-    <nav aria-label="Portal navigation" className="space-y-5">
+    <nav aria-label="Portal navigation" className="space-y-6">
       {Object.entries(sectionedRoutes).map(([section, routes]) => (
-        <div key={section} className="space-y-2">
-          <p className="px-2 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-            {sectionLabels[section as PortalRouteDefinition["section"]]}
-          </p>
+        <div key={section} className="space-y-1">
+          {!collapsed ? (
+            <p className="mb-2 px-3 text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500">
+              {sectionLabels[section as PortalRouteDefinition["section"]]}
+            </p>
+          ) : null}
           <div className="space-y-1">
             {routes.map((route) => {
               const Icon = routeIcons[route.id];
               const isActive = pathname === route.href;
+
+              const linkClass = cn(
+                "group flex items-center gap-3 rounded-lg py-2.5 transition-colors",
+                collapsed ? "justify-center px-2" : "px-3",
+                isActive
+                  ? "bg-white/[0.08] text-white"
+                  : "text-zinc-400 hover:bg-white/[0.05] hover:text-white",
+              );
+
+              const iconClass = cn(
+                "h-[22px] w-[22px] shrink-0 stroke-[1.75]",
+                isActive ? "text-[#4db6ac]" : "text-current",
+              );
+
+              const linkInner = (
+                <>
+                  <Icon className={iconClass} aria-hidden />
+                  {!collapsed ? (
+                    <span className="truncate text-sm font-medium">{route.label}</span>
+                  ) : null}
+                </>
+              );
+
+              if (collapsed) {
+                return (
+                  <Tooltip key={route.href}>
+                    <TooltipTrigger asChild>
+                      <Link href={route.href} className={linkClass} aria-current={isActive ? "page" : undefined}>
+                        {linkInner}
+                      </Link>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="border-white/[0.08] bg-[#1e1e1e] text-white">
+                      {route.label}
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              }
+
               return (
                 <Link
                   key={route.href}
                   href={route.href}
-                  className={cn(
-                    "block rounded-lg border px-3 py-3 transition-colors",
-                    isActive
-                      ? "border-border bg-accent text-accent-foreground"
-                      : "border-transparent text-muted-foreground hover:border-border hover:bg-card hover:text-foreground",
-                  )}
+                  className={linkClass}
+                  aria-current={isActive ? "page" : undefined}
                 >
-                  <div className="flex items-start gap-3">
-                    <span className="mt-0.5 inline-flex h-7 w-7 items-center justify-center rounded-md bg-background text-muted-foreground">
-                      <Icon className="h-4 w-4" aria-hidden />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-foreground">{route.label}</p>
-                      <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{route.description}</p>
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {route.previewMetrics.map((metric) => (
-                          <Badge key={`${route.id}-${metric.label}`} variant="outline" className="text-[10px]">
-                            {metric.label}: {metric.value}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
+                  {linkInner}
                 </Link>
               );
             })}
