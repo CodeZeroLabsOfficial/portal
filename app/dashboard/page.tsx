@@ -1,14 +1,13 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
+import { ArrowUpRight, BarChart3, CircleCheck, FileText, WalletCards } from "lucide-react";
 import { LogoutButton } from "@/components/auth/logout-button";
-import { SiteHeader } from "@/components/site-header";
 import { APP_NAME, DEFAULT_CURRENCY } from "@/lib/constants";
 import { formatCurrencyAmount } from "@/lib/format";
 import { getCurrentSessionUser } from "@/lib/auth/server-session";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { getDashboardData } from "@/server/firestore/portal-data";
+import { WorkspaceShell } from "@/components/portal/workspace-shell";
 
 export default async function DashboardPage() {
   const user = await getCurrentSessionUser();
@@ -20,29 +19,34 @@ export default async function DashboardPage() {
   const mrr = formatCurrencyAmount(data.mrrMinorUnits);
 
   return (
-    <div className="flex min-h-dvh flex-col">
-      <SiteHeader />
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6">
-        <div className="flex flex-col gap-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-            <Badge variant="secondary">{APP_NAME}</Badge>
-            <Badge variant="outline">{user.role}</Badge>
+    <WorkspaceShell
+      title="CSM Dashboard"
+      description="Unified billing, proposal, and activity monitoring."
+      roleLabel={user.role}
+      userLabel={user.email || user.uid}
+      actions={<LogoutButton />}
+    >
+      <div className="space-y-6">
+        <section className="rounded-xl border border-border/70 bg-card/80 p-5">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
+              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+                Signed in as {user.email || user.uid}. Workspace metrics are mirrored from Firestore
+                with {DEFAULT_CURRENCY.toUpperCase()} as the billing currency baseline.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="secondary">{APP_NAME}</Badge>
+              <Badge variant="outline">Live data sync</Badge>
+            </div>
           </div>
-          <p className="max-w-2xl text-sm text-muted-foreground">
-            Signed in as {user.email || user.uid}. Metrics are fetched from Firestore mirrors with{" "}
-            {DEFAULT_CURRENCY.toUpperCase()} as the default billing currency.
-          </p>
-          <div className="pt-2">
-            <LogoutButton />
-          </div>
-        </div>
-
-        <Separator className="my-8" />
+        </section>
 
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Card>
+          <Card className="border-border/70 bg-card/90">
             <CardHeader className="pb-2">
+              <WalletCards className="h-4 w-4 text-muted-foreground" aria-hidden />
               <CardDescription>Active subscriptions</CardDescription>
               <CardTitle className="text-3xl tabular-nums">{data.activeSubscriptions}</CardTitle>
             </CardHeader>
@@ -50,8 +54,9 @@ export default async function DashboardPage() {
               Synced from Stripe webhook mirror records.
             </CardContent>
           </Card>
-          <Card>
+          <Card className="border-border/70 bg-card/90">
             <CardHeader className="pb-2">
+              <BarChart3 className="h-4 w-4 text-muted-foreground" aria-hidden />
               <CardDescription>MRR</CardDescription>
               <CardTitle className="text-3xl tabular-nums">{mrr}</CardTitle>
             </CardHeader>
@@ -59,8 +64,9 @@ export default async function DashboardPage() {
               Australian dollars · Stripe invoices + subscriptions
             </CardContent>
           </Card>
-          <Card>
+          <Card className="border-border/70 bg-card/90">
             <CardHeader className="pb-2">
+              <FileText className="h-4 w-4 text-muted-foreground" aria-hidden />
               <CardDescription>Open proposals</CardDescription>
               <CardTitle className="text-3xl tabular-nums">{data.openProposals}</CardTitle>
             </CardHeader>
@@ -68,8 +74,9 @@ export default async function DashboardPage() {
               Draft, sent, and viewed proposals.
             </CardContent>
           </Card>
-          <Card>
+          <Card className="border-border/70 bg-card/90">
             <CardHeader className="pb-2">
+              <CircleCheck className="h-4 w-4 text-muted-foreground" aria-hidden />
               <CardDescription>Conversion</CardDescription>
               <CardTitle className="text-3xl tabular-nums">{data.conversionRatePercent}%</CardTitle>
             </CardHeader>
@@ -79,7 +86,7 @@ export default async function DashboardPage() {
           </Card>
         </section>
 
-        <Card className="mt-8">
+        <Card className="border-border/70 bg-card/90">
           <CardHeader>
             <CardTitle className="text-base">Recent activity</CardTitle>
             <CardDescription>
@@ -93,7 +100,7 @@ export default async function DashboardPage() {
               data.recentActivity.map((item) => (
                 <div
                   key={item.id}
-                  className="flex items-center justify-between rounded-md border border-border px-3 py-2"
+                  className="flex items-center justify-between rounded-lg border border-border/70 bg-background px-3 py-2.5"
                 >
                   <div>
                     <p className="font-medium">{item.title}</p>
@@ -109,17 +116,34 @@ export default async function DashboardPage() {
             )}
           </CardContent>
         </Card>
-
-        <p className="mt-10 text-center text-xs text-muted-foreground">
-          <Link href="/admin" className="underline underline-offset-4">
-            Admin console
-          </Link>
-          {" · "}
-          <Link href="/customer" className="underline underline-offset-4">
-            Customer portal preview
-          </Link>
-        </p>
-      </main>
-    </div>
+        <section className="grid gap-4 lg:grid-cols-2">
+          <Card className="border-border/70 bg-card/90">
+            <CardHeader>
+              <CardTitle className="text-base">Workflow posture</CardTitle>
+              <CardDescription>
+                Balanced between revenue tracking and proposal execution.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm text-muted-foreground">
+              <p>Pipeline is hydrated from subscriptions, invoices, and proposals in one timeline.</p>
+              <p>Use Operations to manage customers and Customer Portal for account-specific billing.</p>
+            </CardContent>
+          </Card>
+          <Card className="border-border/70 bg-card/90">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                Next actions
+                <ArrowUpRight className="h-4 w-4 text-muted-foreground" aria-hidden />
+              </CardTitle>
+              <CardDescription>Suggested cadence from this dashboard state.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm text-muted-foreground">
+              <p>Review open proposals with stale activity first to improve conversion velocity.</p>
+              <p>Validate subscription statuses against Stripe webhook mirrors before finance close.</p>
+            </CardContent>
+          </Card>
+        </section>
+      </div>
+    </WorkspaceShell>
   );
 }

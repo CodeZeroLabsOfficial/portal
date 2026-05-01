@@ -1,11 +1,11 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
+import { CreditCard, ReceiptText } from "lucide-react";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { formatCurrencyAmount } from "@/lib/format";
 import { getCurrentSessionUser } from "@/lib/auth/server-session";
 import { getCustomerPortalData } from "@/server/firestore/portal-data";
-import { SiteHeader } from "@/components/site-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { WorkspaceShell } from "@/components/portal/workspace-shell";
 
 export default async function CustomerPortalPage() {
   const user = await getCurrentSessionUser();
@@ -16,24 +16,29 @@ export default async function CustomerPortalPage() {
   const data = await getCustomerPortalData(user);
 
   return (
-    <div className="flex min-h-dvh flex-col">
-      <SiteHeader />
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6">
-        <div className="mb-8">
-          <h1 className="text-2xl font-semibold tracking-tight">Customer portal</h1>
-          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            Self-service subscriptions, invoices, payment methods, and shared proposals. Scope data
-            by signed-in customer and Stripe customer id.
+    <WorkspaceShell
+      title="Customer Portal"
+      description="Self-serve billing and proposal visibility."
+      roleLabel={user.role}
+      userLabel={user.email || user.uid}
+      actions={<LogoutButton />}
+    >
+      <div className="space-y-6">
+        <section className="rounded-xl border border-border/70 bg-card/80 p-5">
+          <h1 className="text-2xl font-semibold tracking-tight">Account workspace</h1>
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+            Self-service subscriptions, invoices, payment methods, and shared proposals. Data is
+            scoped to the signed-in customer and Stripe customer id.
           </p>
-          <div className="mt-4">
-            <LogoutButton />
-          </div>
-        </div>
+        </section>
 
         <div className="grid gap-4 md:grid-cols-2">
-          <Card>
+          <Card className="border-border/70 bg-card/90">
             <CardHeader>
-              <CardTitle className="text-base">Billing</CardTitle>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <CreditCard className="h-4 w-4 text-muted-foreground" aria-hidden />
+                Billing
+              </CardTitle>
               <CardDescription>Stripe Customer Portal entry point and invoice downloads.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2 text-sm text-muted-foreground">
@@ -41,9 +46,12 @@ export default async function CustomerPortalPage() {
               <p>Invoices: {data.invoices.length}</p>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="border-border/70 bg-card/90">
             <CardHeader>
-              <CardTitle className="text-base">Proposals</CardTitle>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <ReceiptText className="h-4 w-4 text-muted-foreground" aria-hidden />
+                Proposals
+              </CardTitle>
               <CardDescription>Proposals shared with this customer and acceptance status.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2 text-sm text-muted-foreground">
@@ -60,7 +68,7 @@ export default async function CustomerPortalPage() {
           </Card>
         </div>
 
-        <Card className="mt-6">
+        <Card className="border-border/70 bg-card/90">
           <CardHeader>
             <CardTitle className="text-base">Latest invoices</CardTitle>
             <CardDescription>Download links and payment status from Firestore invoice mirrors.</CardDescription>
@@ -72,7 +80,7 @@ export default async function CustomerPortalPage() {
               data.invoices.slice(0, 8).map((invoice) => (
                 <div
                   key={invoice.id}
-                  className="flex items-center justify-between rounded-md border border-border px-3 py-2"
+                  className="flex items-center justify-between rounded-lg border border-border/70 bg-background px-3 py-2.5"
                 >
                   <div>
                     <p className="font-medium">{invoice.stripeInvoiceId}</p>
@@ -86,13 +94,7 @@ export default async function CustomerPortalPage() {
             )}
           </CardContent>
         </Card>
-
-        <p className="mt-10 text-center text-xs text-muted-foreground">
-          <Link href="/" className="underline underline-offset-4">
-            Home
-          </Link>
-        </p>
-      </main>
-    </div>
+      </div>
+    </WorkspaceShell>
   );
 }

@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { applicationDefault, cert, getApps, initializeApp, type App } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
@@ -38,6 +39,23 @@ export function getFirebaseAdminApp(): App | null {
     } catch (error) {
       logError("firebase_admin_init_json_failed", {
         message: error instanceof Error ? error.message : "unknown",
+      });
+      return null;
+    }
+  }
+
+  if (env.GOOGLE_APPLICATION_CREDENTIALS) {
+    try {
+      const fileContents = readFileSync(env.GOOGLE_APPLICATION_CREDENTIALS, "utf8");
+      const serviceAccount = JSON.parse(fileContents) as Record<string, unknown>;
+      return initializeApp({
+        credential: cert(serviceAccount),
+        projectId: projectId ?? (serviceAccount.project_id as string | undefined),
+      });
+    } catch (error) {
+      logError("firebase_admin_init_file_failed", {
+        message: error instanceof Error ? error.message : "unknown",
+        googleApplicationCredentials: env.GOOGLE_APPLICATION_CREDENTIALS,
       });
       return null;
     }
