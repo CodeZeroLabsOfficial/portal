@@ -1,13 +1,23 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { LogoutButton } from "@/components/auth/logout-button";
 import { SiteHeader } from "@/components/site-header";
 import { APP_NAME, DEFAULT_CURRENCY } from "@/lib/constants";
 import { formatCurrencyAmount } from "@/lib/format";
+import { getCurrentSessionUser } from "@/lib/auth/server-session";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { getDashboardData } from "@/server/firestore/portal-data";
 
-export default function DashboardPage() {
-  const mrr = formatCurrencyAmount(84_200_00);
+export default async function DashboardPage() {
+  const user = await getCurrentSessionUser();
+  if (!user) {
+    redirect("/login?next=/dashboard");
+  }
+
+  const data = await getDashboardData(user);
+  const mrr = formatCurrencyAmount(data.mrrMinorUnits);
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -17,11 +27,15 @@ export default function DashboardPage() {
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
             <Badge variant="secondary">{APP_NAME}</Badge>
+            <Badge variant="outline">{user.role}</Badge>
           </div>
           <p className="max-w-2xl text-sm text-muted-foreground">
-            Overview metrics load from Firestore and Stripe-backed mirrors. Currency defaults to{" "}
-            {DEFAULT_CURRENCY.toUpperCase()}.
+            Signed in as {user.email || user.uid}. Metrics are fetched from Firestore mirrors with{" "}
+            {DEFAULT_CURRENCY.toUpperCase()} as the default billing currency.
           </p>
+          <div className="pt-2">
+            <LogoutButton />
+          </div>
         </div>
 
         <Separator className="my-8" />
@@ -30,9 +44,11 @@ export default function DashboardPage() {
           <Card>
             <CardHeader className="pb-2">
               <CardDescription>Active subscriptions</CardDescription>
-              <CardTitle className="text-3xl tabular-nums">128</CardTitle>
+              <CardTitle className="text-3xl tabular-nums">{data.activeSubscriptions}</CardTitle>
             </CardHeader>
-            <CardContent className="text-xs text-muted-foreground">Placeholder · sync via webhooks</CardContent>
+            <CardContent className="text-xs text-muted-foreground">
+              Synced from Stripe webhook mirror records.
+            </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2">
@@ -46,17 +62,19 @@ export default function DashboardPage() {
           <Card>
             <CardHeader className="pb-2">
               <CardDescription>Open proposals</CardDescription>
-              <CardTitle className="text-3xl tabular-nums">24</CardTitle>
+              <CardTitle className="text-3xl tabular-nums">{data.openProposals}</CardTitle>
             </CardHeader>
-            <CardContent className="text-xs text-muted-foreground">Draft + sent awaiting response</CardContent>
+            <CardContent className="text-xs text-muted-foreground">
+              Draft, sent, and viewed proposals.
+            </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2">
               <CardDescription>Conversion</CardDescription>
-              <CardTitle className="text-3xl tabular-nums">38%</CardTitle>
+              <CardTitle className="text-3xl tabular-nums">{data.conversionRatePercent}%</CardTitle>
             </CardHeader>
             <CardContent className="text-xs text-muted-foreground">
-              Accepted ÷ viewed · analytics pipeline next
+              Accepted proposals over closed proposals.
             </CardContent>
           </Card>
         </section>
@@ -68,8 +86,27 @@ export default function DashboardPage() {
               Feed will aggregate proposal events, invoices, and subscription changes from Firestore.
             </CardDescription>
           </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            No activity yet — connect Firebase reads and Stripe webhooks to populate this list.
+          <CardContent className="space-y-2 text-sm">
+            {data.recentActivity.length === 0 ? (
+              <p className="text-muted-foreground">No activity available yet.</p>
+            ) : (
+              data.recentActivity.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between rounded-md border border-border px-3 py-2"
+                >
+                  <div>
+                    <p className="font-medium">{item.title}</p>
+                    <p className="text-xs text-muted-foreground">{item.detail}</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {item.timestampMs > 0
+                      ? new Date(item.timestampMs).toLocaleDateString("en-AU")
+                      : "—"}
+                  </p>
+                </div>
+              ))
+            )}
           </CardContent>
         </Card>
 
