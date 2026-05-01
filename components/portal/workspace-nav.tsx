@@ -1,9 +1,19 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LifeBuoy, LayoutDashboard, Settings2, type LucideIcon } from "lucide-react";
+import {
+  CreditCard,
+  LayoutDashboard,
+  LifeBuoy,
+  ListTodo,
+  Settings2,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { ADMIN_PORTAL_NAV, isAdminNavActive } from "@/lib/admin-portal-routes";
 import { cn } from "@/lib/utils";
 import { PORTAL_ROUTE_DEFINITIONS, type PortalRouteDefinition } from "@/lib/portal-routes";
 
@@ -11,6 +21,13 @@ const routeIcons: Record<PortalRouteDefinition["id"], LucideIcon> = {
   dashboard: LayoutDashboard,
   admin: Settings2,
   customer: LifeBuoy,
+};
+
+const adminNavIcons: Record<(typeof ADMIN_PORTAL_NAV)[number]["id"], LucideIcon> = {
+  dashboard: LayoutDashboard,
+  customers: Users,
+  billing: CreditCard,
+  tasks: ListTodo,
 };
 
 const sectionLabels = {
@@ -25,6 +42,34 @@ interface WorkspaceNavProps {
 
 export function WorkspaceNav({ collapsed = false }: WorkspaceNavProps) {
   const pathname = usePathname();
+  const isAdminPortal = pathname.startsWith("/admin");
+
+  if (isAdminPortal) {
+    return (
+      <nav aria-label="Admin portal navigation" className="space-y-1">
+        {!collapsed ? (
+          <p className="mb-3 px-3 text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500">
+            Admin
+          </p>
+        ) : null}
+        {ADMIN_PORTAL_NAV.map((item) => {
+          const Icon = adminNavIcons[item.id];
+          const isActive = isAdminNavActive(item.href, pathname);
+          return (
+            <NavRow
+              key={item.href}
+              href={item.href}
+              label={item.label}
+              collapsed={collapsed}
+              isActive={isActive}
+            >
+              <Icon className={iconClassName(isActive)} aria-hidden />
+            </NavRow>
+          );
+        })}
+      </nav>
+    );
+  }
 
   const sectionedRoutes = PORTAL_ROUTE_DEFINITIONS.reduce<
     Record<PortalRouteDefinition["section"], PortalRouteDefinition[]>
@@ -53,58 +98,76 @@ export function WorkspaceNav({ collapsed = false }: WorkspaceNavProps) {
             {routes.map((route) => {
               const Icon = routeIcons[route.id];
               const isActive = pathname === route.href;
-
-              const linkClass = cn(
-                "group flex items-center gap-3 rounded-lg py-2.5 transition-colors",
-                collapsed ? "justify-center px-2" : "px-3",
-                isActive
-                  ? "bg-white/[0.08] text-white"
-                  : "text-zinc-400 hover:bg-white/[0.05] hover:text-white",
-              );
-
-              const iconClass = cn(
-                "h-[22px] w-[22px] shrink-0 stroke-[1.75]",
-                isActive ? "text-[#4db6ac]" : "text-current",
-              );
-
-              const linkInner = (
-                <>
-                  <Icon className={iconClass} aria-hidden />
-                  {!collapsed ? (
-                    <span className="truncate text-sm font-medium">{route.label}</span>
-                  ) : null}
-                </>
-              );
-
-              if (collapsed) {
-                return (
-                  <Tooltip key={route.href}>
-                    <TooltipTrigger asChild>
-                      <Link href={route.href} className={linkClass} aria-current={isActive ? "page" : undefined}>
-                        {linkInner}
-                      </Link>
-                    </TooltipTrigger>
-                    <TooltipContent side="right" className="border-white/[0.08] bg-[#1e1e1e] text-white">
-                      {route.label}
-                    </TooltipContent>
-                  </Tooltip>
-                );
-              }
-
               return (
-                <Link
+                <NavRow
                   key={route.href}
                   href={route.href}
-                  className={linkClass}
-                  aria-current={isActive ? "page" : undefined}
+                  label={route.label}
+                  collapsed={collapsed}
+                  isActive={isActive}
                 >
-                  {linkInner}
-                </Link>
+                  <Icon className={iconClassName(isActive)} aria-hidden />
+                </NavRow>
               );
             })}
           </div>
         </div>
       ))}
     </nav>
+  );
+}
+
+function iconClassName(isActive: boolean) {
+  return cn(
+    "h-[22px] w-[22px] shrink-0 stroke-[1.75]",
+    isActive ? "text-[#4db6ac]" : "text-current",
+  );
+}
+
+function NavRow({
+  href,
+  label,
+  collapsed,
+  isActive,
+  children,
+}: {
+  href: string;
+  label: string;
+  collapsed: boolean;
+  isActive: boolean;
+  children: ReactNode;
+}) {
+  const linkClass = cn(
+    "group flex items-center gap-3 rounded-lg py-2.5 transition-colors",
+    collapsed ? "justify-center px-2" : "px-3",
+    isActive ? "bg-white/[0.08] text-white" : "text-zinc-400 hover:bg-white/[0.05] hover:text-white",
+  );
+
+  const linkInner = (
+    <>
+      {children}
+      {!collapsed ? <span className="truncate text-sm font-medium">{label}</span> : null}
+    </>
+  );
+
+  if (collapsed) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Link href={href} className={linkClass} aria-current={isActive ? "page" : undefined}>
+            {linkInner}
+          </Link>
+        </TooltipTrigger>
+        <TooltipContent side="right" className="border-white/[0.08] bg-[#1e1e1e] text-white">
+          {label}
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return (
+    <Link href={href} className={linkClass} aria-current={isActive ? "page" : undefined}>
+      {linkInner}
+    </Link>
   );
 }

@@ -1,15 +1,15 @@
 import { redirect } from "next/navigation";
-import { BarChart3, FolderKanban, Users } from "lucide-react";
+import { FolderKanban, Users } from "lucide-react";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { getCurrentSessionUser } from "@/lib/auth/server-session";
 import { getAdminPortalData } from "@/server/firestore/portal-data";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { WorkspaceShell } from "@/components/portal/workspace-shell";
 
-export default async function AdminHomePage() {
+export default async function AdminCustomersPage() {
   const user = await getCurrentSessionUser();
   if (!user) {
-    redirect("/login?next=/admin");
+    redirect("/login?next=/admin/customers");
   }
 
   const data = await getAdminPortalData(user);
@@ -17,46 +17,33 @@ export default async function AdminHomePage() {
 
   return (
     <WorkspaceShell
-      title="Dashboard"
-      description="High-level metrics across customers, billing, and proposals."
+      title="Customers"
+      description="Organisations, subscriptions, and proposal activity."
       roleLabel={user.role}
       userLabel={user.email || user.uid}
       actions={<LogoutButton />}
     >
       <div className="space-y-6">
         <section className="rounded-xl border border-border/70 bg-card/80 p-5">
-          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Customers</h1>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Snapshot of the admin workspace. Open Customers for the full directory, or Billing and
-            Tasks as those modules go live.
+            Customer records from Firestore, scoped by organisation, with subscription and proposal
+            context.
           </p>
         </section>
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card className="border-border/70 bg-card/90">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <BarChart3 className="h-4 w-4 text-muted-foreground" aria-hidden />
-                At a glance
-              </CardTitle>
-              <CardDescription>Live counts from Firestore and Stripe mirrors.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm text-muted-foreground">
-              <p>Customers: {data.customers.length}</p>
-              <p>Subscriptions: {data.subscriptions.length}</p>
-              <p>Proposals: {data.proposals.length}</p>
-            </CardContent>
-          </Card>
+        <div className="grid gap-4 md:grid-cols-2">
           <Card className="border-border/70 bg-card/90">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <Users className="h-4 w-4 text-muted-foreground" aria-hidden />
-                Customers
+                Directory
               </CardTitle>
-              <CardDescription>Manage accounts and plans in the Customers area.</CardDescription>
+              <CardDescription>Accounts linked to Stripe customers and portal roles.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2 text-sm text-muted-foreground">
-              <p>Use the sidebar link for the full customer list and roles.</p>
+              <p>Customers: {data.customers.length}</p>
+              <p>Subscriptions: {data.subscriptions.length}</p>
             </CardContent>
           </Card>
           <Card className="border-border/70 bg-card/90">
@@ -65,14 +52,36 @@ export default async function AdminHomePage() {
                 <FolderKanban className="h-4 w-4 text-muted-foreground" aria-hidden />
                 Proposals
               </CardTitle>
-              <CardDescription>Pipeline health from proposal records.</CardDescription>
+              <CardDescription>Engagement across shared proposals.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2 text-sm text-muted-foreground">
-              <p>Total: {data.proposals.length}</p>
+              <p>Total proposals: {data.proposals.length}</p>
               <p>Accepted: {acceptedCount}</p>
             </CardContent>
           </Card>
         </div>
+
+        <Card className="border-border/70 bg-card/90">
+          <CardHeader>
+            <CardTitle className="text-base">Recent customers</CardTitle>
+            <CardDescription>Fetched from the `users` collection and scoped by organisation.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            {data.customers.length === 0 ? (
+              <p className="text-muted-foreground">No customer records found.</p>
+            ) : (
+              data.customers.slice(0, 12).map((customer) => (
+                <div
+                  key={customer.uid}
+                  className="flex items-center justify-between rounded-lg border border-border/70 bg-background px-3 py-2.5"
+                >
+                  <p className="font-medium">{customer.displayName || customer.email || customer.uid}</p>
+                  <p className="text-xs text-muted-foreground">{customer.role}</p>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
       </div>
     </WorkspaceShell>
   );
