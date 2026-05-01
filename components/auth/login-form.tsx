@@ -76,7 +76,6 @@ export function LoginForm({ nextPath }: LoginFormProps) {
         <Label htmlFor="email">Email</Label>
         <Input
           id="email"
-          name="email"
           type="email"
           autoComplete="email"
           {...form.register("email")}
@@ -90,7 +89,6 @@ export function LoginForm({ nextPath }: LoginFormProps) {
         <Label htmlFor="password">Password</Label>
         <Input
           id="password"
-          name="password"
           type="password"
           autoComplete="current-password"
           {...form.register("password")}
