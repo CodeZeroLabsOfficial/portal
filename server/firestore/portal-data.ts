@@ -1,6 +1,7 @@
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import type { InvoiceRecord } from "@/types/invoice";
+import type { ProposalBlock } from "@/types/proposal";
 import type { ProposalRecord } from "@/types/proposal";
 import type { SubscriptionRecord } from "@/types/subscription";
 import type { PortalUser } from "@/types/user";
@@ -102,6 +103,24 @@ function parseInvoice(id: string, data: Record<string, unknown>): InvoiceRecord 
   };
 }
 
+function parseProposalBlocks(raw: unknown): ProposalBlock[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+
+  return raw
+    .filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null)
+    .map((item, index) => {
+      const id = asString(item.id) ?? `block-${index + 1}`;
+      const type = asString(item.type) ?? "text";
+      return {
+        ...item,
+        id,
+        type,
+      } as ProposalBlock;
+    });
+}
+
 function parseProposal(id: string, data: Record<string, unknown>): ProposalRecord {
   const statusCandidate = data.status;
   const status =
@@ -123,10 +142,8 @@ function parseProposal(id: string, data: Record<string, unknown>): ProposalRecor
     document: {
       title: asString(data.title) ?? "Untitled proposal",
       blocks:
-        data.document &&
-        typeof data.document === "object" &&
-        Array.isArray((data.document as { blocks?: unknown }).blocks)
-          ? ((data.document as { blocks: Record<string, unknown>[] }).blocks ?? [])
+        data.document && typeof data.document === "object"
+          ? parseProposalBlocks((data.document as { blocks?: unknown }).blocks)
           : [],
     },
     createdAtMs: asNumber(data.createdAtMs) ?? 0,
