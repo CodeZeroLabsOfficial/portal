@@ -524,26 +524,26 @@ export function AdminHomeDashboard({
     : `${paymentCount} payments received`;
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-xl border border-border/70 bg-card/80 p-5">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Welcome back, {name}!</h1>
-            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Here are your stats for {today}</p>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="gap-1.5 text-[14px] font-medium text-muted-foreground hover:text-foreground"
-            asChild
-          >
-            <Link href="#">
-              <Settings2 className="h-4 w-4 shrink-0" aria-hidden />
-              Customize dashboard
-            </Link>
-          </Button>
+    <div className="space-y-8">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-[1.75rem] md:leading-tight">
+            Welcome back, {name}!
+          </h1>
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Here are your stats for {today}</p>
         </div>
-      </section>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="gap-1.5 text-[14px] font-medium text-muted-foreground hover:text-foreground"
+          asChild
+        >
+          <Link href="#">
+            <Settings2 className="h-4 w-4 shrink-0" aria-hidden />
+            Customize dashboard
+          </Link>
+        </Button>
+      </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
         <MetricCard
@@ -571,7 +571,7 @@ export function AdminHomeDashboard({
         />
       </div>
 
-      <div className="border-t border-border/70 pt-6">
+      <div className="border-t border-border/70 pt-8">
         <AdminDashboardSecondaryChart tabs={chartTabs} chartRangeLabel={chartRangeLabel} />
       </div>
     </div>

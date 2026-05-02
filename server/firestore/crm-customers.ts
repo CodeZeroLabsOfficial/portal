@@ -1,3 +1,4 @@
+import { logError } from "@/lib/logging";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { getFirebaseAdminAuth, getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import type { CustomerListRow } from "@/lib/customer-list";
@@ -22,8 +23,13 @@ function asNumber(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
+function orgIdForCrm(user: PortalUser): string | undefined {
+  const raw = user.organizationId?.trim();
+  return raw && raw.length > 0 ? raw : undefined;
+}
+
 function canStaffManageCrm(user: PortalUser): boolean {
-  return (user.role === "admin" || user.role === "team") && Boolean(user.organizationId);
+  return (user.role === "admin" || user.role === "team") && Boolean(orgIdForCrm(user));
 }
 
 type AdminDb = NonNullable<ReturnType<typeof getFirebaseAdminFirestore>>;
@@ -34,7 +40,7 @@ function formatLocation(data: Pick<CustomerRecord, "city" | "region" | "country"
 }
 
 function parseCustomerRecord(id: string, data: Record<string, unknown>): CustomerRecord | null {
-  const organizationId = asString(data.organizationId);
+  const organizationId = asString(data.organizationId)?.trim();
   if (!organizationId) return null;
   const name = asString(data.name) ?? "";
   const email = asString(data.email) ?? "";
@@ -158,7 +164,7 @@ export async function getAdminCustomerListRows(user: PortalUser): Promise<Custom
   if (!db || !canStaffManageCrm(user)) {
     return [];
   }
-  const organizationId = user.organizationId!;
+  const organizationId = orgIdForCrm(user)!;
   try {
     const [customerSnap, subscriptions] = await Promise.all([
       db.collection(COLLECTIONS.customers).where("organizationId", "==", organizationId).limit(500).get(),
@@ -169,7 +175,11 @@ export async function getAdminCustomerListRows(user: PortalUser): Promise<Custom
       .filter((c): c is CustomerRecord => c !== null)
       .sort((a, b) => (b.updatedAtMs || b.createdAtMs) - (a.updatedAtMs || a.createdAtMs));
     return customers.map((c) => customerToListRow(c, subscriptions));
-  } catch {
+  } catch (error) {
+    logError("crm_list_customers_failed", {
+      message: error instanceof Error ? error.message : "unknown",
+      organizationId,
+    });
     return [];
   }
 }
@@ -184,7 +194,7 @@ export async function getCustomerRecordForOrg(
   const snap = await ref.get();
   if (!snap.exists) return null;
   const parsed = parseCustomerRecord(snap.id, snap.data() as Record<string, unknown>);
-  if (!parsed || parsed.organizationId !== user.organizationId) return null;
+  if (!parsed || parsed.organizationId !== orgIdForCrm(user)) return null;
   return parsed;
 }
 
@@ -249,7 +259,7 @@ export async function listCustomerNotes(
       .map((d) => parseNote(d.id, d.data() as Record<string, unknown>))
       .filter(
         (n): n is CustomerNoteRecord =>
-          n !== null && n.organizationId === user.organizationId,
+          n !== null && n.organizationId.trim() === orgIdForCrm(user),
       );
     return rows.sort((a, b) => b.createdAtMs - a.createdAtMs);
   } catch {
@@ -276,7 +286,7 @@ export async function listCustomerActivities(
       .map((d) => parseActivity(d.id, d.data() as Record<string, unknown>))
       .filter(
         (a): a is CustomerActivityRecord =>
-          a !== null && a.organizationId === user.organizationId,
+          a !== null && a.organizationId.trim() === orgIdForCrm(user),
       );
     return rows.sort((a, b) => b.createdAtMs - a.createdAtMs);
   } catch {
@@ -320,7 +330,7 @@ export async function listInvoicesForStripeCustomer(
       .get();
     return snap.docs
       .map((d) => parseInvoice(d.id, d.data() as Record<string, unknown>))
-      .filter((inv) => inv.organizationId === user.organizationId);
+      .filter((inv) => inv.organizationId?.trim() === orgIdForCrm(user));
   } catch {
     return [];
   }
@@ -363,7 +373,7 @@ export async function listSubscriptionsForStripeCustomer(
         updatedAtMs: asNumber(data.updatedAtMs) ?? Date.now(),
       } satisfies SubscriptionRecord;
     });
-    return rows.filter((s) => s.organizationId === user.organizationId);
+    return rows.filter((s) => s.organizationId?.trim() === orgIdForCrm(user));
   } catch {
     return [];
   }
@@ -375,7 +385,7 @@ export async function listProposalsForOrganization(user: PortalUser): Promise<Pr
   try {
     const snap = await db
       .collection(COLLECTIONS.proposals)
-      .where("organizationId", "==", user.organizationId)
+      .where("organizationId", "==", orgIdForCrm(user)!)
       .limit(100)
       .get();
     return snap.docs.map((doc) => {
@@ -433,7 +443,7 @@ export async function listTasksForCustomer(user: PortalUser, customerId: string)
       .get();
     return snap.docs
       .map((d) => parseTask(d.id, d.data() as Record<string, unknown>))
-      .filter((t) => t.organizationId === user.organizationId);
+      .filter((t) => t.organizationId?.trim() === orgIdForCrm(user));
   } catch {
     return [];
   }
@@ -457,7 +467,7 @@ export async function createCustomerDocument(
   if (!db || !canStaffManageCrm(user)) {
     return { ok: false, message: "CRM requires an organization on your staff account." };
   }
-  const organizationId = user.organizationId!;
+  const organizationId = orgIdForCrm(user)!;
   const now = Date.now();
   const customFields: Record<string, string> = {};
   for (const pair of input.customFields ?? []) {
@@ -542,7 +552,7 @@ export async function appendCustomerNote(
   const customer = await getCustomerRecordForOrg(user, customerId);
   if (!customer) return { ok: false, message: "Customer not found." };
   const now = Date.now();
-  const organizationId = user.organizationId!;
+  const organizationId = orgIdForCrm(user)!;
   await db.collection(COLLECTIONS.customerNotes).add({
     customerId,
     organizationId,
@@ -579,7 +589,7 @@ export async function setCustomerArchived(
   });
   await db.collection(COLLECTIONS.customerActivities).add({
     customerId,
-    organizationId: user.organizationId!,
+    organizationId: orgIdForCrm(user)!,
     type: "archived",
     title: archived ? "Archived" : "Restored",
     actorUid: user.uid,
@@ -605,7 +615,7 @@ export async function deleteCustomerDocument(
     const batch = database.batch();
     for (const doc of snap.docs) {
       const data = doc.data() as Record<string, unknown>;
-      if (asString(data.organizationId) === user.organizationId) {
+      if (asString(data.organizationId)?.trim() === orgIdForCrm(user)) {
         batch.delete(doc.ref);
       }
     }
@@ -635,7 +645,7 @@ export async function syncStripeCustomerBasics(
     .update({ stripeCustomerId, updatedAtMs: now });
   await db.collection(COLLECTIONS.customerActivities).add({
     customerId,
-    organizationId: user.organizationId!,
+    organizationId: orgIdForCrm(user)!,
     type: "stripe_sync",
     title: "Stripe customer linked",
     detail: stripeCustomerId,

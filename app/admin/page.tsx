@@ -19,6 +19,7 @@ export default async function AdminHomePage() {
       roleLabel={user.role}
       displayName={user.displayName ?? ""}
       userLabel={user.email || user.uid}
+      showMainHeader={false}
       contentClassName="max-w-[1200px]"
       rightAside={<AdminHomeRightAside data={data} />}
     >

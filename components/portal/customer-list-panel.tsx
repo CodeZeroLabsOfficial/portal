@@ -76,6 +76,12 @@ export interface CustomerListPanelProps {
 
 export function CustomerListPanel({ rows, hasOrganization }: CustomerListPanelProps) {
   const router = useRouter();
+
+  /** Next.js can reuse a stale RSC payload when returning to this route; refresh forces a server re-read. */
+  React.useEffect(() => {
+    router.refresh();
+  }, [router]);
+
   const [query, setQuery] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<"all" | "active" | "archived">("active");
   const [tagFilter, setTagFilter] = React.useState("");
@@ -150,31 +156,31 @@ export function CustomerListPanel({ rows, hasOrganization }: CustomerListPanelPr
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <AddCustomerModal open={addOpen} onOpenChange={setAddOpen} />
 
-      <section className="rounded-xl border border-border/70 bg-card/80 p-5">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">Customers</h1>
-            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-              Search and manage customer profiles, subscriptions context, and internal notes. Link Stripe customers
-              and Firebase Auth accounts from each profile.
-            </p>
-          </div>
-          <Button
-            type="button"
-            size="sm"
-            className="gap-1.5 shadow-sm"
-            disabled={!hasOrganization}
-            title={!hasOrganization ? "Set an organization on your staff account first." : undefined}
-            onClick={() => setAddOpen(true)}
-          >
-            <Plus className="h-4 w-4 shrink-0" aria-hidden />
-            Add customer
-          </Button>
-        </div>
-      </section>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25 }}
+        >
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-[1.75rem] md:leading-tight">
+            Customers
+          </h1>
+        </motion.div>
+        <Button
+          type="button"
+          size="sm"
+          className="gap-1.5 shadow-sm"
+          disabled={!hasOrganization}
+          title={!hasOrganization ? "Set an organization on your staff account first." : undefined}
+          onClick={() => setAddOpen(true)}
+        >
+          <Plus className="h-4 w-4 shrink-0" aria-hidden />
+          Add customer
+        </Button>
+      </div>
 
       {!hasOrganization ? (
         <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
@@ -183,7 +189,7 @@ export function CustomerListPanel({ rows, hasOrganization }: CustomerListPanelPr
         </div>
       ) : null}
 
-      <section className="overflow-hidden rounded-xl border border-border/70 bg-card/90 shadow-sm backdrop-blur-sm">
+      <section className="overflow-hidden rounded-xl border border-border/80 bg-card/80 shadow-sm backdrop-blur-sm">
         <div className="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <h2 className="shrink-0 text-sm font-semibold text-foreground">Directory</h2>
           <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-2">
