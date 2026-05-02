@@ -465,10 +465,6 @@ export function AdminHomeDashboard({
   const paidYtd = paidInvoicesInRange(data.invoices, yearStart, nowMs);
   const revenueMinor = useYtdRevenue ? sumAmountDueMinor(paidYtd) : revenueThisMonthMinor;
   const paymentCount = useYtdRevenue ? paidYtd.length : paymentsThisMonth;
-  const revenueTitle = useYtdRevenue
-    ? `Total Revenue (${now.getFullYear()} YTD)`
-    : "Total Revenue (this month)";
-
   const dom = now.getDate();
   const daysInPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0).getDate();
   const cmpDom = Math.min(dom, daysInPrevMonth);
@@ -515,13 +511,23 @@ export function AdminHomeDashboard({
   const taskHeadlineTotal = taskDue.overdue + taskDue.dueThisWeek;
 
   const { line, area } = buildChartPath();
-  const rangeLabel = "Last 14 days";
+  const chartRangeEnd = new Date(nowMs);
+  const chartRangeStart = new Date(nowMs);
+  chartRangeStart.setDate(chartRangeStart.getDate() - 13);
+  const chartRangeLabel = `${formatShortChartDate(chartRangeStart)} - ${formatShortChartDate(chartRangeEnd)}`;
+  const reportsRangeStart = new Date(nowMs);
+  reportsRangeStart.setDate(reportsRangeStart.getDate() - 6);
+  const reportsRangeLabel = `${formatShortChartDate(reportsRangeStart)} - ${formatShortChartDate(chartRangeEnd)}`;
+
+  const revenueValueDetail = useYtdRevenue
+    ? `${paymentCount} payments · ${now.getFullYear()} YTD`
+    : `${paymentCount} payments received`;
 
   return (
-    <div className="space-y-6">
+    <div className="rounded-2xl border border-border/80 bg-card p-6 shadow-sm md:p-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground md:text-3xl">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground md:text-[1.75rem] md:leading-tight">
             Welcome back, {name}!
           </h1>
           <p className="mt-1.5 text-sm text-muted-foreground">
@@ -541,74 +547,56 @@ export function AdminHomeDashboard({
         </Button>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-border/80 bg-card/95 shadow-sm">
-        <div className="grid divide-y divide-border sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-          <MetricCard
-            variant="strip"
-            title="Total Active Clients"
-            value={String(activeClients)}
-            delta={clientsDeltaStr}
-            deltaCaption="Trend uses new customer sign-ups (full calendar months)"
-            positive={clientsMom.pct > 0}
-            neutralDelta={clientsMom.neutral}
-          />
-          <MetricCard
-            variant="strip"
-            title="MRR / ARR"
-            titleDetail="Monthly / annual recurring revenue (active subscriptions)"
-            value={formatCurrencyAmount(mrrMinor, DEFAULT_CURRENCY)}
-            valueDetail={`ARR ${formatCurrencyAmount(arrMinor, DEFAULT_CURRENCY)}`}
-            delta={mrrGrowthStr}
-            deltaCaption="Growth from paid invoice volume (MTD vs same days prior month)"
-            positive={paidMom.pct > 0}
-            neutralDelta={paidMom.neutral}
-          />
-          <MetricCard
-            variant="strip"
-            title={revenueTitle}
-            titleDetail="Paid invoices in organisation scope"
-            value={formatCurrencyAmount(revenueMinor, DEFAULT_CURRENCY)}
-            valueDetail={`${paymentCount} payments received`}
-            delta={revenueDeltaStr}
-            deltaCaption={
-              useYtdRevenue ? undefined : "Compared with the same day-range last month"
-            }
-            positive={revenueDeltaStr !== undefined && revenueMomPct > 0}
-            neutralDelta={revenueDeltaStr !== undefined ? revenueMomNeutral : revenueMinor === 0}
-          />
-        </div>
+      <div className="mt-8 grid gap-4 sm:grid-cols-3">
+        <MetricCard
+          title="Total Active Clients"
+          value={String(activeClients)}
+          delta={clientsDeltaStr}
+          positive={clientsMom.pct > 0}
+          neutralDelta={clientsMom.neutral}
+        />
+        <MetricCard
+          title="MRR / ARR"
+          value={formatCurrencyAmount(mrrMinor, DEFAULT_CURRENCY)}
+          valueDetail={`ARR ${formatCurrencyAmount(arrMinor, DEFAULT_CURRENCY)}`}
+          delta={mrrGrowthStr}
+          positive={paidMom.pct > 0}
+          neutralDelta={paidMom.neutral}
+        />
+        <MetricCard
+          title="Total Revenue"
+          value={formatCurrencyAmount(revenueMinor, DEFAULT_CURRENCY)}
+          valueDetail={revenueValueDetail}
+          delta={revenueDeltaStr}
+          positive={revenueDeltaStr !== undefined && revenueMomPct > 0}
+          neutralDelta={revenueDeltaStr !== undefined ? revenueMomNeutral : revenueMinor === 0}
+        />
+      </div>
 
-        <div className="grid grid-cols-2 divide-y divide-border border-t border-border md:grid-cols-4 md:divide-x md:divide-y-0">
+      <div className="mt-10 border-t border-border/70 pt-8">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-8 md:grid-cols-4 md:gap-x-8">
           <SecondaryMetric
             value={String(activeSubCount)}
             valueClassName="text-primary"
-            label="Active Subscriptions"
-            detail={`${utilPct === null ? "—" : `${utilPct}%`} utilization · ${churnPct}% churn`}
+            label="Subscriptions"
+            hint={`${utilPct === null ? "—" : `${utilPct}%`} utilization · ${churnPct}% churn (non-active share)`}
           />
           <SecondaryMetric
             value={String(pendingCount)}
-            label="Pending Proposals"
-            detail={`${formatCurrencyAmount(pendingValueMinor, DEFAULT_CURRENCY)} total value`}
+            label="Proposals"
+            hint={`Pending pipeline · ${formatCurrencyAmount(pendingValueMinor, DEFAULT_CURRENCY)} total value`}
           />
           <SecondaryMetric
             value={String(openTicketTotal)}
-            label="Open Support Tickets"
-            detail={
-              <span className="leading-relaxed">
-                <span className="text-destructive/90">Critical {ticketBuckets.critical}</span>
-                <span className="text-muted-foreground"> · </span>
-                <span className="text-amber-200/90">High {ticketBuckets.high}</span>
-                <span className="text-muted-foreground"> · </span>
-                <span>Medium {ticketBuckets.medium}</span>
-              </span>
-            }
+            label="Support Tickets"
+            hint={`Critical ${ticketBuckets.critical} · High ${ticketBuckets.high} · Medium ${ticketBuckets.medium}`}
           />
           <SecondaryMetric
             value={String(taskHeadlineTotal)}
-            label="Tasks Due This Week"
-            detail={
+            label="Tasks"
+            hint={
               taskDue.overdue === 0 && taskDue.dueThisWeek === 0
-                ? "No open tasks with deadlines in range"
+                ? "No open tasks with due dates in range"
                 : [
                     taskDue.overdue > 0 ? `${taskDue.overdue} overdue` : null,
                     taskDue.dueThisWeek > 0 ? `${taskDue.dueThisWeek} due remainder of week` : null,
@@ -618,81 +606,89 @@ export function AdminHomeDashboard({
             }
           />
         </div>
+      </div>
 
-        <div className="border-t border-border px-5 py-5 sm:px-6">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm font-medium text-foreground">Volume trend</p>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-9 gap-2 border-border bg-background/60 text-[13px] font-normal text-muted-foreground"
-              type="button"
-            >
-              <CalendarRange className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-              {rangeLabel}
-            </Button>
-          </div>
-          <div className="relative -mx-0.5">
-            <svg
-              viewBox="0 0 600 132"
-              className="h-auto w-full max-h-[200px] text-primary"
-              role="img"
-              aria-label="Volume trend chart"
-            >
-              <title>Volume trend</title>
-              <defs>
-                <linearGradient id="adminChartFill" x1="0" x2="0" y1="0" y2="1">
-                  <stop offset="0%" stopColor="currentColor" stopOpacity={0.32} />
-                  <stop offset="100%" stopColor="currentColor" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              {[0, 100, 200, 300, 400, 500, 600].map((x) => (
-                <line
-                  key={x}
-                  x1={x}
-                  y1={0}
-                  x2={x}
-                  y2={120}
-                  className="stroke-border"
-                  strokeWidth={1}
-                  strokeDasharray="4 6"
-                />
-              ))}
-              <path d={area} fill="url(#adminChartFill)" className="text-transparent" />
-              <path
-                d={line}
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2.25}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            <div className="mt-1 flex justify-between px-0.5 text-[11px] text-muted-foreground">
-              <span>Day 1</span>
-              <span>Day 4</span>
-              <span>Day 8</span>
-              <span>Day 12</span>
-              <span>Day 14</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-4 sm:px-6">
-          <h2 className="text-base font-semibold text-foreground">Reports overview</h2>
+      <div className="mt-10 border-t border-border/70 pt-8">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <Button
             variant="outline"
             size="sm"
-            className="h-9 gap-2 border-border bg-background/60 text-[13px] font-normal text-muted-foreground"
+            className="h-9 gap-2 rounded-md border-border bg-background/50 text-[13px] font-normal text-muted-foreground shadow-none"
             type="button"
           >
             <CalendarRange className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-            {rangeLabel}
+            {chartRangeLabel}
           </Button>
         </div>
+        <div className="relative">
+          <svg
+            viewBox="0 0 600 132"
+            className="h-auto w-full max-h-[240px] text-primary"
+            preserveAspectRatio="xMidYMid meet"
+            role="img"
+            aria-label="Volume trend chart"
+          >
+            <title>Volume trend</title>
+            <defs>
+              <linearGradient id="adminChartFill" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stopColor="currentColor" stopOpacity={0.32} />
+                <stop offset="100%" stopColor="currentColor" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            {[0, 100, 200, 300, 400, 500, 600].map((x) => (
+              <line
+                key={x}
+                x1={x}
+                y1={0}
+                x2={x}
+                y2={120}
+                className="stroke-border"
+                strokeWidth={1}
+                strokeDasharray="4 6"
+              />
+            ))}
+            <path d={area} fill="url(#adminChartFill)" className="text-transparent" />
+            <path
+              d={line}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2.25}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <div className="mt-2 flex justify-between text-[11px] text-muted-foreground">
+            <span>Day 1</span>
+            <span>Day 4</span>
+            <span>Day 8</span>
+            <span>Day 12</span>
+            <span>Day 14</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-border/70 pt-6">
+        <h2 className="text-base font-semibold text-foreground">Reports overview</h2>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-9 gap-2 rounded-md border-border bg-background/50 text-[13px] font-normal text-muted-foreground shadow-none"
+          type="button"
+        >
+          <CalendarRange className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+          {reportsRangeLabel}
+        </Button>
       </div>
     </div>
   );
+}
+
+function formatShortChartDate(d: Date): string {
+  return new Intl.DateTimeFormat("en-AU", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(d);
 }
 
 function SecondaryMetric({
@@ -700,87 +696,78 @@ function SecondaryMetric({
   valueClassName,
   label,
   detail,
+  hint,
 }: {
   value: string;
   valueClassName?: string;
   label: string;
-  detail: ReactNode;
+  /** Optional — screenshot-style row is value + label only. */
+  detail?: ReactNode;
+  /** Extra context on hover (metrics stay two-line visually). */
+  hint?: string;
 }) {
   return (
-    <div className="flex flex-col px-5 py-4 sm:px-6">
+    <div className="flex flex-col" title={hint}>
       <p
         className={cn(
-          "text-xl font-semibold tabular-nums tracking-tight text-foreground sm:text-2xl",
+          "text-xl font-semibold tabular-nums tracking-tight text-muted-foreground sm:text-2xl",
           valueClassName,
         )}
       >
         {value}
       </p>
-      <p className="mt-1 text-xs font-medium text-muted-foreground">{label}</p>
-      <p className="mt-1.5 text-[11px] leading-snug text-muted-foreground/90">{detail}</p>
+      <p className="mt-1 text-xs font-medium text-foreground">{label}</p>
+      {detail != null && detail !== "" ? (
+        <p className="mt-1.5 text-[11px] leading-snug text-muted-foreground">{detail}</p>
+      ) : null}
     </div>
   );
 }
 
 function MetricCard({
-  variant = "default",
   title,
   titleDetail,
   value,
   valueDetail,
   delta,
-  deltaCaption,
   positive,
   neutralDelta,
 }: {
-  variant?: "default" | "strip";
   title: string;
   titleDetail?: string;
   value: string;
   valueDetail?: string;
   delta?: string;
-  deltaCaption?: string;
   positive: boolean;
   neutralDelta?: boolean;
 }) {
   const showDelta = typeof delta === "string" && delta.length > 0;
   return (
-    <div
-      className={cn(
-        variant === "strip"
-          ? "bg-transparent px-5 py-5 sm:px-6"
-          : "rounded-xl border border-border bg-card/90 p-5 shadow-sm",
-      )}
-    >
+    <div className="rounded-xl border border-border/80 bg-card p-5 shadow-none">
       <div>
-        <p className="text-sm font-medium text-muted-foreground">{title}</p>
+        <p className="text-xs font-medium text-muted-foreground">{title}</p>
         {titleDetail ? (
-          <p className="mt-0.5 text-xs leading-snug text-muted-foreground/90">{titleDetail}</p>
+          <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground/90">{titleDetail}</p>
         ) : null}
       </div>
-      <p className="mt-2 text-2xl font-semibold tabular-nums tracking-tight text-foreground">{value}</p>
+      <p className="mt-3 text-2xl font-bold tabular-nums tracking-tight text-foreground">{value}</p>
       {valueDetail ? (
-        <p className="mt-1.5 text-sm font-medium tabular-nums text-muted-foreground">{valueDetail}</p>
+        <p className="mt-1.5 text-xs font-medium tabular-nums text-muted-foreground">{valueDetail}</p>
       ) : null}
       {showDelta ? (
-        <>
-          <p
-            className={cn(
-              "mt-2 inline-flex items-center gap-1 text-sm font-medium",
-              neutralDelta ? "text-muted-foreground" : positive ? "text-emerald-400" : "text-destructive",
-            )}
-          >
-            {neutralDelta ? null : positive ? (
-              <ArrowUpRight className="h-4 w-4 shrink-0" aria-hidden />
-            ) : (
-              <ArrowDownRight className="h-4 w-4 shrink-0" aria-hidden />
-            )}
-            {delta}
-          </p>
-          {deltaCaption ? (
-            <p className="mt-1 text-xs leading-snug text-muted-foreground">{deltaCaption}</p>
-          ) : null}
-        </>
+        <p
+          className={cn(
+            "mt-3 inline-flex items-center gap-1 text-sm font-medium",
+            neutralDelta ? "text-muted-foreground" : positive ? "text-emerald-400" : "text-destructive",
+          )}
+        >
+          {neutralDelta ? null : positive ? (
+            <ArrowUpRight className="h-4 w-4 shrink-0" aria-hidden />
+          ) : (
+            <ArrowDownRight className="h-4 w-4 shrink-0" aria-hidden />
+          )}
+          {delta}
+        </p>
       ) : null}
     </div>
   );
