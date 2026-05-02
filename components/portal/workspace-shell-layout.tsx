@@ -41,6 +41,8 @@ interface WorkspaceShellLayoutProps {
   userLabel: string;
   displayName?: string;
   rightAside?: ReactNode;
+  /** When false, the xl+ right sidebar column is not rendered. */
+  showRightAside?: boolean;
   showMainHeader?: boolean;
   contentClassName?: string;
   children: ReactNode;
@@ -117,6 +119,7 @@ export function WorkspaceShellLayout({
   userLabel,
   displayName = "",
   rightAside,
+  showRightAside = true,
   showMainHeader = true,
   contentClassName,
   children,
@@ -391,9 +394,11 @@ export function WorkspaceShellLayout({
               </div>
             </main>
 
-            <aside className="hidden w-[300px] shrink-0 border-l border-white/[0.06] bg-[#0D0D16] px-4 py-8 xl:block">
-              <div className="space-y-6">{rightAside ?? <DefaultWorkspaceRightAside />}</div>
-            </aside>
+            {showRightAside ? (
+              <aside className="hidden w-[300px] shrink-0 border-l border-white/[0.06] bg-[#0D0D16] px-4 py-8 xl:block">
+                <div className="space-y-6">{rightAside ?? <DefaultWorkspaceRightAside />}</div>
+              </aside>
+            ) : null}
           </div>
         </div>
       </div>

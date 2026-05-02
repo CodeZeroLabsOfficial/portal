@@ -11,6 +11,8 @@ interface WorkspaceShellProps {
   displayName?: string;
   /** Replaces the default right column (xl+) when set. */
   rightAside?: ReactNode;
+  /** When false, the xl+ right sidebar is hidden. */
+  showRightAside?: boolean;
   /** When false, the large title + description block above page content is omitted. */
   showMainHeader?: boolean;
   /** Applied to the inner content wrapper (default `max-w-6xl`). */
@@ -25,6 +27,7 @@ export function WorkspaceShell({
   userLabel,
   displayName,
   rightAside,
+  showRightAside = true,
   showMainHeader = true,
   contentClassName,
   children,
@@ -37,6 +40,7 @@ export function WorkspaceShell({
       userLabel={userLabel}
       displayName={displayName}
       rightAside={rightAside}
+      showRightAside={showRightAside}
       showMainHeader={showMainHeader}
       contentClassName={contentClassName}
     >

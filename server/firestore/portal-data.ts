@@ -1,3 +1,4 @@
+import { unstable_noStore as noStore } from "next/cache";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import type { InvoiceRecord } from "@/types/invoice";
@@ -191,6 +192,8 @@ async function queryUsersInCustomerRole(user: PortalUser, db: AdminFirestore, li
 
 /** CRM table rows from `customers` (org-scoped). Requires `organizationId` on staff users. */
 export async function getAdminCustomerListRows(user: PortalUser): Promise<CustomerListRow[]> {
+  /** Always read fresh Firestore data — avoids stale RSC / router cache after create or edits. */
+  noStore();
   return loadCrmCustomerListRows(user);
 }
 

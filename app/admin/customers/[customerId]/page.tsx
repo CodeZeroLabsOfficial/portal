@@ -50,6 +50,7 @@ export default async function AdminCustomerDetailPage({ params }: PageProps) {
       displayName={user.displayName ?? ""}
       userLabel={user.email || user.uid}
       showMainHeader={false}
+      showRightAside={false}
       contentClassName="max-w-[1100px]"
     >
       <CustomerDetailView
