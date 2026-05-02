@@ -38,13 +38,19 @@ const sectionLabels = {
 
 interface WorkspaceNavProps {
   collapsed?: boolean;
+  /** When `admin` or `team`, the admin sidebar is shown on every route (not only under `/admin`). */
+  userRole?: string;
 }
 
-export function WorkspaceNav({ collapsed = false }: WorkspaceNavProps) {
-  const pathname = usePathname();
-  const isAdminPortal = pathname.startsWith("/admin");
+function isStaffRole(role: string | undefined): boolean {
+  return role === "admin" || role === "team";
+}
 
-  if (isAdminPortal) {
+export function WorkspaceNav({ collapsed = false, userRole }: WorkspaceNavProps) {
+  const pathname = usePathname();
+  const showAdminSidebar = isStaffRole(userRole);
+
+  if (showAdminSidebar) {
     return (
       <nav aria-label="Admin portal navigation" className="space-y-1">
         {!collapsed ? (

@@ -16,7 +16,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { signOutFromPortal } from "@/components/auth/logout-button";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { ThemeMenuItems } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -135,7 +135,7 @@ export function WorkspaceShellLayout({
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto px-2 py-4">
-            <WorkspaceNav collapsed={collapsed} />
+            <WorkspaceNav collapsed={collapsed} userRole={roleLabel} />
           </div>
 
           <div
@@ -185,9 +185,8 @@ export function WorkspaceShellLayout({
                   asChild
                   className="bg-[#673AB7] px-4 text-white shadow-none hover:bg-[#5E35B1]"
                 >
-                  <Link href="/admin">Create</Link>
+                    <Link href="/admin">Create</Link>
                 </Button>
-                <ThemeToggle />
                 <div className="ml-0.5 border-l border-white/[0.08] pl-2 sm:ml-1 sm:pl-3">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -216,12 +215,14 @@ export function WorkspaceShellLayout({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
                       align="end"
-                      className="w-56 border-white/[0.08] bg-[#1e1e1e] text-zinc-100 shadow-lg"
+                      className="min-w-[14rem] border-white/[0.08] bg-[#1e1e1e] text-zinc-100 shadow-lg"
                     >
                       <DropdownMenuLabel className="font-semibold text-white">{nameHeadline}</DropdownMenuLabel>
                       {userLabel.trim() && userLabel.trim() !== nameHeadline ? (
                         <p className="px-2 pb-1.5 text-xs leading-snug text-zinc-500">{userLabel.trim()}</p>
                       ) : null}
+                      <DropdownMenuSeparator className="bg-white/[0.08]" />
+                      <ThemeMenuItems />
                       <DropdownMenuSeparator className="bg-white/[0.08]" />
                       <DropdownMenuItem
                         className="cursor-pointer gap-2 text-zinc-200 focus:bg-white/[0.08] focus:text-white"
