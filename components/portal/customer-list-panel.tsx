@@ -171,8 +171,9 @@ export function CustomerListPanel({ rows, hasOrganization }: CustomerListPanelPr
         </motion.div>
         <Button
           type="button"
+          variant="ghost"
           size="sm"
-          className="gap-1.5 shadow-sm"
+          className="gap-1.5 text-[14px] font-medium text-muted-foreground hover:text-foreground"
           disabled={!hasOrganization}
           title={!hasOrganization ? "Set an organization on your staff account first." : undefined}
           onClick={() => setAddOpen(true)}
