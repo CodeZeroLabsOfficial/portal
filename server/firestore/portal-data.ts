@@ -4,6 +4,8 @@ import type { InvoiceRecord } from "@/types/invoice";
 import type { ProposalBlock } from "@/types/proposal";
 import type { ProposalRecord } from "@/types/proposal";
 import type { SubscriptionRecord } from "@/types/subscription";
+import type { SupportTicketRecord, SupportTicketUrgency } from "@/types/support-ticket";
+import type { TaskRecord } from "@/types/task";
 import type { PortalUser } from "@/types/user";
 
 export interface ActivityItem {
@@ -32,6 +34,9 @@ export interface AdminPortalData {
   customers: PortalUser[];
   subscriptions: SubscriptionRecord[];
   proposals: ProposalRecord[];
+  invoices: InvoiceRecord[];
+  tasks: TaskRecord[];
+  supportTickets: SupportTicketRecord[];
 }
 
 function asString(value: unknown): string | undefined {
@@ -226,6 +231,71 @@ async function listProposalsForUser(user: PortalUser): Promise<ProposalRecord[]>
   return snap.docs.map((doc) => parseProposal(doc.id, doc.data() as Record<string, unknown>));
 }
 
+function parseTask(id: string, data: Record<string, unknown>): TaskRecord {
+  return {
+    id,
+    organizationId: asString(data.organizationId),
+    title: asString(data.title) ?? "Task",
+    status: asString(data.status) ?? "open",
+    dueAtMs: asNumber(data.dueAtMs),
+    updatedAtMs: asNumber(data.updatedAtMs) ?? Date.now(),
+  };
+}
+
+function parseSupportTicket(id: string, data: Record<string, unknown>): SupportTicketRecord {
+  const raw = (asString(data.urgency) ?? asString(data.priority) ?? "medium").toLowerCase();
+  let urgency: SupportTicketUrgency = "medium";
+  if (raw.includes("crit") || raw === "p0" || raw === "critical") {
+    urgency = "critical";
+  } else if (raw.includes("high") || raw === "p1" || raw === "high") {
+    urgency = "high";
+  } else if (raw.includes("low") || raw === "p3" || raw === "low") {
+    urgency = "low";
+  }
+
+  return {
+    id,
+    organizationId: asString(data.organizationId),
+    status: asString(data.status) ?? "open",
+    urgency,
+    updatedAtMs: asNumber(data.updatedAtMs) ?? Date.now(),
+  };
+}
+
+async function listTasksForUser(user: PortalUser): Promise<TaskRecord[]> {
+  const db = getFirebaseAdminFirestore();
+  if (!db || !canReadByOrganization(user) || !user.organizationId) {
+    return [];
+  }
+  try {
+    const snap = await db
+      .collection(COLLECTIONS.tasks)
+      .where("organizationId", "==", user.organizationId)
+      .limit(200)
+      .get();
+    return snap.docs.map((doc) => parseTask(doc.id, doc.data() as Record<string, unknown>));
+  } catch {
+    return [];
+  }
+}
+
+async function listSupportTicketsForUser(user: PortalUser): Promise<SupportTicketRecord[]> {
+  const db = getFirebaseAdminFirestore();
+  if (!db || !canReadByOrganization(user) || !user.organizationId) {
+    return [];
+  }
+  try {
+    const snap = await db
+      .collection(COLLECTIONS.supportTickets)
+      .where("organizationId", "==", user.organizationId)
+      .limit(200)
+      .get();
+    return snap.docs.map((doc) => parseSupportTicket(doc.id, doc.data() as Record<string, unknown>));
+  } catch {
+    return [];
+  }
+}
+
 export async function getDashboardData(user: PortalUser): Promise<DashboardData> {
   const [subscriptions, invoices, proposals] = await Promise.all([
     listSubscriptionsForUser(user),
@@ -298,7 +368,14 @@ export async function getCustomerPortalData(user: PortalUser): Promise<CustomerP
 export async function getAdminPortalData(user: PortalUser): Promise<AdminPortalData> {
   const db = getFirebaseAdminFirestore();
   if (!db || !canReadByOrganization(user)) {
-    return { customers: [], subscriptions: [], proposals: [] };
+    return {
+      customers: [],
+      subscriptions: [],
+      proposals: [],
+      invoices: [],
+      tasks: [],
+      supportTickets: [],
+    };
   }
 
   let userQuery = db.collection(COLLECTIONS.users).where("role", "==", "customer").limit(200);
@@ -308,14 +385,20 @@ export async function getAdminPortalData(user: PortalUser): Promise<AdminPortalD
   const usersSnap = await userQuery.get();
   const customers = usersSnap.docs.map((doc) => parsePortalUser(doc.id, doc.data() as Record<string, unknown>));
 
-  const [subscriptions, proposals] = await Promise.all([
+  const [subscriptions, proposals, invoices, tasks, supportTickets] = await Promise.all([
     listSubscriptionsForUser(user),
     listProposalsForUser(user),
+    listInvoicesForUser(user),
+    listTasksForUser(user),
+    listSupportTicketsForUser(user),
   ]);
 
   return {
     customers,
     subscriptions,
     proposals,
+    invoices,
+    tasks,
+    supportTickets,
   };
 }

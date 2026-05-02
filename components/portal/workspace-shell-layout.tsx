@@ -182,10 +182,8 @@ export function WorkspaceShellLayout({
         >
           <div
             className={cn(
-              "flex shrink-0 items-center border-b border-white/[0.06]",
-              collapsed
-                ? "flex-col justify-center gap-2 px-2 py-3"
-                : "h-14 justify-between px-4",
+              "flex h-14 shrink-0 items-center border-b border-white/[0.06]",
+              collapsed ? "flex-col justify-center gap-1 px-2" : "justify-between px-4",
             )}
           >
             {!collapsed ? (
@@ -253,42 +251,47 @@ export function WorkspaceShellLayout({
 
         <div className="flex min-w-0 flex-1 flex-col bg-[#0D0D16]">
           <header className="sticky top-0 z-20 border-b border-white/[0.06] bg-[#0D0D16]/95 backdrop-blur-md">
-            <div className="flex h-16 w-full items-center gap-3 px-4 sm:px-6">
+            <div className="flex h-14 w-full items-center gap-3 px-4 sm:px-4">
               <div className="relative hidden min-w-0 flex-1 lg:block">
                 <Search
-                  className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500"
+                  className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 stroke-[1.5] text-zinc-400"
                   aria-hidden
                 />
                 <Input
                   type="search"
                   placeholder={isAdminRoute ? "Search..." : "Search for list, template, etc."}
-                  className="h-10 border-white/[0.08] bg-[#1e1e1e] pl-10 text-sm text-zinc-200 placeholder:text-zinc-500 focus-visible:ring-primary"
+                  className="h-9 max-w-xl rounded-full border-white/[0.08] bg-[#1e1e1e] pl-10 pr-4 text-[14px] font-medium leading-none text-white shadow-none placeholder:text-zinc-400 focus-visible:ring-2 focus-visible:ring-primary"
                   aria-label="Search"
                 />
               </div>
               <div className="flex min-w-0 flex-1 items-center gap-3 lg:hidden">
                 <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/[0.08] bg-[#1e1e1e]">
-                  <Building2 className="h-4 w-4 text-zinc-400" aria-hidden />
+                  <Building2 className="h-[18px] w-[18px] stroke-[1.5] text-zinc-400" aria-hidden />
                 </span>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-white">{title}</p>
-                  <p className="truncate text-xs text-zinc-500">{description}</p>
+                  <p className="truncate text-[14px] font-medium leading-none text-white">{title}</p>
+                  <p className="truncate text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500">
+                    {description}
+                  </p>
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-2 sm:gap-3">
                 {isAdminRoute ? (
                   <Button
                     variant="ghost"
-                    className="hidden gap-2 text-sm text-zinc-300 hover:bg-white/[0.06] hover:text-white sm:inline-flex"
+                    className="hidden h-9 gap-2 rounded-lg px-3 text-[14px] font-medium text-zinc-400 hover:bg-white/[0.06] hover:text-white sm:inline-flex"
                     asChild
                   >
                     <Link href="#">
-                      <Bell className="h-4 w-4 shrink-0" aria-hidden />
+                      <Bell className="h-[18px] w-[18px] shrink-0 stroke-[1.5]" aria-hidden />
                       Notifications
                     </Link>
                   </Button>
                 ) : (
-                  <Button asChild className="bg-primary px-4 text-primary-foreground shadow-none hover:bg-primary/90">
+                  <Button
+                    asChild
+                    className="h-9 rounded-lg bg-primary px-4 text-[14px] font-medium text-primary-foreground shadow-none hover:bg-primary/90"
+                  >
                     <Link href="/admin">Create</Link>
                   </Button>
                 )}
@@ -299,23 +302,23 @@ export function WorkspaceShellLayout({
                         type="button"
                         title={avatarTitle}
                         aria-label={`Account menu for ${nameHeadline}`}
-                        className="flex max-w-full items-center gap-2 rounded-lg border border-transparent px-1.5 py-1 text-left transition-colors hover:border-white/[0.08] hover:bg-white/[0.06] sm:gap-2.5 sm:px-2"
+                        className="flex max-w-full items-center gap-2 rounded-lg border border-transparent px-1.5 py-0.5 text-left transition-colors hover:border-white/[0.08] hover:bg-white/[0.06] sm:gap-2.5 sm:px-2"
                       >
                         <div
-                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary text-sm font-semibold text-primary-foreground"
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary text-[13px] font-semibold text-primary-foreground"
                           aria-hidden
                         >
                           {initial}
                         </div>
                         <div className="hidden min-w-0 flex-1 sm:block">
-                          <p className="max-w-[140px] truncate text-sm font-semibold text-white md:max-w-[220px]">
+                          <p className="max-w-[140px] truncate text-[14px] font-medium leading-none text-white md:max-w-[220px]">
                             {nameHeadline}
                           </p>
-                          <p className="max-w-[140px] truncate text-xs font-medium tracking-wide text-zinc-400 md:max-w-[220px]">
+                          <p className="max-w-[140px] truncate text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500 md:max-w-[220px]">
                             {roleLabel.toUpperCase()}
                           </p>
                         </div>
-                        <ChevronDown className="h-4 w-4 shrink-0 text-zinc-400" aria-hidden />
+                        <ChevronDown className="h-[18px] w-[18px] shrink-0 stroke-[1.5] text-zinc-400" aria-hidden />
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent

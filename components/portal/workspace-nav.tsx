@@ -13,7 +13,6 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   ADMIN_PORTAL_NAV,
@@ -81,13 +80,6 @@ export function WorkspaceNav({ collapsed = false, userRole }: WorkspaceNavProps)
                 label={item.label}
                 collapsed={collapsed}
                 isActive={isActive}
-                badge={
-                  item.badge && !collapsed ? (
-                    <Badge className="ml-auto h-5 shrink-0 border-0 bg-primary px-2 text-[10px] font-semibold uppercase tracking-wide text-primary-foreground">
-                      {item.badge}
-                    </Badge>
-                  ) : null
-                }
               >
                 <Icon className={iconClassName(isActive)} aria-hidden />
               </NavRow>
@@ -187,14 +179,12 @@ function NavRow({
   label,
   collapsed,
   isActive,
-  badge,
   children,
 }: {
   href: string;
   label: string;
   collapsed: boolean;
   isActive: boolean;
-  badge?: ReactNode;
   children: ReactNode;
 }) {
   const linkClass = cn(
@@ -207,10 +197,7 @@ function NavRow({
     <>
       {children}
       {!collapsed ? (
-        <>
-          <span className="min-w-0 flex-1 truncate text-[14px] font-medium leading-none">{label}</span>
-          {badge}
-        </>
+        <span className="min-w-0 flex-1 truncate text-[14px] font-medium leading-none">{label}</span>
       ) : null}
     </>
   );

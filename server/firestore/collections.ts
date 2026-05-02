@@ -14,6 +14,9 @@ export const COLLECTIONS = {
   proposals: "proposals",
   proposalTemplates: "proposal_templates",
   analyticsEvents: "analytics_events",
+  /** Optional — admin dashboard aggregates when present. */
+  tasks: "tasks",
+  supportTickets: "support_tickets",
 } as const;
 
 export type CollectionName = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];

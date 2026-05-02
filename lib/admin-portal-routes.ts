@@ -2,8 +2,6 @@ export interface AdminPortalNavItem {
   id: "dashboard" | "customers" | "billing" | "tasks";
   href: "/admin" | "/admin/customers" | "/admin/billing" | "/admin/tasks";
   label: string;
-  /** Pill shown next to the label (e.g. Beta). */
-  badge?: string;
 }
 
 export interface AdminPortalNavFooterItem {
@@ -14,7 +12,7 @@ export interface AdminPortalNavFooterItem {
 }
 
 export const ADMIN_PORTAL_NAV: AdminPortalNavItem[] = [
-  { id: "dashboard", href: "/admin", label: "Dashboard", badge: "Beta" },
+  { id: "dashboard", href: "/admin", label: "Dashboard" },
   { id: "customers", href: "/admin/customers", label: "Customers" },
   { id: "billing", href: "/admin/billing", label: "Billing" },
   { id: "tasks", href: "/admin/tasks", label: "Tasks" },

@@ -10,6 +10,12 @@ import {
 } from "lucide-react";
 import { APP_NAME, DEFAULT_CURRENCY } from "@/lib/constants";
 import { formatCurrencyAmount } from "@/lib/format";
+import type { InvoiceRecord } from "@/types/invoice";
+import type { ProposalBlock, ProposalRecord } from "@/types/proposal";
+import type { SupportTicketRecord } from "@/types/support-ticket";
+import type { TaskRecord } from "@/types/task";
+import type { PortalUser } from "@/types/user";
+import type { SubscriptionRecord } from "@/types/subscription";
 import type { AdminPortalData } from "@/server/firestore/portal-data";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,22 +40,6 @@ function formatWelcomeDate(d: Date): string {
     month: "short",
     year: "numeric",
   }).format(d);
-}
-
-function compactCount(n: number): string {
-  if (n >= 1000) {
-    return `${(n / 1000).toFixed(1)}k`;
-  }
-  return String(n);
-}
-
-/** e.g. $17.1k for values over $1k AUD. */
-function compactAudFromMinor(minor: number): string {
-  const dollars = minor / 100;
-  if (dollars >= 1000) {
-    return `$${(dollars / 1000).toFixed(1)}k`;
-  }
-  return formatCurrencyAmount(minor, DEFAULT_CURRENCY);
 }
 
 function shortRef(id: string): string {
@@ -108,6 +98,221 @@ function buildChartPath(): { line: string; area: string } {
   const line = `M ${pts}`;
   const area = `M 0,${baseline} L ${CHART_POINTS.map((p) => `${p.x},${p.y}`).join(" L ")} L ${w},${baseline} Z`;
   return { line, area };
+}
+
+function startOfMonthMs(d: Date): number {
+  return new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+}
+
+function startOfYearMs(d: Date): number {
+  return new Date(d.getFullYear(), 0, 1).getTime();
+}
+
+function startOfPreviousMonthMs(d: Date): number {
+  return new Date(d.getFullYear(), d.getMonth() - 1, 1).getTime();
+}
+
+function countActiveClients(customers: PortalUser[], subscriptions: SubscriptionRecord[]): number {
+  const activeCustomerIds = new Set(
+    subscriptions
+      .filter((s) => s.status === "active" || s.status === "trialing")
+      .map((s) => s.customerId)
+      .filter(Boolean),
+  );
+  if (activeCustomerIds.size === 0) {
+    return customers.length;
+  }
+  const matched = customers.filter(
+    (c) =>
+      (c.stripeCustomerId && activeCustomerIds.has(c.stripeCustomerId)) || activeCustomerIds.has(c.uid),
+  ).length;
+  return matched > 0 ? matched : customers.length;
+}
+
+/** Month-over-month % change in new customer sign-ups (calendar months). */
+function newCustomersMomPercent(customers: PortalUser[], now: Date): { pct: number; neutral: boolean } {
+  const thisMonthStart = startOfMonthMs(now);
+  const lastMonthStart = startOfPreviousMonthMs(now);
+  const newThisMonth = customers.filter((c) => c.createdAtMs >= thisMonthStart && c.createdAtMs <= now.getTime()).length;
+  const newLastMonth = customers.filter(
+    (c) => c.createdAtMs >= lastMonthStart && c.createdAtMs < thisMonthStart,
+  ).length;
+  if (newLastMonth === 0 && newThisMonth === 0) {
+    return { pct: 0, neutral: true };
+  }
+  if (newLastMonth === 0) {
+    return { pct: newThisMonth > 0 ? 100 : 0, neutral: newThisMonth === 0 };
+  }
+  const pct = ((newThisMonth - newLastMonth) / newLastMonth) * 100;
+  return { pct, neutral: Math.abs(pct) < 0.05 };
+}
+
+type SubWithAmount = SubscriptionRecord & { mrrAmount?: number; amount?: number };
+
+function sumMrrAndArr(subscriptions: SubscriptionRecord[]): { mrrMinor: number; arrMinor: number } {
+  let mrrMinor = 0;
+  let arrMinor = 0;
+  for (const s of subscriptions) {
+    if (s.status !== "active" && s.status !== "trialing") {
+      continue;
+    }
+    const r = s as SubWithAmount;
+    const minor = r.mrrAmount ?? r.amount ?? 0;
+    if (minor <= 0) {
+      continue;
+    }
+    if (s.interval === "year") {
+      arrMinor += minor;
+      mrrMinor += Math.round(minor / 12);
+    } else {
+      mrrMinor += minor;
+      arrMinor += minor * 12;
+    }
+  }
+  return { mrrMinor, arrMinor };
+}
+
+function paidInvoicesInRange(invoices: InvoiceRecord[], startMs: number, endMs: number): InvoiceRecord[] {
+  return invoices.filter(
+    (inv) =>
+      inv.status === "paid" &&
+      typeof inv.paidAtMs === "number" &&
+      inv.paidAtMs >= startMs &&
+      inv.paidAtMs <= endMs,
+  );
+}
+
+function sumAmountDueMinor(invoices: InvoiceRecord[]): number {
+  return invoices.reduce((sum, inv) => sum + inv.amountDue, 0);
+}
+
+/** Paid invoice revenue: this month-to-date vs same number of days last month. */
+const PRICING_MINOR_KEYS = [
+  "totalMinorUnits",
+  "amountMinorUnits",
+  "subtotalMinorUnits",
+  "totalCents",
+  "amountCents",
+  "amount",
+] as const;
+
+function extractPricingMinorFromBlock(block: ProposalBlock): number {
+  if (block.type !== "pricing") {
+    return 0;
+  }
+  const b = block as Record<string, unknown>;
+  for (const k of PRICING_MINOR_KEYS) {
+    const v = b[k];
+    if (typeof v === "number" && Number.isFinite(v)) {
+      return Math.round(v);
+    }
+  }
+  return 0;
+}
+
+function sumPendingProposalValueMinor(proposals: ProposalRecord[]): number {
+  return proposals
+    .filter((p) => p.status === "draft" || p.status === "sent" || p.status === "viewed")
+    .reduce(
+      (sum, p) =>
+        sum + p.document.blocks.reduce((s, bl) => s + extractPricingMinorFromBlock(bl), 0),
+      0,
+    );
+}
+
+function isTaskOpenStatus(status: string): boolean {
+  const s = status.toLowerCase();
+  return (
+    s !== "done" &&
+    s !== "completed" &&
+    s !== "cancelled" &&
+    s !== "canceled" &&
+    s !== "closed"
+  );
+}
+
+function isTicketOpenStatus(status: string): boolean {
+  const s = status.toLowerCase();
+  return s !== "resolved" && s !== "closed" && s !== "done" && s !== "cancelled" && s !== "canceled";
+}
+
+function startOfCalendarWeekMs(d: Date): number {
+  const c = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const dow = c.getDay();
+  const toMonday = dow === 0 ? -6 : 1 - dow;
+  c.setDate(c.getDate() + toMonday);
+  c.setHours(0, 0, 0, 0);
+  return c.getTime();
+}
+
+function endOfCalendarWeekMs(weekStartMs: number): number {
+  return weekStartMs + 7 * 86400000 - 1;
+}
+
+function countTasksDueAndOverdue(tasks: TaskRecord[], now: Date): { dueThisWeek: number; overdue: number } {
+  const nowMs = now.getTime();
+  const wkStart = startOfCalendarWeekMs(now);
+  const wkEnd = endOfCalendarWeekMs(wkStart);
+  let dueThisWeek = 0;
+  let overdue = 0;
+  for (const t of tasks) {
+    if (!isTaskOpenStatus(t.status)) {
+      continue;
+    }
+    const due = t.dueAtMs;
+    if (due === undefined || !Number.isFinite(due)) {
+      continue;
+    }
+    if (due < nowMs) {
+      overdue += 1;
+    } else if (due >= wkStart && due <= wkEnd) {
+      dueThisWeek += 1;
+    }
+  }
+  return { dueThisWeek, overdue };
+}
+
+function countOpenTicketsByUrgency(tickets: SupportTicketRecord[]): {
+  critical: number;
+  high: number;
+  medium: number;
+} {
+  const open = tickets.filter((t) => isTicketOpenStatus(t.status));
+  let critical = 0;
+  let high = 0;
+  let medium = 0;
+  for (const t of open) {
+    if (t.urgency === "critical") {
+      critical += 1;
+    } else if (t.urgency === "high") {
+      high += 1;
+    } else {
+      medium += 1;
+    }
+  }
+  return { critical, high, medium };
+}
+
+function paidRevenueMomPercent(invoices: InvoiceRecord[], now: Date): { pct: number; neutral: boolean } {
+  const thisMonthStart = startOfMonthMs(now);
+  const nowMs = now.getTime();
+  const lastMonthStart = startOfPreviousMonthMs(now);
+  const dom = now.getDate();
+  const daysInPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0).getDate();
+  const cmpDom = Math.min(dom, daysInPrevMonth);
+  const lastWindowEnd = new Date(now.getFullYear(), now.getMonth() - 1, cmpDom, 23, 59, 59, 999).getTime();
+  const thisSlice = paidInvoicesInRange(invoices, thisMonthStart, nowMs);
+  const lastSlice = paidInvoicesInRange(invoices, lastMonthStart, lastWindowEnd);
+  const a = sumAmountDueMinor(thisSlice);
+  const b = sumAmountDueMinor(lastSlice);
+  if (a === 0 && b === 0) {
+    return { pct: 0, neutral: true };
+  }
+  if (b === 0) {
+    return { pct: a > 0 ? 100 : 0, neutral: a === 0 };
+  }
+  const pct = ((a - b) / b) * 100;
+  return { pct, neutral: Math.abs(pct) < 0.05 };
 }
 
 export function AdminHomeRightAside({ data }: { data: AdminPortalData }) {
@@ -238,13 +443,75 @@ export function AdminHomeDashboard({
 }) {
   const name = firstName(displayName, userLabel);
   const today = formatWelcomeDate(new Date());
-  const accepted = data.proposals.filter((p) => p.status === "accepted").length;
-  const proposalTotal = data.proposals.length;
-  const acceptRate = proposalTotal === 0 ? 0 : (accepted / proposalTotal) * 100;
-  const activeSubs = data.subscriptions.filter((s) => s.status === "active" || s.status === "trialing").length;
+  const now = new Date();
 
-  const cardSalesMinor = Math.max(0, activeSubs) * 12_500 + proposalTotal * 2_100;
-  const achReturnsMinor = Math.max(0, data.customers.length) * 1_800 + Math.max(0, proposalTotal - accepted) * 3_400;
+  const activeClients = countActiveClients(data.customers, data.subscriptions);
+  const clientsMom = newCustomersMomPercent(data.customers, now);
+  const clientsDeltaStr = `${clientsMom.pct >= 0 ? "+" : ""}${clientsMom.pct.toFixed(1)}% vs last month`;
+
+  const { mrrMinor, arrMinor } = sumMrrAndArr(data.subscriptions);
+  const paidMom = paidRevenueMomPercent(data.invoices, now);
+  const mrrGrowthStr = `${paidMom.pct >= 0 ? "+" : ""}${paidMom.pct.toFixed(1)}%`;
+
+  const monthStart = startOfMonthMs(now);
+  const nowMs = now.getTime();
+  const yearStart = startOfYearMs(now);
+  const paidThisMonth = paidInvoicesInRange(data.invoices, monthStart, nowMs);
+  const revenueThisMonthMinor = sumAmountDueMinor(paidThisMonth);
+  const paymentsThisMonth = paidThisMonth.length;
+
+  const useYtdRevenue = revenueThisMonthMinor === 0 && paymentsThisMonth === 0;
+  const paidYtd = paidInvoicesInRange(data.invoices, yearStart, nowMs);
+  const revenueMinor = useYtdRevenue ? sumAmountDueMinor(paidYtd) : revenueThisMonthMinor;
+  const paymentCount = useYtdRevenue ? paidYtd.length : paymentsThisMonth;
+  const revenueTitle = useYtdRevenue
+    ? `Total Revenue (${now.getFullYear()} YTD)`
+    : "Total Revenue (this month)";
+
+  const dom = now.getDate();
+  const daysInPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0).getDate();
+  const cmpDom = Math.min(dom, daysInPrevMonth);
+  const lastMonthComparableEnd = new Date(now.getFullYear(), now.getMonth() - 1, cmpDom, 23, 59, 59, 999).getTime();
+  const revenueLastMonthComparableMinor = sumAmountDueMinor(
+    paidInvoicesInRange(data.invoices, startOfPreviousMonthMs(now), lastMonthComparableEnd),
+  );
+
+  let revenueDeltaStr: string | undefined;
+  let revenueMomPct = 0;
+  let revenueMomNeutral = true;
+  if (!useYtdRevenue) {
+    if (revenueLastMonthComparableMinor === 0) {
+      revenueMomPct = revenueMinor > 0 ? 100 : 0;
+      revenueMomNeutral = revenueMinor === 0;
+    } else {
+      revenueMomPct = ((revenueMinor - revenueLastMonthComparableMinor) / revenueLastMonthComparableMinor) * 100;
+      revenueMomNeutral = Math.abs(revenueMomPct) < 0.05;
+    }
+    revenueDeltaStr = `${revenueMomPct >= 0 ? "+" : ""}${revenueMomPct.toFixed(1)}% vs last month`;
+  }
+
+  const totalSubs = data.subscriptions.length;
+  const activeSubCount = data.subscriptions.filter(
+    (s) => s.status === "active" || s.status === "trialing",
+  ).length;
+  const utilPct =
+    data.customers.length === 0
+      ? null
+      : Math.min(100, Math.round((activeSubCount / data.customers.length) * 1000) / 10);
+  const churnPct =
+    totalSubs === 0 ? 0 : Math.round(((totalSubs - activeSubCount) / totalSubs) * 1000) / 10;
+
+  const pendingProposals = data.proposals.filter(
+    (p) => p.status === "draft" || p.status === "sent" || p.status === "viewed",
+  );
+  const pendingCount = pendingProposals.length;
+  const pendingValueMinor = sumPendingProposalValueMinor(data.proposals);
+
+  const ticketBuckets = countOpenTicketsByUrgency(data.supportTickets);
+  const openTicketTotal =
+    ticketBuckets.critical + ticketBuckets.high + ticketBuckets.medium;
+  const taskDue = countTasksDueAndOverdue(data.tasks, now);
+  const taskHeadlineTotal = taskDue.overdue + taskDue.dueThisWeek;
 
   const { line, area } = buildChartPath();
   const rangeLabel = "Last 14 days";
@@ -270,48 +537,75 @@ export function AdminHomeDashboard({
 
       <div className="grid gap-4 sm:grid-cols-3">
         <MetricCard
-          title="Card sales"
-          value={formatCurrencyAmount(cardSalesMinor, DEFAULT_CURRENCY)}
-          delta="-15.5%"
-          positive={false}
+          title="Total Active Clients"
+          value={String(activeClients)}
+          delta={clientsDeltaStr}
+          deltaCaption="Trend uses new customer sign-ups (full calendar months)"
+          positive={clientsMom.pct > 0}
+          neutralDelta={clientsMom.neutral}
         />
         <MetricCard
-          title="Card approval rate"
-          value={`${acceptRate.toFixed(2)}%`}
-          delta="+21.3%"
-          positive
+          title="MRR / ARR"
+          titleDetail="Monthly / annual recurring revenue (active subscriptions)"
+          value={formatCurrencyAmount(mrrMinor, DEFAULT_CURRENCY)}
+          valueDetail={`ARR ${formatCurrencyAmount(arrMinor, DEFAULT_CURRENCY)}`}
+          delta={mrrGrowthStr}
+          deltaCaption="Growth from paid invoice volume (MTD vs same days prior month)"
+          positive={paidMom.pct > 0}
+          neutralDelta={paidMom.neutral}
         />
         <MetricCard
-          title="ACH returns"
-          value={formatCurrencyAmount(achReturnsMinor, DEFAULT_CURRENCY)}
-          delta="-9.7%"
-          positive={false}
+          title={revenueTitle}
+          titleDetail="Paid invoices in organisation scope"
+          value={formatCurrencyAmount(revenueMinor, DEFAULT_CURRENCY)}
+          valueDetail={`${paymentCount} payments received`}
+          delta={revenueDeltaStr}
+          deltaCaption={
+            useYtdRevenue ? undefined : "Compared with the same day-range last month"
+          }
+          positive={revenueDeltaStr !== undefined && revenueMomPct > 0}
+          neutralDelta={revenueDeltaStr !== undefined ? revenueMomNeutral : revenueMinor === 0}
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-6 border-y border-border py-5 sm:grid-cols-4">
+      <div className="grid gap-6 border-y border-border py-5 sm:grid-cols-2 lg:grid-cols-4">
         <div>
-          <p className="text-xs font-medium text-muted-foreground">Gross volume</p>
-          <p className="mt-1 text-lg font-semibold tabular-nums text-foreground">
-            {compactAudFromMinor(cardSalesMinor * 48)}
+          <p className="text-xs font-medium text-muted-foreground">Active Subscriptions</p>
+          <p className="mt-1 text-lg font-semibold tabular-nums text-primary">{activeSubCount}</p>
+          <p className="mt-1 text-xs leading-snug text-muted-foreground">
+            {utilPct === null ? "—" : `${utilPct}%`} utilization · {churnPct}% churn
           </p>
         </div>
         <div>
-          <p className="text-xs font-medium text-muted-foreground">New customers</p>
-          <p className="mt-1 text-lg font-semibold tabular-nums text-primary">
-            {compactCount(data.customers.length)}
+          <p className="text-xs font-medium text-muted-foreground">Pending Proposals</p>
+          <p className="mt-1 text-lg font-semibold tabular-nums text-foreground">{pendingCount}</p>
+          <p className="mt-1 text-xs leading-snug text-muted-foreground">
+            {formatCurrencyAmount(pendingValueMinor, DEFAULT_CURRENCY)} total value
           </p>
         </div>
         <div>
-          <p className="text-xs font-medium text-muted-foreground">New accounts</p>
-          <p className="mt-1 text-lg font-semibold tabular-nums text-foreground">
-            {compactCount(data.subscriptions.length)}
+          <p className="text-xs font-medium text-muted-foreground">Open Support Tickets</p>
+          <p className="mt-1 text-lg font-semibold tabular-nums text-foreground">{openTicketTotal}</p>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+            <span className="text-destructive/90">Critical {ticketBuckets.critical}</span>
+            <span className="text-muted-foreground"> · </span>
+            <span className="text-amber-200/90">High {ticketBuckets.high}</span>
+            <span className="text-muted-foreground"> · </span>
+            <span>Medium {ticketBuckets.medium}</span>
           </p>
         </div>
         <div>
-          <p className="text-xs font-medium text-muted-foreground">Transactions</p>
-          <p className="mt-1 text-lg font-semibold tabular-nums text-foreground">
-            {compactCount(Math.max(1, data.proposals.length + data.subscriptions.length))}
+          <p className="text-xs font-medium text-muted-foreground">Tasks Due This Week</p>
+          <p className="mt-1 text-lg font-semibold tabular-nums text-foreground">{taskHeadlineTotal}</p>
+          <p className="mt-1 text-xs leading-snug text-muted-foreground">
+            {taskDue.overdue === 0 && taskDue.dueThisWeek === 0
+              ? "No open tasks with deadlines in range"
+              : [
+                  taskDue.overdue > 0 ? `${taskDue.overdue} overdue` : null,
+                  taskDue.dueThisWeek > 0 ? `${taskDue.dueThisWeek} due remainder of week` : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
           </p>
         </div>
       </div>
@@ -393,32 +687,56 @@ export function AdminHomeDashboard({
 
 function MetricCard({
   title,
+  titleDetail,
   value,
+  valueDetail,
   delta,
+  deltaCaption,
   positive,
+  neutralDelta,
 }: {
   title: string;
+  titleDetail?: string;
   value: string;
-  delta: string;
+  valueDetail?: string;
+  delta?: string;
+  deltaCaption?: string;
   positive: boolean;
+  neutralDelta?: boolean;
 }) {
+  const showDelta = typeof delta === "string" && delta.length > 0;
   return (
     <div className="rounded-xl border border-border bg-card/90 p-5 shadow-sm">
-      <p className="text-sm font-medium text-muted-foreground">{title}</p>
+      <div>
+        <p className="text-sm font-medium text-muted-foreground">{title}</p>
+        {titleDetail ? (
+          <p className="mt-0.5 text-xs leading-snug text-muted-foreground/90">{titleDetail}</p>
+        ) : null}
+      </div>
       <p className="mt-2 text-2xl font-semibold tabular-nums tracking-tight text-foreground">{value}</p>
-      <p
-        className={cn(
-          "mt-2 inline-flex items-center gap-1 text-sm font-medium",
-          positive ? "text-emerald-400" : "text-destructive",
-        )}
-      >
-        {positive ? (
-          <ArrowUpRight className="h-4 w-4 shrink-0" aria-hidden />
-        ) : (
-          <ArrowDownRight className="h-4 w-4 shrink-0" aria-hidden />
-        )}
-        {delta}
-      </p>
+      {valueDetail ? (
+        <p className="mt-1.5 text-sm font-medium tabular-nums text-muted-foreground">{valueDetail}</p>
+      ) : null}
+      {showDelta ? (
+        <>
+          <p
+            className={cn(
+              "mt-2 inline-flex items-center gap-1 text-sm font-medium",
+              neutralDelta ? "text-muted-foreground" : positive ? "text-emerald-400" : "text-destructive",
+            )}
+          >
+            {neutralDelta ? null : positive ? (
+              <ArrowUpRight className="h-4 w-4 shrink-0" aria-hidden />
+            ) : (
+              <ArrowDownRight className="h-4 w-4 shrink-0" aria-hidden />
+            )}
+            {delta}
+          </p>
+          {deltaCaption ? (
+            <p className="mt-1 text-xs leading-snug text-muted-foreground">{deltaCaption}</p>
+          ) : null}
+        </>
+      ) : null}
     </div>
   );
 }
