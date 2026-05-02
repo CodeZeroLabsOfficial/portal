@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import {
   ArrowDownRight,
@@ -325,8 +326,8 @@ export function AdminHomeRightAside({ data }: { data: AdminPortalData }) {
     .slice(0, 4);
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-xl border border-border bg-card/80">
+    <div className="space-y-5">
+      <section className="overflow-hidden rounded-xl border border-border/80 bg-card/95 shadow-sm">
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <h2 className="text-sm font-semibold text-foreground">Recent transactions</h2>
           <Link
@@ -396,7 +397,7 @@ export function AdminHomeRightAside({ data }: { data: AdminPortalData }) {
         </div>
       </section>
 
-      <section className="rounded-xl border border-border bg-card/80">
+      <section className="overflow-hidden rounded-xl border border-border/80 bg-card/95 shadow-sm">
         <div className="flex items-center gap-2 border-b border-border px-4 py-3">
           <h2 className="text-sm font-semibold text-foreground">Recent activities</h2>
           <Badge
@@ -517,7 +518,7 @@ export function AdminHomeDashboard({
   const rangeLabel = "Last 14 days";
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground md:text-3xl">
@@ -527,165 +528,202 @@ export function AdminHomeDashboard({
             Here are your stats for {today}
           </p>
         </div>
-        <Button variant="ghost" size="sm" className="gap-1.5 text-sm text-muted-foreground hover:text-foreground" asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="gap-1.5 text-[14px] font-medium text-muted-foreground hover:text-foreground"
+          asChild
+        >
           <Link href="#">
-            <Settings2 className="h-4 w-4" aria-hidden />
+            <Settings2 className="h-4 w-4 shrink-0" aria-hidden />
             Customize dashboard
           </Link>
         </Button>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <MetricCard
-          title="Total Active Clients"
-          value={String(activeClients)}
-          delta={clientsDeltaStr}
-          deltaCaption="Trend uses new customer sign-ups (full calendar months)"
-          positive={clientsMom.pct > 0}
-          neutralDelta={clientsMom.neutral}
-        />
-        <MetricCard
-          title="MRR / ARR"
-          titleDetail="Monthly / annual recurring revenue (active subscriptions)"
-          value={formatCurrencyAmount(mrrMinor, DEFAULT_CURRENCY)}
-          valueDetail={`ARR ${formatCurrencyAmount(arrMinor, DEFAULT_CURRENCY)}`}
-          delta={mrrGrowthStr}
-          deltaCaption="Growth from paid invoice volume (MTD vs same days prior month)"
-          positive={paidMom.pct > 0}
-          neutralDelta={paidMom.neutral}
-        />
-        <MetricCard
-          title={revenueTitle}
-          titleDetail="Paid invoices in organisation scope"
-          value={formatCurrencyAmount(revenueMinor, DEFAULT_CURRENCY)}
-          valueDetail={`${paymentCount} payments received`}
-          delta={revenueDeltaStr}
-          deltaCaption={
-            useYtdRevenue ? undefined : "Compared with the same day-range last month"
-          }
-          positive={revenueDeltaStr !== undefined && revenueMomPct > 0}
-          neutralDelta={revenueDeltaStr !== undefined ? revenueMomNeutral : revenueMinor === 0}
-        />
-      </div>
+      <div className="overflow-hidden rounded-xl border border-border/80 bg-card/95 shadow-sm">
+        <div className="grid divide-y divide-border sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          <MetricCard
+            variant="strip"
+            title="Total Active Clients"
+            value={String(activeClients)}
+            delta={clientsDeltaStr}
+            deltaCaption="Trend uses new customer sign-ups (full calendar months)"
+            positive={clientsMom.pct > 0}
+            neutralDelta={clientsMom.neutral}
+          />
+          <MetricCard
+            variant="strip"
+            title="MRR / ARR"
+            titleDetail="Monthly / annual recurring revenue (active subscriptions)"
+            value={formatCurrencyAmount(mrrMinor, DEFAULT_CURRENCY)}
+            valueDetail={`ARR ${formatCurrencyAmount(arrMinor, DEFAULT_CURRENCY)}`}
+            delta={mrrGrowthStr}
+            deltaCaption="Growth from paid invoice volume (MTD vs same days prior month)"
+            positive={paidMom.pct > 0}
+            neutralDelta={paidMom.neutral}
+          />
+          <MetricCard
+            variant="strip"
+            title={revenueTitle}
+            titleDetail="Paid invoices in organisation scope"
+            value={formatCurrencyAmount(revenueMinor, DEFAULT_CURRENCY)}
+            valueDetail={`${paymentCount} payments received`}
+            delta={revenueDeltaStr}
+            deltaCaption={
+              useYtdRevenue ? undefined : "Compared with the same day-range last month"
+            }
+            positive={revenueDeltaStr !== undefined && revenueMomPct > 0}
+            neutralDelta={revenueDeltaStr !== undefined ? revenueMomNeutral : revenueMinor === 0}
+          />
+        </div>
 
-      <div className="grid gap-6 border-y border-border py-5 sm:grid-cols-2 lg:grid-cols-4">
-        <div>
-          <p className="text-xs font-medium text-muted-foreground">Active Subscriptions</p>
-          <p className="mt-1 text-lg font-semibold tabular-nums text-primary">{activeSubCount}</p>
-          <p className="mt-1 text-xs leading-snug text-muted-foreground">
-            {utilPct === null ? "—" : `${utilPct}%`} utilization · {churnPct}% churn
-          </p>
+        <div className="grid grid-cols-2 divide-y divide-border border-t border-border md:grid-cols-4 md:divide-x md:divide-y-0">
+          <SecondaryMetric
+            value={String(activeSubCount)}
+            valueClassName="text-primary"
+            label="Active Subscriptions"
+            detail={`${utilPct === null ? "—" : `${utilPct}%`} utilization · ${churnPct}% churn`}
+          />
+          <SecondaryMetric
+            value={String(pendingCount)}
+            label="Pending Proposals"
+            detail={`${formatCurrencyAmount(pendingValueMinor, DEFAULT_CURRENCY)} total value`}
+          />
+          <SecondaryMetric
+            value={String(openTicketTotal)}
+            label="Open Support Tickets"
+            detail={
+              <span className="leading-relaxed">
+                <span className="text-destructive/90">Critical {ticketBuckets.critical}</span>
+                <span className="text-muted-foreground"> · </span>
+                <span className="text-amber-200/90">High {ticketBuckets.high}</span>
+                <span className="text-muted-foreground"> · </span>
+                <span>Medium {ticketBuckets.medium}</span>
+              </span>
+            }
+          />
+          <SecondaryMetric
+            value={String(taskHeadlineTotal)}
+            label="Tasks Due This Week"
+            detail={
+              taskDue.overdue === 0 && taskDue.dueThisWeek === 0
+                ? "No open tasks with deadlines in range"
+                : [
+                    taskDue.overdue > 0 ? `${taskDue.overdue} overdue` : null,
+                    taskDue.dueThisWeek > 0 ? `${taskDue.dueThisWeek} due remainder of week` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")
+            }
+          />
         </div>
-        <div>
-          <p className="text-xs font-medium text-muted-foreground">Pending Proposals</p>
-          <p className="mt-1 text-lg font-semibold tabular-nums text-foreground">{pendingCount}</p>
-          <p className="mt-1 text-xs leading-snug text-muted-foreground">
-            {formatCurrencyAmount(pendingValueMinor, DEFAULT_CURRENCY)} total value
-          </p>
-        </div>
-        <div>
-          <p className="text-xs font-medium text-muted-foreground">Open Support Tickets</p>
-          <p className="mt-1 text-lg font-semibold tabular-nums text-foreground">{openTicketTotal}</p>
-          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            <span className="text-destructive/90">Critical {ticketBuckets.critical}</span>
-            <span className="text-muted-foreground"> · </span>
-            <span className="text-amber-200/90">High {ticketBuckets.high}</span>
-            <span className="text-muted-foreground"> · </span>
-            <span>Medium {ticketBuckets.medium}</span>
-          </p>
-        </div>
-        <div>
-          <p className="text-xs font-medium text-muted-foreground">Tasks Due This Week</p>
-          <p className="mt-1 text-lg font-semibold tabular-nums text-foreground">{taskHeadlineTotal}</p>
-          <p className="mt-1 text-xs leading-snug text-muted-foreground">
-            {taskDue.overdue === 0 && taskDue.dueThisWeek === 0
-              ? "No open tasks with deadlines in range"
-              : [
-                  taskDue.overdue > 0 ? `${taskDue.overdue} overdue` : null,
-                  taskDue.dueThisWeek > 0 ? `${taskDue.dueThisWeek} due remainder of week` : null,
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
-          </p>
-        </div>
-      </div>
 
-      <section className="rounded-xl border border-border bg-card/90 p-5 shadow-sm">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm font-medium text-foreground">Volume trend</p>
+        <div className="border-t border-border px-5 py-5 sm:px-6">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm font-medium text-foreground">Volume trend</p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 gap-2 border-border bg-background/60 text-[13px] font-normal text-muted-foreground"
+              type="button"
+            >
+              <CalendarRange className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+              {rangeLabel}
+            </Button>
+          </div>
+          <div className="relative -mx-0.5">
+            <svg
+              viewBox="0 0 600 132"
+              className="h-auto w-full max-h-[200px] text-primary"
+              role="img"
+              aria-label="Volume trend chart"
+            >
+              <title>Volume trend</title>
+              <defs>
+                <linearGradient id="adminChartFill" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stopColor="currentColor" stopOpacity={0.32} />
+                  <stop offset="100%" stopColor="currentColor" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              {[0, 100, 200, 300, 400, 500, 600].map((x) => (
+                <line
+                  key={x}
+                  x1={x}
+                  y1={0}
+                  x2={x}
+                  y2={120}
+                  className="stroke-border"
+                  strokeWidth={1}
+                  strokeDasharray="4 6"
+                />
+              ))}
+              <path d={area} fill="url(#adminChartFill)" className="text-transparent" />
+              <path
+                d={line}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.25}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <div className="mt-1 flex justify-between px-0.5 text-[11px] text-muted-foreground">
+              <span>Day 1</span>
+              <span>Day 4</span>
+              <span>Day 8</span>
+              <span>Day 12</span>
+              <span>Day 14</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-4 sm:px-6">
+          <h2 className="text-base font-semibold text-foreground">Reports overview</h2>
           <Button
             variant="outline"
             size="sm"
-            className="h-9 gap-2 border-border bg-background/80 text-[13px] font-normal text-muted-foreground"
+            className="h-9 gap-2 border-border bg-background/60 text-[13px] font-normal text-muted-foreground"
             type="button"
           >
             <CalendarRange className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
             {rangeLabel}
           </Button>
         </div>
-        <div className="relative -mx-1">
-          <svg
-            viewBox="0 0 600 132"
-            className="h-auto w-full text-primary"
-            role="img"
-            aria-label="Volume trend chart"
-          >
-            <title>Volume trend</title>
-            <defs>
-              <linearGradient id="adminChartFill" x1="0" x2="0" y1="0" y2="1">
-                <stop offset="0%" stopColor="currentColor" stopOpacity={0.32} />
-                <stop offset="100%" stopColor="currentColor" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            {[0, 100, 200, 300, 400, 500, 600].map((x) => (
-              <line
-                key={x}
-                x1={x}
-                y1={0}
-                x2={x}
-                y2={120}
-                className="stroke-border"
-                strokeWidth={1}
-                strokeDasharray="4 6"
-              />
-            ))}
-            <path d={area} fill="url(#adminChartFill)" className="text-transparent" />
-            <path
-              d={line}
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2.25}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-          <div className="mt-1 flex justify-between px-0.5 text-[11px] text-muted-foreground">
-            <span>Day 1</span>
-            <span>Day 4</span>
-            <span>Day 8</span>
-            <span>Day 12</span>
-            <span>Day 14</span>
-          </div>
-        </div>
-      </section>
+      </div>
+    </div>
+  );
+}
 
-      <section className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-6">
-        <h2 className="text-base font-semibold text-foreground">Reports overview</h2>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-9 gap-2 border-border bg-background/80 text-[13px] font-normal text-muted-foreground"
-          type="button"
-        >
-          <CalendarRange className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-          {rangeLabel}
-        </Button>
-      </section>
+function SecondaryMetric({
+  value,
+  valueClassName,
+  label,
+  detail,
+}: {
+  value: string;
+  valueClassName?: string;
+  label: string;
+  detail: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col px-5 py-4 sm:px-6">
+      <p
+        className={cn(
+          "text-xl font-semibold tabular-nums tracking-tight text-foreground sm:text-2xl",
+          valueClassName,
+        )}
+      >
+        {value}
+      </p>
+      <p className="mt-1 text-xs font-medium text-muted-foreground">{label}</p>
+      <p className="mt-1.5 text-[11px] leading-snug text-muted-foreground/90">{detail}</p>
     </div>
   );
 }
 
 function MetricCard({
+  variant = "default",
   title,
   titleDetail,
   value,
@@ -695,6 +733,7 @@ function MetricCard({
   positive,
   neutralDelta,
 }: {
+  variant?: "default" | "strip";
   title: string;
   titleDetail?: string;
   value: string;
@@ -706,7 +745,13 @@ function MetricCard({
 }) {
   const showDelta = typeof delta === "string" && delta.length > 0;
   return (
-    <div className="rounded-xl border border-border bg-card/90 p-5 shadow-sm">
+    <div
+      className={cn(
+        variant === "strip"
+          ? "bg-transparent px-5 py-5 sm:px-6"
+          : "rounded-xl border border-border bg-card/90 p-5 shadow-sm",
+      )}
+    >
       <div>
         <p className="text-sm font-medium text-muted-foreground">{title}</p>
         {titleDetail ? (
