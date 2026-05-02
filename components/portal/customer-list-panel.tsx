@@ -12,10 +12,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
-
-const addCustomerGreen =
-  "bg-[#1e4d3a] text-white shadow-sm hover:bg-[#173d2e] focus-visible:ring-[#1e4d3a] focus-visible:ring-offset-2 focus-visible:ring-offset-white";
 
 function initialsFromName(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -32,7 +28,7 @@ function CustomerAvatar({ row }: { row: CustomerListRow }) {
 
   if (url && canUseNextImage) {
     return (
-      <span className="relative inline-flex h-9 w-9 shrink-0 overflow-hidden rounded-full bg-zinc-200 ring-1 ring-zinc-200/80">
+      <span className="relative inline-flex h-9 w-9 shrink-0 overflow-hidden rounded-full bg-muted ring-1 ring-border">
         <Image src={url} alt="" width={36} height={36} className="h-9 w-9 object-cover" />
       </span>
     );
@@ -40,7 +36,7 @@ function CustomerAvatar({ row }: { row: CustomerListRow }) {
 
   return (
     <span
-      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-zinc-200 to-zinc-300 text-[11px] font-semibold text-zinc-700 ring-1 ring-zinc-200/80"
+      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-[11px] font-semibold text-muted-foreground ring-1 ring-border"
       aria-hidden
     >
       {initialsFromName(row.name)}
@@ -99,29 +95,42 @@ export function CustomerListPanel({ rows }: CustomerListPanelProps) {
   }
 
   return (
-    <div className="rounded-2xl bg-gradient-to-b from-[#eceef2] via-[#e6e9ef] to-[#dfe3ea] p-6 sm:p-8 text-zinc-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-3xl font-bold tracking-tight text-zinc-950">Customer</h1>
-        <Button type="button" size="lg" className={cn("h-11 rounded-xl px-5 text-[15px] font-semibold", addCustomerGreen)}>
-          <Plus className="h-5 w-5 stroke-[2]" aria-hidden />
+    <div className="space-y-8">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground md:text-[1.75rem] md:leading-tight">
+            Customers
+          </h1>
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            Users with <span className="font-mono text-foreground/90">role: &quot;customer&quot;</span> and optional
+            profile fields.
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="gap-1.5 text-[14px] font-medium text-muted-foreground hover:text-foreground"
+        >
+          <Plus className="h-4 w-4 shrink-0" aria-hidden />
           Add New Customer
         </Button>
       </div>
 
-      <div className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-[0_12px_40px_-12px_rgba(15,23,42,0.12)] sm:p-6">
-        <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <h2 className="shrink-0 text-base font-bold text-zinc-900">Customer List</h2>
-          <div className="flex min-w-0 flex-1 flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end">
-            <div className="relative min-w-0 flex-1 sm:max-w-md lg:max-w-lg">
+      <section className="overflow-hidden rounded-xl border border-border/80 bg-card/95 shadow-sm">
+        <div className="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <h2 className="shrink-0 text-sm font-semibold text-foreground">Customer List</h2>
+          <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-2">
+            <div className="relative min-w-0 flex-1 sm:max-w-xs md:max-w-md">
               <Search
-                className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-zinc-400"
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
                 aria-hidden
               />
               <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search here..."
-                className="h-11 rounded-full border-zinc-200 bg-white pl-11 pr-4 text-[15px] text-zinc-900 shadow-sm placeholder:text-zinc-400 focus-visible:border-zinc-300 focus-visible:ring-zinc-400/30"
+                className="h-9 rounded-full border-border/80 bg-background/60 pl-9 text-[14px] text-foreground placeholder:text-muted-foreground"
                 aria-label="Search customers"
               />
             </div>
@@ -129,105 +138,104 @@ export function CustomerListPanel({ rows }: CustomerListPanelProps) {
               <Button
                 type="button"
                 variant="outline"
-                className="h-11 rounded-xl border-zinc-200 bg-white px-4 text-[15px] font-medium text-zinc-700 shadow-sm hover:bg-zinc-50"
+                size="sm"
+                className="border-border/80 bg-card/80 text-[14px] font-medium text-foreground hover:bg-muted/60"
               >
-                <Filter className="h-[18px] w-[18px] text-zinc-500" aria-hidden />
+                <Filter className="h-4 w-4 text-muted-foreground" aria-hidden />
                 Filter
               </Button>
               <Button
                 type="button"
                 variant="outline"
                 size="icon"
-                className="h-11 w-11 shrink-0 rounded-xl border-zinc-200 bg-white text-zinc-600 shadow-sm hover:bg-zinc-50"
+                className="h-9 w-9 shrink-0 border-border/80 bg-card/80 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                 aria-label="Export"
               >
-                <SquareArrowOutUpRight className="h-[18px] w-[18px]" aria-hidden />
+                <SquareArrowOutUpRight className="h-4 w-4" aria-hidden />
               </Button>
             </div>
           </div>
         </div>
 
-        <div className="overflow-x-auto rounded-xl border border-zinc-100">
-          <table className="w-full min-w-[720px] border-collapse text-left text-[15px]">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[720px] text-left text-[13px]">
             <thead>
-              <tr className="border-b border-zinc-200 bg-zinc-50/80">
-                <th className="w-12 px-4 py-3.5">
+              <tr className="border-b border-border text-muted-foreground">
+                <th className="w-12 px-4 py-2.5">
                   <input
                     ref={selectAllRef}
                     type="checkbox"
                     checked={allFilteredSelected}
                     onChange={toggleAllFiltered}
-                    className="h-4 w-4 cursor-pointer rounded border-zinc-300 text-[#1e4d3a] focus:ring-[#1e4d3a]"
+                    className="h-4 w-4 cursor-pointer rounded border-border text-primary focus:ring-primary"
                     aria-label="Select all visible customers"
                   />
                 </th>
-                <th className="px-4 py-3.5 text-sm font-medium text-zinc-500">Name</th>
-                <th className="px-4 py-3.5 text-sm font-medium text-zinc-500">E-mail</th>
-                <th className="px-4 py-3.5 text-sm font-medium text-zinc-500">Phone</th>
-                <th className="px-4 py-3.5 text-sm font-medium text-zinc-500">Location</th>
-                <th className="px-4 py-3.5 text-sm font-medium text-zinc-500">Gender</th>
-                <th className="w-14 px-2 py-3.5 text-center text-sm font-medium text-zinc-500">Action</th>
+                <th className="px-4 py-2.5 font-medium">Name</th>
+                <th className="px-4 py-2.5 font-medium">E-mail</th>
+                <th className="px-4 py-2.5 font-medium">Phone</th>
+                <th className="px-4 py-2.5 font-medium">Location</th>
+                <th className="px-4 py-2.5 font-medium">Gender</th>
+                <th className="w-14 px-2 py-2.5 text-center font-medium">Action</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="text-foreground">
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center text-sm text-zinc-500">
-                    No customers yet. Add Firestore documents at{" "}
-                    <span className="font-mono text-zinc-600">{"customers/<customerUid>"}</span> with fields such as name,
-                    email, phone, location, and gender.
+                  <td colSpan={7} className="px-4 py-6 text-center text-sm text-muted-foreground">
+                    No customers yet. Add <span className="font-mono text-foreground/90">users</span> documents with{" "}
+                    <span className="font-mono text-foreground/90">role: &quot;customer&quot;</span> (document id =
+                    Auth UID). Optional: phone, location or city/country, gender; name uses displayName or name.
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center text-sm text-zinc-500">
+                  <td colSpan={7} className="px-4 py-6 text-center text-sm text-muted-foreground">
                     No customers match your search.
                   </td>
                 </tr>
               ) : (
                 filtered.map((row) => (
-                  <tr key={row.id} className="border-b border-zinc-100 last:border-b-0">
-                    <td className="px-4 py-4 align-middle">
+                  <tr key={row.id} className="border-b border-border/60 last:border-0">
+                    <td className="px-4 py-3 align-middle">
                       <input
                         type="checkbox"
                         checked={selected.has(row.id)}
                         onChange={() => toggleOne(row.id)}
-                        className="h-4 w-4 cursor-pointer rounded border-zinc-300 text-[#1e4d3a] focus:ring-[#1e4d3a]"
+                        className="h-4 w-4 cursor-pointer rounded border-border text-primary focus:ring-primary"
                         aria-label={`Select ${row.name}`}
                       />
                     </td>
-                    <td className="px-4 py-4 align-middle">
+                    <td className="px-4 py-3 align-middle">
                       <div className="flex items-center gap-3">
                         <CustomerAvatar row={row} />
-                        <span className="font-medium text-zinc-900">{row.name}</span>
+                        <span className="font-medium text-foreground">{row.name}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-4 align-middle text-zinc-600">{row.email}</td>
-                    <td className="px-4 py-4 align-middle text-zinc-600">{row.phone}</td>
-                    <td className="px-4 py-4 align-middle text-zinc-600">{row.location}</td>
-                    <td className="px-4 py-4 align-middle text-zinc-600">{row.gender}</td>
-                    <td className="px-2 py-4 text-center align-middle">
+                    <td className="px-4 py-3 align-middle text-muted-foreground">{row.email}</td>
+                    <td className="px-4 py-3 align-middle text-muted-foreground">{row.phone}</td>
+                    <td className="px-4 py-3 align-middle text-muted-foreground">{row.location}</td>
+                    <td className="px-4 py-3 align-middle text-muted-foreground">{row.gender}</td>
+                    <td className="px-2 py-3 text-center align-middle">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="h-9 w-9 rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800"
+                            className="h-8 w-8 text-muted-foreground hover:bg-muted hover:text-foreground"
                             aria-label={`Actions for ${row.name}`}
                           >
-                            <MoreHorizontal className="h-5 w-5" aria-hidden />
+                            <MoreHorizontal className="h-4 w-4" aria-hidden />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent
                           align="end"
-                          className="min-w-[10rem] border-zinc-200 bg-white text-zinc-900 shadow-lg"
+                          className="min-w-[10rem] border-border/80 bg-popover text-popover-foreground shadow-lg"
                         >
-                          <DropdownMenuItem className="focus:bg-zinc-100">View profile</DropdownMenuItem>
-                          <DropdownMenuItem className="focus:bg-zinc-100">Edit</DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive focus:bg-red-50 focus:text-destructive">
-                            Remove
-                          </DropdownMenuItem>
+                          <DropdownMenuItem>View profile</DropdownMenuItem>
+                          <DropdownMenuItem>Edit</DropdownMenuItem>
+                          <DropdownMenuItem className="text-destructive focus:text-destructive">Remove</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </td>
@@ -237,7 +245,7 @@ export function CustomerListPanel({ rows }: CustomerListPanelProps) {
             </tbody>
           </table>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

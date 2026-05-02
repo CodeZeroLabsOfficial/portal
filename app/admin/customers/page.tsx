@@ -14,13 +14,13 @@ export default async function AdminCustomersPage() {
 
   return (
     <WorkspaceShell
-      title="Customer"
+      title="Customers"
       description="Directory and contact details."
       roleLabel={user.role}
       displayName={user.displayName ?? ""}
       userLabel={user.email || user.uid}
       showMainHeader={false}
-      contentClassName="max-w-6xl"
+      contentClassName="max-w-[1200px]"
     >
       <CustomerListPanel rows={rows} />
     </WorkspaceShell>

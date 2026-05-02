@@ -176,12 +176,23 @@ function canReadByOrganization(user: PortalUser): boolean {
   return user.role === "admin" || user.role === "team";
 }
 
+type AdminFirestore = NonNullable<ReturnType<typeof getFirebaseAdminFirestore>>;
+
+/** `users/{uid}` with `role: "customer"` — same documents used for customer portal login. */
+async function queryUsersInCustomerRole(user: PortalUser, db: AdminFirestore, limit: number) {
+  let q = db.collection(COLLECTIONS.users).where("role", "==", "customer").limit(limit);
+  if (user.organizationId) {
+    q = q.where("organizationId", "==", user.organizationId);
+  }
+  return q.get();
+}
+
 /**
- * `customers/{customerUid}` — document id is the customer UID.
- * Supported fields: `name` | `displayName` | `fullName`, `email`, `phone`, `location` or `city`+`country`,
- * `gender`, `photoURL` | `avatarUrl`, optional `organizationId` for tenant scoping on queries.
+ * Maps a `users/{uid}` document to CRM list columns. Document id = Auth / portal UID.
+ * Fields: `name` | `displayName` | `fullName`, `email`, `phone`, `location` or `city`+`country`,
+ * `gender`, `photoURL` | `avatarUrl`.
  */
-function parseAdminCustomerDocument(docId: string, data: Record<string, unknown>): CustomerListRow {
+function parseUserDocumentToCustomerListRow(docId: string, data: Record<string, unknown>): CustomerListRow {
   const name =
     asString(data.name) ?? asString(data.displayName) ?? asString(data.fullName) ?? "";
   const email = asString(data.email) ?? "";
@@ -216,11 +227,10 @@ export async function getAdminCustomerListRows(user: PortalUser): Promise<Custom
     return [];
   }
   try {
-    const col = db.collection(COLLECTIONS.customers);
-    const snap = user.organizationId
-      ? await col.where("organizationId", "==", user.organizationId).limit(500).get()
-      : await col.limit(500).get();
-    return snap.docs.map((doc) => parseAdminCustomerDocument(doc.id, doc.data() as Record<string, unknown>));
+    const usersSnap = await queryUsersInCustomerRole(user, db, 500);
+    return usersSnap.docs.map((doc) =>
+      parseUserDocumentToCustomerListRow(doc.id, doc.data() as Record<string, unknown>),
+    );
   } catch {
     return [];
   }
@@ -429,11 +439,7 @@ export async function getAdminPortalData(user: PortalUser): Promise<AdminPortalD
     };
   }
 
-  let userQuery = db.collection(COLLECTIONS.users).where("role", "==", "customer").limit(200);
-  if (user.organizationId) {
-    userQuery = userQuery.where("organizationId", "==", user.organizationId);
-  }
-  const usersSnap = await userQuery.get();
+  const usersSnap = await queryUsersInCustomerRole(user, db, 200);
   const customers = usersSnap.docs.map((doc) => parsePortalUser(doc.id, doc.data() as Record<string, unknown>));
 
   const [subscriptions, proposals, invoices, tasks, supportTickets] = await Promise.all([

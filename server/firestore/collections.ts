@@ -9,8 +9,6 @@
  */
 export const COLLECTIONS = {
   users: "users",
-  /** CRM customer profile: document id = customer UID; fields (e.g. name, email, phone) on the document. */
-  customers: "customers",
   subscriptions: "subscriptions",
   invoices: "invoices",
   proposals: "proposals",
