@@ -14,7 +14,6 @@ import {
   Sparkles,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -74,7 +73,7 @@ export function WorkspaceShellLayout({
         <aside
           aria-label="Workspace"
           className={cn(
-            "sticky top-0 flex h-dvh shrink-0 flex-col border-r border-white/[0.06] bg-[#121212] transition-[width] duration-200 ease-out",
+            "sticky top-0 flex h-dvh shrink-0 flex-col border-r border-white/[0.06] bg-[#0D0D16] transition-[width] duration-200 ease-out",
             collapsed ? "w-[72px]" : "w-[260px]",
           )}
         >
@@ -107,35 +106,6 @@ export function WorkspaceShellLayout({
             </Button>
           </div>
 
-          <div
-            className={cn(
-              "flex items-center gap-2 border-b border-white/[0.06] py-3",
-              collapsed ? "flex-col justify-center px-2" : "px-4",
-            )}
-          >
-            <div
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#1A73E8] text-sm font-semibold text-white"
-              aria-hidden
-            >
-              {initial}
-            </div>
-            {!collapsed ? (
-              <>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-white">{userLabel}</p>
-                  <p className="truncate text-xs text-zinc-500">{roleLabel}</p>
-                </div>
-                <button
-                  type="button"
-                  className="rounded-md p-1.5 text-zinc-400 transition-colors hover:bg-white/[0.06] hover:text-white"
-                  aria-label="Notifications"
-                >
-                  <Bell className="h-4 w-4" aria-hidden />
-                </button>
-              </>
-            ) : null}
-          </div>
-
           <div className="min-h-0 flex-1 overflow-y-auto px-2 py-4">
             <WorkspaceNav collapsed={collapsed} />
           </div>
@@ -158,8 +128,8 @@ export function WorkspaceShellLayout({
           </div>
         </aside>
 
-        <div className="flex min-w-0 flex-1 flex-col bg-[#0d0d0d]">
-          <header className="sticky top-0 z-20 border-b border-white/[0.06] bg-[#121212]/95 backdrop-blur-md">
+        <div className="flex min-w-0 flex-1 flex-col bg-[#0D0D16]">
+          <header className="sticky top-0 z-20 border-b border-white/[0.06] bg-[#0D0D16]/95 backdrop-blur-md">
             <div className="flex h-16 w-full items-center gap-3 px-4 sm:px-6">
               <div className="relative hidden min-w-0 flex-1 lg:block">
                 <Search
@@ -169,7 +139,7 @@ export function WorkspaceShellLayout({
                 <Input
                   type="search"
                   placeholder="Search for list, template, etc."
-                  className="h-10 border-white/[0.08] bg-[#1e1e1e] pl-10 text-sm text-zinc-200 placeholder:text-zinc-500 focus-visible:ring-[#1A73E8]"
+                  className="h-10 border-white/[0.08] bg-[#1e1e1e] pl-10 text-sm text-zinc-200 placeholder:text-zinc-500 focus-visible:ring-[#673AB7]"
                   aria-label="Search"
                 />
               </div>
@@ -182,27 +152,39 @@ export function WorkspaceShellLayout({
                   <p className="truncate text-xs text-zinc-500">{description}</p>
                 </div>
               </div>
-              <div className="flex shrink-0 items-center gap-2">
-                <Badge
-                  variant="outline"
-                  className="hidden border-white/[0.12] bg-transparent text-zinc-400 sm:inline-flex"
-                >
-                  {roleLabel}
-                </Badge>
+              <div className="flex shrink-0 items-center gap-2 sm:gap-3">
                 <Button
                   asChild
-                  className="bg-[#1A73E8] px-4 text-white shadow-none hover:bg-[#1557b0]"
+                  className="bg-[#673AB7] px-4 text-white shadow-none hover:bg-[#5E35B1]"
                 >
                   <Link href="/admin">Create</Link>
                 </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="hidden border-white/[0.12] bg-transparent text-white hover:bg-white/[0.06] sm:inline-flex"
-                >
-                  Customer Call
-                </Button>
                 <ThemeToggle />
+                <div
+                  className="ml-0.5 flex items-center gap-2 border-l border-white/[0.08] pl-2 sm:ml-1 sm:gap-2.5 sm:pl-3"
+                  aria-label={`Signed in as ${userLabel}, role ${roleLabel}`}
+                >
+                  <div
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#673AB7] text-sm font-semibold text-white"
+                    title={userLabel}
+                    aria-hidden
+                  >
+                    {initial}
+                  </div>
+                  <div className="hidden min-w-0 text-left sm:block">
+                    <p className="max-w-[140px] truncate text-sm font-medium text-white md:max-w-[220px]">
+                      {userLabel}
+                    </p>
+                    <p className="max-w-[140px] truncate text-xs text-zinc-500 md:max-w-[220px]">{roleLabel}</p>
+                  </div>
+                  <button
+                    type="button"
+                    className="rounded-md p-1.5 text-zinc-400 transition-colors hover:bg-white/[0.06] hover:text-white"
+                    aria-label="Notifications"
+                  >
+                    <Bell className="h-4 w-4" aria-hidden />
+                  </button>
+                </div>
                 {actions}
               </div>
             </div>
@@ -219,10 +201,10 @@ export function WorkspaceShellLayout({
               </div>
             </main>
 
-            <aside className="hidden w-[300px] shrink-0 border-l border-white/[0.06] bg-[#121212] px-4 py-8 xl:block">
+            <aside className="hidden w-[300px] shrink-0 border-l border-white/[0.06] bg-[#0D0D16] px-4 py-8 xl:block">
               <div className="space-y-6">
                 <div className="overflow-hidden rounded-xl border border-white/[0.06] bg-[#1a1a1a]">
-                  <div className="h-28 bg-gradient-to-br from-[#1a73e8]/30 via-[#1e1e1e] to-[#0d47a1]/40" />
+                  <div className="h-28 bg-gradient-to-br from-[#673AB7]/35 via-[#1e1e1e] to-[#311B92]/45" />
                   <div className="space-y-2 p-4">
                     <p className="text-sm font-semibold text-white">Check new feature available</p>
                     <p className="text-xs leading-relaxed text-zinc-500">
@@ -232,7 +214,7 @@ export function WorkspaceShellLayout({
                       href="https://codezerolabs.com.au"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-sm font-medium text-[#1A73E8] hover:underline"
+                      className="inline-flex items-center gap-1.5 text-sm font-medium text-[#673AB7] hover:underline"
                     >
                       Open link
                       <ExternalLink className="h-3.5 w-3.5" aria-hidden />
@@ -243,7 +225,7 @@ export function WorkspaceShellLayout({
                   <p className="text-sm font-semibold text-white">Recommended</p>
                   <ul className="mt-4 space-y-4">
                     <li className="flex gap-3">
-                      <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.06] text-[#4db6ac]">
+                      <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.06] text-[#673AB7]">
                         <Sparkles className="h-4 w-4" aria-hidden />
                       </span>
                       <div>
@@ -253,14 +235,14 @@ export function WorkspaceShellLayout({
                         </p>
                         <Link
                           href="/dashboard"
-                          className="mt-2 inline-block text-xs font-medium text-[#1A73E8] hover:underline"
+                          className="mt-2 inline-block text-xs font-medium text-[#673AB7] hover:underline"
                         >
                           Learn more
                         </Link>
                       </div>
                     </li>
                     <li className="flex gap-3">
-                      <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.06] text-[#4db6ac]">
+                      <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.06] text-[#673AB7]">
                         <Building2 className="h-4 w-4" aria-hidden />
                       </span>
                       <div>
@@ -270,7 +252,7 @@ export function WorkspaceShellLayout({
                         </p>
                         <Link
                           href="/admin"
-                          className="mt-2 inline-block text-xs font-medium text-[#1A73E8] hover:underline"
+                          className="mt-2 inline-block text-xs font-medium text-[#673AB7] hover:underline"
                         >
                           Learn more
                         </Link>

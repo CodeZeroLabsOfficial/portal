@@ -120,7 +120,7 @@ export function WorkspaceNav({ collapsed = false }: WorkspaceNavProps) {
 function iconClassName(isActive: boolean) {
   return cn(
     "h-[22px] w-[22px] shrink-0 stroke-[1.75]",
-    isActive ? "text-[#4db6ac]" : "text-current",
+    isActive ? "text-[#673AB7]" : "text-current",
   );
 }
 
