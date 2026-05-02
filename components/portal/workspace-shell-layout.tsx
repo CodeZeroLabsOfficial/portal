@@ -2,9 +2,11 @@
 
 import type { ReactNode } from "react";
 import * as React from "react";
+import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
+  Bell,
   Building2,
   ChevronDown,
   ChevronsLeft,
@@ -12,7 +14,6 @@ import {
   ExternalLink,
   LogOut,
   Search,
-  Settings,
   Sparkles,
 } from "lucide-react";
 import { signOutFromPortal } from "@/components/auth/logout-button";
@@ -27,7 +28,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { WorkspaceNav } from "@/components/portal/workspace-nav";
 import { cn } from "@/lib/utils";
 
@@ -39,7 +40,74 @@ interface WorkspaceShellLayoutProps {
   roleLabel: string;
   userLabel: string;
   displayName?: string;
+  rightAside?: ReactNode;
+  showMainHeader?: boolean;
+  contentClassName?: string;
   children: ReactNode;
+}
+
+function DefaultWorkspaceRightAside() {
+  return (
+    <>
+      <div className="overflow-hidden rounded-xl border border-white/[0.06] bg-[#1a1a1a]">
+        <div className="h-28 bg-gradient-to-br from-primary/35 via-[#1e1e1e] to-primary/25" />
+        <div className="space-y-2 p-4">
+          <p className="text-sm font-semibold text-white">Check new feature available</p>
+          <p className="text-xs leading-relaxed text-zinc-500">
+            Explore billing insights and faster invoice exports from the workspace.
+          </p>
+          <a
+            href="https://codezerolabs.com.au"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+          >
+            Open link
+            <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+          </a>
+        </div>
+      </div>
+      <div>
+        <p className="text-sm font-semibold text-white">Recommended</p>
+        <ul className="mt-4 space-y-4">
+          <li className="flex gap-3">
+            <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.06] text-primary">
+              <Sparkles className="h-4 w-4" aria-hidden />
+            </span>
+            <div>
+              <p className="text-sm font-medium text-white">Explore new templates</p>
+              <p className="mt-1 text-xs text-zinc-500">
+                Browse proposal templates aligned with your pricing tiers.
+              </p>
+              <Link
+                href="/dashboard"
+                className="mt-2 inline-block text-xs font-medium text-primary hover:underline"
+              >
+                Learn more
+              </Link>
+            </div>
+          </li>
+          <li className="flex gap-3">
+            <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.06] text-primary">
+              <Building2 className="h-4 w-4" aria-hidden />
+            </span>
+            <div>
+              <p className="text-sm font-medium text-white">Integrate with another app</p>
+              <p className="mt-1 text-xs text-zinc-500">
+                Connect Stripe and your CRM for a single source of truth.
+              </p>
+              <Link
+                href="/admin"
+                className="mt-2 inline-block text-xs font-medium text-primary hover:underline"
+              >
+                Learn more
+              </Link>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </>
+  );
 }
 
 export function WorkspaceShellLayout({
@@ -48,9 +116,14 @@ export function WorkspaceShellLayout({
   roleLabel,
   userLabel,
   displayName = "",
+  rightAside,
+  showMainHeader = true,
+  contentClassName,
   children,
 }: WorkspaceShellLayoutProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const isAdminRoute = pathname.startsWith("/admin");
   const [collapsed, setCollapsed] = React.useState(false);
 
   async function handleSignOut() {
@@ -95,6 +168,8 @@ export function WorkspaceShellLayout({
     return nameHeadline;
   }, [displayName, userLabel, nameHeadline]);
 
+  const portalHomeHref = roleLabel === "admin" || roleLabel === "team" ? "/admin" : "/dashboard";
+
   return (
     <TooltipProvider delayDuration={0}>
       <div className="portal-ui flex min-h-dvh w-full text-[15px] antialiased">
@@ -107,13 +182,50 @@ export function WorkspaceShellLayout({
         >
           <div
             className={cn(
-              "flex h-14 shrink-0 items-center border-b border-white/[0.06]",
-              collapsed ? "justify-center px-2" : "justify-between px-4",
+              "flex shrink-0 items-center border-b border-white/[0.06]",
+              collapsed
+                ? "flex-col justify-center gap-2 px-2 py-3"
+                : "h-14 justify-between px-4",
             )}
           >
             {!collapsed ? (
-              <span className="text-sm font-semibold tracking-tight text-white">Home</span>
-            ) : null}
+              <Link
+                href={portalHomeHref}
+                className="min-w-0 flex-1 pr-2 outline-none ring-offset-2 ring-offset-[#0D0D16] focus-visible:ring-2 focus-visible:ring-primary"
+                aria-label="Code Zero Labs home"
+              >
+                <Image
+                  src="/brand/logo-expanded.png"
+                  alt="Code Zero Labs"
+                  width={200}
+                  height={48}
+                  className="h-8 w-auto max-w-full object-contain object-left"
+                  priority
+                />
+              </Link>
+            ) : (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link
+                    href={portalHomeHref}
+                    className="flex shrink-0 items-center justify-center rounded-lg outline-none ring-offset-2 ring-offset-[#0D0D16] focus-visible:ring-2 focus-visible:ring-primary"
+                    aria-label="Code Zero Labs home"
+                  >
+                    <Image
+                      src="/brand/logo-collapsed.png"
+                      alt=""
+                      width={36}
+                      height={36}
+                      className="h-9 w-9 object-contain"
+                      priority
+                    />
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="border-white/[0.08] bg-[#1e1e1e] text-white">
+                  Home
+                </TooltipContent>
+              </Tooltip>
+            )}
             <Button
               type="button"
               variant="ghost"
@@ -134,25 +246,8 @@ export function WorkspaceShellLayout({
             </Button>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-2 py-4">
+          <div className="flex min-h-0 flex-1 flex-col px-2 py-4">
             <WorkspaceNav collapsed={collapsed} userRole={roleLabel} />
-          </div>
-
-          <div
-            className={cn(
-              "border-t border-white/[0.06] p-2",
-              collapsed ? "flex justify-center" : "flex justify-start",
-            )}
-          >
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="text-zinc-400 hover:bg-white/[0.06] hover:text-white"
-              aria-label="Settings"
-            >
-              <Settings className="h-4 w-4" aria-hidden />
-            </Button>
           </div>
         </aside>
 
@@ -166,8 +261,8 @@ export function WorkspaceShellLayout({
                 />
                 <Input
                   type="search"
-                  placeholder="Search for list, template, etc."
-                  className="h-10 border-white/[0.08] bg-[#1e1e1e] pl-10 text-sm text-zinc-200 placeholder:text-zinc-500 focus-visible:ring-[#673AB7]"
+                  placeholder={isAdminRoute ? "Search..." : "Search for list, template, etc."}
+                  className="h-10 border-white/[0.08] bg-[#1e1e1e] pl-10 text-sm text-zinc-200 placeholder:text-zinc-500 focus-visible:ring-primary"
                   aria-label="Search"
                 />
               </div>
@@ -181,12 +276,22 @@ export function WorkspaceShellLayout({
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-                <Button
-                  asChild
-                  className="bg-[#673AB7] px-4 text-white shadow-none hover:bg-[#5E35B1]"
-                >
+                {isAdminRoute ? (
+                  <Button
+                    variant="ghost"
+                    className="hidden gap-2 text-sm text-zinc-300 hover:bg-white/[0.06] hover:text-white sm:inline-flex"
+                    asChild
+                  >
+                    <Link href="#">
+                      <Bell className="h-4 w-4 shrink-0" aria-hidden />
+                      Notifications
+                    </Link>
+                  </Button>
+                ) : (
+                  <Button asChild className="bg-primary px-4 text-primary-foreground shadow-none hover:bg-primary/90">
                     <Link href="/admin">Create</Link>
-                </Button>
+                  </Button>
+                )}
                 <div className="ml-0.5 border-l border-white/[0.08] pl-2 sm:ml-1 sm:pl-3">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -197,7 +302,7 @@ export function WorkspaceShellLayout({
                         className="flex max-w-full items-center gap-2 rounded-lg border border-transparent px-1.5 py-1 text-left transition-colors hover:border-white/[0.08] hover:bg-white/[0.06] sm:gap-2.5 sm:px-2"
                       >
                         <div
-                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#673AB7] text-sm font-semibold text-white"
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary text-sm font-semibold text-primary-foreground"
                           aria-hidden
                         >
                           {initial}
@@ -242,75 +347,19 @@ export function WorkspaceShellLayout({
 
           <div className="flex min-h-0 flex-1">
             <main className="min-w-0 flex-1 overflow-auto px-4 py-8 sm:px-6 lg:px-8">
-              <div className="mx-auto max-w-6xl space-y-6">
-                <div className="mb-2 hidden lg:block">
-                  <h1 className="text-2xl font-semibold tracking-tight text-white">{title}</h1>
-                  <p className="mt-1 text-sm text-zinc-500">{description}</p>
-                </div>
+              <div className={cn("mx-auto space-y-6", contentClassName ?? "max-w-6xl")}>
+                {showMainHeader ? (
+                  <div className="mb-2 hidden lg:block">
+                    <h1 className="text-2xl font-semibold tracking-tight text-white">{title}</h1>
+                    <p className="mt-1 text-sm text-zinc-500">{description}</p>
+                  </div>
+                ) : null}
                 {children}
               </div>
             </main>
 
             <aside className="hidden w-[300px] shrink-0 border-l border-white/[0.06] bg-[#0D0D16] px-4 py-8 xl:block">
-              <div className="space-y-6">
-                <div className="overflow-hidden rounded-xl border border-white/[0.06] bg-[#1a1a1a]">
-                  <div className="h-28 bg-gradient-to-br from-[#673AB7]/35 via-[#1e1e1e] to-[#311B92]/45" />
-                  <div className="space-y-2 p-4">
-                    <p className="text-sm font-semibold text-white">Check new feature available</p>
-                    <p className="text-xs leading-relaxed text-zinc-500">
-                      Explore billing insights and faster invoice exports from the workspace.
-                    </p>
-                    <a
-                      href="https://codezerolabs.com.au"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-sm font-medium text-[#673AB7] hover:underline"
-                    >
-                      Open link
-                      <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-                    </a>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-white">Recommended</p>
-                  <ul className="mt-4 space-y-4">
-                    <li className="flex gap-3">
-                      <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.06] text-[#673AB7]">
-                        <Sparkles className="h-4 w-4" aria-hidden />
-                      </span>
-                      <div>
-                        <p className="text-sm font-medium text-white">Explore new templates</p>
-                        <p className="mt-1 text-xs text-zinc-500">
-                          Browse proposal templates aligned with your pricing tiers.
-                        </p>
-                        <Link
-                          href="/dashboard"
-                          className="mt-2 inline-block text-xs font-medium text-[#673AB7] hover:underline"
-                        >
-                          Learn more
-                        </Link>
-                      </div>
-                    </li>
-                    <li className="flex gap-3">
-                      <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.06] text-[#673AB7]">
-                        <Building2 className="h-4 w-4" aria-hidden />
-                      </span>
-                      <div>
-                        <p className="text-sm font-medium text-white">Integrate with another app</p>
-                        <p className="mt-1 text-xs text-zinc-500">
-                          Connect Stripe and your CRM for a single source of truth.
-                        </p>
-                        <Link
-                          href="/admin"
-                          className="mt-2 inline-block text-xs font-medium text-[#673AB7] hover:underline"
-                        >
-                          Learn more
-                        </Link>
-                      </div>
-                    </li>
-                  </ul>
-                </div>
-              </div>
+              <div className="space-y-6">{rightAside ?? <DefaultWorkspaceRightAside />}</div>
             </aside>
           </div>
         </div>

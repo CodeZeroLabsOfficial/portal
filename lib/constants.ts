@@ -6,6 +6,9 @@ export const DEFAULT_LOCALE = "en-AU" as const;
 
 export const APP_NAME = "Code Zero Labs Portal";
 
+/** Shown next to the workspace logo (aligned with package release cadence). */
+export const PORTAL_DISPLAY_VERSION = "v0.1";
+
 /** Cookie name used to persist theme preference (next-themes). */
 export const THEME_COOKIE_NAME = "portal-theme";
 

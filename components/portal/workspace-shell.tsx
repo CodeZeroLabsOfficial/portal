@@ -9,6 +9,12 @@ interface WorkspaceShellProps {
   userLabel: string;
   /** Shown in the top bar above `roleLabel`; falls back to `userLabel` when blank. */
   displayName?: string;
+  /** Replaces the default right column (xl+) when set. */
+  rightAside?: ReactNode;
+  /** When false, the large title + description block above page content is omitted. */
+  showMainHeader?: boolean;
+  /** Applied to the inner content wrapper (default `max-w-6xl`). */
+  contentClassName?: string;
   children: ReactNode;
 }
 
@@ -18,6 +24,9 @@ export function WorkspaceShell({
   roleLabel,
   userLabel,
   displayName,
+  rightAside,
+  showMainHeader = true,
+  contentClassName,
   children,
 }: WorkspaceShellProps) {
   return (
@@ -27,6 +36,9 @@ export function WorkspaceShell({
       roleLabel={roleLabel}
       userLabel={userLabel}
       displayName={displayName}
+      rightAside={rightAside}
+      showMainHeader={showMainHeader}
+      contentClassName={contentClassName}
     >
       {children}
     </WorkspaceShellLayout>
