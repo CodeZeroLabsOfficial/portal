@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { ListTodo } from "lucide-react";
-import { LogoutButton } from "@/components/auth/logout-button";
 import { getCurrentSessionUser } from "@/lib/auth/server-session";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { WorkspaceShell } from "@/components/portal/workspace-shell";
@@ -16,8 +15,8 @@ export default async function AdminTasksPage() {
       title="Tasks"
       description="Follow-ups, approvals, and operational checklists."
       roleLabel={user.role}
+      displayName={user.displayName ?? ""}
       userLabel={user.email || user.uid}
-      actions={<LogoutButton />}
     >
       <div className="space-y-6">
         <section className="rounded-xl border border-border/70 bg-card/80 p-5">

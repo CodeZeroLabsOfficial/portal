@@ -3,18 +3,29 @@
 import type { ReactNode } from "react";
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
-  Bell,
   Building2,
+  ChevronDown,
   ChevronsLeft,
   ChevronsRight,
   ExternalLink,
+  LogOut,
   Search,
   Settings,
   Sparkles,
 } from "lucide-react";
+import { signOutFromPortal } from "@/components/auth/logout-button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { WorkspaceNav } from "@/components/portal/workspace-nav";
@@ -27,7 +38,7 @@ interface WorkspaceShellLayoutProps {
   description: string;
   roleLabel: string;
   userLabel: string;
-  actions?: ReactNode;
+  displayName?: string;
   children: ReactNode;
 }
 
@@ -36,10 +47,17 @@ export function WorkspaceShellLayout({
   description,
   roleLabel,
   userLabel,
-  actions,
+  displayName = "",
   children,
 }: WorkspaceShellLayoutProps) {
+  const router = useRouter();
   const [collapsed, setCollapsed] = React.useState(false);
+
+  async function handleSignOut() {
+    await signOutFromPortal();
+    router.replace("/login");
+    router.refresh();
+  }
 
   React.useEffect(() => {
     try {
@@ -62,10 +80,20 @@ export function WorkspaceShellLayout({
     });
   }
 
+  const nameHeadline = displayName.trim() ? displayName.trim() : userLabel.trim();
+
   const initial = React.useMemo(() => {
-    const ch = userLabel.trim().charAt(0);
+    const source = displayName.trim() || userLabel.trim();
+    const ch = source.charAt(0);
     return ch ? ch.toUpperCase() : "?";
-  }, [userLabel]);
+  }, [displayName, userLabel]);
+
+  const avatarTitle = React.useMemo(() => {
+    if (displayName.trim() && userLabel.trim() && userLabel.trim() !== nameHeadline) {
+      return `${nameHeadline} · ${userLabel.trim()}`;
+    }
+    return nameHeadline;
+  }, [displayName, userLabel, nameHeadline]);
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -160,32 +188,53 @@ export function WorkspaceShellLayout({
                   <Link href="/admin">Create</Link>
                 </Button>
                 <ThemeToggle />
-                <div
-                  className="ml-0.5 flex items-center gap-2 border-l border-white/[0.08] pl-2 sm:ml-1 sm:gap-2.5 sm:pl-3"
-                  aria-label={`Signed in as ${userLabel}, role ${roleLabel}`}
-                >
-                  <div
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#673AB7] text-sm font-semibold text-white"
-                    title={userLabel}
-                    aria-hidden
-                  >
-                    {initial}
-                  </div>
-                  <div className="hidden min-w-0 text-left sm:block">
-                    <p className="max-w-[140px] truncate text-sm font-medium text-white md:max-w-[220px]">
-                      {userLabel}
-                    </p>
-                    <p className="max-w-[140px] truncate text-xs text-zinc-500 md:max-w-[220px]">{roleLabel}</p>
-                  </div>
-                  <button
-                    type="button"
-                    className="rounded-md p-1.5 text-zinc-400 transition-colors hover:bg-white/[0.06] hover:text-white"
-                    aria-label="Notifications"
-                  >
-                    <Bell className="h-4 w-4" aria-hidden />
-                  </button>
+                <div className="ml-0.5 border-l border-white/[0.08] pl-2 sm:ml-1 sm:pl-3">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        title={avatarTitle}
+                        aria-label={`Account menu for ${nameHeadline}`}
+                        className="flex max-w-full items-center gap-2 rounded-lg border border-transparent px-1.5 py-1 text-left transition-colors hover:border-white/[0.08] hover:bg-white/[0.06] sm:gap-2.5 sm:px-2"
+                      >
+                        <div
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#673AB7] text-sm font-semibold text-white"
+                          aria-hidden
+                        >
+                          {initial}
+                        </div>
+                        <div className="hidden min-w-0 flex-1 sm:block">
+                          <p className="max-w-[140px] truncate text-sm font-semibold text-white md:max-w-[220px]">
+                            {nameHeadline}
+                          </p>
+                          <p className="max-w-[140px] truncate text-xs font-medium tracking-wide text-zinc-400 md:max-w-[220px]">
+                            {roleLabel.toUpperCase()}
+                          </p>
+                        </div>
+                        <ChevronDown className="h-4 w-4 shrink-0 text-zinc-400" aria-hidden />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align="end"
+                      className="w-56 border-white/[0.08] bg-[#1e1e1e] text-zinc-100 shadow-lg"
+                    >
+                      <DropdownMenuLabel className="font-semibold text-white">{nameHeadline}</DropdownMenuLabel>
+                      {userLabel.trim() && userLabel.trim() !== nameHeadline ? (
+                        <p className="px-2 pb-1.5 text-xs leading-snug text-zinc-500">{userLabel.trim()}</p>
+                      ) : null}
+                      <DropdownMenuSeparator className="bg-white/[0.08]" />
+                      <DropdownMenuItem
+                        className="cursor-pointer gap-2 text-zinc-200 focus:bg-white/[0.08] focus:text-white"
+                        onSelect={() => {
+                          void handleSignOut();
+                        }}
+                      >
+                        <LogOut className="h-4 w-4" aria-hidden />
+                        Sign out
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
-                {actions}
               </div>
             </div>
           </header>

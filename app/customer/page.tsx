@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { CreditCard, ReceiptText } from "lucide-react";
-import { LogoutButton } from "@/components/auth/logout-button";
 import { formatCurrencyAmount } from "@/lib/format";
 import { getCurrentSessionUser } from "@/lib/auth/server-session";
 import { getCustomerPortalData } from "@/server/firestore/portal-data";
@@ -20,8 +19,8 @@ export default async function CustomerPortalPage() {
       title="Customer Portal"
       description="Self-serve billing and proposal visibility."
       roleLabel={user.role}
+      displayName={user.displayName ?? ""}
       userLabel={user.email || user.uid}
-      actions={<LogoutButton />}
     >
       <div className="space-y-6">
         <section className="rounded-xl border border-border/70 bg-card/80 p-5">

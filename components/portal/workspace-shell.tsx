@@ -5,8 +5,10 @@ interface WorkspaceShellProps {
   title: string;
   description: string;
   roleLabel: string;
+  /** Email or uid — used for avatar fallback, tooltips, and when `displayName` is empty. */
   userLabel: string;
-  actions?: ReactNode;
+  /** Shown in the top bar above `roleLabel`; falls back to `userLabel` when blank. */
+  displayName?: string;
   children: ReactNode;
 }
 
@@ -15,7 +17,7 @@ export function WorkspaceShell({
   description,
   roleLabel,
   userLabel,
-  actions,
+  displayName,
   children,
 }: WorkspaceShellProps) {
   return (
@@ -24,7 +26,7 @@ export function WorkspaceShell({
       description={description}
       roleLabel={roleLabel}
       userLabel={userLabel}
-      actions={actions}
+      displayName={displayName}
     >
       {children}
     </WorkspaceShellLayout>

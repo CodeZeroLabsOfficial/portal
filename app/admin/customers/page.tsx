@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { FolderKanban, Users } from "lucide-react";
-import { LogoutButton } from "@/components/auth/logout-button";
 import { getCurrentSessionUser } from "@/lib/auth/server-session";
 import { getAdminPortalData } from "@/server/firestore/portal-data";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,8 +19,8 @@ export default async function AdminCustomersPage() {
       title="Customers"
       description="Organisations, subscriptions, and proposal activity."
       roleLabel={user.role}
+      displayName={user.displayName ?? ""}
       userLabel={user.email || user.uid}
-      actions={<LogoutButton />}
     >
       <div className="space-y-6">
         <section className="rounded-xl border border-border/70 bg-card/80 p-5">

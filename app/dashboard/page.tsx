@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { ArrowUpRight, BarChart3, CircleCheck, FileText, WalletCards } from "lucide-react";
-import { LogoutButton } from "@/components/auth/logout-button";
 import { APP_NAME, DEFAULT_CURRENCY } from "@/lib/constants";
 import { formatCurrencyAmount } from "@/lib/format";
 import { getCurrentSessionUser } from "@/lib/auth/server-session";
@@ -23,8 +22,8 @@ export default async function DashboardPage() {
       title="CSM Dashboard"
       description="Unified billing, proposal, and activity monitoring."
       roleLabel={user.role}
+      displayName={user.displayName ?? ""}
       userLabel={user.email || user.uid}
-      actions={<LogoutButton />}
     >
       <div className="space-y-6">
         <section className="rounded-xl border border-border/70 bg-card/80 p-5">
