@@ -7,6 +7,7 @@ import type { SubscriptionRecord } from "@/types/subscription";
 import type { SupportTicketRecord, SupportTicketUrgency } from "@/types/support-ticket";
 import type { TaskRecord } from "@/types/task";
 import type { PortalUser } from "@/types/user";
+import type { CustomerListRow } from "@/lib/customer-list";
 
 export interface ActivityItem {
   id: string;
@@ -173,6 +174,56 @@ function parsePortalUser(id: string, data: Record<string, unknown>): PortalUser 
 
 function canReadByOrganization(user: PortalUser): boolean {
   return user.role === "admin" || user.role === "team";
+}
+
+/**
+ * `customers/{customerUid}` — document id is the customer UID.
+ * Supported fields: `name` | `displayName` | `fullName`, `email`, `phone`, `location` or `city`+`country`,
+ * `gender`, `photoURL` | `avatarUrl`, optional `organizationId` for tenant scoping on queries.
+ */
+function parseAdminCustomerDocument(docId: string, data: Record<string, unknown>): CustomerListRow {
+  const name =
+    asString(data.name) ?? asString(data.displayName) ?? asString(data.fullName) ?? "";
+  const email = asString(data.email) ?? "";
+  const phone = asString(data.phone) ?? "";
+  let location = asString(data.location) ?? "";
+  if (!location) {
+    const city = asString(data.city);
+    const country = asString(data.country);
+    if (city && country) {
+      location = `${city}, ${country}`;
+    } else {
+      location = city ?? country ?? "";
+    }
+  }
+  const gender = asString(data.gender) ?? "";
+  const avatarUrl = asString(data.photoURL) ?? asString(data.avatarUrl);
+  const displayName = name.trim() || email.trim() || docId;
+  return {
+    id: docId,
+    name: displayName,
+    email: email.trim() || "—",
+    phone: phone.trim() || "—",
+    location: location.trim() || "—",
+    gender: gender.trim() || "—",
+    avatarUrl,
+  };
+}
+
+export async function getAdminCustomerListRows(user: PortalUser): Promise<CustomerListRow[]> {
+  const db = getFirebaseAdminFirestore();
+  if (!db || !canReadByOrganization(user)) {
+    return [];
+  }
+  try {
+    const col = db.collection(COLLECTIONS.customers);
+    const snap = user.organizationId
+      ? await col.where("organizationId", "==", user.organizationId).limit(500).get()
+      : await col.limit(500).get();
+    return snap.docs.map((doc) => parseAdminCustomerDocument(doc.id, doc.data() as Record<string, unknown>));
+  } catch {
+    return [];
+  }
 }
 
 async function listSubscriptionsForUser(user: PortalUser): Promise<SubscriptionRecord[]> {
