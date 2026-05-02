@@ -1,0 +1,66 @@
+import { notFound, redirect } from "next/navigation";
+import { getCurrentSessionUser } from "@/lib/auth/server-session";
+import { CustomerDetailView } from "@/components/portal/customer-detail-view";
+import { WorkspaceShell } from "@/components/portal/workspace-shell";
+import {
+  getCustomerRecordForOrg,
+  listCustomerActivities,
+  listCustomerNotes,
+  listInvoicesForStripeCustomer,
+  listProposalsForOrganization,
+  listSubscriptionsForStripeCustomer,
+  listTasksForCustomer,
+} from "@/server/firestore/crm-customers";
+
+interface PageProps {
+  params: Promise<{ customerId: string }>;
+}
+
+export default async function AdminCustomerDetailPage({ params }: PageProps) {
+  const user = await getCurrentSessionUser();
+  if (!user) {
+    redirect("/login?next=/admin/customers");
+  }
+
+  const { customerId } = await params;
+  const customer = await getCustomerRecordForOrg(user, customerId);
+  if (!customer) {
+    notFound();
+  }
+
+  const [notes, activities, subscriptions, invoices, orgProposals, tasks] = await Promise.all([
+    listCustomerNotes(user, customerId),
+    listCustomerActivities(user, customerId),
+    listSubscriptionsForStripeCustomer(user, customer.stripeCustomerId),
+    listInvoicesForStripeCustomer(user, customer.stripeCustomerId),
+    listProposalsForOrganization(user),
+    listTasksForCustomer(user, customerId),
+  ]);
+
+  const emailLower = customer.email.trim().toLowerCase();
+  const proposalsMatched = orgProposals.filter(
+    (p) => p.recipientEmail?.trim().toLowerCase() === emailLower,
+  );
+
+  return (
+    <WorkspaceShell
+      title={customer.name || customer.email}
+      description="Customer CRM profile"
+      roleLabel={user.role}
+      displayName={user.displayName ?? ""}
+      userLabel={user.email || user.uid}
+      showMainHeader={false}
+      contentClassName="max-w-[1100px]"
+    >
+      <CustomerDetailView
+        customer={customer}
+        subscriptions={subscriptions}
+        invoices={invoices}
+        proposalsMatched={proposalsMatched}
+        notes={notes}
+        activities={activities}
+        tasks={tasks}
+      />
+    </WorkspaceShell>
+  );
+}

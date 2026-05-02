@@ -29,6 +29,8 @@ export interface ProposalRecord {
   organizationId: string;
   createdByUid: string;
   title: string;
+  /** Optional — when set, associates the proposal with a CRM / billing contact email. */
+  recipientEmail?: string;
   status: ProposalStatus;
   /** Public share token for `/p/[token]` viewer — rotate on resend if needed. */
   shareToken: string;

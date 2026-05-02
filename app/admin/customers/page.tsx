@@ -22,7 +22,7 @@ export default async function AdminCustomersPage() {
       showMainHeader={false}
       contentClassName="max-w-[1200px]"
     >
-      <CustomerListPanel rows={rows} />
+      <CustomerListPanel rows={rows} hasOrganization={Boolean(user.organizationId)} />
     </WorkspaceShell>
   );
 }

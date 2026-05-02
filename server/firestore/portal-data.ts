@@ -8,6 +8,7 @@ import type { SupportTicketRecord, SupportTicketUrgency } from "@/types/support-
 import type { TaskRecord } from "@/types/task";
 import type { PortalUser } from "@/types/user";
 import type { CustomerListRow } from "@/lib/customer-list";
+import { getAdminCustomerListRows as loadCrmCustomerListRows } from "@/server/firestore/crm-customers";
 
 export interface ActivityItem {
   id: string;
@@ -143,6 +144,7 @@ function parseProposal(id: string, data: Record<string, unknown>): ProposalRecor
     organizationId: asString(data.organizationId) ?? "",
     createdByUid: asString(data.createdByUid) ?? "",
     title: asString(data.title) ?? "Untitled proposal",
+    recipientEmail: asString(data.recipientEmail) ?? asString(data.customerEmail),
     status,
     shareToken: asString(data.shareToken) ?? "",
     document: {
@@ -187,53 +189,9 @@ async function queryUsersInCustomerRole(user: PortalUser, db: AdminFirestore, li
   return q.get();
 }
 
-/**
- * Maps a `users/{uid}` document to CRM list columns. Document id = Auth / portal UID.
- * Fields: `name` | `displayName` | `fullName`, `email`, `phone`, `location` or `city`+`country`,
- * `gender`, `photoURL` | `avatarUrl`.
- */
-function parseUserDocumentToCustomerListRow(docId: string, data: Record<string, unknown>): CustomerListRow {
-  const name =
-    asString(data.name) ?? asString(data.displayName) ?? asString(data.fullName) ?? "";
-  const email = asString(data.email) ?? "";
-  const phone = asString(data.phone) ?? "";
-  let location = asString(data.location) ?? "";
-  if (!location) {
-    const city = asString(data.city);
-    const country = asString(data.country);
-    if (city && country) {
-      location = `${city}, ${country}`;
-    } else {
-      location = city ?? country ?? "";
-    }
-  }
-  const gender = asString(data.gender) ?? "";
-  const avatarUrl = asString(data.photoURL) ?? asString(data.avatarUrl);
-  const displayName = name.trim() || email.trim() || docId;
-  return {
-    id: docId,
-    name: displayName,
-    email: email.trim() || "—",
-    phone: phone.trim() || "—",
-    location: location.trim() || "—",
-    gender: gender.trim() || "—",
-    avatarUrl,
-  };
-}
-
+/** CRM table rows from `customers` (org-scoped). Requires `organizationId` on staff users. */
 export async function getAdminCustomerListRows(user: PortalUser): Promise<CustomerListRow[]> {
-  const db = getFirebaseAdminFirestore();
-  if (!db || !canReadByOrganization(user)) {
-    return [];
-  }
-  try {
-    const usersSnap = await queryUsersInCustomerRole(user, db, 500);
-    return usersSnap.docs.map((doc) =>
-      parseUserDocumentToCustomerListRow(doc.id, doc.data() as Record<string, unknown>),
-    );
-  } catch {
-    return [];
-  }
+  return loadCrmCustomerListRows(user);
 }
 
 async function listSubscriptionsForUser(user: PortalUser): Promise<SubscriptionRecord[]> {
@@ -296,6 +254,7 @@ function parseTask(id: string, data: Record<string, unknown>): TaskRecord {
   return {
     id,
     organizationId: asString(data.organizationId),
+    customerId: asString(data.customerId),
     title: asString(data.title) ?? "Task",
     status: asString(data.status) ?? "open",
     dueAtMs: asNumber(data.dueAtMs),

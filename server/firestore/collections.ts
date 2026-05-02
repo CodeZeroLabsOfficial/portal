@@ -9,6 +9,12 @@
  */
 export const COLLECTIONS = {
   users: "users",
+  /** CRM customer profiles — org-scoped; optional `portalUserId` links `users/{uid}`. */
+  customers: "customers",
+  /** Timeline entries (created, note added, Stripe sync, etc.) — includes `customerId` + `organizationId`. */
+  customerActivities: "customer_activities",
+  /** Internal notes, calls, emails — includes `customerId` + `organizationId`. */
+  customerNotes: "customer_notes",
   subscriptions: "subscriptions",
   invoices: "invoices",
   proposals: "proposals",
