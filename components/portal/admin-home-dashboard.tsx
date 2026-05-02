@@ -2,7 +2,6 @@ import Link from "next/link";
 import {
   ArrowDownRight,
   ArrowUpRight,
-  CalendarRange,
   Check,
   ChevronRight,
   MoreHorizontal,
@@ -519,9 +518,6 @@ export function AdminHomeDashboard({
   const chartRangeStart = new Date(nowMs);
   chartRangeStart.setDate(chartRangeStart.getDate() - 13);
   const chartRangeLabel = `${formatShortChartDate(chartRangeStart)} - ${formatShortChartDate(chartRangeEnd)}`;
-  const reportsRangeStart = new Date(nowMs);
-  reportsRangeStart.setDate(reportsRangeStart.getDate() - 6);
-  const reportsRangeLabel = `${formatShortChartDate(reportsRangeStart)} - ${formatShortChartDate(chartRangeEnd)}`;
 
   const revenueValueDetail = useYtdRevenue
     ? `${paymentCount} payments · ${now.getFullYear()} YTD`
@@ -579,19 +575,6 @@ export function AdminHomeDashboard({
 
       <div className="border-t border-border/70 pt-8">
         <AdminDashboardSecondaryChart tabs={chartTabs} chartRangeLabel={chartRangeLabel} />
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/70 pt-6">
-        <h2 className="text-base font-semibold text-foreground">Reports overview</h2>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-9 gap-2 rounded-md border-border bg-background/50 text-[13px] font-normal text-muted-foreground shadow-none"
-          type="button"
-        >
-          <CalendarRange className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-          {reportsRangeLabel}
-        </Button>
       </div>
     </div>
   );

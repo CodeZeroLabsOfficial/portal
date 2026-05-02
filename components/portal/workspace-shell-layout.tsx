@@ -182,7 +182,7 @@ export function WorkspaceShellLayout({
         >
           <div
             className={cn(
-              "flex h-14 shrink-0 items-center border-b border-white/[0.06]",
+              "flex h-14 shrink-0 items-center",
               collapsed ? "flex-col justify-center gap-1 px-2" : "justify-between px-4",
             )}
           >
@@ -277,22 +277,52 @@ export function WorkspaceShellLayout({
               </div>
               <div className="flex shrink-0 items-center gap-2 sm:gap-3">
                 {isAdminRoute ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        className="h-9 gap-1.5 rounded-lg bg-primary px-4 text-[14px] font-medium text-primary-foreground shadow-none hover:bg-primary/90"
+                      >
+                        Create
+                        <ChevronDown className="h-[18px] w-[18px] shrink-0 stroke-[1.5] opacity-90" aria-hidden />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align="end"
+                      className="min-w-[12rem] border-white/[0.08] bg-[#1e1e1e] text-zinc-100 shadow-lg"
+                    >
+                      <DropdownMenuLabel className="text-xs font-medium text-zinc-500">Admin portal</DropdownMenuLabel>
+                      <DropdownMenuSeparator className="bg-white/[0.08]" />
+                      <DropdownMenuItem
+                        className="cursor-pointer text-zinc-200 focus:bg-white/[0.08] focus:text-white"
+                        asChild
+                      >
+                        <Link href="/admin/customers">New customer or subscription</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="cursor-pointer text-zinc-200 focus:bg-white/[0.08] focus:text-white"
+                        asChild
+                      >
+                        <Link href="/admin/billing">Billing & invoices</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="cursor-pointer text-zinc-200 focus:bg-white/[0.08] focus:text-white"
+                        asChild
+                      >
+                        <Link href="/admin/tasks">Tasks</Link>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
                   <Button
                     variant="ghost"
-                    className="hidden h-9 gap-2 rounded-lg px-3 text-[14px] font-medium text-zinc-400 hover:bg-white/[0.06] hover:text-white sm:inline-flex"
+                    className="inline-flex h-9 gap-2 rounded-lg px-3 text-[14px] font-medium text-zinc-400 hover:bg-white/[0.06] hover:text-white"
                     asChild
                   >
                     <Link href="#">
                       <Bell className="h-[18px] w-[18px] shrink-0 stroke-[1.5]" aria-hidden />
-                      Notifications
+                      <span className="hidden sm:inline">Notifications</span>
                     </Link>
-                  </Button>
-                ) : (
-                  <Button
-                    asChild
-                    className="h-9 rounded-lg bg-primary px-4 text-[14px] font-medium text-primary-foreground shadow-none hover:bg-primary/90"
-                  >
-                    <Link href="/admin">Create</Link>
                   </Button>
                 )}
                 <div className="ml-0.5 border-l border-white/[0.08] pl-2 sm:ml-1 sm:pl-3">
