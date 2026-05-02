@@ -97,15 +97,9 @@ export function CustomerListPanel({ rows }: CustomerListPanelProps) {
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground md:text-[1.75rem] md:leading-tight">
-            Customers
-          </h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">
-            Users with <span className="font-mono text-foreground/90">role: &quot;customer&quot;</span> and optional
-            profile fields.
-          </p>
-        </div>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground md:text-[1.75rem] md:leading-tight">
+          Customers
+        </h1>
         <Button
           type="button"
           variant="ghost"

@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  BarChart3,
   CreditCard,
   LayoutDashboard,
   LifeBuoy,
@@ -34,6 +35,7 @@ const adminNavIcons: Record<(typeof ADMIN_PORTAL_NAV)[number]["id"], LucideIcon>
   customers: Users,
   billing: CreditCard,
   tasks: ListTodo,
+  reports: BarChart3,
 };
 
 const adminFooterIcons: Record<(typeof ADMIN_PORTAL_NAV_FOOTER)[number]["id"], LucideIcon> = {
