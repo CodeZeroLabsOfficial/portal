@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import Link from "next/link";
 import {
   ArrowDownRight,
@@ -11,6 +10,7 @@ import {
 } from "lucide-react";
 import { APP_NAME, DEFAULT_CURRENCY } from "@/lib/constants";
 import { formatCurrencyAmount } from "@/lib/format";
+import { buildAdminDashboardChartTabs } from "@/lib/admin-dashboard-chart-payload";
 import type { InvoiceRecord } from "@/types/invoice";
 import type { ProposalBlock, ProposalRecord } from "@/types/proposal";
 import type { SupportTicketRecord } from "@/types/support-ticket";
@@ -18,6 +18,7 @@ import type { TaskRecord } from "@/types/task";
 import type { PortalUser } from "@/types/user";
 import type { SubscriptionRecord } from "@/types/subscription";
 import type { AdminPortalData } from "@/server/firestore/portal-data";
+import { AdminDashboardSecondaryChart } from "@/components/portal/admin-dashboard-secondary-chart";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -78,27 +79,6 @@ function proposalStatusLabel(status: string): { label: string; className: string
     label: status.charAt(0).toUpperCase() + status.slice(1),
     className: "border-border bg-muted/40 text-muted-foreground",
   };
-}
-
-/** Demo curve — same shape as typical volume charts; stroke uses currentColor (primary). */
-const CHART_POINTS = [
-  { x: 0, y: 72 },
-  { x: 100, y: 58 },
-  { x: 200, y: 68 },
-  { x: 300, y: 42 },
-  { x: 400, y: 52 },
-  { x: 500, y: 28 },
-  { x: 600, y: 38 },
-];
-
-function buildChartPath(): { line: string; area: string } {
-  const w = 600;
-  const h = 120;
-  const baseline = h + 8;
-  const pts = CHART_POINTS.map((p) => `${p.x},${p.y}`).join(" L ");
-  const line = `M ${pts}`;
-  const area = `M 0,${baseline} L ${CHART_POINTS.map((p) => `${p.x},${p.y}`).join(" L ")} L ${w},${baseline} Z`;
-  return { line, area };
 }
 
 function startOfMonthMs(d: Date): number {
@@ -510,7 +490,31 @@ export function AdminHomeDashboard({
   const taskDue = countTasksDueAndOverdue(data.tasks, now);
   const taskHeadlineTotal = taskDue.overdue + taskDue.dueThisWeek;
 
-  const { line, area } = buildChartPath();
+  const chartTabs = buildAdminDashboardChartTabs(
+    data,
+    now,
+    {
+      subscriptions: String(activeSubCount),
+      proposals: String(pendingCount),
+      supportTickets: String(openTicketTotal),
+      tasks: String(taskHeadlineTotal),
+    },
+    {
+      subscriptions: `${utilPct === null ? "—" : `${utilPct}%`} utilization · ${churnPct}% churn (non-active share)`,
+      proposals: `Pending pipeline · ${formatCurrencyAmount(pendingValueMinor, DEFAULT_CURRENCY)} total value`,
+      supportTickets: `Critical ${ticketBuckets.critical} · High ${ticketBuckets.high} · Medium ${ticketBuckets.medium}`,
+      tasks:
+        taskDue.overdue === 0 && taskDue.dueThisWeek === 0
+          ? "No open tasks with due dates in range"
+          : [
+              taskDue.overdue > 0 ? `${taskDue.overdue} overdue` : null,
+              taskDue.dueThisWeek > 0 ? `${taskDue.dueThisWeek} due remainder of week` : null,
+            ]
+              .filter(Boolean)
+              .join(" · "),
+    },
+  );
+
   const chartRangeEnd = new Date(nowMs);
   const chartRangeStart = new Date(nowMs);
   chartRangeStart.setDate(chartRangeStart.getDate() - 13);
@@ -574,97 +578,7 @@ export function AdminHomeDashboard({
       </div>
 
       <div className="border-t border-border/70 pt-8">
-        <div className="grid grid-cols-2 gap-x-6 gap-y-8 md:grid-cols-4 md:gap-x-8">
-          <SecondaryMetric
-            value={String(activeSubCount)}
-            valueClassName="text-primary"
-            label="Subscriptions"
-            hint={`${utilPct === null ? "—" : `${utilPct}%`} utilization · ${churnPct}% churn (non-active share)`}
-          />
-          <SecondaryMetric
-            value={String(pendingCount)}
-            label="Proposals"
-            hint={`Pending pipeline · ${formatCurrencyAmount(pendingValueMinor, DEFAULT_CURRENCY)} total value`}
-          />
-          <SecondaryMetric
-            value={String(openTicketTotal)}
-            label="Support Tickets"
-            hint={`Critical ${ticketBuckets.critical} · High ${ticketBuckets.high} · Medium ${ticketBuckets.medium}`}
-          />
-          <SecondaryMetric
-            value={String(taskHeadlineTotal)}
-            label="Tasks"
-            hint={
-              taskDue.overdue === 0 && taskDue.dueThisWeek === 0
-                ? "No open tasks with due dates in range"
-                : [
-                    taskDue.overdue > 0 ? `${taskDue.overdue} overdue` : null,
-                    taskDue.dueThisWeek > 0 ? `${taskDue.dueThisWeek} due remainder of week` : null,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")
-            }
-          />
-        </div>
-      </div>
-
-      <div className="border-t border-border/70 pt-8">
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-9 gap-2 rounded-md border-border bg-background/50 text-[13px] font-normal text-muted-foreground shadow-none"
-            type="button"
-          >
-            <CalendarRange className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-            {chartRangeLabel}
-          </Button>
-        </div>
-        <div className="relative">
-          <svg
-            viewBox="0 0 600 132"
-            className="h-auto w-full max-h-[240px] text-primary"
-            preserveAspectRatio="xMidYMid meet"
-            role="img"
-            aria-label="Volume trend chart"
-          >
-            <title>Volume trend</title>
-            <defs>
-              <linearGradient id="adminChartFill" x1="0" x2="0" y1="0" y2="1">
-                <stop offset="0%" stopColor="currentColor" stopOpacity={0.32} />
-                <stop offset="100%" stopColor="currentColor" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            {[0, 100, 200, 300, 400, 500, 600].map((x) => (
-              <line
-                key={x}
-                x1={x}
-                y1={0}
-                x2={x}
-                y2={120}
-                className="stroke-border"
-                strokeWidth={1}
-                strokeDasharray="4 6"
-              />
-            ))}
-            <path d={area} fill="url(#adminChartFill)" className="text-transparent" />
-            <path
-              d={line}
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2.25}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-          <div className="mt-2 flex justify-between text-[11px] text-muted-foreground">
-            <span>Day 1</span>
-            <span>Day 4</span>
-            <span>Day 8</span>
-            <span>Day 12</span>
-            <span>Day 14</span>
-          </div>
-        </div>
+        <AdminDashboardSecondaryChart tabs={chartTabs} chartRangeLabel={chartRangeLabel} />
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/70 pt-6">
@@ -689,39 +603,6 @@ function formatShortChartDate(d: Date): string {
     month: "short",
     year: "numeric",
   }).format(d);
-}
-
-function SecondaryMetric({
-  value,
-  valueClassName,
-  label,
-  detail,
-  hint,
-}: {
-  value: string;
-  valueClassName?: string;
-  label: string;
-  /** Optional — screenshot-style row is value + label only. */
-  detail?: ReactNode;
-  /** Extra context on hover (metrics stay two-line visually). */
-  hint?: string;
-}) {
-  return (
-    <div className="flex flex-col" title={hint}>
-      <p
-        className={cn(
-          "text-xl font-semibold tabular-nums tracking-tight text-muted-foreground sm:text-2xl",
-          valueClassName,
-        )}
-      >
-        {value}
-      </p>
-      <p className="mt-1 text-xs font-medium text-foreground">{label}</p>
-      {detail != null && detail !== "" ? (
-        <p className="mt-1.5 text-[11px] leading-snug text-muted-foreground">{detail}</p>
-      ) : null}
-    </div>
-  );
 }
 
 function MetricCard({
