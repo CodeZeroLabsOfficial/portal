@@ -524,7 +524,7 @@ export function AdminHomeDashboard({
     : `${paymentCount} payments received`;
 
   return (
-    <div className="rounded-2xl border border-border/80 bg-card p-6 shadow-sm md:p-8">
+    <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground md:text-[1.75rem] md:leading-tight">
@@ -547,7 +547,7 @@ export function AdminHomeDashboard({
         </Button>
       </div>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-3">
         <MetricCard
           title="Total Active Clients"
           value={String(activeClients)}
@@ -573,7 +573,7 @@ export function AdminHomeDashboard({
         />
       </div>
 
-      <div className="mt-10 border-t border-border/70 pt-8">
+      <div className="border-t border-border/70 pt-8">
         <div className="grid grid-cols-2 gap-x-6 gap-y-8 md:grid-cols-4 md:gap-x-8">
           <SecondaryMetric
             value={String(activeSubCount)}
@@ -608,7 +608,7 @@ export function AdminHomeDashboard({
         </div>
       </div>
 
-      <div className="mt-10 border-t border-border/70 pt-8">
+      <div className="border-t border-border/70 pt-8">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <Button
             variant="outline"
@@ -667,7 +667,7 @@ export function AdminHomeDashboard({
         </div>
       </div>
 
-      <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-border/70 pt-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/70 pt-6">
         <h2 className="text-base font-semibold text-foreground">Reports overview</h2>
         <Button
           variant="outline"
