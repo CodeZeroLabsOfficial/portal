@@ -9,7 +9,9 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { resolvePostLoginPath } from "@/lib/auth/post-login-path";
 import { getFirebaseClientAuth } from "@/lib/firebase/client-app";
+import type { UserRole } from "@/types/user";
 
 interface LoginFormProps {
   nextPath: string;
@@ -57,13 +59,19 @@ export function LoginForm({ nextPath }: LoginFormProps) {
         body: JSON.stringify({ idToken }),
       });
 
+      const body = (await response.json().catch(() => ({}))) as {
+        ok?: boolean;
+        error?: string;
+        role?: UserRole;
+      };
       if (!response.ok) {
-        const body = (await response.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(body?.error ?? "Unable to create server session.");
+        throw new Error(body.error ?? "Unable to create server session.");
       }
 
+      const destination = resolvePostLoginPath(nextPath, body.role);
+
       setInfo("Signed in successfully. Redirecting...");
-      router.replace(nextPath);
+      router.replace(destination);
       router.refresh();
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Sign in failed.");

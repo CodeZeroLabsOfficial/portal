@@ -53,6 +53,7 @@ export async function POST(request: Request) {
       ? (existingSnap.data() as Partial<PortalUser> | undefined)
       : undefined;
     const nowMs = Date.now();
+    const role = readRole(existing?.role);
 
     await userRef.set(
       {
@@ -60,7 +61,7 @@ export async function POST(request: Request) {
         email: decoded.email ?? existing?.email ?? "",
         displayName: decoded.name ?? existing?.displayName ?? "",
         photoURL: decoded.picture ?? existing?.photoURL ?? "",
-        role: readRole(existing?.role),
+        role,
         organizationId: existing?.organizationId ?? "",
         stripeCustomerId: existing?.stripeCustomerId ?? "",
         createdAtMs: existing?.createdAtMs ?? nowMs,
@@ -79,7 +80,7 @@ export async function POST(request: Request) {
     });
 
     logInfo("auth_session_created", { uid });
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, role });
   } catch (error) {
     const message = error instanceof Error ? error.message : "unknown";
     logError("auth_session_create_failed", {

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
 import { LoginForm } from "@/components/auth/login-form";
 import { getCurrentSessionUser } from "@/lib/auth/server-session";
+import { resolvePostLoginPath } from "@/lib/auth/post-login-path";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface LoginPageProps {
@@ -14,7 +15,7 @@ export default async function LoginPage(props: LoginPageProps) {
   const nextPath = searchParams.next ?? "/dashboard";
   const currentUser = await getCurrentSessionUser();
   if (currentUser) {
-    redirect(nextPath);
+    redirect(resolvePostLoginPath(nextPath, currentUser.role));
   }
 
   return (
