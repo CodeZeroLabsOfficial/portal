@@ -31,7 +31,7 @@ function formatCustomFields(cf: Record<string, string>): string {
   return entries.map(([k, v]) => `${k}: ${v}`).join("\n");
 }
 
-export function buildPrefilledProposalDocument(
+function buildPrefilledProposalDocument(
   customer: CustomerRecord,
   opportunity: OpportunityRecord,
 ): ProposalDocument {
