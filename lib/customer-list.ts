@@ -1,4 +1,4 @@
-import type { CustomerSubscriptionRollup } from "@/types/customer";
+import type { CustomerCrmType, CustomerSubscriptionRollup } from "@/types/customer";
 
 /** Rows for the admin customer list table (CRM-style UI). */
 export interface CustomerListRow {
@@ -14,6 +14,7 @@ export interface CustomerListRow {
   avatarUrl?: string;
   company?: string;
   tags: string[];
+  crmType: CustomerCrmType;
   status: "active" | "archived";
   subscriptionRollup: CustomerSubscriptionRollup;
   portalUserId?: string;

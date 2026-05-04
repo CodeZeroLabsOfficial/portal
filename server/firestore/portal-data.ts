@@ -145,6 +145,8 @@ function parseProposal(id: string, data: Record<string, unknown>): ProposalRecor
     organizationId: asString(data.organizationId) ?? "",
     createdByUid: asString(data.createdByUid) ?? "",
     title: asString(data.title) ?? "Untitled proposal",
+    customerId: asString(data.customerId),
+    opportunityId: asString(data.opportunityId),
     recipientEmail: asString(data.recipientEmail) ?? asString(data.customerEmail),
     status,
     shareToken: asString(data.shareToken) ?? "",
@@ -190,7 +192,7 @@ async function queryUsersInCustomerRole(user: PortalUser, db: AdminFirestore, li
   return q.get();
 }
 
-/** CRM table rows from `customers` (org-scoped). Requires `organizationId` on staff users. */
+/** CRM table rows from `customers` (single-tenant; all admin/team can list). */
 export async function getAdminCustomerListRows(user: PortalUser): Promise<CustomerListRow[]> {
   /** Always read fresh Firestore data — avoids stale RSC / router cache after create or edits. */
   noStore();
@@ -420,4 +422,21 @@ export async function getAdminPortalData(user: PortalUser): Promise<AdminPortalD
     tasks,
     supportTickets,
   };
+}
+
+/** Single proposal for admin proposal detail — uses full `document.blocks` parsing. */
+export async function getAdminProposalRecord(
+  user: PortalUser,
+  proposalId: string,
+): Promise<ProposalRecord | null> {
+  noStore();
+  const db = getFirebaseAdminFirestore();
+  if (!db || !canReadByOrganization(user)) return null;
+  try {
+    const snap = await db.collection(COLLECTIONS.proposals).doc(proposalId).get();
+    if (!snap.exists) return null;
+    return parseProposal(snap.id, snap.data() as Record<string, unknown>);
+  } catch {
+    return null;
+  }
 }

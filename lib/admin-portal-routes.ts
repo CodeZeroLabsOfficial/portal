@@ -1,6 +1,12 @@
 export interface AdminPortalNavItem {
-  id: "dashboard" | "customers" | "billing" | "tasks" | "reports";
-  href: "/admin" | "/admin/customers" | "/admin/billing" | "/admin/tasks" | "/admin/reports";
+  id: "dashboard" | "customers" | "opportunities" | "billing" | "tasks" | "reports";
+  href:
+    | "/admin"
+    | "/admin/customers"
+    | "/admin/opportunities"
+    | "/admin/billing"
+    | "/admin/tasks"
+    | "/admin/reports";
   label: string;
 }
 
@@ -14,6 +20,7 @@ export interface AdminPortalNavFooterItem {
 export const ADMIN_PORTAL_NAV: AdminPortalNavItem[] = [
   { id: "dashboard", href: "/admin", label: "Dashboard" },
   { id: "customers", href: "/admin/customers", label: "Customers" },
+  { id: "opportunities", href: "/admin/opportunities", label: "Pipeline" },
   { id: "billing", href: "/admin/billing", label: "Billing" },
   { id: "tasks", href: "/admin/tasks", label: "Tasks" },
   { id: "reports", href: "/admin/reports", label: "Reports" },

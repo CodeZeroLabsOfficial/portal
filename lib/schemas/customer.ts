@@ -27,6 +27,8 @@ export const createCustomerSchema = z.object({
   customFields: z.array(customFieldPairSchema).max(15).default([]),
   /** When true, sets `portalUserId` if a Firebase Auth user exists for `email`. */
   linkAuthByEmail: z.boolean().default(false),
+  /** When true, stores `crmType: "lead"` until converted to a contact. */
+  saveAsLead: z.boolean().default(false),
 });
 
 export type CreateCustomerInput = z.infer<typeof createCustomerSchema>;

@@ -4,16 +4,19 @@
  * Security rules (high level — implement in Firebase console):
  * - `users`: user can read/write own doc; admins can read org members via custom claims or backend checks.
  * - `subscriptions`, `invoices`: customer sees own via stripeCustomerId match; staff via organizationId.
+ * - `opportunities`: staff-only reads/writes (Admin SDK in this app); add rules matching `customers` if exposed to clients.
  * - `proposals`, `proposal_templates`: org-scoped; public reads only via dedicated share token rules or Cloud Function proxy.
  * - `analytics_events`: insert from authenticated viewer session or validated public token; reads restricted to proposal owners.
  */
 export const COLLECTIONS = {
   users: "users",
-  /** CRM customer profiles — org-scoped; optional `portalUserId` links `users/{uid}`. */
+  /** CRM customer profiles (single-tenant); optional `portalUserId` links `users/{uid}`. */
   customers: "customers",
-  /** Timeline entries (created, note added, Stripe sync, etc.) — includes `customerId` + `organizationId`. */
+  /** Sales opportunities — `customerId` references `customers`. */
+  opportunities: "opportunities",
+  /** Timeline entries (created, note added, Stripe sync, etc.) — keyed by `customerId`. */
   customerActivities: "customer_activities",
-  /** Internal notes, calls, emails — includes `customerId` + `organizationId`. */
+  /** Internal notes, calls, emails — keyed by `customerId`. */
   customerNotes: "customer_notes",
   subscriptions: "subscriptions",
   invoices: "invoices",

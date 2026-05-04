@@ -1,34 +1,33 @@
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { getCurrentSessionUser } from "@/lib/auth/server-session";
-import { getAdminCustomerListRows } from "@/server/firestore/portal-data";
-import { CustomerListPanel } from "@/components/portal/customer-list-panel";
+import { listOpportunitiesForStaff } from "@/server/firestore/crm-opportunities";
+import { OpportunitiesPanel } from "@/components/portal/opportunities-panel";
 import { WorkspaceShell } from "@/components/portal/workspace-shell";
 
-/** Customer list must not be statically cached — navigations must re-fetch from Firestore. */
 export const dynamic = "force-dynamic";
 
-export default async function AdminCustomersPage() {
+export default async function AdminOpportunitiesPage() {
   await connection();
   const user = await getCurrentSessionUser();
   if (!user) {
-    redirect("/login?next=/admin/customers");
+    redirect("/login?next=/admin/opportunities");
   }
 
-  const rows = await getAdminCustomerListRows(user);
+  const opportunities = await listOpportunitiesForStaff(user);
 
   return (
     <WorkspaceShell
-      title="Customers"
-      description="Directory and contact details."
+      title="Pipeline"
+      description="Opportunity stages and deal flow."
       roleLabel={user.role}
       displayName={user.displayName ?? ""}
       userLabel={user.email || user.uid}
       showMainHeader={false}
       showRightAside={false}
-      contentClassName="max-w-[1200px]"
+      contentClassName="max-w-[1400px]"
     >
-      <CustomerListPanel rows={rows} />
+      <OpportunitiesPanel opportunities={opportunities} />
     </WorkspaceShell>
   );
 }

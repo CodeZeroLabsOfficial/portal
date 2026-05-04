@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { ZodError } from "zod";
 import { getCurrentSessionUser, hasRole } from "@/lib/auth/server-session";
 import { addCustomerNoteSchema, createCustomerSchema } from "@/lib/schemas/customer";
+import { FieldValue } from "firebase-admin/firestore";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import {
@@ -21,9 +22,9 @@ function zodErrorToMessage(error: ZodError): string {
   return first ? `${first.path.join(".")}: ${first.message}` : "Invalid input";
 }
 
-async function requireStaffWithOrg() {
+async function requireStaffForCrm() {
   const user = await getCurrentSessionUser();
-  if (!user || !hasRole(user, ["admin", "team"]) || !user.organizationId) {
+  if (!user || !hasRole(user, ["admin", "team"])) {
     return null;
   }
   return user;
@@ -32,9 +33,9 @@ async function requireStaffWithOrg() {
 export async function createCustomerAction(
   raw: unknown,
 ): Promise<{ ok: true; customerId: string } | { ok: false; message: string }> {
-  const user = await requireStaffWithOrg();
+  const user = await requireStaffForCrm();
   if (!user) {
-    return { ok: false, message: "You need a staff session with an organization to manage customers." };
+    return { ok: false, message: "You need an admin or team session to manage customers." };
   }
   const parsed = createCustomerSchema.safeParse(raw);
   if (!parsed.success) {
@@ -52,7 +53,7 @@ export async function createCustomerAction(
 export async function addCustomerNoteAction(
   raw: unknown,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  const user = await requireStaffWithOrg();
+  const user = await requireStaffForCrm();
   if (!user) {
     return { ok: false, message: "Unauthorized." };
   }
@@ -74,7 +75,7 @@ export async function archiveCustomerAction(
   customerId: string,
   archived: boolean,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  const user = await requireStaffWithOrg();
+  const user = await requireStaffForCrm();
   if (!user) return { ok: false, message: "Unauthorized." };
   const result = await setCustomerArchived(user, customerId, archived);
   if (!result.ok) return { ok: false, message: result.message };
@@ -86,7 +87,7 @@ export async function archiveCustomerAction(
 export async function deleteCustomerAction(
   customerId: string,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  const user = await requireStaffWithOrg();
+  const user = await requireStaffForCrm();
   if (!user) return { ok: false, message: "Unauthorized." };
   const result = await deleteCustomerDocument(user, customerId);
   if (!result.ok) return { ok: false, message: result.message };
@@ -98,7 +99,7 @@ export async function linkStripeCustomerIdAction(
   customerId: string,
   stripeCustomerId: string,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  const user = await requireStaffWithOrg();
+  const user = await requireStaffForCrm();
   if (!user) return { ok: false, message: "Unauthorized." };
   const trimmed = stripeCustomerId.trim();
   if (!trimmed.startsWith("cus_")) {
@@ -117,7 +118,7 @@ export async function linkStripeCustomerIdAction(
 export async function pullStripeCustomerProfileAction(
   customerId: string,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  const user = await requireStaffWithOrg();
+  const user = await requireStaffForCrm();
   if (!user) return { ok: false, message: "Unauthorized." };
 
   const customer = await getCustomerRecordForOrg(user, customerId);
@@ -139,13 +140,12 @@ export async function pullStripeCustomerProfileAction(
     const db = getFirebaseAdminFirestore();
     if (!db) return { ok: false, message: "Database unavailable." };
 
-    const now = Date.now();
     const nameFromStripe =
       sc.name?.trim() ||
       [sc.metadata?.first_name, sc.metadata?.last_name].filter(Boolean).join(" ").trim();
     const emailFromStripe = typeof sc.email === "string" ? sc.email.trim().toLowerCase() : "";
 
-    const patch: Record<string, unknown> = { updatedAtMs: now };
+    const patch: Record<string, unknown> = { updatedAt: FieldValue.serverTimestamp() };
     if (nameFromStripe && !customer.name?.trim()) patch.name = nameFromStripe;
     if (emailFromStripe && !customer.email?.trim()) patch.email = emailFromStripe;
     if (sc.phone && !customer.phone?.trim()) patch.phone = sc.phone;
@@ -156,7 +156,7 @@ export async function pullStripeCustomerProfileAction(
     if (sc.address?.postal_code && !customer.postalCode?.trim()) patch.postalCode = sc.address.postal_code;
     if (sc.address?.country && !customer.country?.trim()) patch.country = sc.address.country;
 
-    const changedFields = Object.keys(patch).filter((k) => k !== "updatedAtMs");
+    const changedFields = Object.keys(patch).filter((k) => k !== "updatedAt");
     if (changedFields.length === 0) {
       return { ok: true };
     }
@@ -165,11 +165,10 @@ export async function pullStripeCustomerProfileAction(
 
     await db.collection(COLLECTIONS.customerActivities).add({
       customerId,
-      organizationId: user.organizationId!,
       type: "stripe_sync",
       title: "Synced profile fields from Stripe",
       actorUid: user.uid,
-      createdAtMs: now,
+      createdAt: FieldValue.serverTimestamp(),
     });
 
     revalidatePath("/admin/customers");

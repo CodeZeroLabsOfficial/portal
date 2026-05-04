@@ -1,4 +1,6 @@
+import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { logError } from "@/lib/logging";
+import { coerceTimestampToMillis } from "@/lib/firestore/timestamp";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { getFirebaseAdminAuth, getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import type { CustomerListRow } from "@/lib/customer-list";
@@ -7,10 +9,12 @@ import type { InvoiceRecord } from "@/types/invoice";
 import type { ProposalRecord } from "@/types/proposal";
 import type {
   CustomerActivityRecord,
+  CustomerCrmType,
   CustomerNoteRecord,
   CustomerRecord,
   CustomerSubscriptionRollup,
 } from "@/types/customer";
+import { deleteOpportunitiesForCustomerDb } from "@/server/firestore/crm-opportunities";
 import type { SubscriptionRecord } from "@/types/subscription";
 import type { TaskRecord } from "@/types/task";
 import type { PortalUser } from "@/types/user";
@@ -23,13 +27,9 @@ function asNumber(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
-function orgIdForCrm(user: PortalUser): string | undefined {
-  const raw = user.organizationId?.trim();
-  return raw && raw.length > 0 ? raw : undefined;
-}
-
-function canStaffManageCrm(user: PortalUser): boolean {
-  return (user.role === "admin" || user.role === "team") && Boolean(orgIdForCrm(user));
+/** Single-tenant CRM: any admin/team member can manage customers (no `organizationId` gate). */
+function canStaffAccessCrm(user: PortalUser): boolean {
+  return user.role === "admin" || user.role === "team";
 }
 
 type AdminDb = NonNullable<ReturnType<typeof getFirebaseAdminFirestore>>;
@@ -40,8 +40,8 @@ function formatLocation(data: Pick<CustomerRecord, "city" | "region" | "country"
 }
 
 function parseCustomerRecord(id: string, data: Record<string, unknown>): CustomerRecord | null {
+  if (typeof data !== "object" || data === null) return null;
   const organizationId = asString(data.organizationId)?.trim();
-  if (!organizationId) return null;
   const name = asString(data.name) ?? "";
   const email = asString(data.email) ?? "";
   const tagsRaw = data.tags;
@@ -58,9 +58,10 @@ function parseCustomerRecord(id: string, data: Record<string, unknown>): Custome
         )
       : {};
   const status = data.status === "archived" ? "archived" : "active";
+  const crmType: CustomerCrmType = data.crmType === "lead" ? "lead" : "contact";
   return {
     id,
-    organizationId,
+    ...(organizationId ? { organizationId } : {}),
     name,
     email,
     company: asString(data.company),
@@ -76,9 +77,10 @@ function parseCustomerRecord(id: string, data: Record<string, unknown>): Custome
     portalUserId: asString(data.portalUserId),
     stripeCustomerId: asString(data.stripeCustomerId),
     avatarUrl: asString(data.avatarUrl),
+    crmType,
     status,
-    createdAtMs: asNumber(data.createdAtMs) ?? 0,
-    updatedAtMs: asNumber(data.updatedAtMs) ?? 0,
+    createdAtMs: coerceTimestampToMillis(data.createdAt ?? data.createdAtMs),
+    updatedAtMs: coerceTimestampToMillis(data.updatedAt ?? data.updatedAtMs),
     createdByUid: asString(data.createdByUid),
   };
 }
@@ -121,17 +123,14 @@ function customerToListRow(
     tags: customer.tags,
     status: customer.status,
     subscriptionRollup: rollupForStripeCustomer(customer.stripeCustomerId, subscriptions),
+    crmType: customer.crmType,
     portalUserId: customer.portalUserId,
     stripeCustomerId: customer.stripeCustomerId,
   };
 }
 
-async function listOrgSubscriptions(db: AdminDb, organizationId: string): Promise<SubscriptionRecord[]> {
-  const snap = await db
-    .collection(COLLECTIONS.subscriptions)
-    .where("organizationId", "==", organizationId)
-    .limit(200)
-    .get();
+async function listAllSubscriptionsForStaff(db: AdminDb): Promise<SubscriptionRecord[]> {
+  const snap = await db.collection(COLLECTIONS.subscriptions).limit(200).get();
   return snap.docs.map((doc) => {
     const data = doc.data() as Record<string, unknown>;
     return {
@@ -161,14 +160,13 @@ async function listOrgSubscriptions(db: AdminDb, organizationId: string): Promis
 
 export async function getAdminCustomerListRows(user: PortalUser): Promise<CustomerListRow[]> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canStaffManageCrm(user)) {
+  if (!db || !canStaffAccessCrm(user)) {
     return [];
   }
-  const organizationId = orgIdForCrm(user)!;
   try {
     const [customerSnap, subscriptions] = await Promise.all([
-      db.collection(COLLECTIONS.customers).where("organizationId", "==", organizationId).limit(500).get(),
-      listOrgSubscriptions(db, organizationId),
+      db.collection(COLLECTIONS.customers).limit(500).get(),
+      listAllSubscriptionsForStaff(db),
     ]);
     const customers = customerSnap.docs
       .map((doc) => parseCustomerRecord(doc.id, doc.data() as Record<string, unknown>))
@@ -178,7 +176,6 @@ export async function getAdminCustomerListRows(user: PortalUser): Promise<Custom
   } catch (error) {
     logError("crm_list_customers_failed", {
       message: error instanceof Error ? error.message : "unknown",
-      organizationId,
     });
     return [];
   }
@@ -189,35 +186,34 @@ export async function getCustomerRecordForOrg(
   customerId: string,
 ): Promise<CustomerRecord | null> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canStaffManageCrm(user)) return null;
+  if (!db || !canStaffAccessCrm(user)) return null;
   const ref = db.collection(COLLECTIONS.customers).doc(customerId);
   const snap = await ref.get();
   if (!snap.exists) return null;
   const parsed = parseCustomerRecord(snap.id, snap.data() as Record<string, unknown>);
-  if (!parsed || parsed.organizationId !== orgIdForCrm(user)) return null;
   return parsed;
 }
 
 function parseNote(id: string, data: Record<string, unknown>): CustomerNoteRecord | null {
   const customerId = asString(data.customerId);
+  if (!customerId) return null;
   const organizationId = asString(data.organizationId);
-  if (!customerId || !organizationId) return null;
   const kind = data.kind === "call" || data.kind === "email" ? data.kind : "note";
   return {
     id,
     customerId,
-    organizationId,
+    ...(organizationId ? { organizationId } : {}),
     authorUid: asString(data.authorUid) ?? "",
     body: asString(data.body) ?? "",
     kind,
-    createdAtMs: asNumber(data.createdAtMs) ?? 0,
+    createdAtMs: coerceTimestampToMillis(data.createdAt ?? data.createdAtMs),
   };
 }
 
 function parseActivity(id: string, data: Record<string, unknown>): CustomerActivityRecord | null {
   const customerId = asString(data.customerId);
+  if (!customerId) return null;
   const organizationId = asString(data.organizationId);
-  if (!customerId || !organizationId) return null;
   const typeRaw = asString(data.type) ?? "other";
   const type =
     typeRaw === "created" ||
@@ -225,18 +221,20 @@ function parseActivity(id: string, data: Record<string, unknown>): CustomerActiv
     typeRaw === "note" ||
     typeRaw === "stripe_sync" ||
     typeRaw === "auth_linked" ||
-    typeRaw === "archived"
+    typeRaw === "archived" ||
+    typeRaw === "lead_converted" ||
+    typeRaw === "opportunity_created"
       ? typeRaw
       : "other";
   return {
     id,
     customerId,
-    organizationId,
+    ...(organizationId ? { organizationId } : {}),
     type,
     title: asString(data.title) ?? "Activity",
     detail: asString(data.detail),
     actorUid: asString(data.actorUid),
-    createdAtMs: asNumber(data.createdAtMs) ?? 0,
+    createdAtMs: coerceTimestampToMillis(data.createdAt ?? data.createdAtMs),
   };
 }
 
@@ -246,7 +244,7 @@ export async function listCustomerNotes(
   limit = 80,
 ): Promise<CustomerNoteRecord[]> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canStaffManageCrm(user)) return [];
+  if (!db || !canStaffAccessCrm(user)) return [];
   const customer = await getCustomerRecordForOrg(user, customerId);
   if (!customer) return [];
   try {
@@ -257,10 +255,7 @@ export async function listCustomerNotes(
       .get();
     const rows = snap.docs
       .map((d) => parseNote(d.id, d.data() as Record<string, unknown>))
-      .filter(
-        (n): n is CustomerNoteRecord =>
-          n !== null && n.organizationId.trim() === orgIdForCrm(user),
-      );
+      .filter((n): n is CustomerNoteRecord => n !== null);
     return rows.sort((a, b) => b.createdAtMs - a.createdAtMs);
   } catch {
     return [];
@@ -273,7 +268,7 @@ export async function listCustomerActivities(
   limit = 80,
 ): Promise<CustomerActivityRecord[]> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canStaffManageCrm(user)) return [];
+  if (!db || !canStaffAccessCrm(user)) return [];
   const customer = await getCustomerRecordForOrg(user, customerId);
   if (!customer) return [];
   try {
@@ -284,10 +279,7 @@ export async function listCustomerActivities(
       .get();
     const rows = snap.docs
       .map((d) => parseActivity(d.id, d.data() as Record<string, unknown>))
-      .filter(
-        (a): a is CustomerActivityRecord =>
-          a !== null && a.organizationId.trim() === orgIdForCrm(user),
-      );
+      .filter((a): a is CustomerActivityRecord => a !== null);
     return rows.sort((a, b) => b.createdAtMs - a.createdAtMs);
   } catch {
     return [];
@@ -321,16 +313,14 @@ export async function listInvoicesForStripeCustomer(
   stripeCustomerId: string | undefined,
 ): Promise<InvoiceRecord[]> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canStaffManageCrm(user) || !stripeCustomerId) return [];
+  if (!db || !canStaffAccessCrm(user) || !stripeCustomerId) return [];
   try {
     const snap = await db
       .collection(COLLECTIONS.invoices)
       .where("customerId", "==", stripeCustomerId)
       .limit(50)
       .get();
-    return snap.docs
-      .map((d) => parseInvoice(d.id, d.data() as Record<string, unknown>))
-      .filter((inv) => inv.organizationId?.trim() === orgIdForCrm(user));
+    return snap.docs.map((d) => parseInvoice(d.id, d.data() as Record<string, unknown>));
   } catch {
     return [];
   }
@@ -341,14 +331,14 @@ export async function listSubscriptionsForStripeCustomer(
   stripeCustomerId: string | undefined,
 ): Promise<SubscriptionRecord[]> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canStaffManageCrm(user) || !stripeCustomerId) return [];
+  if (!db || !canStaffAccessCrm(user) || !stripeCustomerId) return [];
   try {
     const snap = await db
       .collection(COLLECTIONS.subscriptions)
       .where("customerId", "==", stripeCustomerId)
       .limit(50)
       .get();
-    const rows = snap.docs.map((d) => {
+    return snap.docs.map((d) => {
       const data = d.data() as Record<string, unknown>;
       return {
         id: d.id,
@@ -373,7 +363,6 @@ export async function listSubscriptionsForStripeCustomer(
         updatedAtMs: asNumber(data.updatedAtMs) ?? Date.now(),
       } satisfies SubscriptionRecord;
     });
-    return rows.filter((s) => s.organizationId?.trim() === orgIdForCrm(user));
   } catch {
     return [];
   }
@@ -381,13 +370,9 @@ export async function listSubscriptionsForStripeCustomer(
 
 export async function listProposalsForOrganization(user: PortalUser): Promise<ProposalRecord[]> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canStaffManageCrm(user)) return [];
+  if (!db || !canStaffAccessCrm(user)) return [];
   try {
-    const snap = await db
-      .collection(COLLECTIONS.proposals)
-      .where("organizationId", "==", orgIdForCrm(user)!)
-      .limit(100)
-      .get();
+    const snap = await db.collection(COLLECTIONS.proposals).limit(100).get();
     return snap.docs.map((doc) => {
       const data = doc.data() as Record<string, unknown>;
       const statusCandidate = data.status;
@@ -404,6 +389,8 @@ export async function listProposalsForOrganization(user: PortalUser): Promise<Pr
         organizationId: asString(data.organizationId) ?? "",
         createdByUid: asString(data.createdByUid) ?? "",
         title: asString(data.title) ?? "Untitled proposal",
+        customerId: asString(data.customerId),
+        opportunityId: asString(data.opportunityId),
         recipientEmail: asString(data.recipientEmail) ?? asString(data.customerEmail),
         status,
         shareToken: asString(data.shareToken) ?? "",
@@ -434,16 +421,14 @@ function parseTask(id: string, data: Record<string, unknown>): TaskRecord {
 
 export async function listTasksForCustomer(user: PortalUser, customerId: string): Promise<TaskRecord[]> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canStaffManageCrm(user)) return [];
+  if (!db || !canStaffAccessCrm(user)) return [];
   try {
     const snap = await db
       .collection(COLLECTIONS.tasks)
       .where("customerId", "==", customerId)
       .limit(80)
       .get();
-    return snap.docs
-      .map((d) => parseTask(d.id, d.data() as Record<string, unknown>))
-      .filter((t) => t.organizationId?.trim() === orgIdForCrm(user));
+    return snap.docs.map((d) => parseTask(d.id, d.data() as Record<string, unknown>));
   } catch {
     return [];
   }
@@ -464,11 +449,9 @@ export async function createCustomerDocument(
   input: CreateCustomerInput,
 ): Promise<CreateCustomerResult | CreateCustomerError> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canStaffManageCrm(user)) {
-    return { ok: false, message: "CRM requires an organization on your staff account." };
+  if (!db || !canStaffAccessCrm(user)) {
+    return { ok: false, message: "CRM is only available to admin or team members." };
   }
-  const organizationId = orgIdForCrm(user)!;
-  const now = Date.now();
   const customFields: Record<string, string> = {};
   for (const pair of input.customFields ?? []) {
     if (pair.key.trim()) customFields[pair.key.trim()] = pair.value ?? "";
@@ -490,7 +473,6 @@ export async function createCustomerDocument(
   const col = db.collection(COLLECTIONS.customers);
   const docRef = col.doc();
   const payload = {
-    organizationId,
     name: input.name.trim(),
     email: input.email.trim().toLowerCase(),
     company: input.company?.trim() || null,
@@ -507,32 +489,32 @@ export async function createCustomerDocument(
     stripeCustomerId: null,
     avatarUrl: null,
     status: "active",
-    createdAtMs: now,
-    updatedAtMs: now,
+    crmType: input.saveAsLead ? "lead" : "contact",
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
     createdByUid: user.uid,
   };
 
   await docRef.set(payload);
 
+  const firstActivityAt = Timestamp.now();
   await db.collection(COLLECTIONS.customerActivities).add({
     customerId: docRef.id,
-    organizationId,
     type: "created",
     title: "Customer created",
     detail: input.name.trim(),
     actorUid: user.uid,
-    createdAtMs: now,
+    createdAt: firstActivityAt,
   });
 
   if (portalUserId) {
     await db.collection(COLLECTIONS.customerActivities).add({
       customerId: docRef.id,
-      organizationId,
       type: "auth_linked",
       title: "Linked Firebase Auth user",
       detail: input.email.trim().toLowerCase(),
       actorUid: user.uid,
-      createdAtMs: now + 1,
+      createdAt: Timestamp.fromMillis(firstActivityAt.toMillis() + 1),
     });
   }
 
@@ -546,29 +528,26 @@ export async function appendCustomerNote(
   kind: CustomerNoteRecord["kind"],
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canStaffManageCrm(user)) {
+  if (!db || !canStaffAccessCrm(user)) {
     return { ok: false, message: "Not allowed." };
   }
   const customer = await getCustomerRecordForOrg(user, customerId);
   if (!customer) return { ok: false, message: "Customer not found." };
-  const now = Date.now();
-  const organizationId = orgIdForCrm(user)!;
+  const noteAt = Timestamp.now();
   await db.collection(COLLECTIONS.customerNotes).add({
     customerId,
-    organizationId,
     authorUid: user.uid,
     body: body.trim(),
     kind,
-    createdAtMs: now,
+    createdAt: noteAt,
   });
   await db.collection(COLLECTIONS.customerActivities).add({
     customerId,
-    organizationId,
     type: "note",
     title: kind === "call" ? "Call logged" : kind === "email" ? "Email logged" : "Note added",
     detail: body.trim().slice(0, 280),
     actorUid: user.uid,
-    createdAtMs: now,
+    createdAt: Timestamp.fromMillis(noteAt.toMillis() + 1),
   });
   return { ok: true };
 }
@@ -579,21 +558,19 @@ export async function setCustomerArchived(
   archived: boolean,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canStaffManageCrm(user)) return { ok: false, message: "Not allowed." };
+  if (!db || !canStaffAccessCrm(user)) return { ok: false, message: "Not allowed." };
   const customer = await getCustomerRecordForOrg(user, customerId);
   if (!customer) return { ok: false, message: "Customer not found." };
-  const now = Date.now();
   await db.collection(COLLECTIONS.customers).doc(customerId).update({
     status: archived ? "archived" : "active",
-    updatedAtMs: now,
+    updatedAt: FieldValue.serverTimestamp(),
   });
   await db.collection(COLLECTIONS.customerActivities).add({
     customerId,
-    organizationId: orgIdForCrm(user)!,
     type: "archived",
     title: archived ? "Archived" : "Restored",
     actorUid: user.uid,
-    createdAtMs: now,
+    createdAt: FieldValue.serverTimestamp(),
   });
   return { ok: true };
 }
@@ -603,7 +580,7 @@ export async function deleteCustomerDocument(
   customerId: string,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canStaffManageCrm(user)) return { ok: false, message: "Not allowed." };
+  if (!db || !canStaffAccessCrm(user)) return { ok: false, message: "Not allowed." };
   const customer = await getCustomerRecordForOrg(user, customerId);
   if (!customer) return { ok: false, message: "Customer not found." };
 
@@ -614,10 +591,7 @@ export async function deleteCustomerDocument(
     if (snap.empty) return;
     const batch = database.batch();
     for (const doc of snap.docs) {
-      const data = doc.data() as Record<string, unknown>;
-      if (asString(data.organizationId)?.trim() === orgIdForCrm(user)) {
-        batch.delete(doc.ref);
-      }
+      batch.delete(doc.ref);
     }
     await batch.commit();
     if (snap.size >= 400) await deleteQueryDocs(collection);
@@ -625,6 +599,7 @@ export async function deleteCustomerDocument(
 
   await deleteQueryDocs(COLLECTIONS.customerNotes);
   await deleteQueryDocs(COLLECTIONS.customerActivities);
+  await deleteOpportunitiesForCustomerDb(database, customerId);
   await database.collection(COLLECTIONS.customers).doc(customerId).delete();
   return { ok: true };
 }
@@ -635,22 +610,20 @@ export async function syncStripeCustomerBasics(
   stripeCustomerId: string,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canStaffManageCrm(user)) return { ok: false, message: "Not allowed." };
+  if (!db || !canStaffAccessCrm(user)) return { ok: false, message: "Not allowed." };
   const customer = await getCustomerRecordForOrg(user, customerId);
   if (!customer) return { ok: false, message: "Customer not found." };
-  const now = Date.now();
   await db
     .collection(COLLECTIONS.customers)
     .doc(customerId)
-    .update({ stripeCustomerId, updatedAtMs: now });
+    .update({ stripeCustomerId, updatedAt: FieldValue.serverTimestamp() });
   await db.collection(COLLECTIONS.customerActivities).add({
     customerId,
-    organizationId: orgIdForCrm(user)!,
     type: "stripe_sync",
     title: "Stripe customer linked",
     detail: stripeCustomerId,
     actorUid: user.uid,
-    createdAtMs: now,
+    createdAt: FieldValue.serverTimestamp(),
   });
   return { ok: true };
 }

@@ -11,6 +11,7 @@ import {
   listSubscriptionsForStripeCustomer,
   listTasksForCustomer,
 } from "@/server/firestore/crm-customers";
+import { listOpportunitiesForCustomer } from "@/server/firestore/crm-opportunities";
 
 interface PageProps {
   params: Promise<{ customerId: string }>;
@@ -28,18 +29,21 @@ export default async function AdminCustomerDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const [notes, activities, subscriptions, invoices, orgProposals, tasks] = await Promise.all([
-    listCustomerNotes(user, customerId),
-    listCustomerActivities(user, customerId),
-    listSubscriptionsForStripeCustomer(user, customer.stripeCustomerId),
-    listInvoicesForStripeCustomer(user, customer.stripeCustomerId),
-    listProposalsForOrganization(user),
-    listTasksForCustomer(user, customerId),
-  ]);
+  const [notes, activities, subscriptions, invoices, orgProposals, tasks, opportunities] =
+    await Promise.all([
+      listCustomerNotes(user, customerId),
+      listCustomerActivities(user, customerId),
+      listSubscriptionsForStripeCustomer(user, customer.stripeCustomerId),
+      listInvoicesForStripeCustomer(user, customer.stripeCustomerId),
+      listProposalsForOrganization(user),
+      listTasksForCustomer(user, customerId),
+      listOpportunitiesForCustomer(user, customerId),
+    ]);
 
   const emailLower = customer.email.trim().toLowerCase();
   const proposalsMatched = orgProposals.filter(
-    (p) => p.recipientEmail?.trim().toLowerCase() === emailLower,
+    (p) =>
+      p.customerId === customer.id || p.recipientEmail?.trim().toLowerCase() === emailLower,
   );
 
   return (
@@ -58,6 +62,7 @@ export default async function AdminCustomerDetailPage({ params }: PageProps) {
         subscriptions={subscriptions}
         invoices={invoices}
         proposalsMatched={proposalsMatched}
+        opportunities={opportunities}
         notes={notes}
         activities={activities}
         tasks={tasks}

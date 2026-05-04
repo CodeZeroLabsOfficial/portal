@@ -21,6 +21,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import type { CustomerActivityRecord, CustomerNoteRecord, CustomerRecord } from "@/types/customer";
+import type { OpportunityRecord } from "@/types/opportunity";
 import type { InvoiceRecord } from "@/types/invoice";
 import type { ProposalRecord } from "@/types/proposal";
 import type { SubscriptionRecord } from "@/types/subscription";
@@ -31,6 +32,7 @@ import {
   linkStripeCustomerIdAction,
   pullStripeCustomerProfileAction,
 } from "@/server/actions/customers-crm";
+import { ConvertLeadPanel } from "@/components/portal/convert-lead-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -70,6 +72,7 @@ export interface CustomerDetailViewProps {
   subscriptions: SubscriptionRecord[];
   invoices: InvoiceRecord[];
   proposalsMatched: ProposalRecord[];
+  opportunities: OpportunityRecord[];
   notes: CustomerNoteRecord[];
   activities: CustomerActivityRecord[];
   tasks: TaskRecord[];
@@ -80,6 +83,7 @@ export function CustomerDetailView({
   subscriptions,
   invoices,
   proposalsMatched,
+  opportunities,
   notes,
   activities,
   tasks,
@@ -209,6 +213,15 @@ export function CustomerDetailView({
                     Active
                   </Badge>
                 )}
+                {customer.crmType === "lead" ? (
+                  <Badge variant="outline" className="border-amber-500/50 text-amber-700 dark:text-amber-400">
+                    Lead
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="border-sky-500/40 text-sky-700 dark:text-sky-300">
+                    Contact
+                  </Badge>
+                )}
               </div>
               {customer.company ? (
                 <p className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -301,6 +314,13 @@ export function CustomerDetailView({
         </div>
       </motion.header>
 
+      {customer.crmType === "lead" ? (
+        <ConvertLeadPanel
+          customerId={customer.id}
+          defaultOpportunityName={customer.company?.trim() || `${customer.name || "Opportunity"}`.trim()}
+        />
+      ) : null}
+
       <Tabs value={tab} onValueChange={setTab} className="w-full">
         <TabsList className="no-scrollbar h-auto w-full flex-wrap justify-start gap-1 overflow-x-auto bg-muted/30 p-1">
           <TabsTrigger value="overview" className="gap-1.5">
@@ -330,7 +350,7 @@ export function CustomerDetailView({
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Card className="border-border/80 bg-card/60 shadow-sm backdrop-blur-sm">
               <CardHeader className="pb-2">
                 <CardDescription>Subscriptions</CardDescription>
@@ -350,6 +370,30 @@ export function CustomerDetailView({
                 <CardDescription>Proposals (this contact)</CardDescription>
                 <CardTitle className="text-2xl tabular-nums">{proposalsMatched.length}</CardTitle>
               </CardHeader>
+            </Card>
+            <Card className="border-border/80 bg-card/60 shadow-sm backdrop-blur-sm">
+              <CardHeader className="pb-2">
+                <CardDescription>Opportunities</CardDescription>
+                <CardTitle className="text-2xl tabular-nums">{opportunities.length}</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                {opportunities.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">None linked yet.</p>
+                ) : (
+                  <ul className="space-y-1.5 text-sm">
+                    {opportunities.slice(0, 4).map((o) => (
+                      <li key={o.id}>
+                        <Link href={`/admin/opportunities/${o.id}`} className="text-primary hover:underline">
+                          {o.name}
+                        </Link>
+                      </li>
+                    ))}
+                    {opportunities.length > 4 ? (
+                      <li className="text-xs text-muted-foreground">+{opportunities.length - 4} more on Pipeline</li>
+                    ) : null}
+                  </ul>
+                )}
+              </CardContent>
             </Card>
           </div>
           <Card className="border-border/80 bg-card/60 shadow-sm">
@@ -455,15 +499,16 @@ export function CustomerDetailView({
 
         <TabsContent value="proposals" className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Proposals include <span className="font-mono text-foreground/80">recipientEmail</span> matching this
-            customer&apos;s email.
+            Proposals linked by <span className="font-mono text-foreground/80">customerId</span> or{" "}
+            <span className="font-mono text-foreground/80">recipientEmail</span> matching this profile.
           </p>
           {proposalsMatched.length === 0 ? (
             <Card className="border-dashed border-border/80 bg-muted/20">
               <CardContent className="py-12 text-center text-sm text-muted-foreground">
-                No linked proposals yet. Store{" "}
+                No linked proposals yet. Create one from an opportunity, or store matching{" "}
+                <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">customerId</code> /{" "}
                 <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">recipientEmail</code> on proposal
-                documents when you send to this contact.
+                rows.
               </CardContent>
             </Card>
           ) : (
@@ -477,13 +522,18 @@ export function CustomerDetailView({
                     <p className="font-medium text-foreground">{p.title}</p>
                     <p className="text-xs capitalize text-muted-foreground">Status: {p.status}</p>
                   </div>
-                  {p.shareToken ? (
+                  <div className="flex flex-wrap gap-2">
                     <Button variant="outline" size="sm" asChild>
-                      <Link href={`/p/${p.shareToken}`} target="_blank" rel="noopener noreferrer">
-                        Open
-                      </Link>
+                      <Link href={`/admin/proposals/${p.id}`}>Admin detail</Link>
                     </Button>
-                  ) : null}
+                    {p.shareToken ? (
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href={`/p/${p.shareToken}`} target="_blank" rel="noopener noreferrer">
+                          Public view
+                        </Link>
+                      </Button>
+                    ) : null}
+                  </div>
                 </li>
               ))}
             </ul>

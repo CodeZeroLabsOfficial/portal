@@ -70,11 +70,9 @@ function CustomerAvatar({ row }: { row: CustomerListRow }) {
 
 export interface CustomerListPanelProps {
   rows: CustomerListRow[];
-  /** When false, CRM writes are disabled — staff profile needs `organizationId`. */
-  hasOrganization: boolean;
 }
 
-export function CustomerListPanel({ rows, hasOrganization }: CustomerListPanelProps) {
+export function CustomerListPanel({ rows }: CustomerListPanelProps) {
   const router = useRouter();
 
   /** Next.js can reuse a stale RSC payload when returning to this route; refresh forces a server re-read. */
@@ -84,6 +82,7 @@ export function CustomerListPanel({ rows, hasOrganization }: CustomerListPanelPr
 
   const [query, setQuery] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<"all" | "active" | "archived">("active");
+  const [crmFilter, setCrmFilter] = React.useState<"all" | "leads" | "contacts">("all");
   const [tagFilter, setTagFilter] = React.useState("");
   const [selected, setSelected] = React.useState<Set<string>>(() => new Set());
   const [addOpen, setAddOpen] = React.useState(false);
@@ -94,6 +93,8 @@ export function CustomerListPanel({ rows, hasOrganization }: CustomerListPanelPr
     const tag = tagFilter.trim().toLowerCase();
     return rows.filter((row) => {
       if (statusFilter !== "all" && row.status !== statusFilter) return false;
+      if (crmFilter === "leads" && row.crmType !== "lead") return false;
+      if (crmFilter === "contacts" && row.crmType !== "contact") return false;
       if (tag && !row.tags.some((t) => t.toLowerCase().includes(tag))) return false;
       if (!q) return true;
       const hay = [row.name, row.email, row.phone, row.location, row.company, row.tags.join(" ")]
@@ -101,7 +102,7 @@ export function CustomerListPanel({ rows, hasOrganization }: CustomerListPanelPr
         .toLowerCase();
       return hay.includes(q);
     });
-  }, [rows, query, statusFilter, tagFilter]);
+  }, [rows, query, statusFilter, crmFilter, tagFilter]);
 
   const filteredIds = React.useMemo(() => filtered.map((r) => r.id), [filtered]);
   const allFilteredSelected =
@@ -174,21 +175,12 @@ export function CustomerListPanel({ rows, hasOrganization }: CustomerListPanelPr
           variant="ghost"
           size="sm"
           className="gap-1.5 text-[14px] font-medium text-muted-foreground hover:text-foreground"
-          disabled={!hasOrganization}
-          title={!hasOrganization ? "Set an organization on your staff account first." : undefined}
           onClick={() => setAddOpen(true)}
         >
           <Plus className="h-4 w-4 shrink-0" aria-hidden />
           Add customer
         </Button>
       </div>
-
-      {!hasOrganization ? (
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
-          Your account does not have an <span className="font-mono">organizationId</span>. CRM lists and writes are
-          disabled until it is set on your user document (see Settings / provisioning).
-        </div>
-      ) : null}
 
       <section className="overflow-hidden rounded-xl border border-border/80 bg-card/80 shadow-sm backdrop-blur-sm">
         <div className="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
@@ -226,6 +218,19 @@ export function CustomerListPanel({ rows, hasOrganization }: CustomerListPanelPr
                   <option value="archived">Archived</option>
                   <option value="all">All statuses</option>
                 </select>
+                <select
+                  value={crmFilter}
+                  onChange={(e) => setCrmFilter(e.target.value as typeof crmFilter)}
+                  className={cn(
+                    "h-9 appearance-none rounded-full border border-border/80 bg-background/60 py-0 pr-8 text-[13px] font-medium text-foreground sm:pl-3",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  )}
+                  aria-label="Filter by CRM type"
+                >
+                  <option value="all">All types</option>
+                  <option value="leads">Leads only</option>
+                  <option value="contacts">Contacts only</option>
+                </select>
               </div>
               <Input
                 value={tagFilter}
@@ -250,7 +255,7 @@ export function CustomerListPanel({ rows, hasOrganization }: CustomerListPanelPr
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px] text-left text-[13px]">
+          <table className="w-full min-w-[980px] text-left text-[13px]">
             <thead>
               <tr className="border-b border-border text-muted-foreground">
                 <th className="w-12 px-4 py-2.5">
@@ -268,20 +273,15 @@ export function CustomerListPanel({ rows, hasOrganization }: CustomerListPanelPr
                 <th className="px-4 py-2.5 font-medium">Company</th>
                 <th className="px-4 py-2.5 font-medium">Billing</th>
                 <th className="px-4 py-2.5 font-medium">Tags</th>
+                <th className="px-4 py-2.5 font-medium">CRM</th>
                 <th className="px-4 py-2.5 font-medium">Status</th>
                 <th className="w-14 px-2 py-2.5 text-center font-medium">Action</th>
               </tr>
             </thead>
             <tbody className="text-foreground">
-              {!hasOrganization ? (
+              {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-sm text-muted-foreground">
-                    Organization required to load CRM data.
-                  </td>
-                </tr>
-              ) : rows.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-sm text-muted-foreground">
+                  <td colSpan={9} className="px-4 py-10 text-center text-sm text-muted-foreground">
                     <p className="mx-auto max-w-md leading-relaxed">
                       No customers yet. Add your first profile, or sync from Stripe by linking a{" "}
                       <span className="font-mono text-foreground/90">cus_</span> id on the customer detail page.
@@ -290,7 +290,7 @@ export function CustomerListPanel({ rows, hasOrganization }: CustomerListPanelPr
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-sm text-muted-foreground">
+                  <td colSpan={9} className="px-4 py-10 text-center text-sm text-muted-foreground">
                     No customers match your filters.
                   </td>
                 </tr>
@@ -355,6 +355,18 @@ export function CustomerListPanel({ rows, hasOrganization }: CustomerListPanelPr
                             <span className="text-[11px] text-muted-foreground">+{row.tags.length - 4}</span>
                           ) : null}
                         </div>
+                      </td>
+                      <td className="px-4 py-3 align-middle">
+                        <span
+                          className={cn(
+                            "rounded-full px-2 py-0.5 text-[11px] font-medium capitalize",
+                            row.crmType === "lead"
+                              ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                              : "bg-sky-500/10 text-sky-700 dark:text-sky-300",
+                          )}
+                        >
+                          {row.crmType}
+                        </span>
                       </td>
                       <td className="px-4 py-3 align-middle">
                         <span

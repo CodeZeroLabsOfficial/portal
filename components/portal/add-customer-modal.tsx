@@ -39,6 +39,7 @@ const defaultValues: CreateCustomerInput = {
   tags: [],
   customFields: [],
   linkAuthByEmail: false,
+  saveAsLead: false,
 };
 
 export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) {
@@ -262,6 +263,21 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
               ))}
             </div>
           </div>
+
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] p-3 transition-colors hover:bg-white/[0.05]">
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4 rounded border-border"
+              checked={Boolean(form.watch("saveAsLead"))}
+              onChange={(e) => form.setValue("saveAsLead", e.target.checked, { shouldDirty: true })}
+            />
+            <span className="text-sm leading-snug text-zinc-300">
+              <span className="font-medium text-white">Save as lead</span>
+              <span className="mt-0.5 block text-xs text-zinc-500">
+                Leads use the same customer record; convert to a contact when you attach a real pipeline opportunity.
+              </span>
+            </span>
+          </label>
 
           <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] p-3 transition-colors hover:bg-white/[0.05]">
             <input
