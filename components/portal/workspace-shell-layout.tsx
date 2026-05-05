@@ -34,6 +34,10 @@ import { cn } from "@/lib/utils";
 
 const SIDEBAR_COLLAPSED_KEY = "portal-sidebar-collapsed";
 
+/** Matches `<main>` horizontal padding; negative margin lets content span the full main column. */
+const WORKSPACE_MAIN_CONTENT_CLASS =
+  "w-full min-w-0 max-w-none space-y-6 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8";
+
 interface WorkspaceShellLayoutProps {
   title: string;
   description: string;
@@ -383,7 +387,7 @@ export function WorkspaceShellLayout({
 
           <div className="flex min-h-0 flex-1">
             <main className="min-w-0 flex-1 overflow-auto px-4 py-8 sm:px-6 lg:px-8">
-              <div className={cn("mx-auto space-y-6", contentClassName ?? "max-w-6xl")}>
+              <div className={cn(WORKSPACE_MAIN_CONTENT_CLASS, contentClassName)}>
                 {showMainHeader ? (
                   <div className="mb-2 hidden lg:block">
                     <h1 className="text-2xl font-semibold tracking-tight text-white">{title}</h1>

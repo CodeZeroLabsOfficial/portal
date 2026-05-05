@@ -26,7 +26,6 @@ export default async function AdminCustomersPage() {
       userLabel={user.email || user.uid}
       showMainHeader={false}
       showRightAside={false}
-      contentClassName="max-w-[1200px]"
     >
       <CustomerListPanel rows={rows} />
     </WorkspaceShell>

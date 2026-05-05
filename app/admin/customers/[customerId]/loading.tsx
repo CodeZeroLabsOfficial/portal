@@ -18,7 +18,6 @@ export default async function AdminCustomerDetailLoading() {
       userLabel={user.email || user.uid}
       showMainHeader={false}
       showRightAside={false}
-      contentClassName="mx-0 w-full max-w-none"
     >
       <div className="space-y-8">
         <Skeleton className="h-9 w-32 rounded-lg" />

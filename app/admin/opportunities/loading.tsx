@@ -10,7 +10,6 @@ export default function Loading() {
       userLabel=""
       showMainHeader={false}
       showRightAside={false}
-      contentClassName="max-w-[1400px]"
     >
       <div className="animate-pulse space-y-4 rounded-xl border border-border/60 bg-muted/20 p-8">
         <div className="h-8 w-48 rounded bg-muted" />

@@ -18,7 +18,6 @@ export default async function AdminCustomersLoading() {
       userLabel={user.email || user.uid}
       showMainHeader={false}
       showRightAside={false}
-      contentClassName="max-w-[1200px]"
     >
       <div className="space-y-8">
         <div className="space-y-2">

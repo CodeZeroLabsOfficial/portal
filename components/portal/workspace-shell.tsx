@@ -15,7 +15,7 @@ interface WorkspaceShellProps {
   showRightAside?: boolean;
   /** When false, the large title + description block above page content is omitted. */
   showMainHeader?: boolean;
-  /** Applied to the inner content wrapper (default `max-w-6xl`). */
+  /** Extra classes merged onto the inner content wrapper (default is full-width, edge-aligned). */
   contentClassName?: string;
   children: ReactNode;
 }

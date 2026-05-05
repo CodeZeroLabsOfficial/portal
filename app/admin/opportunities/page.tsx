@@ -25,7 +25,6 @@ export default async function AdminOpportunitiesPage() {
       userLabel={user.email || user.uid}
       showMainHeader={false}
       showRightAside={false}
-      contentClassName="max-w-[1400px]"
     >
       <OpportunitiesPanel opportunities={opportunities} />
     </WorkspaceShell>
