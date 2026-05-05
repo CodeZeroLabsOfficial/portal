@@ -7,7 +7,7 @@ import {
   listCustomerActivities,
   listCustomerNotes,
   listInvoicesForStripeCustomer,
-  listProposalsForOrganization,
+  listProposalsLinkedToCustomer,
   listSubscriptionsForStripeCustomer,
   listTasksForCustomer,
 } from "@/server/firestore/crm-customers";
@@ -30,23 +30,17 @@ export default async function AdminCustomerDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const [notes, activities, subscriptions, invoices, orgProposals, tasks, opportunities, proposalTemplates] =
+  const [notes, activities, subscriptions, invoices, proposalsMatched, tasks, opportunities, proposalTemplates] =
     await Promise.all([
       listCustomerNotes(user, customerId),
       listCustomerActivities(user, customerId),
       listSubscriptionsForStripeCustomer(user, customer.stripeCustomerId),
       listInvoicesForStripeCustomer(user, customer.stripeCustomerId),
-      listProposalsForOrganization(user),
+      listProposalsLinkedToCustomer(user, customerId, customer.email),
       listTasksForCustomer(user, customerId),
       listOpportunitiesForCustomer(user, customerId),
       listProposalTemplatesForOrg(user),
     ]);
-
-  const emailLower = customer.email.trim().toLowerCase();
-  const proposalsMatched = orgProposals.filter(
-    (p) =>
-      p.customerId === customer.id || p.recipientEmail?.trim().toLowerCase() === emailLower,
-  );
 
   return (
     <WorkspaceShell

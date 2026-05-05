@@ -587,13 +587,51 @@ export async function listSubscriptionsForStripeCustomer(
   }
 }
 
-export async function listProposalsForOrganization(user: PortalUser): Promise<ProposalRecord[]> {
+/**
+ * Proposals for this CRM profile: `customerId` on the row, or legacy / email-only matches on `recipientEmail`.
+ * (Avoids loading a global `limit(100)` slice of the collection, which could omit newly created rows.)
+ */
+export async function listProposalsLinkedToCustomer(
+  user: PortalUser,
+  customerId: string,
+  recipientEmail: string,
+): Promise<ProposalRecord[]> {
   const db = getFirebaseAdminFirestore();
   if (!db || !canStaffAccessCrm(user)) return [];
+  const orgId = user.organizationId ?? "default";
+  const emailLower = recipientEmail.trim().toLowerCase();
+
   try {
-    const snap = await db.collection(COLLECTIONS.proposals).limit(100).get();
-    return snap.docs.map((doc) => parseProposalRecord(doc.id, doc.data() as Record<string, unknown>));
-  } catch {
+    const byCustomerSnap = await db
+      .collection(COLLECTIONS.proposals)
+      .where("customerId", "==", customerId)
+      .limit(100)
+      .get();
+
+    const byEmailSnap =
+      emailLower.length > 0
+        ? await db
+            .collection(COLLECTIONS.proposals)
+            .where("recipientEmail", "==", emailLower)
+            .limit(100)
+            .get()
+        : null;
+
+    const seen = new Set<string>();
+    const rows: ProposalRecord[] = [];
+    const docs = [...byCustomerSnap.docs, ...(byEmailSnap?.docs ?? [])];
+    for (const doc of docs) {
+      if (seen.has(doc.id)) continue;
+      seen.add(doc.id);
+      const p = parseProposalRecord(doc.id, doc.data() as Record<string, unknown>);
+      const orgMissing = !p.organizationId;
+      const orgMatch = p.organizationId === orgId;
+      if (!orgMissing && !orgMatch) continue;
+      rows.push(p);
+    }
+    return rows.sort((a, b) => (b.updatedAtMs ?? 0) - (a.updatedAtMs ?? 0));
+  } catch (err) {
+    logError("listProposalsLinkedToCustomer", { err: err instanceof Error ? err.message : String(err) });
     return [];
   }
 }
