@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { motion } from "framer-motion";
 import { FileText } from "lucide-react";
 import { getCurrentSessionUser, hasRole } from "@/lib/auth/server-session";
 import { listProposalTemplatesForOrg } from "@/server/firestore/proposal-templates";
@@ -33,15 +32,11 @@ export default async function AdminProposalsHubPage() {
     >
       <div className="space-y-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <motion.div
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25 }}
-          >
+          <div>
             <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-[1.75rem] md:leading-tight">
               Proposals
             </h1>
-          </motion.div>
+          </div>
           <NewProposalTemplateButton />
         </div>
 
