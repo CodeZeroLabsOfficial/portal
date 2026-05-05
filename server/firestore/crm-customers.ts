@@ -18,6 +18,7 @@ import type {
   CustomerSubscriptionRollup,
 } from "@/types/customer";
 import { deleteOpportunitiesForCustomerDb } from "@/server/firestore/crm-opportunities";
+import { parseProposalRecord } from "@/server/firestore/parse-proposal";
 import type { SubscriptionRecord } from "@/types/subscription";
 import type { TaskRecord } from "@/types/task";
 import type { PortalUser } from "@/types/user";
@@ -591,35 +592,7 @@ export async function listProposalsForOrganization(user: PortalUser): Promise<Pr
   if (!db || !canStaffAccessCrm(user)) return [];
   try {
     const snap = await db.collection(COLLECTIONS.proposals).limit(100).get();
-    return snap.docs.map((doc) => {
-      const data = doc.data() as Record<string, unknown>;
-      const statusCandidate = data.status;
-      const status =
-        statusCandidate === "draft" ||
-        statusCandidate === "viewed" ||
-        statusCandidate === "accepted" ||
-        statusCandidate === "declined" ||
-        statusCandidate === "expired"
-          ? statusCandidate
-          : "sent";
-      return {
-        id: doc.id,
-        organizationId: asString(data.organizationId) ?? "",
-        createdByUid: asString(data.createdByUid) ?? "",
-        title: asString(data.title) ?? "Untitled proposal",
-        customerId: asString(data.customerId),
-        opportunityId: asString(data.opportunityId),
-        recipientEmail: asString(data.recipientEmail) ?? asString(data.customerEmail),
-        status,
-        shareToken: asString(data.shareToken) ?? "",
-        document: {
-          title: asString(data.title) ?? "Untitled proposal",
-          blocks: [],
-        },
-        createdAtMs: asNumber(data.createdAtMs) ?? 0,
-        updatedAtMs: asNumber(data.updatedAtMs) ?? 0,
-      } satisfies ProposalRecord;
-    });
+    return snap.docs.map((doc) => parseProposalRecord(doc.id, doc.data() as Record<string, unknown>));
   } catch {
     return [];
   }

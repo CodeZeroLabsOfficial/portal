@@ -2,8 +2,8 @@ import { unstable_noStore as noStore } from "next/cache";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import type { InvoiceRecord } from "@/types/invoice";
-import type { ProposalBlock } from "@/types/proposal";
 import type { ProposalRecord } from "@/types/proposal";
+import { parseProposalRecord } from "@/server/firestore/parse-proposal";
 import type { SubscriptionRecord } from "@/types/subscription";
 import type { SupportTicketRecord, SupportTicketUrgency } from "@/types/support-ticket";
 import type { TaskRecord } from "@/types/task";
@@ -115,55 +115,8 @@ function parseInvoice(id: string, data: Record<string, unknown>): InvoiceRecord 
   };
 }
 
-function parseProposalBlocks(raw: unknown): ProposalBlock[] {
-  if (!Array.isArray(raw)) {
-    return [];
-  }
-
-  return raw
-    .filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null)
-    .map((item, index) => {
-      const id = asString(item.id) ?? `block-${index + 1}`;
-      const type = asString(item.type) ?? "text";
-      return {
-        ...item,
-        id,
-        type,
-      } as ProposalBlock;
-    });
-}
-
 function parseProposal(id: string, data: Record<string, unknown>): ProposalRecord {
-  const statusCandidate = data.status;
-  const status =
-    statusCandidate === "draft" ||
-    statusCandidate === "viewed" ||
-    statusCandidate === "accepted" ||
-    statusCandidate === "declined" ||
-    statusCandidate === "expired"
-      ? statusCandidate
-      : "sent";
-
-  return {
-    id,
-    organizationId: asString(data.organizationId) ?? "",
-    createdByUid: asString(data.createdByUid) ?? "",
-    title: asString(data.title) ?? "Untitled proposal",
-    customerId: asString(data.customerId),
-    opportunityId: asString(data.opportunityId),
-    recipientEmail: asString(data.recipientEmail) ?? asString(data.customerEmail),
-    status,
-    shareToken: asString(data.shareToken) ?? "",
-    document: {
-      title: asString(data.title) ?? "Untitled proposal",
-      blocks:
-        data.document && typeof data.document === "object"
-          ? parseProposalBlocks((data.document as { blocks?: unknown }).blocks)
-          : [],
-    },
-    createdAtMs: asNumber(data.createdAtMs) ?? 0,
-    updatedAtMs: asNumber(data.updatedAtMs) ?? 0,
-  };
+  return parseProposalRecord(id, data);
 }
 
 function parsePortalUser(id: string, data: Record<string, unknown>): PortalUser {

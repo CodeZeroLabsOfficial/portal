@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { WorkspaceShell } from "@/components/portal/workspace-shell";
+import { ProposalDocumentEditor } from "@/components/proposal/proposal-document-editor";
+import { ProposalShareSettings } from "@/components/proposal/proposal-share-settings";
 
 interface PageProps {
   params: Promise<{ proposalId: string }>;
@@ -29,14 +31,14 @@ export default async function AdminProposalDetailPage({ params }: PageProps) {
   return (
     <WorkspaceShell
       title={proposal.title}
-      description="Draft proposal"
+      description="Proposal builder — tied to CRM contacts and opportunities."
       roleLabel={user.role}
       displayName={user.displayName ?? ""}
       userLabel={user.email || user.uid}
       showMainHeader={false}
       showRightAside={false}
     >
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline" className="capitalize">
             {proposal.status}
@@ -50,19 +52,32 @@ export default async function AdminProposalDetailPage({ params }: PageProps) {
           <CardHeader>
             <CardTitle className="text-base">Summary</CardTitle>
             <CardDescription>
-              Created from the opportunity flow or dashboard. Open the public link to preview what your customer sees.
+              Created from the opportunity flow or dashboard. Publish when ready — that stages linked deals and unlocks
+              analytics on the public link.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 text-sm">
             <p>
               <span className="text-muted-foreground">Blocks · </span>
-              {blockCount} sections in the document builder payload.
+              {blockCount} sections.
             </p>
+            {typeof proposal.viewCount === "number" ? (
+              <p>
+                <span className="text-muted-foreground">Public opens · </span>
+                {proposal.viewCount}
+              </p>
+            ) : null}
+            {typeof proposal.totalEngagementSeconds === "number" ? (
+              <p>
+                <span className="text-muted-foreground">Approx. engagement · </span>
+                {Math.max(0, Math.round(proposal.totalEngagementSeconds / 60))} minutes on page
+              </p>
+            ) : null}
             {proposal.customerId ? (
               <p>
                 <span className="text-muted-foreground">Customer · </span>
                 <Link href={`/admin/customers/${proposal.customerId}`} className="text-primary hover:underline">
-                  {proposal.customerId}
+                  Open CRM profile
                 </Link>
               </p>
             ) : null}
@@ -70,7 +85,7 @@ export default async function AdminProposalDetailPage({ params }: PageProps) {
               <p>
                 <span className="text-muted-foreground">Opportunity · </span>
                 <Link href={`/admin/opportunities/${proposal.opportunityId}`} className="text-primary hover:underline">
-                  Open pipeline record
+                  Pipeline record
                 </Link>
               </p>
             ) : null}
@@ -84,6 +99,15 @@ export default async function AdminProposalDetailPage({ params }: PageProps) {
             ) : null}
           </CardContent>
         </Card>
+
+        <ProposalShareSettings proposalId={proposal.id} hasPassword={Boolean(proposal.sharePasswordHash)} />
+
+        <ProposalDocumentEditor
+          proposalId={proposal.id}
+          initialTitle={proposal.document.title || proposal.title}
+          initialDocument={proposal.document}
+          initialStatus={proposal.status}
+        />
       </div>
     </WorkspaceShell>
   );

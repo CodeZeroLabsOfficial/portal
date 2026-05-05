@@ -1,3 +1,5 @@
+/** Discriminated proposal block payloads stored under `document.blocks`. */
+
 export type ProposalBlockType =
   | "header"
   | "text"
@@ -15,14 +17,123 @@ export interface ProposalBlockBase {
   type: ProposalBlockType;
 }
 
+export interface HeaderBlock extends ProposalBlockBase {
+  type: "header";
+  text: string;
+}
+
+export interface TextBlock extends ProposalBlockBase {
+  type: "text";
+  /** Sanitized rich HTML from the editor. */
+  html?: string;
+  /** Plain fallback (legacy / import). */
+  body?: string;
+}
+
+export interface ImageBlock extends ProposalBlockBase {
+  type: "image";
+  url: string;
+  alt?: string;
+  caption?: string;
+}
+
+export interface VideoBlock extends ProposalBlockBase {
+  type: "video";
+  url: string;
+  title?: string;
+}
+
+export interface PricingLineItem {
+  id: string;
+  label: string;
+  unitAmountMinor: number;
+  /** Default quantity for the public viewer. */
+  quantity?: number;
+  /** When true, buyer can toggle off (add-on). */
+  optional?: boolean;
+}
+
+export interface PricingBlock extends ProposalBlockBase {
+  type: "pricing";
+  currency: string;
+  lineItems: PricingLineItem[];
+  /** Let the recipient change quantities on the public page. */
+  allowQuantityEdit?: boolean;
+  /** Optional title above the table. */
+  title?: string;
+  /** Legacy keys used by dashboard heuristics (optional). */
+  totalMinorUnits?: number;
+}
+
+export type FormFieldType = "text" | "email" | "textarea" | "select";
+
+export interface FormField {
+  id: string;
+  label: string;
+  fieldType: FormFieldType;
+  required?: boolean;
+  options?: string[];
+}
+
+export interface FormBlock extends ProposalBlockBase {
+  type: "form";
+  fields: FormField[];
+  submitLabel?: string;
+  /** Client-side only until wired to workflow — responses stored in `formResponse` on accept. */
+  storeLocallyOnAccept?: boolean;
+}
+
+export interface SignatureBlock extends ProposalBlockBase {
+  type: "signature";
+  title?: string;
+  signerLabel?: string;
+  requirePrintedName?: boolean;
+  requireAcceptTerms?: boolean;
+  termsSummary?: string;
+}
+
+export interface EmbedBlock extends ProposalBlockBase {
+  type: "embed";
+  url: string;
+  title?: string;
+  aspectRatio?: "16:9" | "4:3" | "auto";
+}
+
+export interface PaymentBlock extends ProposalBlockBase {
+  type: "payment";
+  label?: string;
+  /** Future: Stripe Price or PaymentIntent id. */
+  stripePriceId?: string;
+}
+
+export interface DividerBlock extends ProposalBlockBase {
+  type: "divider";
+}
+
+export type ProposalBlock =
+  | HeaderBlock
+  | TextBlock
+  | ImageBlock
+  | VideoBlock
+  | PricingBlock
+  | FormBlock
+  | SignatureBlock
+  | EmbedBlock
+  | PaymentBlock
+  | DividerBlock;
+
 export interface ProposalDocument {
   title: string;
   blocks: ProposalBlock[];
 }
 
-export type ProposalBlock = ProposalBlockBase & Record<string, unknown>;
-
 export type ProposalStatus = "draft" | "sent" | "viewed" | "accepted" | "declined" | "expired";
+
+export interface ProposalBranding {
+  logoUrl?: string;
+  primaryColor?: string;
+  fontFamily?: string;
+}
 
 export interface ProposalRecord {
   id: string;
@@ -39,11 +150,19 @@ export interface ProposalRecord {
   /** Public share token for `/p/[token]` viewer — rotate on resend if needed. */
   shareToken: string;
   document: ProposalDocument;
-  branding?: {
-    logoUrl?: string;
-    primaryColor?: string;
-    fontFamily?: string;
-  };
+  branding?: ProposalBranding;
+  documentVersion?: number;
+  /** PBKDF2 string from `hashSharePassword` — if set, public link requires password once per browser. */
+  sharePasswordHash?: string;
+  /** When the proposal was first sent to the client. */
+  sentAtMs?: number;
+  /** Public engagement (updated from analytics API). */
+  viewCount?: number;
+  totalEngagementSeconds?: number;
+  lastViewedAtMs?: number;
+  /** After explicit acceptance on the public page. */
+  acceptedAtMs?: number;
+  acceptedByName?: string;
   /** Stripe Checkout / PaymentIntent linkage when collecting payment in-proposal. */
   stripePaymentIntentId?: string;
   createdAtMs: number;

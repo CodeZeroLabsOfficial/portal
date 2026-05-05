@@ -180,7 +180,16 @@ function extractPricingMinorFromBlock(block: ProposalBlock): number {
   if (block.type !== "pricing") {
     return 0;
   }
-  const b = block as Record<string, unknown>;
+  if (block.lineItems.length > 0) {
+    let sum = 0;
+    for (const li of block.lineItems) {
+      const unit = typeof li.unitAmountMinor === "number" ? li.unitAmountMinor : 0;
+      const qty = typeof li.quantity === "number" && li.quantity > 0 ? li.quantity : 1;
+      sum += Math.round(unit * qty);
+    }
+    if (sum > 0) return sum;
+  }
+  const b = block as unknown as Record<string, unknown>;
   for (const k of PRICING_MINOR_KEYS) {
     const v = b[k];
     if (typeof v === "number" && Number.isFinite(v)) {
