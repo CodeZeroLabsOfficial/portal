@@ -79,7 +79,7 @@ export function WorkspaceNav({ collapsed = false, userRole }: WorkspaceNavProps)
         ) : null}
         <div className="min-h-0 flex-1 space-y-0.5 overflow-y-auto">
           {ADMIN_PORTAL_NAV.map((item) => {
-            const Icon = adminNavIcons[item.id];
+            const Icon = adminNavIcons[item.id] ?? LayoutDashboard;
             const isActive = isAdminNavActive(item.href, pathname);
             return (
               <NavRow
@@ -97,7 +97,7 @@ export function WorkspaceNav({ collapsed = false, userRole }: WorkspaceNavProps)
 
         <div className={cn("mt-8 shrink-0 space-y-0.5 border-t border-white/[0.06] pt-4", collapsed && "mt-4 pt-3")}>
           {ADMIN_PORTAL_NAV_FOOTER.map((item) => {
-            const Icon = adminFooterIcons[item.id];
+            const Icon = adminFooterIcons[item.id] ?? Mail;
             const isActive = item.external ? false : isAdminFooterNavActive(item.href, pathname);
             if (item.external) {
               return (
@@ -154,7 +154,7 @@ export function WorkspaceNav({ collapsed = false, userRole }: WorkspaceNavProps)
           ) : null}
           <div className="space-y-1">
             {routes.map((route) => {
-              const Icon = routeIcons[route.id];
+              const Icon = routeIcons[route.id] ?? LayoutDashboard;
               const isActive = pathname === route.href;
               return (
                 <NavRow
