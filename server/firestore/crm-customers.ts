@@ -6,6 +6,7 @@ import { getFirebaseAdminAuth, getFirebaseAdminFirestore } from "@/lib/firebase/
 import { accountKeyToNormalizedCompany, companyNameToAccountKey } from "@/lib/account-key";
 import type { AccountListRow } from "@/lib/account-list";
 import type { CustomerListRow } from "@/lib/customer-list";
+import type { UpdateAccountFormInput } from "@/lib/schemas/account";
 import type { CreateCustomerInput, UpdateCustomerFormInput } from "@/lib/schemas/customer";
 import type { InvoiceRecord } from "@/types/invoice";
 import type { ProposalRecord } from "@/types/proposal";
@@ -329,6 +330,73 @@ export async function getAccountDetailForKey(
     companyCountry: pickLatestNonEmpty(contacts, (r) => r.companyCountry) || undefined,
     contacts: [...contacts].sort((a, b) => (b.updatedAtMs || 0) - (a.updatedAtMs || 0)),
   };
+}
+
+export async function updateAccountDetailsForGroup(
+  user: PortalUser,
+  input: UpdateAccountFormInput,
+): Promise<{ ok: true; newAccountKey: string } | { ok: false; message: string }> {
+  const db = getFirebaseAdminFirestore();
+  if (!db || !canStaffAccessCrm(user)) {
+    return { ok: false, message: "CRM is only available to admin or team members." };
+  }
+
+  const norm = accountKeyToNormalizedCompany(input.accountKey);
+  if (!norm) {
+    return { ok: false, message: "Invalid account." };
+  }
+
+  const customers = await listCustomerRecordsForStaffSorted(user);
+  if (!customers) {
+    return { ok: false, message: "Could not load customers." };
+  }
+
+  const contacts = customers.filter((c) => c.company?.trim().toLowerCase() === norm);
+  if (contacts.length === 0) {
+    return { ok: false, message: "Account not found." };
+  }
+
+  const companyTrimmed = input.company.trim();
+  const newAccountKey = companyNameToAccountKey(companyTrimmed);
+  if (!newAccountKey) {
+    return { ok: false, message: "Company name is required." };
+  }
+
+  const payload: Record<string, unknown> = {
+    company: companyTrimmed,
+    companyPhone: input.companyPhone?.trim() || null,
+    companyEmail: input.companyEmail?.trim()?.toLowerCase() || null,
+    companyWebsite: input.companyWebsite?.trim() || null,
+    companyAddressLine1: input.companyAddressLine1?.trim() || null,
+    companyAddressLine2: input.companyAddressLine2?.trim() || null,
+    companyCity: input.companyCity?.trim() || null,
+    companyRegion: input.companyRegion?.trim() || null,
+    companyPostalCode: input.companyPostalCode?.trim() || null,
+    companyCountry: input.companyCountry?.trim() || null,
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+
+  try {
+    await Promise.all(
+      contacts.map(async (c) => {
+        await db.collection(COLLECTIONS.customers).doc(c.id).update(payload);
+        await db.collection(COLLECTIONS.customerActivities).add({
+          customerId: c.id,
+          type: "updated",
+          title: "Account company details updated",
+          detail: companyTrimmed,
+          actorUid: user.uid,
+          createdAt: Timestamp.now(),
+        });
+      }),
+    );
+    return { ok: true, newAccountKey };
+  } catch (error) {
+    logError("crm_update_account_failed", {
+      message: error instanceof Error ? error.message : "unknown",
+    });
+    return { ok: false, message: "Failed to update account details." };
+  }
 }
 
 export async function getCustomerRecordForOrg(

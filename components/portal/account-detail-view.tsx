@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Building2, Globe, Mail, MapPin, Phone, Users } from "lucide-react";
+import { ArrowLeft, Building2, Globe, Mail, MapPin, Pencil, Phone, Users } from "lucide-react";
 import type { AccountDetailAggregate } from "@/server/firestore/crm-customers";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,6 +44,14 @@ export function AccountDetailView({ account }: AccountDetailViewProps) {
             Accounts
           </Link>
         </Button>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <Button variant="secondary" size="sm" className="gap-1.5 shadow-sm" asChild>
+            <Link href={`/admin/accounts/${account.key}/edit`}>
+              <Pencil className="h-3.5 w-3.5" aria-hidden />
+              Edit
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-end justify-between gap-4 border-b border-border/80 pb-6">

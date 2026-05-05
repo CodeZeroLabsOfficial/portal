@@ -1,14 +1,15 @@
 import { z } from "zod";
 
 const trimmed = z.string().trim();
-const optionalTrimmed = z
+
+export const optionalTrimmed = z
   .string()
   .trim()
   .optional()
   .transform((v) => (v && v.length > 0 ? v : undefined));
 
 /** Empty string → undefined; otherwise must be a valid email. */
-const optionalCompanyEmail = z
+export const optionalCompanyEmail = z
   .string()
   .trim()
   .max(320)
@@ -16,6 +17,15 @@ const optionalCompanyEmail = z
   .transform((v) => (v && v.length > 0 ? v : undefined))
   .refine((v) => v === undefined || z.string().email().safeParse(v).success, {
     message: "Enter a valid company email or leave blank",
+  });
+
+export const companyWebsiteField = z
+  .string()
+  .trim()
+  .optional()
+  .transform((v) => (v && v.length > 0 ? v : undefined))
+  .refine((v) => v === undefined || v.length <= 2048, {
+    message: "Website must be at most 2048 characters",
   });
 
 export const customFieldPairSchema = z.object({
@@ -29,14 +39,7 @@ export const createCustomerSchema = z.object({
   company: optionalTrimmed,
   companyPhone: optionalTrimmed,
   companyEmail: optionalCompanyEmail,
-  companyWebsite: z
-    .string()
-    .trim()
-    .optional()
-    .transform((v) => (v && v.length > 0 ? v : undefined))
-    .refine((v) => v === undefined || v.length <= 2048, {
-      message: "Website must be at most 2048 characters",
-    }),
+  companyWebsite: companyWebsiteField,
   companyAddressLine1: optionalTrimmed,
   companyAddressLine2: optionalTrimmed,
   companyCity: optionalTrimmed,
