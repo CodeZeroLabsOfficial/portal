@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { motion } from "framer-motion";
 import { FileText } from "lucide-react";
 import { getCurrentSessionUser, hasRole } from "@/lib/auth/server-session";
 import { listProposalTemplatesForOrg } from "@/server/firestore/proposal-templates";
@@ -23,7 +24,7 @@ export default async function AdminProposalsHubPage() {
   return (
     <WorkspaceShell
       title="Proposals"
-      description="Templates used when creating proposals from customers or pipeline deals."
+      description="Reusable proposal layouts for CRM."
       roleLabel={user.role}
       displayName={user.displayName ?? ""}
       userLabel={user.email || user.uid}
@@ -32,14 +33,15 @@ export default async function AdminProposalsHubPage() {
     >
       <div className="space-y-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="space-y-1">
-            <h2 className="text-lg font-semibold text-foreground">Proposal templates</h2>
-            <p className="max-w-xl text-sm text-muted-foreground">
-              Design reusable layouts (pricing, packages, …). On a customer profile, pick a template when creating a
-              proposal — merge fields like {"{{name}}"}, {"{{company}}"}, and {"{{deal_amount}}"} are filled from CRM
-              data.
-            </p>
-          </div>
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25 }}
+          >
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-[1.75rem] md:leading-tight">
+              Proposals
+            </h1>
+          </motion.div>
           <NewProposalTemplateButton />
         </div>
 

@@ -27,17 +27,22 @@ export function OpportunityDetailView({ opportunity, customer, proposalTemplates
 
   async function createProposal() {
     setBusy(true);
-    const res = await createDraftProposalFromOpportunityAction(
-      opportunity.id,
-      templateId.trim() ? templateId.trim() : undefined,
-    );
-    setBusy(false);
-    if (!res.ok) {
-      window.alert(res.message);
-      return;
+    try {
+      const res = await createDraftProposalFromOpportunityAction(
+        opportunity.id,
+        templateId.trim() ? templateId.trim() : undefined,
+      );
+      if (!res.ok) {
+        window.alert(res.message);
+        return;
+      }
+      router.push(`/admin/proposals/${res.proposalId}`);
+      router.refresh();
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : "Could not create proposal. Please try again.");
+    } finally {
+      setBusy(false);
     }
-    router.push(`/admin/proposals/${res.proposalId}`);
-    router.refresh();
   }
 
   const cfEntries = Object.entries({

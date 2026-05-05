@@ -30,7 +30,6 @@ import type { SubscriptionRecord } from "@/types/subscription";
 import type { TaskRecord } from "@/types/task";
 import {
   addCustomerNoteAction,
-  archiveCustomerAction,
   linkStripeCustomerIdAction,
   pullStripeCustomerProfileAction,
 } from "@/server/actions/customers-crm";
@@ -186,17 +185,22 @@ export function CustomerDetailView({
 
   async function createProposalFromCustomer() {
     setBusy("proposal");
-    const res = await createDraftProposalFromCustomerAction(
-      customer.id,
-      proposalTemplateId.trim() ? proposalTemplateId.trim() : undefined,
-    );
-    setBusy(null);
-    if (!res.ok) {
-      window.alert(res.message);
-      return;
+    try {
+      const res = await createDraftProposalFromCustomerAction(
+        customer.id,
+        proposalTemplateId.trim() ? proposalTemplateId.trim() : undefined,
+      );
+      if (!res.ok) {
+        window.alert(res.message);
+        return;
+      }
+      router.push(`/admin/proposals/${res.proposalId}`);
+      router.refresh();
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : "Could not create proposal. Please try again.");
+    } finally {
+      setBusy(null);
     }
-    router.push(`/admin/proposals/${res.proposalId}`);
-    router.refresh();
   }
 
   async function submitNote(e: React.FormEvent) {
@@ -229,35 +233,12 @@ export function CustomerDetailView({
             Customers
           </Link>
         </Button>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="border-border/80"
-            disabled={busy === "archive"}
-            onClick={() =>
-              run("archive", () =>
-                archiveCustomerAction(customer.id, customer.status !== "archived"),
-              )
-            }
-          >
-            {busy === "archive" ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            {customer.status === "archived" ? "Restore" : "Archive"}
-          </Button>
-          <ProposalCreateControls
-            proposalTemplates={proposalTemplates}
-            proposalTemplateId={proposalTemplateId}
-            onTemplateChange={setProposalTemplateId}
-            busy={busy === "proposal"}
-            onCreate={() => void createProposalFromCustomer()}
-          />
-          <Button variant="secondary" size="sm" className="gap-1.5 shadow-sm" asChild>
-            <Link href={`/admin/customers/${customer.id}/edit`}>
-              <Pencil className="h-3.5 w-3.5" aria-hidden />
-              Edit
-            </Link>
-          </Button>
-        </div>
+        <Button variant="secondary" size="sm" className="gap-1.5 shadow-sm" asChild>
+          <Link href={`/admin/customers/${customer.id}/edit`}>
+            <Pencil className="h-3.5 w-3.5" aria-hidden />
+            Edit
+          </Link>
+        </Button>
       </div>
 
       <motion.header

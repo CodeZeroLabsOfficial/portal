@@ -11,6 +11,7 @@ import { getOpportunityForStaff } from "@/server/firestore/crm-opportunities";
 import { getProposalTemplateForStaff } from "@/server/firestore/proposal-templates";
 import { cloneBrandingFromTemplate, cloneProposalDocument } from "@/lib/proposal-clone-document";
 import { applyProposalTokensToDocument } from "@/lib/proposal-template-tokens";
+import { logError } from "@/lib/logging";
 import type { CustomerRecord } from "@/types/customer";
 import type { OpportunityRecord } from "@/types/opportunity";
 import type { ProposalBlock, ProposalBranding, ProposalDocument } from "@/types/proposal";
@@ -19,6 +20,24 @@ async function requireStaffForCrm() {
   const user = await getCurrentSessionUser();
   if (!user || !hasRole(user, ["admin", "team"])) return null;
   return user;
+}
+
+/** Firestore rejects `undefined` anywhere under a document — strip before `set`. */
+function omitUndefinedDeep(value: unknown): unknown {
+  if (value === null || typeof value !== "object") {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => omitUndefinedDeep(item));
+  }
+  const obj = value as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  for (const key of Object.keys(obj)) {
+    const v = obj[key];
+    if (v === undefined) continue;
+    out[key] = omitUndefinedDeep(v);
+  }
+  return out;
 }
 
 function formatAddressLine(c: CustomerRecord): string {
@@ -152,6 +171,11 @@ export async function createDraftProposalFromCustomerAction(
   const customer = await getCustomerRecordForOrg(user, customerId);
   if (!customer) return { ok: false, message: "Customer not found." };
 
+  const recipientEmail = (customer.email ?? "").trim().toLowerCase();
+  if (!recipientEmail) {
+    return { ok: false, message: "Add an email address to this contact before creating a proposal." };
+  }
+
   const db = getFirebaseAdminFirestore();
   if (!db) return { ok: false, message: "Database unavailable." };
 
@@ -170,36 +194,51 @@ export async function createDraftProposalFromCustomerAction(
     document = buildCustomerOnlyProposalDocument(customer);
   }
 
-  const organizationId = user.organizationId ?? "default";
-  const now = Date.now();
-  const shareToken = randomUUID().replace(/-/g, "");
+  try {
+    const organizationId = user.organizationId ?? "default";
+    const now = Date.now();
+    const shareToken = randomUUID().replace(/-/g, "");
 
-  const ref = db.collection(COLLECTIONS.proposals).doc();
-  const payload: Record<string, unknown> = {
-    organizationId,
-    createdByUid: user.uid,
-    title: document.title,
-    customerId: customer.id,
-    recipientEmail: customer.email.trim().toLowerCase(),
-    status: "draft",
-    shareToken,
-    document,
-    createdAtMs: now,
-    updatedAtMs: now,
-    createdAt: FieldValue.serverTimestamp(),
-    updatedAt: FieldValue.serverTimestamp(),
-  };
-  if (branding) payload.branding = branding;
-  if (sourceTemplateId) payload.sourceTemplateId = sourceTemplateId;
+    const ref = db.collection(COLLECTIONS.proposals).doc();
+    const payload: Record<string, unknown> = {
+      organizationId,
+      createdByUid: user.uid,
+      title: document.title,
+      customerId: customer.id,
+      recipientEmail,
+      status: "draft",
+      shareToken,
+      document: omitUndefinedDeep(document),
+      createdAtMs: now,
+      updatedAtMs: now,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+    if (branding) {
+      const b = omitUndefinedDeep(branding) as ProposalBranding;
+      if (Object.keys(b as object).length > 0) payload.branding = b;
+    }
+    if (sourceTemplateId) payload.sourceTemplateId = sourceTemplateId;
 
-  await ref.set(payload);
+    await ref.set(payload);
 
-  revalidatePath("/admin");
-  revalidatePath("/admin/proposals");
-  revalidatePath(`/admin/proposals/${ref.id}`);
-  revalidatePath(`/admin/customers/${customer.id}`);
+    revalidatePath("/admin");
+    revalidatePath("/admin/proposals");
+    revalidatePath(`/admin/proposals/${ref.id}`);
+    revalidatePath(`/admin/customers/${customer.id}`);
 
-  return { ok: true, proposalId: ref.id };
+    return { ok: true, proposalId: ref.id };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    logError("createDraftProposalFromCustomerAction_failed", { message: msg });
+    return {
+      ok: false,
+      message:
+        err instanceof Error && err.message
+          ? err.message
+          : "Could not save the proposal. If this persists, check Firestore rules and that the document has no invalid fields.",
+    };
+  }
 }
 
 /**
@@ -218,6 +257,14 @@ export async function createDraftProposalFromOpportunityAction(
 
   const customer = await getCustomerRecordForOrg(user, opportunity.customerId);
   if (!customer) return { ok: false, message: "Customer not found." };
+
+  const recipientEmail = (customer.email ?? "").trim().toLowerCase();
+  if (!recipientEmail) {
+    return {
+      ok: false,
+      message: "This opportunity's contact needs an email address before creating a proposal.",
+    };
+  }
 
   const db = getFirebaseAdminFirestore();
   if (!db) return { ok: false, message: "Database unavailable." };
@@ -240,36 +287,51 @@ export async function createDraftProposalFromOpportunityAction(
     document = buildPrefilledProposalDocument(customer, opportunity);
   }
 
-  const organizationId = user.organizationId ?? "default";
-  const now = Date.now();
-  const shareToken = randomUUID().replace(/-/g, "");
+  try {
+    const organizationId = user.organizationId ?? "default";
+    const now = Date.now();
+    const shareToken = randomUUID().replace(/-/g, "");
 
-  const ref = db.collection(COLLECTIONS.proposals).doc();
-  const payload: Record<string, unknown> = {
-    organizationId,
-    createdByUid: user.uid,
-    title: document.title,
-    customerId: customer.id,
-    opportunityId: opportunity.id,
-    recipientEmail: customer.email.trim().toLowerCase(),
-    status: "draft",
-    shareToken,
-    document,
-    createdAtMs: now,
-    updatedAtMs: now,
-    createdAt: FieldValue.serverTimestamp(),
-    updatedAt: FieldValue.serverTimestamp(),
-  };
-  if (branding) payload.branding = branding;
-  if (sourceTemplateId) payload.sourceTemplateId = sourceTemplateId;
+    const ref = db.collection(COLLECTIONS.proposals).doc();
+    const payload: Record<string, unknown> = {
+      organizationId,
+      createdByUid: user.uid,
+      title: document.title,
+      customerId: customer.id,
+      opportunityId: opportunity.id,
+      recipientEmail,
+      status: "draft",
+      shareToken,
+      document: omitUndefinedDeep(document),
+      createdAtMs: now,
+      updatedAtMs: now,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+    if (branding) {
+      const b = omitUndefinedDeep(branding) as ProposalBranding;
+      if (Object.keys(b as object).length > 0) payload.branding = b;
+    }
+    if (sourceTemplateId) payload.sourceTemplateId = sourceTemplateId;
 
-  await ref.set(payload);
+    await ref.set(payload);
 
-  revalidatePath("/admin");
-  revalidatePath("/admin/proposals");
-  revalidatePath(`/admin/proposals/${ref.id}`);
-  revalidatePath(`/admin/customers/${customer.id}`);
-  revalidatePath(`/admin/opportunities/${opportunityId}`);
+    revalidatePath("/admin");
+    revalidatePath("/admin/proposals");
+    revalidatePath(`/admin/proposals/${ref.id}`);
+    revalidatePath(`/admin/customers/${customer.id}`);
+    revalidatePath(`/admin/opportunities/${opportunityId}`);
 
-  return { ok: true, proposalId: ref.id };
+    return { ok: true, proposalId: ref.id };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    logError("createDraftProposalFromOpportunityAction_failed", { message: msg });
+    return {
+      ok: false,
+      message:
+        err instanceof Error && err.message
+          ? err.message
+          : "Could not save the proposal. If this persists, check Firestore rules and that the document has no invalid fields.",
+    };
+  }
 }

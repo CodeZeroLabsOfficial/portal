@@ -23,8 +23,15 @@ export function NewProposalTemplateButton() {
   }
 
   return (
-    <Button type="button" size="sm" className="gap-2" disabled={busy} onClick={() => void onClick()}>
-      {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      className="gap-1.5 text-[14px] font-medium text-muted-foreground hover:text-foreground"
+      disabled={busy}
+      onClick={() => void onClick()}
+    >
+      {busy ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden /> : <Plus className="h-4 w-4 shrink-0" aria-hidden />}
       New template
     </Button>
   );
