@@ -598,7 +598,6 @@ export async function listProposalsLinkedToCustomer(
 ): Promise<ProposalRecord[]> {
   const db = getFirebaseAdminFirestore();
   if (!db || !canStaffAccessCrm(user)) return [];
-  const orgId = user.organizationId ?? "default";
   const emailLower = recipientEmail.trim().toLowerCase();
 
   try {
@@ -623,11 +622,7 @@ export async function listProposalsLinkedToCustomer(
     for (const doc of docs) {
       if (seen.has(doc.id)) continue;
       seen.add(doc.id);
-      const p = parseProposalRecord(doc.id, doc.data() as Record<string, unknown>);
-      const orgMissing = !p.organizationId;
-      const orgMatch = p.organizationId === orgId;
-      if (!orgMissing && !orgMatch) continue;
-      rows.push(p);
+      rows.push(parseProposalRecord(doc.id, doc.data() as Record<string, unknown>));
     }
     return rows.sort((a, b) => (b.updatedAtMs ?? 0) - (a.updatedAtMs ?? 0));
   } catch (err) {

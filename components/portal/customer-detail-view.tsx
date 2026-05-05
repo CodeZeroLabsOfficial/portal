@@ -70,6 +70,53 @@ function rollupFromSubscriptions(subs: SubscriptionRecord[]): string {
   return `Subscriptions · ${statuses.join(", ")}`;
 }
 
+function ProposalCreateControls({
+  proposalTemplates,
+  proposalTemplateId,
+  onTemplateChange,
+  busy,
+  onCreate,
+}: {
+  proposalTemplates: ProposalTemplateRecord[];
+  proposalTemplateId: string;
+  onTemplateChange: (id: string) => void;
+  busy: boolean;
+  onCreate: () => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {proposalTemplates.length > 0 ? (
+        <label className="flex flex-col gap-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+          Template
+          <select
+            className="min-w-[160px] rounded-md border border-input bg-background px-2 py-1.5 text-xs font-normal normal-case text-foreground"
+            value={proposalTemplateId}
+            onChange={(e) => onTemplateChange(e.target.value)}
+            disabled={busy}
+          >
+            <option value="">Standard (auto-filled)</option>
+            {proposalTemplates.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+      <Button size="sm" className="gap-1.5 shadow-sm" disabled={busy} onClick={() => void onCreate()}>
+        {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Send className="h-3.5 w-3.5" aria-hidden />}
+        Create proposal
+      </Button>
+      <Button variant="outline" size="sm" className="hidden sm:inline-flex" asChild>
+        <Link href="/admin/proposals">
+          <FileText className="mr-1 h-3.5 w-3.5" aria-hidden />
+          Templates
+        </Link>
+      </Button>
+    </div>
+  );
+}
+
 export interface CustomerDetailViewProps {
   customer: CustomerRecord;
   subscriptions: SubscriptionRecord[];
@@ -197,45 +244,13 @@ export function CustomerDetailView({
             {busy === "archive" ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             {customer.status === "archived" ? "Restore" : "Archive"}
           </Button>
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            {proposalTemplates.length > 0 ? (
-              <label className="flex flex-col gap-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                Template
-                <select
-                  className="min-w-[160px] rounded-md border border-input bg-background px-2 py-1.5 text-xs font-normal normal-case text-foreground"
-                  value={proposalTemplateId}
-                  onChange={(e) => setProposalTemplateId(e.target.value)}
-                  disabled={busy === "proposal"}
-                >
-                  <option value="">Standard (auto-filled)</option>
-                  {proposalTemplates.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ) : null}
-            <Button
-              size="sm"
-              className="gap-1.5 shadow-sm"
-              disabled={busy === "proposal"}
-              onClick={() => void createProposalFromCustomer()}
-            >
-              {busy === "proposal" ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
-              ) : (
-                <Send className="h-3.5 w-3.5" aria-hidden />
-              )}
-              Create proposal
-            </Button>
-            <Button variant="outline" size="sm" className="hidden sm:inline-flex" asChild>
-              <Link href="/admin/proposals">
-                <FileText className="mr-1 h-3.5 w-3.5" aria-hidden />
-                Templates
-              </Link>
-            </Button>
-          </div>
+          <ProposalCreateControls
+            proposalTemplates={proposalTemplates}
+            proposalTemplateId={proposalTemplateId}
+            onTemplateChange={setProposalTemplateId}
+            busy={busy === "proposal"}
+            onCreate={() => void createProposalFromCustomer()}
+          />
           <Button variant="secondary" size="sm" className="gap-1.5 shadow-sm" asChild>
             <Link href={`/admin/customers/${customer.id}/edit`}>
               <Pencil className="h-3.5 w-3.5" aria-hidden />
@@ -558,17 +573,32 @@ export function CustomerDetailView({
         </TabsContent>
 
         <TabsContent value="proposals" className="space-y-4">
+          <Card className="border-border/80 bg-card/60">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Create and link</CardTitle>
+              <CardDescription>
+                New drafts are saved with this customer&apos;s id and email. They appear below once created.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-wrap gap-3">
+              <ProposalCreateControls
+                proposalTemplates={proposalTemplates}
+                proposalTemplateId={proposalTemplateId}
+                onTemplateChange={setProposalTemplateId}
+                busy={busy === "proposal"}
+                onCreate={() => void createProposalFromCustomer()}
+              />
+            </CardContent>
+          </Card>
           <p className="text-sm text-muted-foreground">
-            Proposals linked by <span className="font-mono text-foreground/80">customerId</span> or{" "}
+            List includes proposals with this CRM <span className="font-mono text-foreground/80">customerId</span>, or{" "}
             <span className="font-mono text-foreground/80">recipientEmail</span> matching this profile.
           </p>
           {proposalsMatched.length === 0 ? (
             <Card className="border-dashed border-border/80 bg-muted/20">
-              <CardContent className="py-12 text-center text-sm text-muted-foreground">
-                No linked proposals yet. Create one from an opportunity, or store matching{" "}
-                <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">customerId</code> /{" "}
-                <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">recipientEmail</code> on proposal
-                rows.
+              <CardContent className="py-12 text-center text-sm text-muted-foreground space-y-2">
+                <p>No linked proposals yet.</p>
+                <p>Use <strong className="text-foreground/90">Create proposal</strong> above, or attach one when creating from an opportunity.</p>
               </CardContent>
             </Card>
           ) : (
