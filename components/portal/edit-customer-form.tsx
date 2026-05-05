@@ -24,6 +24,15 @@ function customerToFormDefaults(customer: CustomerRecord): UpdateCustomerFormInp
     name: customer.name,
     email: customer.email,
     company: customer.company ?? "",
+    companyPhone: customer.companyPhone ?? "",
+    companyEmail: customer.companyEmail ?? "",
+    companyWebsite: customer.companyWebsite ?? "",
+    companyAddressLine1: customer.companyAddressLine1 ?? "",
+    companyAddressLine2: customer.companyAddressLine2 ?? "",
+    companyCity: customer.companyCity ?? "",
+    companyRegion: customer.companyRegion ?? "",
+    companyPostalCode: customer.companyPostalCode ?? "",
+    companyCountry: customer.companyCountry ?? "",
     phone: customer.phone ?? "",
     addressLine1: customer.addressLine1 ?? "",
     addressLine2: customer.addressLine2 ?? "",
@@ -105,7 +114,9 @@ export function EditCustomerForm({ customer }: EditCustomerFormProps) {
         <Card className="w-full overflow-hidden border-border/80 shadow-sm">
           <CardHeader className="border-b border-border/60 bg-muted/20">
             <CardTitle className="text-xl">Edit customer</CardTitle>
-            <CardDescription>Update contact details, address, tags, and custom fields.</CardDescription>
+            <CardDescription>
+              Update contact details, company profile, address, tags, and custom fields.
+            </CardDescription>
           </CardHeader>
           <CardContent className="p-6">
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" noValidate>
@@ -148,18 +159,55 @@ export function EditCustomerForm({ customer }: EditCustomerFormProps) {
                     <p className="text-xs text-destructive">{form.formState.errors.email.message}</p>
                   ) : null}
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-crm-company">Company</Label>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="edit-crm-company">Company name</Label>
                   <Input id="edit-crm-company" placeholder="Acme Pty Ltd" {...form.register("company")} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-crm-phone">Phone</Label>
-                  <Input id="edit-crm-phone" type="tel" placeholder="+61 …" {...form.register("phone")} />
+                  <Label htmlFor="edit-crm-company-phone">Company phone</Label>
+                  <Input id="edit-crm-company-phone" type="tel" placeholder="+61 …" {...form.register("companyPhone")} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-crm-company-email">Company email</Label>
+                  <Input
+                    id="edit-crm-company-email"
+                    type="email"
+                    autoComplete="off"
+                    placeholder="hello@acme.com"
+                    {...form.register("companyEmail")}
+                  />
+                  {form.formState.errors.companyEmail ? (
+                    <p className="text-xs text-destructive">{form.formState.errors.companyEmail.message}</p>
+                  ) : null}
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="edit-crm-company-website">Company website</Label>
+                  <Input id="edit-crm-company-website" placeholder="https://acme.com" {...form.register("companyWebsite")} />
+                  {form.formState.errors.companyWebsite ? (
+                    <p className="text-xs text-destructive">{form.formState.errors.companyWebsite.message}</p>
+                  ) : null}
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label>Address</Label>
+                <Label>Company address</Label>
+                <Input placeholder="Line 1" {...form.register("companyAddressLine1")} />
+                <Input placeholder="Line 2" {...form.register("companyAddressLine2")} />
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Input placeholder="City" {...form.register("companyCity")} />
+                  <Input placeholder="State / region" {...form.register("companyRegion")} />
+                  <Input placeholder="Postal code" {...form.register("companyPostalCode")} />
+                  <Input placeholder="Country" {...form.register("companyCountry")} />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-crm-phone">Contact phone</Label>
+                <Input id="edit-crm-phone" type="tel" placeholder="+61 …" {...form.register("phone")} />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Contact address</Label>
                 <Input placeholder="Line 1" {...form.register("addressLine1")} />
                 <Input placeholder="Line 2" {...form.register("addressLine2")} />
                 <div className="grid gap-2 sm:grid-cols-2">

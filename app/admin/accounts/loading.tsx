@@ -1,0 +1,41 @@
+import { WorkspaceShell } from "@/components/portal/workspace-shell";
+import { Skeleton } from "@/components/ui/skeleton";
+import { getCurrentSessionUser } from "@/lib/auth/server-session";
+import { redirect } from "next/navigation";
+
+export default async function AdminAccountsLoading() {
+  const user = await getCurrentSessionUser();
+  if (!user) {
+    redirect("/login?next=/admin/accounts");
+  }
+
+  return (
+    <WorkspaceShell
+      title="Accounts"
+      description="Company directory from CRM."
+      roleLabel={user.role}
+      displayName={user.displayName ?? ""}
+      userLabel={user.email || user.uid}
+      showMainHeader={false}
+      showRightAside={false}
+    >
+      <div className="space-y-8">
+        <div className="space-y-2">
+          <Skeleton className="h-9 w-48 rounded-lg" />
+          <Skeleton className="h-4 max-w-lg rounded-md" />
+        </div>
+        <div className="overflow-hidden rounded-xl border border-border/80">
+          <div className="flex gap-3 border-b border-border p-4">
+            <Skeleton className="h-9 flex-1 max-w-md rounded-full" />
+            <Skeleton className="h-9 w-9 rounded-full" />
+          </div>
+          <div className="space-y-3 p-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <Skeleton key={i} className="h-12 w-full rounded-lg" />
+            ))}
+          </div>
+        </div>
+      </div>
+    </WorkspaceShell>
+  );
+}

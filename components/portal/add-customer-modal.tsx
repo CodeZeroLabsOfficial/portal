@@ -29,6 +29,15 @@ const defaultValues: CreateCustomerInput = {
   name: "",
   email: "",
   company: "",
+  companyPhone: "",
+  companyEmail: "",
+  companyWebsite: "",
+  companyAddressLine1: "",
+  companyAddressLine2: "",
+  companyCity: "",
+  companyRegion: "",
+  companyPostalCode: "",
+  companyCountry: "",
   phone: "",
   addressLine1: "",
   addressLine2: "",
@@ -149,9 +158,9 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
                 <p className="text-xs text-destructive">{form.formState.errors.email.message}</p>
               ) : null}
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="crm-company" className="text-zinc-300">
-                Company
+                Company name
               </Label>
               <Input
                 id="crm-company"
@@ -161,21 +170,100 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="crm-phone" className="text-zinc-300">
-                Phone
+              <Label htmlFor="crm-company-phone" className="text-zinc-300">
+                Company phone
               </Label>
               <Input
-                id="crm-phone"
+                id="crm-company-phone"
                 type="tel"
                 className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
                 placeholder="+61 …"
-                {...form.register("phone")}
+                {...form.register("companyPhone")}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="crm-company-email" className="text-zinc-300">
+                Company email
+              </Label>
+              <Input
+                id="crm-company-email"
+                type="email"
+                autoComplete="off"
+                className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+                placeholder="hello@acme.com"
+                {...form.register("companyEmail")}
+              />
+              {form.formState.errors.companyEmail ? (
+                <p className="text-xs text-destructive">{form.formState.errors.companyEmail.message}</p>
+              ) : null}
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="crm-company-website" className="text-zinc-300">
+                Company website
+              </Label>
+              <Input
+                id="crm-company-website"
+                className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+                placeholder="https://acme.com"
+                {...form.register("companyWebsite")}
+              />
+              {form.formState.errors.companyWebsite ? (
+                <p className="text-xs text-destructive">{form.formState.errors.companyWebsite.message}</p>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-zinc-300">Company address</Label>
+            <Input
+              className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+              placeholder="Line 1"
+              {...form.register("companyAddressLine1")}
+            />
+            <Input
+              className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+              placeholder="Line 2"
+              {...form.register("companyAddressLine2")}
+            />
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Input
+                className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+                placeholder="City"
+                {...form.register("companyCity")}
+              />
+              <Input
+                className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+                placeholder="State / region"
+                {...form.register("companyRegion")}
+              />
+              <Input
+                className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+                placeholder="Postal code"
+                {...form.register("companyPostalCode")}
+              />
+              <Input
+                className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+                placeholder="Country"
+                {...form.register("companyCountry")}
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label className="text-zinc-300">Address</Label>
+            <Label htmlFor="crm-phone" className="text-zinc-300">
+              Contact phone
+            </Label>
+            <Input
+              id="crm-phone"
+              type="tel"
+              className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+              placeholder="+61 …"
+              {...form.register("phone")}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-zinc-300">Contact address</Label>
             <Input
               className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
               placeholder="Line 1"

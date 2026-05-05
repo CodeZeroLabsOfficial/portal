@@ -3,6 +3,8 @@ import { logError } from "@/lib/logging";
 import { coerceTimestampToMillis } from "@/lib/firestore/timestamp";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { getFirebaseAdminAuth, getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
+import { accountKeyToNormalizedCompany, companyNameToAccountKey } from "@/lib/account-key";
+import type { AccountListRow } from "@/lib/account-list";
 import type { CustomerListRow } from "@/lib/customer-list";
 import type { CreateCustomerInput, UpdateCustomerFormInput } from "@/lib/schemas/customer";
 import type { InvoiceRecord } from "@/types/invoice";
@@ -39,6 +41,39 @@ function formatLocation(data: Pick<CustomerRecord, "city" | "region" | "country"
   return parts.length ? parts.join(", ") : "";
 }
 
+function formatCompanyLocation(
+  data: Pick<CustomerRecord, "companyCity" | "companyRegion" | "companyCountry">,
+): string {
+  const parts = [data.companyCity, data.companyRegion, data.companyCountry].filter(Boolean) as string[];
+  return parts.length ? parts.join(", ") : "";
+}
+
+function companyAddressSummary(c: CustomerRecord): string {
+  const street = [c.companyAddressLine1, c.companyAddressLine2].filter(Boolean).join(", ");
+  const loc = formatCompanyLocation(c);
+  const pc = c.companyPostalCode?.trim();
+  const chunks = [street, [pc, loc].filter(Boolean).join(" ").trim()].filter(Boolean);
+  return chunks.join(" · ") || "—";
+}
+
+function pickLatestNonEmpty(
+  customers: CustomerRecord[],
+  pick: (row: CustomerRecord) => string | undefined,
+): string {
+  const sorted = [...customers].sort((a, b) => (b.updatedAtMs || 0) - (a.updatedAtMs || 0));
+  for (const row of sorted) {
+    const v = pick(row)?.trim();
+    if (v) return v;
+  }
+  return "";
+}
+
+function displayCompanyNameForGroup(customers: CustomerRecord[]): string {
+  const sorted = [...customers].sort((a, b) => (b.updatedAtMs || 0) - (a.updatedAtMs || 0));
+  const raw = sorted[0]?.company?.trim();
+  return raw || "—";
+}
+
 function parseCustomerRecord(id: string, data: Record<string, unknown>): CustomerRecord | null {
   if (typeof data !== "object" || data === null) return null;
   const organizationId = asString(data.organizationId)?.trim();
@@ -65,6 +100,15 @@ function parseCustomerRecord(id: string, data: Record<string, unknown>): Custome
     name,
     email,
     company: asString(data.company),
+    companyPhone: asString(data.companyPhone),
+    companyEmail: asString(data.companyEmail),
+    companyWebsite: asString(data.companyWebsite),
+    companyAddressLine1: asString(data.companyAddressLine1),
+    companyAddressLine2: asString(data.companyAddressLine2),
+    companyCity: asString(data.companyCity),
+    companyRegion: asString(data.companyRegion),
+    companyPostalCode: asString(data.companyPostalCode),
+    companyCountry: asString(data.companyCountry),
     phone: asString(data.phone),
     addressLine1: asString(data.addressLine1),
     addressLine2: asString(data.addressLine2),
@@ -158,20 +202,38 @@ async function listAllSubscriptionsForStaff(db: AdminDb): Promise<SubscriptionRe
   });
 }
 
+async function listCustomerRecordsForStaffSorted(
+  user: PortalUser,
+): Promise<CustomerRecord[] | null> {
+  const db = getFirebaseAdminFirestore();
+  if (!db || !canStaffAccessCrm(user)) {
+    return null;
+  }
+  try {
+    const customerSnap = await db.collection(COLLECTIONS.customers).limit(500).get();
+    return customerSnap.docs
+      .map((doc) => parseCustomerRecord(doc.id, doc.data() as Record<string, unknown>))
+      .filter((c): c is CustomerRecord => c !== null)
+      .sort((a, b) => (b.updatedAtMs || b.createdAtMs) - (a.updatedAtMs || a.createdAtMs));
+  } catch (error) {
+    logError("crm_list_customers_failed", {
+      message: error instanceof Error ? error.message : "unknown",
+    });
+    return null;
+  }
+}
+
 export async function getAdminCustomerListRows(user: PortalUser): Promise<CustomerListRow[]> {
   const db = getFirebaseAdminFirestore();
   if (!db || !canStaffAccessCrm(user)) {
     return [];
   }
   try {
-    const [customerSnap, subscriptions] = await Promise.all([
-      db.collection(COLLECTIONS.customers).limit(500).get(),
+    const [customers, subscriptions] = await Promise.all([
+      listCustomerRecordsForStaffSorted(user),
       listAllSubscriptionsForStaff(db),
     ]);
-    const customers = customerSnap.docs
-      .map((doc) => parseCustomerRecord(doc.id, doc.data() as Record<string, unknown>))
-      .filter((c): c is CustomerRecord => c !== null)
-      .sort((a, b) => (b.updatedAtMs || b.createdAtMs) - (a.updatedAtMs || a.createdAtMs));
+    if (!customers) return [];
     return customers.map((c) => customerToListRow(c, subscriptions));
   } catch (error) {
     logError("crm_list_customers_failed", {
@@ -179,6 +241,94 @@ export async function getAdminCustomerListRows(user: PortalUser): Promise<Custom
     });
     return [];
   }
+}
+
+export async function getAdminAccountListRows(user: PortalUser): Promise<AccountListRow[]> {
+  const customers = await listCustomerRecordsForStaffSorted(user);
+  if (!customers) return [];
+
+  const byNorm = new Map<string, CustomerRecord[]>();
+  for (const c of customers) {
+    const name = c.company?.trim();
+    if (!name) continue;
+    const norm = name.toLowerCase();
+    const bucket = byNorm.get(norm) ?? [];
+    bucket.push(c);
+    byNorm.set(norm, bucket);
+  }
+
+  const rows: AccountListRow[] = [];
+  for (const [, group] of byNorm) {
+    const displayName = displayCompanyNameForGroup(group);
+    const key = companyNameToAccountKey(displayName);
+    if (!key) continue;
+    const addressSummary = (() => {
+      const sorted = [...group].sort((a, b) => (b.updatedAtMs || 0) - (a.updatedAtMs || 0));
+      for (const c of sorted) {
+        const s = companyAddressSummary(c);
+        if (s !== "—") return s;
+      }
+      return "—";
+    })();
+    rows.push({
+      key,
+      displayName,
+      addressSummary,
+      companyPhone: pickLatestNonEmpty(group, (r) => r.companyPhone),
+      companyEmail: pickLatestNonEmpty(group, (r) => r.companyEmail),
+      companyWebsite: pickLatestNonEmpty(group, (r) => r.companyWebsite),
+      contactCount: group.length,
+      activeContactCount: group.filter((r) => r.status === "active").length,
+    });
+  }
+
+  rows.sort((a, b) => a.displayName.localeCompare(b.displayName, undefined, { sensitivity: "base" }));
+  return rows;
+}
+
+export interface AccountDetailAggregate {
+  key: string;
+  displayName: string;
+  companyPhone: string;
+  companyEmail: string;
+  companyWebsite: string;
+  companyAddressLine1?: string;
+  companyAddressLine2?: string;
+  companyCity?: string;
+  companyRegion?: string;
+  companyPostalCode?: string;
+  companyCountry?: string;
+  contacts: CustomerRecord[];
+}
+
+export async function getAccountDetailForKey(
+  user: PortalUser,
+  accountKey: string,
+): Promise<AccountDetailAggregate | null> {
+  const customers = await listCustomerRecordsForStaffSorted(user);
+  if (!customers) return null;
+
+  const norm = accountKeyToNormalizedCompany(accountKey);
+  if (!norm) return null;
+
+  const contacts = customers.filter((c) => c.company?.trim().toLowerCase() === norm);
+  if (contacts.length === 0) return null;
+
+  const displayName = displayCompanyNameForGroup(contacts);
+  return {
+    key: companyNameToAccountKey(displayName),
+    displayName,
+    companyPhone: pickLatestNonEmpty(contacts, (r) => r.companyPhone),
+    companyEmail: pickLatestNonEmpty(contacts, (r) => r.companyEmail),
+    companyWebsite: pickLatestNonEmpty(contacts, (r) => r.companyWebsite),
+    companyAddressLine1: pickLatestNonEmpty(contacts, (r) => r.companyAddressLine1) || undefined,
+    companyAddressLine2: pickLatestNonEmpty(contacts, (r) => r.companyAddressLine2) || undefined,
+    companyCity: pickLatestNonEmpty(contacts, (r) => r.companyCity) || undefined,
+    companyRegion: pickLatestNonEmpty(contacts, (r) => r.companyRegion) || undefined,
+    companyPostalCode: pickLatestNonEmpty(contacts, (r) => r.companyPostalCode) || undefined,
+    companyCountry: pickLatestNonEmpty(contacts, (r) => r.companyCountry) || undefined,
+    contacts: [...contacts].sort((a, b) => (b.updatedAtMs || 0) - (a.updatedAtMs || 0)),
+  };
 }
 
 export async function getCustomerRecordForOrg(
@@ -476,6 +626,15 @@ export async function createCustomerDocument(
     name: input.name.trim(),
     email: input.email.trim().toLowerCase(),
     company: input.company?.trim() || null,
+    companyPhone: input.companyPhone?.trim() || null,
+    companyEmail: input.companyEmail?.trim()?.toLowerCase() || null,
+    companyWebsite: input.companyWebsite?.trim() || null,
+    companyAddressLine1: input.companyAddressLine1?.trim() || null,
+    companyAddressLine2: input.companyAddressLine2?.trim() || null,
+    companyCity: input.companyCity?.trim() || null,
+    companyRegion: input.companyRegion?.trim() || null,
+    companyPostalCode: input.companyPostalCode?.trim() || null,
+    companyCountry: input.companyCountry?.trim() || null,
     phone: input.phone?.trim() || null,
     addressLine1: input.addressLine1?.trim() || null,
     addressLine2: input.addressLine2?.trim() || null,
@@ -562,6 +721,15 @@ export async function updateCustomerDocument(
     name: rest.name.trim(),
     email: rest.email.trim().toLowerCase(),
     company: rest.company?.trim() || null,
+    companyPhone: rest.companyPhone?.trim() || null,
+    companyEmail: rest.companyEmail?.trim()?.toLowerCase() || null,
+    companyWebsite: rest.companyWebsite?.trim() || null,
+    companyAddressLine1: rest.companyAddressLine1?.trim() || null,
+    companyAddressLine2: rest.companyAddressLine2?.trim() || null,
+    companyCity: rest.companyCity?.trim() || null,
+    companyRegion: rest.companyRegion?.trim() || null,
+    companyPostalCode: rest.companyPostalCode?.trim() || null,
+    companyCountry: rest.companyCountry?.trim() || null,
     phone: rest.phone?.trim() || null,
     addressLine1: rest.addressLine1?.trim() || null,
     addressLine2: rest.addressLine2?.trim() || null,

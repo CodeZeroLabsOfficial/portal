@@ -31,6 +31,14 @@ async function requireStaffForCrm() {
   return user;
 }
 
+function revalidateCrmCustomerPaths(customerId?: string) {
+  revalidatePath("/admin/customers", "layout");
+  revalidatePath("/admin/accounts", "layout");
+  if (customerId) {
+    revalidatePath(`/admin/customers/${customerId}`);
+  }
+}
+
 export async function createCustomerAction(
   raw: unknown,
 ): Promise<{ ok: true; customerId: string } | { ok: false; message: string }> {
@@ -46,8 +54,7 @@ export async function createCustomerAction(
   if (!result.ok) {
     return { ok: false, message: result.message };
   }
-  revalidatePath("/admin/customers");
-  revalidatePath(`/admin/customers/${result.customerId}`);
+  revalidateCrmCustomerPaths(result.customerId);
   return { ok: true, customerId: result.customerId };
 }
 
@@ -67,8 +74,7 @@ export async function updateCustomerAction(
     return { ok: false, message: result.message };
   }
   const id = parsed.data.id;
-  revalidatePath("/admin/customers");
-  revalidatePath(`/admin/customers/${id}`);
+  revalidateCrmCustomerPaths(id);
   revalidatePath(`/admin/customers/${id}/edit`);
   return { ok: true };
 }
@@ -89,8 +95,7 @@ export async function addCustomerNoteAction(
   if (!result.ok) {
     return { ok: false, message: result.message };
   }
-  revalidatePath("/admin/customers");
-  revalidatePath(`/admin/customers/${customerId}`);
+  revalidateCrmCustomerPaths(customerId);
   return { ok: true };
 }
 
@@ -102,8 +107,7 @@ export async function archiveCustomerAction(
   if (!user) return { ok: false, message: "Unauthorized." };
   const result = await setCustomerArchived(user, customerId, archived);
   if (!result.ok) return { ok: false, message: result.message };
-  revalidatePath("/admin/customers");
-  revalidatePath(`/admin/customers/${customerId}`);
+  revalidateCrmCustomerPaths(customerId);
   return { ok: true };
 }
 
@@ -114,7 +118,7 @@ export async function deleteCustomerAction(
   if (!user) return { ok: false, message: "Unauthorized." };
   const result = await deleteCustomerDocument(user, customerId);
   if (!result.ok) return { ok: false, message: result.message };
-  revalidatePath("/admin/customers");
+  revalidateCrmCustomerPaths();
   return { ok: true };
 }
 
@@ -130,8 +134,7 @@ export async function linkStripeCustomerIdAction(
   }
   const result = await syncStripeCustomerBasics(user, customerId, trimmed);
   if (!result.ok) return { ok: false, message: result.message };
-  revalidatePath("/admin/customers");
-  revalidatePath(`/admin/customers/${customerId}`);
+  revalidateCrmCustomerPaths(customerId);
   return { ok: true };
 }
 
@@ -194,8 +197,7 @@ export async function pullStripeCustomerProfileAction(
       createdAt: FieldValue.serverTimestamp(),
     });
 
-    revalidatePath("/admin/customers");
-    revalidatePath(`/admin/customers/${customerId}`);
+    revalidateCrmCustomerPaths(customerId);
     return { ok: true };
   } catch (e) {
     const message = e instanceof Error ? e.message : "Stripe request failed.";

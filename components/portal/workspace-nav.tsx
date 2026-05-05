@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BarChart3,
+  Building2,
   Columns3,
   CreditCard,
   LayoutDashboard,
@@ -35,6 +36,7 @@ const adminNavIcons: Record<(typeof ADMIN_PORTAL_NAV)[number]["id"], LucideIcon>
   dashboard: LayoutDashboard,
   customers: Users,
   opportunities: Columns3,
+  accounts: Building2,
   billing: CreditCard,
   tasks: ListTodo,
   reports: BarChart3,

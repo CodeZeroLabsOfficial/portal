@@ -7,6 +7,17 @@ const optionalTrimmed = z
   .optional()
   .transform((v) => (v && v.length > 0 ? v : undefined));
 
+/** Empty string → undefined; otherwise must be a valid email. */
+const optionalCompanyEmail = z
+  .string()
+  .trim()
+  .max(320)
+  .optional()
+  .transform((v) => (v && v.length > 0 ? v : undefined))
+  .refine((v) => v === undefined || z.string().email().safeParse(v).success, {
+    message: "Enter a valid company email or leave blank",
+  });
+
 export const customFieldPairSchema = z.object({
   key: trimmed.min(1, "Key is required").max(64),
   value: z.string().max(2000).default(""),
@@ -16,6 +27,22 @@ export const createCustomerSchema = z.object({
   name: trimmed.min(1, "Name is required").max(200),
   email: trimmed.email("Valid email required").max(320),
   company: optionalTrimmed,
+  companyPhone: optionalTrimmed,
+  companyEmail: optionalCompanyEmail,
+  companyWebsite: z
+    .string()
+    .trim()
+    .optional()
+    .transform((v) => (v && v.length > 0 ? v : undefined))
+    .refine((v) => v === undefined || v.length <= 2048, {
+      message: "Website must be at most 2048 characters",
+    }),
+  companyAddressLine1: optionalTrimmed,
+  companyAddressLine2: optionalTrimmed,
+  companyCity: optionalTrimmed,
+  companyRegion: optionalTrimmed,
+  companyPostalCode: optionalTrimmed,
+  companyCountry: optionalTrimmed,
   phone: optionalTrimmed,
   addressLine1: optionalTrimmed,
   addressLine2: optionalTrimmed,

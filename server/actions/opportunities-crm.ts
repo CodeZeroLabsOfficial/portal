@@ -50,6 +50,7 @@ export async function convertLeadToContactAction(
 
   revalidatePath("/admin/customers");
   revalidatePath(`/admin/customers/${result.customerId}`);
+  revalidatePath("/admin/accounts", "layout");
   revalidatePath("/admin/opportunities");
   revalidatePath(`/admin/opportunities/${result.opportunityId}`);
   return result;

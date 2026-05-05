@@ -20,6 +20,16 @@ export interface CustomerRecord {
   name: string;
   email: string;
   company?: string;
+  /** Company switchboard / main line (distinct from contact `phone`). */
+  companyPhone?: string;
+  companyEmail?: string;
+  companyWebsite?: string;
+  companyAddressLine1?: string;
+  companyAddressLine2?: string;
+  companyCity?: string;
+  companyRegion?: string;
+  companyPostalCode?: string;
+  companyCountry?: string;
   phone?: string;
   addressLine1?: string;
   addressLine2?: string;

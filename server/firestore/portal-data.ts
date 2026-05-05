@@ -9,7 +9,11 @@ import type { SupportTicketRecord, SupportTicketUrgency } from "@/types/support-
 import type { TaskRecord } from "@/types/task";
 import type { PortalUser } from "@/types/user";
 import type { CustomerListRow } from "@/lib/customer-list";
-import { getAdminCustomerListRows as loadCrmCustomerListRows } from "@/server/firestore/crm-customers";
+import {
+  getAccountDetailForKey,
+  getAdminAccountListRows as loadCrmAccountListRows,
+  getAdminCustomerListRows as loadCrmCustomerListRows,
+} from "@/server/firestore/crm-customers";
 
 export interface ActivityItem {
   id: string;
@@ -197,6 +201,17 @@ export async function getAdminCustomerListRows(user: PortalUser): Promise<Custom
   /** Always read fresh Firestore data — avoids stale RSC / router cache after create or edits. */
   noStore();
   return loadCrmCustomerListRows(user);
+}
+
+/** Distinct company names from CRM customers (see `lib/account-list`). */
+export async function getAdminAccountListRows(user: PortalUser) {
+  noStore();
+  return loadCrmAccountListRows(user);
+}
+
+export async function getAdminAccountDetail(user: PortalUser, accountKey: string) {
+  noStore();
+  return getAccountDetailForKey(user, accountKey);
 }
 
 async function listSubscriptionsForUser(user: PortalUser): Promise<SubscriptionRecord[]> {
