@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ExternalLink } from "lucide-react";
 import { getCurrentSessionUser, hasRole } from "@/lib/auth/server-session";
 import { getProposalTemplateForStaff } from "@/server/firestore/proposal-templates";
 import { ProposalDocumentEditor } from "@/components/proposal/proposal-document-editor";
@@ -43,6 +43,12 @@ export default async function EditProposalTemplatePage({ params }: PageProps) {
             <Link href="/admin/proposals">
               <ArrowLeft className="h-4 w-4" aria-hidden />
               All templates
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" className="gap-2" asChild>
+            <Link href={`/admin/proposals/templates/${template.id}/preview`} target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="h-4 w-4" aria-hidden />
+              Open public viewer
             </Link>
           </Button>
           <DeleteProposalTemplateButton templateId={template.id} templateName={template.name} />
