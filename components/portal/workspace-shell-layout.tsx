@@ -50,6 +50,7 @@ interface WorkspaceShellLayoutProps {
   showRightAside?: boolean;
   showMainHeader?: boolean;
   contentClassName?: string;
+  secondaryNav?: ReactNode;
   children: ReactNode;
 }
 
@@ -127,6 +128,7 @@ export function WorkspaceShellLayout({
   showRightAside = true,
   showMainHeader = true,
   contentClassName,
+  secondaryNav,
   children,
 }: WorkspaceShellLayoutProps) {
   const router = useRouter();
@@ -396,7 +398,17 @@ export function WorkspaceShellLayout({
             </div>
           </header>
 
-          <div className="flex min-h-0 flex-1">
+          <div
+            className={cn(
+              "flex min-h-0 flex-1",
+              secondaryNav ? "flex-col md:flex-row" : "",
+            )}
+          >
+            {secondaryNav ? (
+              <div className="shrink-0 border-b border-white/[0.06] bg-[#111118] md:w-[232px] md:border-b-0 md:border-r">
+                {secondaryNav}
+              </div>
+            ) : null}
             <main className="min-w-0 flex-1 overflow-auto px-4 py-8 sm:px-6 lg:px-8">
               <div className={cn(WORKSPACE_MAIN_CONTENT_CLASS, contentClassName)}>
                 {showMainHeader ? (

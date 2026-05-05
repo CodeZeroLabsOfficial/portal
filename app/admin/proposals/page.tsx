@@ -36,6 +36,9 @@ export default async function AdminProposalsHubPage() {
             <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-[1.75rem] md:leading-tight">
               Proposals
             </h1>
+            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+              Create, send, and track dynamic digital proposals.
+            </p>
           </div>
           <NewProposalTemplateButton />
         </div>

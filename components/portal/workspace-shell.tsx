@@ -17,6 +17,8 @@ interface WorkspaceShellProps {
   showMainHeader?: boolean;
   /** Extra classes merged onto the inner content wrapper (default is full-width, edge-aligned). */
   contentClassName?: string;
+  /** Narrow column between the primary sidebar and main content (e.g. Settings submenu). */
+  secondaryNav?: ReactNode;
   children: ReactNode;
 }
 
@@ -30,6 +32,7 @@ export function WorkspaceShell({
   showRightAside = true,
   showMainHeader = true,
   contentClassName,
+  secondaryNav,
   children,
 }: WorkspaceShellProps) {
   return (
@@ -43,6 +46,7 @@ export function WorkspaceShell({
       showRightAside={showRightAside}
       showMainHeader={showMainHeader}
       contentClassName={contentClassName}
+      secondaryNav={secondaryNav}
     >
       {children}
     </WorkspaceShellLayout>
