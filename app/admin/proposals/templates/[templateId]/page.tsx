@@ -1,25 +1,12 @@
 import Link from "next/link";
-import dynamic from "next/dynamic";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { getCurrentSessionUser, hasRole } from "@/lib/auth/server-session";
 import { getProposalTemplateForStaff } from "@/server/firestore/proposal-templates";
 import { DeleteProposalTemplateButton } from "@/components/proposal/delete-proposal-template-button";
+import { ProposalDocumentEditorLazy } from "@/components/proposal/proposal-document-editor-lazy";
 import { WorkspaceShell } from "@/components/portal/workspace-shell";
 import { Button } from "@/components/ui/button";
-
-const ProposalDocumentEditor = dynamic(
-  () =>
-    import("@/components/proposal/proposal-document-editor").then((m) => m.ProposalDocumentEditor),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="rounded-2xl border border-border/70 bg-muted/20 p-12 text-center text-sm text-muted-foreground">
-        Loading editor…
-      </div>
-    ),
-  },
-);
 
 interface PageProps {
   params: Promise<{ templateId: string }>;
@@ -67,7 +54,7 @@ export default async function EditProposalTemplatePage({ params }: PageProps) {
           <DeleteProposalTemplateButton templateId={template.id} templateName={template.name} />
         </div>
 
-        <ProposalDocumentEditor
+        <ProposalDocumentEditorLazy
           variant="template"
           templateId={template.id}
           initialTemplateName={template.name}

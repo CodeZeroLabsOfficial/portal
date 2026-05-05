@@ -1,5 +1,4 @@
 import Link from "next/link";
-import dynamic from "next/dynamic";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { getCurrentSessionUser } from "@/lib/auth/server-session";
@@ -8,21 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { WorkspaceShell } from "@/components/portal/workspace-shell";
+import { ProposalDocumentEditorLazy } from "@/components/proposal/proposal-document-editor-lazy";
 import { ProposalShareSettings } from "@/components/proposal/proposal-share-settings";
 import type { PackagesBlock } from "@/types/proposal";
-
-const ProposalDocumentEditor = dynamic(
-  () =>
-    import("@/components/proposal/proposal-document-editor").then((m) => m.ProposalDocumentEditor),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="rounded-2xl border border-border/70 bg-muted/20 p-12 text-center text-sm text-muted-foreground">
-        Loading editor…
-      </div>
-    ),
-  },
-);
 
 interface PageProps {
   params: Promise<{ proposalId: string }>;
@@ -169,7 +156,7 @@ export default async function AdminProposalDetailPage({ params, searchParams }: 
 
         <ProposalShareSettings proposalId={proposal.id} hasPassword={Boolean(proposal.sharePasswordHash)} />
 
-        <ProposalDocumentEditor
+        <ProposalDocumentEditorLazy
           proposalId={proposal.id}
           initialTitle={proposal.document.title || proposal.title}
           initialDocument={proposal.document}
