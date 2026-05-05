@@ -3,6 +3,10 @@ import { ArrowLeft, Building2, Globe, Mail, MapPin, Pencil, Phone, Users } from 
 import type { AccountDetailAggregate } from "@/server/firestore/crm-customers";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  WORKSPACE_DETAIL_PAGE_TITLE_CLASS,
+  WORKSPACE_PAGE_DESCRIPTION_STACK_CLASS,
+} from "@/lib/workspace-page-typography";
 import { cn } from "@/lib/utils";
 
 function websiteHref(raw: string): string {
@@ -63,10 +67,8 @@ export function AccountDetailView({ account }: AccountDetailViewProps) {
             <Building2 className="h-7 w-7 stroke-[1.5]" />
           </span>
           <div className="min-w-0 space-y-2">
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
-              {account.displayName}
-            </h1>
-            <p className="text-sm text-muted-foreground">
+            <h1 className={WORKSPACE_DETAIL_PAGE_TITLE_CLASS}>{account.displayName}</h1>
+            <p className={WORKSPACE_PAGE_DESCRIPTION_STACK_CLASS}>
               {account.contacts.length} contact{account.contacts.length === 1 ? "" : "s"} linked to this company name
             </p>
           </div>

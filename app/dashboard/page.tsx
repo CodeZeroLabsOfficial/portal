@@ -7,6 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getDashboardData } from "@/server/firestore/portal-data";
 import { WorkspaceShell } from "@/components/portal/workspace-shell";
+import {
+  WORKSPACE_HUB_PAGE_TITLE_CLASS,
+  WORKSPACE_PAGE_DESCRIPTION_CLASS,
+} from "@/lib/workspace-page-typography";
 
 export default async function DashboardPage() {
   const user = await getCurrentSessionUser();
@@ -29,8 +33,8 @@ export default async function DashboardPage() {
         <section className="rounded-xl border border-border/70 bg-card/80 p-5">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
-              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+              <h1 className={WORKSPACE_HUB_PAGE_TITLE_CLASS}>Overview</h1>
+              <p className={WORKSPACE_PAGE_DESCRIPTION_CLASS}>
                 Signed in as {user.email || user.uid}. Workspace metrics are mirrored from Firestore
                 with {DEFAULT_CURRENCY.toUpperCase()} as the billing currency baseline.
               </p>

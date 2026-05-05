@@ -8,6 +8,10 @@ import { isStripeApiConfigured } from "@/lib/stripe/server";
 import { getCustomerPortalData } from "@/server/firestore/portal-data";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { WorkspaceShell } from "@/components/portal/workspace-shell";
+import {
+  WORKSPACE_HUB_PAGE_TITLE_CLASS,
+  WORKSPACE_PAGE_DESCRIPTION_CLASS,
+} from "@/lib/workspace-page-typography";
 
 export default async function CustomerPortalPage() {
   const user = await getCurrentSessionUser();
@@ -29,8 +33,8 @@ export default async function CustomerPortalPage() {
     >
       <div className="space-y-6">
         <section className="rounded-xl border border-border/70 bg-card/80 p-5">
-          <h1 className="text-2xl font-semibold tracking-tight">Account workspace</h1>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+          <h1 className={WORKSPACE_HUB_PAGE_TITLE_CLASS}>Account workspace</h1>
+          <p className={WORKSPACE_PAGE_DESCRIPTION_CLASS}>
             Self-service subscriptions, invoices, payment methods, and shared proposals. Data is
             scoped to the signed-in customer and Stripe customer id.
           </p>

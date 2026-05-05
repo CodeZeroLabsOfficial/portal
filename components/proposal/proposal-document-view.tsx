@@ -8,6 +8,7 @@ import type {
   ProposalPublicSelections,
 } from "@/types/proposal";
 import { sanitizeProposalHtml } from "@/lib/sanitize-proposal-html";
+import { WORKSPACE_DETAIL_PAGE_TITLE_CLASS } from "@/lib/workspace-page-typography";
 import { cn } from "@/lib/utils";
 import { embedVideoSrc } from "@/components/proposal/embed-video";
 import { PricingBlockPublic } from "@/components/proposal/pricing-block-public";
@@ -34,7 +35,7 @@ function BlockView({
   switch (block.type) {
     case "header":
       return (
-        <h2 className="scroll-mt-20 text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
+        <h2 className={cn("scroll-mt-20", WORKSPACE_DETAIL_PAGE_TITLE_CLASS)}>
           {block.text}
         </h2>
       );

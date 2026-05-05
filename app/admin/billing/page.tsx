@@ -3,6 +3,10 @@ import { CreditCard } from "lucide-react";
 import { getCurrentSessionUser } from "@/lib/auth/server-session";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { WorkspaceShell } from "@/components/portal/workspace-shell";
+import {
+  WORKSPACE_HUB_PAGE_TITLE_CLASS,
+  WORKSPACE_PAGE_DESCRIPTION_CLASS,
+} from "@/lib/workspace-page-typography";
 
 export default async function AdminBillingPage() {
   const user = await getCurrentSessionUser();
@@ -20,8 +24,8 @@ export default async function AdminBillingPage() {
     >
       <div className="space-y-6">
         <section className="rounded-xl border border-border/70 bg-card/80 p-5">
-          <h1 className="text-2xl font-semibold tracking-tight">Billing</h1>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+          <h1 className={WORKSPACE_HUB_PAGE_TITLE_CLASS}>Billing</h1>
+          <p className={WORKSPACE_PAGE_DESCRIPTION_CLASS}>
             Centralise subscription health, invoice status, and payment method visibility. Detailed
             billing tools will connect here next.
           </p>

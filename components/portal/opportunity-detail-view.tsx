@@ -13,6 +13,10 @@ import { createDraftProposalFromOpportunityAction } from "@/server/actions/propo
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  WORKSPACE_DETAIL_PAGE_TITLE_CLASS,
+  WORKSPACE_PAGE_DESCRIPTION_STACK_CLASS,
+} from "@/lib/workspace-page-typography";
 
 export interface OpportunityDetailViewProps {
   opportunity: OpportunityRecord;
@@ -99,12 +103,12 @@ export function OpportunityDetailView({ opportunity, customer, proposalTemplates
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="min-w-0 space-y-3">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">{opportunity.name}</h1>
+              <h1 className={WORKSPACE_DETAIL_PAGE_TITLE_CLASS}>{opportunity.name}</h1>
               <Badge variant="outline" className="font-normal">
                 {opportunityStageLabel(opportunity.stage)}
               </Badge>
             </div>
-            <p className="text-sm text-muted-foreground">
+            <p className={WORKSPACE_PAGE_DESCRIPTION_STACK_CLASS}>
               Linked contact ·{" "}
               <Link href={`/admin/customers/${customer.id}`} className="font-medium text-primary hover:underline">
                 {customer.name || customer.email}

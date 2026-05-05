@@ -4,6 +4,10 @@ import { FileText } from "lucide-react";
 import { getCurrentSessionUser, hasRole } from "@/lib/auth/server-session";
 import { listProposalTemplatesForOrg } from "@/server/firestore/proposal-templates";
 import { WorkspaceShell } from "@/components/portal/workspace-shell";
+import {
+  WORKSPACE_HUB_PAGE_TITLE_CLASS,
+  WORKSPACE_PAGE_DESCRIPTION_CLASS,
+} from "@/lib/workspace-page-typography";
 import { NewProposalTemplateButton } from "@/components/proposal/new-proposal-template-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,10 +37,8 @@ export default async function AdminProposalsHubPage() {
       <div className="space-y-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-[1.75rem] md:leading-tight">
-              Proposals
-            </h1>
-            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+            <h1 className={WORKSPACE_HUB_PAGE_TITLE_CLASS}>Proposals</h1>
+            <p className={WORKSPACE_PAGE_DESCRIPTION_CLASS}>
               Create, send, and track dynamic digital proposals.
             </p>
           </div>

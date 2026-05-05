@@ -31,6 +31,10 @@ import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AddCustomerModal } from "@/components/portal/add-customer-modal";
 import { WorkspaceNav } from "@/components/portal/workspace-nav";
+import {
+  WORKSPACE_MAIN_COLUMN_DESCRIPTION_CLASS,
+  WORKSPACE_MAIN_COLUMN_TITLE_CLASS,
+} from "@/lib/workspace-page-typography";
 import { cn } from "@/lib/utils";
 
 const SIDEBAR_COLLAPSED_KEY = "portal-sidebar-collapsed";
@@ -260,7 +264,7 @@ export function WorkspaceShellLayout({
             </Button>
           </div>
 
-          <div className="flex min-h-0 flex-1 flex-col px-2 py-4">
+          <div className="flex min-h-0 flex-1 flex-col px-2 pb-4 pt-2">
             <WorkspaceNav collapsed={collapsed} userRole={roleLabel} />
           </div>
         </aside>
@@ -415,8 +419,8 @@ export function WorkspaceShellLayout({
               <div className={cn(WORKSPACE_MAIN_CONTENT_CLASS, contentClassName)}>
                 {showMainHeader ? (
                   <div className="mb-2 hidden lg:block">
-                    <h1 className="text-2xl font-semibold tracking-tight text-white">{title}</h1>
-                    <p className="mt-1 text-sm text-zinc-500">{description}</p>
+                    <h1 className={WORKSPACE_MAIN_COLUMN_TITLE_CLASS}>{title}</h1>
+                    <p className={WORKSPACE_MAIN_COLUMN_DESCRIPTION_CLASS}>{description}</p>
                   </div>
                 ) : null}
                 {children}

@@ -7,6 +7,10 @@ import type { OpportunityRecord } from "@/types/opportunity";
 import { OpportunitiesBoard } from "@/components/portal/opportunities-board";
 import { OpportunitiesList } from "@/components/portal/opportunities-list";
 import { Button } from "@/components/ui/button";
+import {
+  WORKSPACE_HUB_PAGE_TITLE_CLASS,
+  WORKSPACE_PAGE_DESCRIPTION_CLASS,
+} from "@/lib/workspace-page-typography";
 import { cn } from "@/lib/utils";
 
 export interface OpportunitiesPanelProps {
@@ -24,10 +28,8 @@ export function OpportunitiesPanel({ opportunities }: OpportunitiesPanelProps) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25 }}
         >
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-[1.75rem] md:leading-tight">
-            Pipeline
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <h1 className={WORKSPACE_HUB_PAGE_TITLE_CLASS}>Pipeline</h1>
+          <p className={WORKSPACE_PAGE_DESCRIPTION_CLASS}>
             Drag cards between stages or use the list view to change the stage from the dropdown.
           </p>
         </motion.div>

@@ -20,6 +20,10 @@ import type { AdminPortalData } from "@/server/firestore/portal-data";
 import { AdminDashboardSecondaryChart } from "@/components/portal/admin-dashboard-secondary-chart";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  WORKSPACE_HUB_PAGE_TITLE_CLASS,
+  WORKSPACE_PAGE_DESCRIPTION_CLASS,
+} from "@/lib/workspace-page-typography";
 import { cn } from "@/lib/utils";
 
 function firstName(displayName: string, fallback: string): string {
@@ -541,10 +545,8 @@ export function AdminHomeDashboard({
     <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-[1.75rem] md:leading-tight">
-            Welcome back, {name}!
-          </h1>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Here are your stats for {today}</p>
+          <h1 className={WORKSPACE_HUB_PAGE_TITLE_CLASS}>Welcome back, {name}!</h1>
+          <p className={WORKSPACE_PAGE_DESCRIPTION_CLASS}>Here are your stats for {today}</p>
         </div>
         <Button
           variant="ghost"

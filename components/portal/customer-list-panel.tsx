@@ -20,6 +20,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import {
+  WORKSPACE_HUB_PAGE_TITLE_CLASS,
+  WORKSPACE_PAGE_DESCRIPTION_CLASS,
+} from "@/lib/workspace-page-typography";
 import { cn } from "@/lib/utils";
 
 function initialsFromName(name: string): string {
@@ -166,9 +170,8 @@ export function CustomerListPanel({ rows }: CustomerListPanelProps) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25 }}
         >
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-[1.75rem] md:leading-tight">
-            Customers
-          </h1>
+          <h1 className={WORKSPACE_HUB_PAGE_TITLE_CLASS}>Customers</h1>
+          <p className={WORKSPACE_PAGE_DESCRIPTION_CLASS}>Unified hub for leads and contacts.</p>
         </motion.div>
         <Button
           type="button"

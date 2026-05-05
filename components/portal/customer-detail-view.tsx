@@ -44,6 +44,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  WORKSPACE_DETAIL_PAGE_TITLE_CLASS,
+  WORKSPACE_PAGE_DESCRIPTION_STACK_CLASS,
+} from "@/lib/workspace-page-typography";
 import { cn } from "@/lib/utils";
 
 function initials(name: string): string {
@@ -280,7 +284,7 @@ export function CustomerDetailView({
             </div>
             <div className="min-w-0 space-y-2">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="truncate text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
+                <h1 className={cn("truncate", WORKSPACE_DETAIL_PAGE_TITLE_CLASS)}>
                   {customer.name || customer.email}
                 </h1>
                 {customer.status === "archived" ? (
@@ -301,7 +305,7 @@ export function CustomerDetailView({
                 )}
               </div>
               {customer.company ? (
-                <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                <p className={cn(WORKSPACE_PAGE_DESCRIPTION_STACK_CLASS, "flex items-center gap-2")}>
                   <Building2 className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
                   {customer.company}
                 </p>

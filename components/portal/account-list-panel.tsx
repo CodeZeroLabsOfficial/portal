@@ -14,6 +14,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import {
+  WORKSPACE_HUB_PAGE_TITLE_CLASS,
+  WORKSPACE_PAGE_DESCRIPTION_CLASS,
+} from "@/lib/workspace-page-typography";
 
 export interface AccountListPanelProps {
   rows: AccountListRow[];
@@ -61,10 +65,8 @@ export function AccountListPanel({ rows }: AccountListPanelProps) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25 }}
         >
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-[1.75rem] md:leading-tight">
-            Accounts
-          </h1>
-          <p className="mt-1 max-w-xl text-sm text-muted-foreground">
+          <h1 className={WORKSPACE_HUB_PAGE_TITLE_CLASS}>Accounts</h1>
+          <p className={WORKSPACE_PAGE_DESCRIPTION_CLASS}>
             Company profiles from customer records. Set company details when editing a customer.
           </p>
         </motion.div>
