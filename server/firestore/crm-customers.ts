@@ -3,6 +3,7 @@ import { logError } from "@/lib/logging";
 import { coerceTimestampToMillis } from "@/lib/firestore/timestamp";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { getFirebaseAdminAuth, getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
+import { getStripe } from "@/lib/stripe/server";
 import { accountKeyToNormalizedCompany, companyNameToAccountKey } from "@/lib/account-key";
 import type { AccountListRow } from "@/lib/account-list";
 import type { CustomerListRow } from "@/lib/customer-list";
@@ -18,6 +19,7 @@ import type {
   CustomerSubscriptionRollup,
 } from "@/types/customer";
 import { deleteOpportunitiesForCustomerDb } from "@/server/firestore/crm-opportunities";
+import { ensureStripeCustomer } from "@/server/stripe/proposal-billing";
 import { parseProposalRecord } from "@/server/firestore/parse-proposal";
 import type { SubscriptionRecord } from "@/types/subscription";
 import type { TaskRecord } from "@/types/task";
@@ -729,6 +731,35 @@ export async function createCustomerDocument(
   };
 
   await docRef.set(payload);
+
+  const stripe = getStripe();
+  if (stripe) {
+    try {
+      const crmForStripe: CustomerRecord = {
+        id: docRef.id,
+        name: payload.name,
+        email: payload.email,
+        tags: payload.tags,
+        customFields,
+        crmType: payload.crmType,
+        status: "active",
+        createdAtMs: Date.now(),
+        updatedAtMs: Date.now(),
+      };
+      const { stripeCustomerId, created } = await ensureStripeCustomer(stripe, crmForStripe);
+      if (created) {
+        await docRef.update({
+          stripeCustomerId,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+      }
+    } catch (err) {
+      logError("create_customer_stripe_sync_failed", {
+        customerId: docRef.id,
+        message: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
 
   const firstActivityAt = Timestamp.now();
   await db.collection(COLLECTIONS.customerActivities).add({

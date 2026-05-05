@@ -19,9 +19,7 @@ export function StripeIntegrationCard({ connected }: StripeIntegrationCardProps)
           <div className="min-w-0 space-y-1">
             <h2 className="text-base font-semibold text-white">Stripe</h2>
             <p className="text-sm text-zinc-400">
-              Sync customers, subscriptions, invoices, and payments into Firestore via webhooks. Staff can raise
-              invoices and Checkout sessions from proposals; customers manage cards and history on your domain through
-              the Billing Portal.
+              Sync customers, subscriptions, invoices, and payments from Stripe.
             </p>
           </div>
         </div>
@@ -53,7 +51,7 @@ export function StripeIntegrationCard({ connected }: StripeIntegrationCardProps)
         <p className="mt-4 text-sm text-zinc-500">
           Add <code className="rounded bg-white/[0.06] px-1.5 py-0.5 text-zinc-300">STRIPE_SECRET_KEY</code> and{" "}
           <code className="rounded bg-white/[0.06] px-1.5 py-0.5 text-zinc-300">STRIPE_WEBHOOK_SECRET</code> to your
-          deployment environment, then register the webhook endpoint below.
+          deployment environment.
         </p>
       ) : null}
     </div>
