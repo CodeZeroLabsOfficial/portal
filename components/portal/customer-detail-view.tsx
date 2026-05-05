@@ -9,7 +9,7 @@ import {
   ArrowLeft,
   Building2,
   CreditCard,
-  Pencil,
+  ExternalLink,
   FileText,
   FolderOpen,
   Link2,
@@ -17,9 +17,11 @@ import {
   Loader2,
   Mail,
   MessageSquare,
+  Pencil,
   Phone,
-  Send,
+  Plus,
   Sparkles,
+  Trash2,
 } from "lucide-react";
 import type { CustomerActivityRecord, CustomerNoteRecord, CustomerRecord } from "@/types/customer";
 import type { OpportunityRecord } from "@/types/opportunity";
@@ -33,6 +35,7 @@ import {
   linkStripeCustomerIdAction,
   pullStripeCustomerProfileAction,
 } from "@/server/actions/customers-crm";
+import { deleteProposalAction } from "@/server/actions/proposal-builder";
 import { createDraftProposalFromCustomerAction } from "@/server/actions/proposals-crm";
 import { ConvertLeadPanel } from "@/components/portal/convert-lead-panel";
 import { Badge } from "@/components/ui/badge";
@@ -103,8 +106,8 @@ function ProposalCreateControls({
         </label>
       ) : null}
       <Button size="sm" className="gap-1.5 shadow-sm" disabled={busy} onClick={() => void onCreate()}>
-        {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Send className="h-3.5 w-3.5" aria-hidden />}
-        Create proposal
+        {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Plus className="h-3.5 w-3.5" aria-hidden />}
+        Add proposal
       </Button>
       <Button variant="outline" size="sm" className="hidden sm:inline-flex" asChild>
         <Link href="/admin/proposals">
@@ -151,6 +154,7 @@ export function CustomerDetailView({
   const [noteBody, setNoteBody] = React.useState("");
   const [noteKind, setNoteKind] = React.useState<CustomerNoteRecord["kind"]>("note");
   const [noteError, setNoteError] = React.useState<string | null>(null);
+  const [deletingProposalId, setDeletingProposalId] = React.useState<string | null>(null);
 
   const timeline = React.useMemo(() => {
     const merged: { id: string; at: number; label: string; sub: string; kind: "activity" | "note" }[] = [];
@@ -200,6 +204,21 @@ export function CustomerDetailView({
       window.alert(e instanceof Error ? e.message : "Could not create proposal. Please try again.");
     } finally {
       setBusy(null);
+    }
+  }
+
+  async function deleteProposal(proposalId: string, title: string) {
+    if (!window.confirm(`Delete proposal “${title}”? This cannot be undone.`)) return;
+    setDeletingProposalId(proposalId);
+    try {
+      const res = await deleteProposalAction(proposalId);
+      if (!res.ok) {
+        window.alert(res.message);
+        return;
+      }
+      router.refresh();
+    } finally {
+      setDeletingProposalId(null);
     }
   }
 
@@ -556,9 +575,9 @@ export function CustomerDetailView({
         <TabsContent value="proposals" className="space-y-4">
           <Card className="border-border/80 bg-card/60">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">Create and link</CardTitle>
+              <CardTitle className="text-base">Add proposal</CardTitle>
               <CardDescription>
-                New drafts are saved with this customer&apos;s id and email. They appear below once created.
+                Drafts are saved with this contact&apos;s id and email. Use Edit or Delete on each row below.
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-wrap gap-3">
@@ -579,7 +598,10 @@ export function CustomerDetailView({
             <Card className="border-dashed border-border/80 bg-muted/20">
               <CardContent className="py-12 text-center text-sm text-muted-foreground space-y-2">
                 <p>No linked proposals yet.</p>
-                <p>Use <strong className="text-foreground/90">Create proposal</strong> above, or attach one when creating from an opportunity.</p>
+                <p>
+                  Use <strong className="text-foreground/90">Add proposal</strong> above, or attach one when creating
+                  from an opportunity.
+                </p>
               </CardContent>
             </Card>
           ) : (
@@ -593,13 +615,32 @@ export function CustomerDetailView({
                     <p className="font-medium text-foreground">{p.title}</p>
                     <p className="text-xs capitalize text-muted-foreground">Status: {p.status}</p>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Button variant="outline" size="sm" asChild>
-                      <Link href={`/admin/proposals/${p.id}`}>Admin detail</Link>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button variant="outline" size="sm" className="gap-1.5" asChild>
+                      <Link href={`/admin/proposals/${p.id}`}>
+                        <Pencil className="h-3.5 w-3.5" aria-hidden />
+                        Edit
+                      </Link>
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      disabled={deletingProposalId === p.id}
+                      onClick={() => void deleteProposal(p.id, p.title)}
+                    >
+                      {deletingProposalId === p.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                      ) : (
+                        <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                      )}
+                      Delete
                     </Button>
                     {p.shareToken ? (
-                      <Button variant="outline" size="sm" asChild>
+                      <Button variant="outline" size="sm" className="gap-1.5" asChild>
                         <Link href={`/p/${p.shareToken}`} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="h-3.5 w-3.5" aria-hidden />
                           Public view
                         </Link>
                       </Button>

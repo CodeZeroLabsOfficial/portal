@@ -419,6 +419,7 @@ function BlockFields({
     }
     case "packages": {
       const b = block as PackagesBlock;
+      const tiers = b.tiers ?? [];
       return (
         <div className="space-y-6">
           <div className="grid gap-3 sm:grid-cols-2">
@@ -457,7 +458,7 @@ function BlockFields({
                 patch({
                   ...b,
                   tiers: [
-                    ...b.tiers,
+                    ...tiers,
                     {
                       id: newId(),
                       name: "New tier",
@@ -477,16 +478,16 @@ function BlockFields({
           </div>
 
           <div className="space-y-6">
-            {b.tiers.map((tier, idx) => (
+            {tiers.map((tier, idx) => (
               <div key={tier.id} className="space-y-3 rounded-xl border border-border/60 bg-muted/10 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <Input
                     className="max-w-xs font-medium"
                     value={tier.name}
                     onChange={(e) => {
-                      const tiers = [...b.tiers];
-                      tiers[idx] = { ...tier, name: e.target.value };
-                      patch({ ...b, tiers });
+                      const next = [...tiers];
+                      next[idx] = { ...tier, name: e.target.value };
+                      patch({ ...b, tiers: next });
                     }}
                   />
                   <label className="flex items-center gap-2 text-sm">
@@ -494,11 +495,11 @@ function BlockFields({
                       type="checkbox"
                       checked={Boolean(tier.recommended)}
                       onChange={(e) => {
-                        const tiers = b.tiers.map((t, i) => ({
+                        const next = tiers.map((t, i) => ({
                           ...t,
                           recommended: i === idx ? e.target.checked : e.target.checked ? false : t.recommended,
                         }));
-                        patch({ ...b, tiers });
+                        patch({ ...b, tiers: next });
                       }}
                     />
                     Recommended
@@ -511,13 +512,13 @@ function BlockFields({
                       type="number"
                       min={0}
                       step={1}
-                      value={tier.includedUsers}
+                      value={tier.includedUsers ?? 0}
                       onChange={(e) => {
                         const v = Number(e.target.value);
                         if (!Number.isFinite(v) || v < 0) return;
-                        const tiers = [...b.tiers];
-                        tiers[idx] = { ...tier, includedUsers: Math.floor(v) };
-                        patch({ ...b, tiers });
+                        const next = [...tiers];
+                        next[idx] = { ...tier, includedUsers: Math.floor(v) };
+                        patch({ ...b, tiers: next });
                       }}
                     />
                   </div>
@@ -527,13 +528,13 @@ function BlockFields({
                       type="number"
                       min={0}
                       step={1}
-                      value={tier.includedLocations}
+                      value={tier.includedLocations ?? 0}
                       onChange={(e) => {
                         const v = Number(e.target.value);
                         if (!Number.isFinite(v) || v < 0) return;
-                        const tiers = [...b.tiers];
-                        tiers[idx] = { ...tier, includedLocations: Math.floor(v) };
-                        patch({ ...b, tiers });
+                        const next = [...tiers];
+                        next[idx] = { ...tier, includedLocations: Math.floor(v) };
+                        patch({ ...b, tiers: next });
                       }}
                     />
                   </div>
@@ -543,13 +544,13 @@ function BlockFields({
                       type="number"
                       min={0}
                       step={1}
-                      value={tier.includedAdmins}
+                      value={tier.includedAdmins ?? 0}
                       onChange={(e) => {
                         const v = Number(e.target.value);
                         if (!Number.isFinite(v) || v < 0) return;
-                        const tiers = [...b.tiers];
-                        tiers[idx] = { ...tier, includedAdmins: Math.floor(v) };
-                        patch({ ...b, tiers });
+                        const next = [...tiers];
+                        next[idx] = { ...tier, includedAdmins: Math.floor(v) };
+                        patch({ ...b, tiers: next });
                       }}
                     />
                   </div>
@@ -561,13 +562,13 @@ function BlockFields({
                       type="number"
                       min={0}
                       step="0.01"
-                      value={tier.monthlyCost12Minor / 100}
+                      value={(tier.monthlyCost12Minor ?? 0) / 100}
                       onChange={(e) => {
                         const v = Number(e.target.value);
                         if (!Number.isFinite(v)) return;
-                        const tiers = [...b.tiers];
-                        tiers[idx] = { ...tier, monthlyCost12Minor: Math.round(v * 100) };
-                        patch({ ...b, tiers });
+                        const next = [...tiers];
+                        next[idx] = { ...tier, monthlyCost12Minor: Math.round(v * 100) };
+                        patch({ ...b, tiers: next });
                       }}
                     />
                   </div>
@@ -577,13 +578,13 @@ function BlockFields({
                       type="number"
                       min={0}
                       step="0.01"
-                      value={tier.monthlyCost24Minor / 100}
+                      value={(tier.monthlyCost24Minor ?? 0) / 100}
                       onChange={(e) => {
                         const v = Number(e.target.value);
                         if (!Number.isFinite(v)) return;
-                        const tiers = [...b.tiers];
-                        tiers[idx] = { ...tier, monthlyCost24Minor: Math.round(v * 100) };
-                        patch({ ...b, tiers });
+                        const next = [...tiers];
+                        next[idx] = { ...tier, monthlyCost24Minor: Math.round(v * 100) };
+                        patch({ ...b, tiers: next });
                       }}
                     />
                   </div>
@@ -598,12 +599,12 @@ function BlockFields({
                     onChange={(e) => {
                       const v = Number(e.target.value);
                       if (!Number.isFinite(v)) return;
-                      const tiers = [...b.tiers];
-                      tiers[idx] = {
+                      const next = [...tiers];
+                      next[idx] = {
                         ...tier,
                         upfrontCost12Minor: v > 0 ? Math.round(v * 100) : undefined,
                       };
-                      patch({ ...b, tiers });
+                      patch({ ...b, tiers: next });
                     }}
                   />
                   <p className="text-[11px] text-muted-foreground">Leave at 0 for no upfront charge on the 12-month plan.</p>
@@ -612,15 +613,15 @@ function BlockFields({
                   <Label className="text-xs text-muted-foreground">Features (one per line)</Label>
                   <textarea
                     className="min-h-[72px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    value={tier.features.join("\n")}
+                    value={(tier.features ?? []).join("\n")}
                     onChange={(e) => {
                       const lines = e.target.value
                         .split("\n")
                         .map((s) => s.trim())
                         .filter(Boolean);
-                      const tiers = [...b.tiers];
-                      tiers[idx] = { ...tier, features: lines };
-                      patch({ ...b, tiers });
+                      const next = [...tiers];
+                      next[idx] = { ...tier, features: lines };
+                      patch({ ...b, tiers: next });
                     }}
                   />
                 </div>
@@ -629,7 +630,7 @@ function BlockFields({
                   variant="ghost"
                   size="sm"
                   className="text-destructive"
-                  onClick={() => patch({ ...b, tiers: b.tiers.filter((t) => t.id !== tier.id) })}
+                  onClick={() => patch({ ...b, tiers: tiers.filter((t) => t.id !== tier.id) })}
                 >
                   Remove tier
                 </Button>

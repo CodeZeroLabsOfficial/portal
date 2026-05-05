@@ -137,7 +137,7 @@ function BlockView({
         <div className="rounded-xl border border-border/70 bg-card p-4 shadow-sm">
           <p className="text-sm font-medium text-foreground">{block.submitLabel ?? "Information"}</p>
           <div className="mt-4 space-y-3">
-            {block.fields.map((f) => (
+            {(block.fields ?? []).map((f) => (
               <div key={f.id}>
                 <label className="text-[12px] font-medium text-muted-foreground">
                   {f.label}

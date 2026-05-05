@@ -13,7 +13,7 @@ export default async function AdminReportsPage() {
   return (
     <WorkspaceShell
       title="Reports"
-      description="Operational metrics, exports, and scheduled summaries."
+      description="Insights and performance analytics."
       roleLabel={user.role}
       displayName={user.displayName ?? ""}
       userLabel={user.email || user.uid}

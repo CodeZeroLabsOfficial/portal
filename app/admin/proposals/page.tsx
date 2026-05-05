@@ -24,7 +24,7 @@ export default async function AdminProposalsHubPage() {
   return (
     <WorkspaceShell
       title="Proposals"
-      description="Reusable proposal layouts for CRM."
+      description="Create, send, and track dynamic digital proposals."
       roleLabel={user.role}
       displayName={user.displayName ?? ""}
       userLabel={user.email || user.uid}

@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { AddCustomerModal } from "@/components/portal/add-customer-modal";
 import { WorkspaceNav } from "@/components/portal/workspace-nav";
 import { cn } from "@/lib/utils";
 
@@ -132,6 +133,7 @@ export function WorkspaceShellLayout({
   const pathname = usePathname();
   const isAdminRoute = pathname.startsWith("/admin");
   const [collapsed, setCollapsed] = React.useState(false);
+  const [addCustomerOpen, setAddCustomerOpen] = React.useState(false);
 
   async function handleSignOut() {
     await signOutFromPortal();
@@ -179,6 +181,9 @@ export function WorkspaceShellLayout({
 
   return (
     <TooltipProvider delayDuration={0}>
+      {isAdminRoute ? (
+        <AddCustomerModal open={addCustomerOpen} onOpenChange={setAddCustomerOpen} />
+      ) : null}
       <div className="portal-ui flex min-h-dvh w-full text-[15px] antialiased">
         <aside
           aria-label="Workspace"
@@ -298,25 +303,31 @@ export function WorkspaceShellLayout({
                       align="end"
                       className="min-w-[12rem] border-white/[0.08] bg-[#1e1e1e] text-zinc-100 shadow-lg"
                     >
-                      <DropdownMenuLabel className="text-xs font-medium text-zinc-500">Admin portal</DropdownMenuLabel>
+                      <DropdownMenuLabel className="text-xs font-medium text-zinc-500">Create</DropdownMenuLabel>
                       <DropdownMenuSeparator className="bg-white/[0.08]" />
                       <DropdownMenuItem
                         className="cursor-pointer text-zinc-200 focus:bg-white/[0.08] focus:text-white"
-                        asChild
+                        onSelect={() => setAddCustomerOpen(true)}
                       >
-                        <Link href="/admin/customers">New customer or subscription</Link>
+                        New customer
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="cursor-pointer text-zinc-200 focus:bg-white/[0.08] focus:text-white"
                         asChild
                       >
-                        <Link href="/admin/billing">Billing & invoices</Link>
+                        <Link href="/admin/customers">New subscription</Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="cursor-pointer text-zinc-200 focus:bg-white/[0.08] focus:text-white"
                         asChild
                       >
-                        <Link href="/admin/tasks">Tasks</Link>
+                        <Link href="/admin/opportunities">New proposal</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="cursor-pointer text-zinc-200 focus:bg-white/[0.08] focus:text-white"
+                        asChild
+                      >
+                        <Link href="/admin/tasks">New task</Link>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

@@ -13,7 +13,7 @@ export default async function AdminTasksPage() {
   return (
     <WorkspaceShell
       title="Tasks"
-      description="Follow-ups, approvals, and operational checklists."
+      description="Stay on top of assignments and deadlines."
       roleLabel={user.role}
       displayName={user.displayName ?? ""}
       userLabel={user.email || user.uid}

@@ -7,7 +7,7 @@ import {
   MoreHorizontal,
   Settings2,
 } from "lucide-react";
-import { APP_NAME, DEFAULT_CURRENCY } from "@/lib/constants";
+import { DEFAULT_CURRENCY } from "@/lib/constants";
 import { formatCurrencyAmount } from "@/lib/format";
 import { buildAdminDashboardChartTabs } from "@/lib/admin-dashboard-chart-payload";
 import type { InvoiceRecord } from "@/types/invoice";
@@ -422,10 +422,6 @@ export function AdminHomeRightAside({ data }: { data: AdminPortalData }) {
           )}
         </ul>
       </section>
-
-      <p className="px-1 text-[11px] leading-relaxed text-muted-foreground">
-        {APP_NAME} — activity is mirrored from Firestore.
-      </p>
     </div>
   );
 }

@@ -25,7 +25,8 @@ export function PackagesBlockPublic({
   interactive = true,
 }: PackagesBlockPublicProps) {
   const router = useRouter();
-  const currency = block.currency.toUpperCase();
+  const currency = (block.currency ?? "aud").toUpperCase();
+  const tiers = Array.isArray(block.tiers) ? block.tiers : [];
 
   const [term, setTerm] = React.useState<"12_months" | "24_months">(
     initialSelection?.term ?? "24_months",
@@ -45,8 +46,10 @@ export function PackagesBlockPublic({
   const label24 = block.plan24Label ?? "24 months";
   const title = block.title ?? "Packages";
 
-  function monthlyMinor(tier: (typeof block.tiers)[0]): number {
-    return term === "12_months" ? tier.monthlyCost12Minor : tier.monthlyCost24Minor;
+  function monthlyMinor(tier: (typeof tiers)[number]): number {
+    const m12 = tier.monthlyCost12Minor ?? 0;
+    const m24 = tier.monthlyCost24Minor ?? 0;
+    return term === "12_months" ? m12 : m24;
   }
 
   async function selectTier(tierId: string) {
@@ -121,7 +124,10 @@ export function PackagesBlockPublic({
       ) : null}
 
       <div className="mt-10 grid gap-6 md:grid-cols-3 md:gap-4">
-        {block.tiers.map((tier) => {
+        {tiers.length === 0 ? (
+          <p className="col-span-full text-center text-sm text-zinc-400">No package tiers configured yet.</p>
+        ) : null}
+        {tiers.map((tier) => {
           const mm = monthlyMinor(tier);
           const upfront =
             term === "12_months" && typeof tier.upfrontCost12Minor === "number" && tier.upfrontCost12Minor > 0
@@ -161,19 +167,19 @@ export function PackagesBlockPublic({
                     <span className={cn("font-medium", isRecommended ? "text-teal-100" : "text-zinc-800")}>
                       Included users
                     </span>
-                    : {tier.includedUsers}
+                    : {tier.includedUsers ?? 0}
                   </li>
                   <li>
                     <span className={cn("font-medium", isRecommended ? "text-teal-100" : "text-zinc-800")}>
                       Included locations
                     </span>
-                    : {tier.includedLocations}
+                    : {tier.includedLocations ?? 0}
                   </li>
                   <li>
                     <span className={cn("font-medium", isRecommended ? "text-teal-100" : "text-zinc-800")}>
                       Included admins
                     </span>
-                    : {tier.includedAdmins}
+                    : {tier.includedAdmins ?? 0}
                   </li>
                 </ul>
 
@@ -230,9 +236,9 @@ export function PackagesBlockPublic({
                 </div>
               </div>
 
-              {tier.features.length > 0 ? (
+              {(tier.features ?? []).length > 0 ? (
                 <ul className="mt-5 space-y-2.5">
-                  {tier.features.map((feat) => (
+                  {(tier.features ?? []).map((feat) => (
                     <li key={feat} className="flex gap-2 text-sm text-zinc-300">
                       <Check className="mt-0.5 h-4 w-4 shrink-0 text-teal-400" aria-hidden />
                       <span>{feat}</span>

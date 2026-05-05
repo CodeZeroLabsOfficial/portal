@@ -314,3 +314,39 @@ export async function saveProposalPackageSelectionAction(
   revalidatePath(`/admin/proposals/${proposal.id}`);
   return { ok: true };
 }
+
+export async function deleteProposalAction(
+  proposalId: string,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const user = await requireStaff();
+  if (!user) return { ok: false, message: "Unauthorized." };
+
+  const trimmed = proposalId?.trim();
+  if (!trimmed) return { ok: false, message: "Invalid proposal." };
+
+  const existing = await getAdminProposalRecord(user, trimmed);
+  if (!existing) return { ok: false, message: "Proposal not found." };
+
+  const db = getFirebaseAdminFirestore();
+  if (!db) return { ok: false, message: "Database unavailable." };
+
+  try {
+    await db.collection(COLLECTIONS.proposals).doc(trimmed).delete();
+  } catch (e) {
+    return {
+      ok: false,
+      message: e instanceof Error ? e.message : "Could not delete the proposal.",
+    };
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/proposals");
+  revalidatePath(`/admin/proposals/${trimmed}`);
+  if (existing.customerId) {
+    revalidatePath(`/admin/customers/${existing.customerId}`);
+  }
+  if (existing.opportunityId) {
+    revalidatePath(`/admin/opportunities/${existing.opportunityId}`);
+  }
+  return { ok: true };
+}

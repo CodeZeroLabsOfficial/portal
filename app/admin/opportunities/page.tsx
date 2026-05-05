@@ -19,7 +19,7 @@ export default async function AdminOpportunitiesPage() {
   return (
     <WorkspaceShell
       title="Pipeline"
-      description="Opportunity stages and deal flow."
+      description="Track and manage your sales pipeline."
       roleLabel={user.role}
       displayName={user.displayName ?? ""}
       userLabel={user.email || user.uid}

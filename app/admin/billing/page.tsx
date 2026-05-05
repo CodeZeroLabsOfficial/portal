@@ -13,7 +13,7 @@ export default async function AdminBillingPage() {
   return (
     <WorkspaceShell
       title="Billing"
-      description="Invoices, subscriptions, and Stripe reconciliation."
+      description="Invoices, subscriptions, and payment management."
       roleLabel={user.role}
       displayName={user.displayName ?? ""}
       userLabel={user.email || user.uid}

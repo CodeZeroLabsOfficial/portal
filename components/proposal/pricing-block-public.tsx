@@ -13,16 +13,17 @@ export interface PricingBlockPublicProps {
 }
 
 export function PricingBlockPublic({ block, className }: PricingBlockPublicProps) {
+  const lineItems = block.lineItems ?? [];
   const [qty, setQty] = React.useState<LineState>(() =>
     Object.fromEntries(
-      block.lineItems.map((li) => [li.id, typeof li.quantity === "number" && li.quantity > 0 ? li.quantity : 1]),
+      lineItems.map((li) => [li.id, typeof li.quantity === "number" && li.quantity > 0 ? li.quantity : 1]),
     ),
   );
   const [optionalOff, setOptionalOff] = React.useState<Record<string, boolean>>({});
 
-  const currency = block.currency.toUpperCase();
+  const currency = (block.currency ?? "aud").toUpperCase();
 
-  const totalMinor = block.lineItems.reduce((sum, li) => {
+  const totalMinor = lineItems.reduce((sum, li) => {
     if (li.optional && optionalOff[li.id]) return sum;
     const q = qty[li.id] ?? 1;
     return sum + Math.round(li.unitAmountMinor * q);
@@ -48,7 +49,7 @@ export function PricingBlockPublic({ block, className }: PricingBlockPublicProps
             </tr>
           </thead>
           <tbody>
-            {block.lineItems.map((li) => {
+            {lineItems.map((li) => {
               const q = qty[li.id] ?? 1;
               const lineTotal = Math.round(li.unitAmountMinor * q);
               const hidden = Boolean(li.optional && optionalOff[li.id]);

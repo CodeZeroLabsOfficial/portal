@@ -84,8 +84,10 @@ export default async function AdminProposalDetailPage({ params }: PageProps) {
                     if (sel.kind !== "packages") return null;
                     const blk = proposal.document.blocks.find((b) => b.id === blockId);
                     const pb: PackagesBlock | undefined = blk?.type === "packages" ? blk : undefined;
-                    const tierName = pb?.tiers.find((t) => t.id === sel.tierId)?.name ?? `${sel.tierId.slice(0, 6)}…`;
-                    const termLabel = sel.term === "12_months" ? "12 months" : "24 months";
+                    const tierName =
+                      pb?.tiers?.find((t) => t.id === sel.tierId)?.name ?? `${sel.tierId.slice(0, 6)}…`;
+                    const termLabel =
+                      sel.term === "12_months" ? "12 months" : sel.term === "24_months" ? "24 months" : "Term";
                     return (
                       <li key={blockId}>
                         <span className="font-medium text-foreground">{tierName}</span> · {termLabel}

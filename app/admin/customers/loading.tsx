@@ -12,7 +12,7 @@ export default async function AdminCustomersLoading() {
   return (
     <WorkspaceShell
       title="Customers"
-      description="Directory and contact details."
+      description="Unified hub for leads and contacts."
       roleLabel={user.role}
       displayName={user.displayName ?? ""}
       userLabel={user.email || user.uid}
