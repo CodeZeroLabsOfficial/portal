@@ -35,7 +35,7 @@ export default async function AdminOpportunityDetailPage({ params }: PageProps) 
       userLabel={user.email || user.uid}
       showMainHeader={false}
       showRightAside={false}
-      contentClassName="max-w-[960px]"
+      contentClassName="mx-0 w-full max-w-none"
     >
       <OpportunityDetailView opportunity={opportunity} customer={customer} />
     </WorkspaceShell>

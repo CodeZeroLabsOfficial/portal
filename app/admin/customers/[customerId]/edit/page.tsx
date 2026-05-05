@@ -29,7 +29,7 @@ export default async function AdminCustomerEditPage({ params }: PageProps) {
       userLabel={user.email || user.uid}
       showMainHeader={false}
       showRightAside={false}
-      contentClassName="max-w-[1100px]"
+      contentClassName="w-full max-w-none -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8"
     >
       <EditCustomerForm customer={customer} />
     </WorkspaceShell>

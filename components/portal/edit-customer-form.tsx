@@ -91,7 +91,7 @@ export function EditCustomerForm({ customer }: EditCustomerFormProps) {
   const busy = form.formState.isSubmitting;
 
   return (
-    <div className="space-y-8">
+    <div className="w-full min-w-0 space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <Button variant="ghost" size="sm" className="-ml-2 gap-1.5 text-muted-foreground hover:text-foreground" asChild>
           <Link href={`/admin/customers/${customer.id}`}>
@@ -101,8 +101,8 @@ export function EditCustomerForm({ customer }: EditCustomerFormProps) {
         </Button>
       </div>
 
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-        <Card className="overflow-hidden border-border/80 shadow-sm">
+      <motion.div className="w-full" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+        <Card className="w-full overflow-hidden border-border/80 shadow-sm">
           <CardHeader className="border-b border-border/60 bg-muted/20">
             <CardTitle className="text-xl">Edit customer</CardTitle>
             <CardDescription>Update contact details, address, tags, and custom fields.</CardDescription>

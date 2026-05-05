@@ -35,7 +35,7 @@ export default async function AdminProposalDetailPage({ params }: PageProps) {
       userLabel={user.email || user.uid}
       showMainHeader={false}
       showRightAside={false}
-      contentClassName="max-w-[720px]"
+      contentClassName="mx-0 w-full max-w-none"
     >
       <div className="space-y-6">
         <div className="flex flex-wrap items-center gap-2">
