@@ -401,6 +401,9 @@ export function CustomerListPanel({ rows }: CustomerListPanelProps) {
                             <DropdownMenuItem asChild>
                               <Link href={`/admin/customers/${row.id}`}>Open profile</Link>
                             </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                              <Link href={`/admin/customers/${row.id}/edit`}>Edit</Link>
+                            </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => handleArchive(row.id, row.status !== "archived")}
                             >

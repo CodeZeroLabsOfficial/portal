@@ -4,7 +4,7 @@ import { coerceTimestampToMillis } from "@/lib/firestore/timestamp";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { getFirebaseAdminAuth, getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import type { CustomerListRow } from "@/lib/customer-list";
-import type { CreateCustomerInput } from "@/lib/schemas/customer";
+import type { CreateCustomerInput, UpdateCustomerFormInput } from "@/lib/schemas/customer";
 import type { InvoiceRecord } from "@/types/invoice";
 import type { ProposalRecord } from "@/types/proposal";
 import type {
@@ -519,6 +519,88 @@ export async function createCustomerDocument(
   }
 
   return { ok: true, customerId: docRef.id };
+}
+
+export async function updateCustomerDocument(
+  user: PortalUser,
+  input: UpdateCustomerFormInput,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const db = getFirebaseAdminFirestore();
+  if (!db || !canStaffAccessCrm(user)) {
+    return { ok: false, message: "CRM is only available to admin or team members." };
+  }
+
+  const { id: customerId, ...rest } = input;
+  const existing = await getCustomerRecordForOrg(user, customerId);
+  if (!existing) {
+    return { ok: false, message: "Customer not found." };
+  }
+
+  const customFields: Record<string, string> = {};
+  for (const pair of rest.customFields ?? []) {
+    if (pair.key.trim()) {
+      customFields[pair.key.trim()] = pair.value ?? "";
+    }
+  }
+
+  let portalUserId: string | null | undefined;
+  if (rest.linkAuthByEmail) {
+    const auth = getFirebaseAdminAuth();
+    if (auth) {
+      try {
+        const u = await auth.getUserByEmail(rest.email.trim().toLowerCase());
+        portalUserId = u.uid;
+      } catch {
+        portalUserId = null;
+      }
+    } else {
+      portalUserId = null;
+    }
+  }
+
+  const payload: Record<string, unknown> = {
+    name: rest.name.trim(),
+    email: rest.email.trim().toLowerCase(),
+    company: rest.company?.trim() || null,
+    phone: rest.phone?.trim() || null,
+    addressLine1: rest.addressLine1?.trim() || null,
+    addressLine2: rest.addressLine2?.trim() || null,
+    city: rest.city?.trim() || null,
+    region: rest.region?.trim() || null,
+    postalCode: rest.postalCode?.trim() || null,
+    country: rest.country?.trim() || null,
+    tags: rest.tags ?? [],
+    customFields,
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+
+  if (portalUserId !== undefined) {
+    payload.portalUserId = portalUserId;
+  }
+
+  await db.collection(COLLECTIONS.customers).doc(customerId).update(payload);
+
+  const updatedAt = Timestamp.now();
+  await db.collection(COLLECTIONS.customerActivities).add({
+    customerId,
+    type: "updated",
+    title: "Profile updated",
+    actorUid: user.uid,
+    createdAt: updatedAt,
+  });
+
+  if (rest.linkAuthByEmail && portalUserId && portalUserId !== existing.portalUserId) {
+    await db.collection(COLLECTIONS.customerActivities).add({
+      customerId,
+      type: "auth_linked",
+      title: "Linked Firebase Auth user",
+      detail: rest.email.trim().toLowerCase(),
+      actorUid: user.uid,
+      createdAt: Timestamp.fromMillis(updatedAt.toMillis() + 1),
+    });
+  }
+
+  return { ok: true };
 }
 
 export async function appendCustomerNote(

@@ -9,6 +9,7 @@ import {
   ArrowLeft,
   Building2,
   CreditCard,
+  Pencil,
   FileText,
   FolderOpen,
   Link2,
@@ -161,7 +162,7 @@ export function CustomerDetailView({
             Customers
           </Link>
         </Button>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <Button
             variant="outline"
             size="sm"
@@ -180,6 +181,12 @@ export function CustomerDetailView({
             <Link href={`/admin?focus=proposals&email=${encodeURIComponent(customer.email)}`}>
               <Send className="h-3.5 w-3.5" aria-hidden />
               Send proposal
+            </Link>
+          </Button>
+          <Button variant="secondary" size="sm" className="gap-1.5 shadow-sm" asChild>
+            <Link href={`/admin/customers/${customer.id}/edit`}>
+              <Pencil className="h-3.5 w-3.5" aria-hidden />
+              Edit
             </Link>
           </Button>
         </div>

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { ZodError } from "zod";
 import { getCurrentSessionUser, hasRole } from "@/lib/auth/server-session";
-import { addCustomerNoteSchema, createCustomerSchema } from "@/lib/schemas/customer";
+import { addCustomerNoteSchema, createCustomerSchema, updateCustomerFormSchema } from "@/lib/schemas/customer";
 import { FieldValue } from "firebase-admin/firestore";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import { COLLECTIONS } from "@/server/firestore/collections";
@@ -14,6 +14,7 @@ import {
   getCustomerRecordForOrg,
   setCustomerArchived,
   syncStripeCustomerBasics,
+  updateCustomerDocument,
 } from "@/server/firestore/crm-customers";
 import { getStripe } from "@/lib/stripe/server";
 
@@ -48,6 +49,28 @@ export async function createCustomerAction(
   revalidatePath("/admin/customers");
   revalidatePath(`/admin/customers/${result.customerId}`);
   return { ok: true, customerId: result.customerId };
+}
+
+export async function updateCustomerAction(
+  raw: unknown,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const user = await requireStaffForCrm();
+  if (!user) {
+    return { ok: false, message: "You need an admin or team session to manage customers." };
+  }
+  const parsed = updateCustomerFormSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { ok: false, message: zodErrorToMessage(parsed.error) };
+  }
+  const result = await updateCustomerDocument(user, parsed.data);
+  if (!result.ok) {
+    return { ok: false, message: result.message };
+  }
+  const id = parsed.data.id;
+  revalidatePath("/admin/customers");
+  revalidatePath(`/admin/customers/${id}`);
+  revalidatePath(`/admin/customers/${id}/edit`);
+  return { ok: true };
 }
 
 export async function addCustomerNoteAction(
