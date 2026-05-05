@@ -19,3 +19,21 @@ export function getStripe(): Stripe | null {
   }
   return stripeInstance;
 }
+
+/** True when a Stripe secret key is configured (API + Checkout / invoices). */
+export function isStripeApiConfigured(): boolean {
+  try {
+    return Boolean(getServerEnv().STRIPE_SECRET_KEY?.trim());
+  } catch {
+    return false;
+  }
+}
+
+/** Webhooks require signing secret so mirrored rows stay trustworthy. */
+export function isStripeWebhookConfigured(): boolean {
+  try {
+    return Boolean(getServerEnv().STRIPE_WEBHOOK_SECRET?.trim());
+  } catch {
+    return false;
+  }
+}

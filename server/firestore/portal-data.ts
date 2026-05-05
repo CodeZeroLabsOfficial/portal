@@ -2,6 +2,7 @@ import { unstable_noStore as noStore } from "next/cache";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import type { InvoiceRecord } from "@/types/invoice";
+import type { PaymentRecord } from "@/types/payment";
 import type { ProposalRecord } from "@/types/proposal";
 import { parseProposalRecord } from "@/server/firestore/parse-proposal";
 import type { SubscriptionRecord } from "@/types/subscription";
@@ -34,6 +35,7 @@ export interface DashboardData {
 export interface CustomerPortalData {
   subscriptions: SubscriptionRecord[];
   invoices: InvoiceRecord[];
+  payments: PaymentRecord[];
   proposals: ProposalRecord[];
 }
 
@@ -80,7 +82,8 @@ function parseSubscription(id: string, data: Record<string, unknown>): Subscript
       data.status === "incomplete" ||
       data.status === "incomplete_expired" ||
       data.status === "unpaid" ||
-      data.status === "paused"
+      data.status === "paused" ||
+      data.status === "active"
         ? data.status
         : "active",
     priceId: asString(data.priceId),
@@ -89,6 +92,22 @@ function parseSubscription(id: string, data: Record<string, unknown>): Subscript
     interval: data.interval === "year" ? "year" : data.interval === "month" ? "month" : undefined,
     currentPeriodEndMs: asNumber(data.currentPeriodEndMs),
     cancelAtPeriodEnd: asBoolean(data.cancelAtPeriodEnd),
+    mrrAmount: asNumber(data.mrrAmount),
+    updatedAtMs: asNumber(data.updatedAtMs) ?? Date.now(),
+  };
+}
+
+function parsePayment(id: string, data: Record<string, unknown>): PaymentRecord {
+  return {
+    id,
+    stripePaymentIntentId: asString(data.stripePaymentIntentId) ?? id,
+    customerId: asString(data.customerId) ?? "",
+    organizationId: asString(data.organizationId),
+    currency: asString(data.currency) ?? "aud",
+    amount: asNumber(data.amount) ?? 0,
+    status: asString(data.status) ?? "processing",
+    description: asString(data.description),
+    createdAtMs: asNumber(data.createdAtMs) ?? 0,
     updatedAtMs: asNumber(data.updatedAtMs) ?? Date.now(),
   };
 }
@@ -101,6 +120,7 @@ function parseInvoice(id: string, data: Record<string, unknown>): InvoiceRecord 
     organizationId: asString(data.organizationId),
     status:
       data.status === "draft" ||
+      data.status === "open" ||
       data.status === "paid" ||
       data.status === "void" ||
       data.status === "uncollectible"
@@ -204,6 +224,25 @@ async function listInvoicesForUser(user: PortalUser): Promise<InvoiceRecord[]> {
   }
 
   return snap.docs.map((doc) => parseInvoice(doc.id, doc.data() as Record<string, unknown>));
+}
+
+async function listPaymentsForUser(user: PortalUser): Promise<PaymentRecord[]> {
+  const db = getFirebaseAdminFirestore();
+  if (!db) {
+    return [];
+  }
+
+  const col = db.collection(COLLECTIONS.payments);
+  let snap;
+  if (canReadByOrganization(user) && user.organizationId) {
+    snap = await col.where("organizationId", "==", user.organizationId).limit(100).get();
+  } else if (user.stripeCustomerId) {
+    snap = await col.where("customerId", "==", user.stripeCustomerId).limit(100).get();
+  } else {
+    snap = await col.limit(0).get();
+  }
+
+  return snap.docs.map((doc) => parsePayment(doc.id, doc.data() as Record<string, unknown>));
 }
 
 async function listProposalsForUser(user: PortalUser): Promise<ProposalRecord[]> {
@@ -349,13 +388,14 @@ export async function getDashboardData(user: PortalUser): Promise<DashboardData>
 }
 
 export async function getCustomerPortalData(user: PortalUser): Promise<CustomerPortalData> {
-  const [subscriptions, invoices, proposals] = await Promise.all([
+  const [subscriptions, invoices, payments, proposals] = await Promise.all([
     listSubscriptionsForUser(user),
     listInvoicesForUser(user),
+    listPaymentsForUser(user),
     listProposalsForUser(user),
   ]);
 
-  return { subscriptions, invoices, proposals };
+  return { subscriptions, invoices, payments, proposals };
 }
 
 export async function getAdminPortalData(user: PortalUser): Promise<AdminPortalData> {

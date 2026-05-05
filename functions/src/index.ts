@@ -1,13 +1,7 @@
 /**
- * Firebase Cloud Functions (optional) — lead conversion and opportunities are implemented
- * in Next.js server actions (`server/firestore/crm-opportunities.ts`) using the Admin SDK.
- *
- * Use this package when you need triggers callable from mobile clients without session cookies,
- * or to enforce invariants in Firestore rules + Functions instead of the app layer.
- *
- * Example extension point (not wired): mirror `customers` writes and ensure `crmType`
- * transitions from lead → contact always pair with an `opportunities` child doc — typically
- * unnecessary if all conversions go through `convertLeadToContactWithOpportunity`.
+ * Firebase Cloud Functions (optional). Stripe webhooks are implemented in Next.js at
+ * `POST /api/webhooks/stripe` (see `server/stripe/stripe-sync.ts` and `docs/STRIPE_SETUP.md`).
+ * Deploy a Cloud HTTPS function only if your hosting model cannot expose that route publicly.
  */
 import * as admin from "firebase-admin";
 import * as functions from "firebase-functions/v1";

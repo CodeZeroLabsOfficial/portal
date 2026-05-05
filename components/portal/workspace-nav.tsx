@@ -73,7 +73,7 @@ export function WorkspaceNav({ collapsed = false, userRole }: WorkspaceNavProps)
     return (
       <nav aria-label="Admin portal navigation" className="flex h-full min-h-0 flex-1 flex-col">
         {!collapsed ? (
-          <p className="mb-2.5 shrink-0 px-3 text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500">
+          <p className="mb-2.5 shrink-0 px-2 text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500">
             Admin
           </p>
         ) : null}
@@ -148,7 +148,7 @@ export function WorkspaceNav({ collapsed = false, userRole }: WorkspaceNavProps)
       {Object.entries(sectionedRoutes).map(([section, routes]) => (
         <div key={section} className="space-y-1">
           {!collapsed ? (
-            <p className="mb-2 px-3 text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500">
+            <p className="mb-2 px-2 text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500">
               {sectionLabels[section as PortalRouteDefinition["section"]]}
             </p>
           ) : null}
@@ -196,14 +196,15 @@ function NavRow({
   children: ReactNode;
 }) {
   const linkClass = cn(
-    "group flex min-h-[40px] w-full items-center gap-3 rounded-lg py-2 transition-colors",
-    collapsed ? "justify-center px-2" : "px-3",
+    "group flex min-h-[40px] w-full items-center gap-3 rounded-lg px-2 py-2 transition-colors",
     isActive ? "bg-white/[0.08] text-white" : "text-zinc-400 hover:bg-white/[0.05] hover:text-white",
   );
 
   const linkInner = (
     <>
-      {children}
+      <span className="inline-flex size-9 shrink-0 items-center justify-center [&>svg]:shrink-0">
+        {children}
+      </span>
       {!collapsed ? (
         <span className="min-w-0 flex-1 truncate text-[14px] font-medium leading-none">{label}</span>
       ) : null}
@@ -246,14 +247,15 @@ function NavRowExternal({
   children: ReactNode;
 }) {
   const linkClass = cn(
-    "group flex min-h-[40px] w-full items-center gap-3 rounded-lg py-2 transition-colors",
-    collapsed ? "justify-center px-2" : "px-3",
+    "group flex min-h-[40px] w-full items-center gap-3 rounded-lg px-2 py-2 transition-colors",
     isActive ? "bg-white/[0.08] text-white" : "text-zinc-400 hover:bg-white/[0.05] hover:text-white",
   );
 
   const linkInner = (
     <>
-      {children}
+      <span className="inline-flex size-9 shrink-0 items-center justify-center [&>svg]:shrink-0">
+        {children}
+      </span>
       {!collapsed ? <span className="truncate text-[14px] font-medium leading-none">{label}</span> : null}
     </>
   );

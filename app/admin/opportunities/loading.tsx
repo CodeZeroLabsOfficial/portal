@@ -1,13 +1,20 @@
 import { WorkspaceShell } from "@/components/portal/workspace-shell";
+import { getCurrentSessionUser } from "@/lib/auth/server-session";
+import { redirect } from "next/navigation";
 
-export default function Loading() {
+export default async function Loading() {
+  const user = await getCurrentSessionUser();
+  if (!user) {
+    redirect("/login?next=/admin/opportunities");
+  }
+
   return (
     <WorkspaceShell
       title="Pipeline"
       description="Loading opportunities…"
-      roleLabel=""
-      displayName=""
-      userLabel=""
+      roleLabel={user.role}
+      displayName={user.displayName ?? ""}
+      userLabel={user.email || user.uid}
       showMainHeader={false}
       showRightAside={false}
     >

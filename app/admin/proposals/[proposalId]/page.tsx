@@ -8,7 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { WorkspaceShell } from "@/components/portal/workspace-shell";
 import { ProposalDocumentEditorLazy } from "@/components/proposal/proposal-document-editor-lazy";
+import { ProposalStripeActions } from "@/components/proposal/proposal-stripe-actions";
 import { ProposalShareSettings } from "@/components/proposal/proposal-share-settings";
+import { getServerEnv } from "@/lib/env/server";
+import { isStripeApiConfigured } from "@/lib/stripe/server";
 import type { PackagesBlock } from "@/types/proposal";
 
 interface PageProps {
@@ -39,6 +42,14 @@ export default async function AdminProposalDetailPage({ params, searchParams }: 
   const customerBackId = proposal.customerId?.trim() || firstQueryString(sp.customer);
 
   const blockCount = proposal.document.blocks?.length ?? 0;
+
+  const stripeReady = isStripeApiConfigured();
+  let defaultSubscriptionPriceId: string | null = null;
+  try {
+    defaultSubscriptionPriceId = getServerEnv().STRIPE_DEFAULT_SUBSCRIPTION_PRICE_ID ?? null;
+  } catch {
+    defaultSubscriptionPriceId = null;
+  }
 
   return (
     <WorkspaceShell
@@ -153,6 +164,13 @@ export default async function AdminProposalDetailPage({ params, searchParams }: 
             ) : null}
           </CardContent>
         </Card>
+
+        <ProposalStripeActions
+          proposalId={proposal.id}
+          stripeReady={stripeReady}
+          customerLinked={Boolean(proposal.customerId?.trim())}
+          defaultSubscriptionPriceId={defaultSubscriptionPriceId}
+        />
 
         <ProposalShareSettings proposalId={proposal.id} hasPassword={Boolean(proposal.sharePasswordHash)} />
 

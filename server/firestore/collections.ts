@@ -20,6 +20,12 @@ export const COLLECTIONS = {
   customerNotes: "customer_notes",
   subscriptions: "subscriptions",
   invoices: "invoices",
+  /** PaymentIntent mirrors — synced from Stripe webhooks (`payment_intent.*`). */
+  payments: "payments",
+  /** Stripe Customer objects mirrored by id (`cus_…`). */
+  stripeCustomers: "stripe_customers",
+  /** Processed Stripe event ids — webhook idempotency (`evt_…`). */
+  stripeWebhookEvents: "stripe_webhook_events",
   proposals: "proposals",
   proposalTemplates: "proposal_templates",
   analyticsEvents: "analytics_events",

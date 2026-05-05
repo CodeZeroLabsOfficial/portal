@@ -20,5 +20,7 @@ export interface SubscriptionRecord {
   interval?: "month" | "year";
   currentPeriodEndMs?: number;
   cancelAtPeriodEnd?: boolean;
+  /** Denormalized recurring amount in minor units (optional — used by dashboard heuristics). */
+  mrrAmount?: number;
   updatedAtMs: number;
 }

@@ -190,14 +190,16 @@ export function WorkspaceShellLayout({
         <aside
           aria-label="Workspace"
           className={cn(
-            "sticky top-0 flex h-dvh shrink-0 flex-col border-r border-white/[0.06] bg-[#0D0D16] transition-[width] duration-200 ease-out",
+            "sticky top-0 flex h-dvh shrink-0 flex-col border-r border-white/[0.06] bg-[#0D0D16] pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] transition-[width] duration-200 ease-out",
             collapsed ? "w-[72px]" : "w-[260px]",
           )}
         >
           <div
             className={cn(
-              "flex h-14 shrink-0 items-center",
-              collapsed ? "flex-col justify-center gap-1 px-2" : "justify-between px-4",
+              "flex shrink-0 items-center",
+              collapsed
+                ? "flex-col gap-2 px-3 pb-3 pt-3"
+                : "h-14 justify-between px-4",
             )}
           >
             {!collapsed ? (
