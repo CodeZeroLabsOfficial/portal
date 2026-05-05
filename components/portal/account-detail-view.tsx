@@ -62,8 +62,8 @@ export function AccountDetailView({ account }: AccountDetailViewProps) {
           >
             <Building2 className="h-7 w-7 stroke-[1.5]" />
           </span>
-          <div className="min-w-0 space-y-1">
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-[1.75rem] md:leading-tight">
+          <div className="min-w-0 space-y-2">
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
               {account.displayName}
             </h1>
             <p className="text-sm text-muted-foreground">

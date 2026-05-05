@@ -21,7 +21,10 @@ function mapSubscriptionStatus(status: Stripe.Subscription.Status): Subscription
   }
 }
 
-function mapInvoiceStatus(status: Stripe.Invoice.Status): InvoiceStatus {
+function mapInvoiceStatus(status: Stripe.Invoice.Status | null | undefined): InvoiceStatus {
+  if (status == null) {
+    return "open";
+  }
   switch (status) {
     case "draft":
     case "open":
