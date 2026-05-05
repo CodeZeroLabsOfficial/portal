@@ -198,7 +198,9 @@ export function CustomerDetailView({
         window.alert(res.message);
         return;
       }
-      router.push(`/admin/proposals/${res.proposalId}`);
+      router.push(
+        `/admin/proposals/${res.proposalId}?customer=${encodeURIComponent(customer.id)}`,
+      );
       router.refresh();
     } catch (e) {
       window.alert(e instanceof Error ? e.message : "Could not create proposal. Please try again.");
@@ -617,7 +619,9 @@ export function CustomerDetailView({
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <Button variant="outline" size="sm" className="gap-1.5" asChild>
-                      <Link href={`/admin/proposals/${p.id}`}>
+                      <Link
+                        href={`/admin/proposals/${p.id}?customer=${encodeURIComponent(customer.id)}`}
+                      >
                         <Pencil className="h-3.5 w-3.5" aria-hidden />
                         Edit
                       </Link>

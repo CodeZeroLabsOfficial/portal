@@ -1,21 +1,42 @@
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { notFound, redirect } from "next/navigation";
-import { ExternalLink } from "lucide-react";
+import { ArrowLeft, ExternalLink } from "lucide-react";
 import { getCurrentSessionUser } from "@/lib/auth/server-session";
 import { getAdminProposalRecord } from "@/server/firestore/portal-data";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { WorkspaceShell } from "@/components/portal/workspace-shell";
-import { ProposalDocumentEditor } from "@/components/proposal/proposal-document-editor";
 import { ProposalShareSettings } from "@/components/proposal/proposal-share-settings";
 import type { PackagesBlock } from "@/types/proposal";
 
+const ProposalDocumentEditor = dynamic(
+  () =>
+    import("@/components/proposal/proposal-document-editor").then((m) => m.ProposalDocumentEditor),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="rounded-2xl border border-border/70 bg-muted/20 p-12 text-center text-sm text-muted-foreground">
+        Loading editor…
+      </div>
+    ),
+  },
+);
+
 interface PageProps {
   params: Promise<{ proposalId: string }>;
+  searchParams: Promise<{ customer?: string | string[] }>;
 }
 
-export default async function AdminProposalDetailPage({ params }: PageProps) {
+function firstQueryString(value: string | string[] | undefined): string | null {
+  const raw = Array.isArray(value) ? value[0] : value;
+  if (typeof raw !== "string") return null;
+  const t = raw.trim();
+  return t.length > 0 ? t : null;
+}
+
+export default async function AdminProposalDetailPage({ params, searchParams }: PageProps) {
   const user = await getCurrentSessionUser();
   if (!user) {
     redirect("/login?next=/admin");
@@ -26,6 +47,9 @@ export default async function AdminProposalDetailPage({ params }: PageProps) {
   if (!proposal) {
     notFound();
   }
+
+  const sp = await searchParams;
+  const customerBackId = proposal.customerId?.trim() || firstQueryString(sp.customer);
 
   const blockCount = proposal.document.blocks?.length ?? 0;
 
@@ -41,6 +65,14 @@ export default async function AdminProposalDetailPage({ params }: PageProps) {
     >
       <div className="space-y-8">
         <div className="flex flex-wrap items-center gap-2">
+          {customerBackId ? (
+            <Button variant="ghost" size="sm" className="-ml-2 gap-1.5 text-muted-foreground hover:text-foreground" asChild>
+              <Link href={`/admin/customers/${encodeURIComponent(customerBackId)}`}>
+                <ArrowLeft className="h-4 w-4" aria-hidden />
+                Back to customer
+              </Link>
+            </Button>
+          ) : null}
           <Badge variant="outline" className="capitalize">
             {proposal.status}
           </Badge>

@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import dynamic from "next/dynamic";
 import {
   closestCenter,
   DndContext,
@@ -51,6 +50,7 @@ import type {
   TextBlock,
   VideoBlock,
 } from "@/types/proposal";
+import { ProposalRichText } from "@/components/proposal/proposal-rich-text";
 import { ProposalDocumentView } from "@/components/proposal/proposal-document-view";
 import { saveProposalDocumentAction, sendProposalAction } from "@/server/actions/proposal-builder";
 import { saveProposalTemplateAction } from "@/server/actions/proposal-templates";
@@ -68,14 +68,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { escapeHtml } from "@/lib/escape-html";
-
-const ProposalRichText = dynamic(
-  () => import("@/components/proposal/proposal-rich-text").then((m) => m.ProposalRichText),
-  {
-    ssr: false,
-    loading: () => <div className="min-h-[140px] animate-pulse rounded-lg bg-muted/40" />,
-  },
-);
 
 function newId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `b-${Date.now()}-${Math.random().toString(16).slice(2)}`;
