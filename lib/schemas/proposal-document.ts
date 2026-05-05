@@ -49,6 +49,30 @@ const pricingBlockSchema = z.object({
   totalMinorUnits: z.number().finite().optional(),
 });
 
+const packageTierSchema = z.object({
+  id: idSchema,
+  name: z.string().default(""),
+  monthlyAmountMinor: z.number().finite(),
+  monthlyOriginalMinor: z.number().finite().optional(),
+  yearlyAmountMinor: z.number().finite(),
+  yearlyOriginalMinor: z.number().finite().optional(),
+  recommended: z.boolean().optional(),
+  features: z.array(z.string()).default([]),
+});
+
+const packagesBlockSchema = z.object({
+  id: idSchema,
+  type: z.literal("packages"),
+  currency: z.string().min(1).default("aud"),
+  title: z.string().optional(),
+  monthlyLabel: z.string().optional(),
+  yearlyLabel: z.string().optional(),
+  yearlyBadgeText: z.string().optional(),
+  quantityLabel: z.string().optional(),
+  defaultQuantity: z.number().finite().positive().optional(),
+  tiers: z.array(packageTierSchema).default([]),
+});
+
 const formFieldSchema = z.object({
   id: idSchema,
   label: z.string().default(""),
@@ -101,6 +125,7 @@ const blockSchema = z.discriminatedUnion("type", [
   imageBlockSchema,
   videoBlockSchema,
   pricingBlockSchema,
+  packagesBlockSchema,
   formBlockSchema,
   signatureBlockSchema,
   embedBlockSchema,

@@ -30,6 +30,14 @@ const acceptSchema = z.object({
   signerName: z.string().trim().min(2).max(200),
 });
 
+const packageSelectionSchema = z.object({
+  shareToken: z.string().min(8),
+  blockId: z.string().min(4),
+  tierId: z.string().min(4),
+  billing: z.enum(["monthly", "yearly"]),
+  quantity: z.number().finite().positive().max(1_000_000),
+});
+
 async function requireStaff() {
   const user = await getCurrentSessionUser();
   if (!user || !hasRole(user, ["admin", "team"])) return null;
@@ -251,5 +259,62 @@ export async function acceptProposalPublicAction(
     revalidatePath(`/admin/opportunities/${proposal.opportunityId}`);
   }
 
+  return { ok: true };
+}
+
+export async function saveProposalPackageSelectionAction(
+  raw: unknown,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const parsed = packageSelectionSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { ok: false, message: "Invalid package selection." };
+  }
+
+  const proposal = await getProposalRecordByShareToken(parsed.data.shareToken);
+  if (!proposal || proposal.status === "draft") {
+    return { ok: false, message: "Proposal not available." };
+  }
+
+  const block = proposal.document.blocks.find((b) => b.id === parsed.data.blockId);
+  if (!block || block.type !== "packages") {
+    return { ok: false, message: "Package block not found." };
+  }
+
+  const tier = block.tiers.find((t) => t.id === parsed.data.tierId);
+  if (!tier) {
+    return { ok: false, message: "That package tier no longer exists." };
+  }
+
+  const quantity = Math.max(1, Math.min(1_000_000, Math.floor(parsed.data.quantity)));
+
+  const db = getFirebaseAdminFirestore();
+  if (!db) return { ok: false, message: "Database unavailable." };
+
+  const ref = db.collection(COLLECTIONS.proposals).doc(proposal.id);
+  const snap = await ref.get();
+  const prevRaw = snap.data()?.publicSelections;
+  const prev =
+    prevRaw && typeof prevRaw === "object" && !Array.isArray(prevRaw)
+      ? { ...(prevRaw as Record<string, unknown>) }
+      : {};
+
+  const now = Date.now();
+  await ref.update({
+    publicSelections: {
+      ...prev,
+      [parsed.data.blockId]: {
+        kind: "packages",
+        tierId: parsed.data.tierId,
+        billing: parsed.data.billing,
+        quantity,
+        updatedAtMs: now,
+      },
+    },
+    updatedAtMs: now,
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+
+  revalidatePath(`/p/${parsed.data.shareToken}`);
+  revalidatePath(`/admin/proposals/${proposal.id}`);
   return { ok: true };
 }

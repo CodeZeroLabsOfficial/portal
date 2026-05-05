@@ -49,13 +49,18 @@ export default async function PublicProposalPage(props: PublicProposalPageProps)
   const unlocked = !requiresPassword || (await isProposalUnlockedForRequest(proposal.id));
 
   return (
-    <main className="proposal-print-root mx-auto min-h-dvh max-w-3xl px-4 py-12 sm:px-6 print:max-w-none print:py-8">
+    <main className="proposal-print-root mx-auto min-h-dvh max-w-6xl px-4 py-12 sm:px-6 print:max-w-none print:py-8">
       {!unlocked ? (
         <ProposalPasswordGate shareToken={proposal.shareToken} />
       ) : (
         <>
           <ProposalAnalyticsTracker shareToken={proposal.shareToken} />
-          <ProposalDocumentView document={proposal.document} branding={proposal.branding} />
+          <ProposalDocumentView
+            document={proposal.document}
+            branding={proposal.branding}
+            shareToken={proposal.shareToken}
+            publicSelections={proposal.publicSelections}
+          />
           <ProposalPublicFooter
             shareToken={proposal.shareToken}
             status={proposal.status}

@@ -6,6 +6,7 @@ export type ProposalBlockType =
   | "image"
   | "video"
   | "pricing"
+  | "packages"
   | "embed"
   | "form"
   | "signature"
@@ -65,6 +66,45 @@ export interface PricingBlock extends ProposalBlockBase {
   totalMinorUnits?: number;
 }
 
+/** One selectable tier in a packages grid (monthly vs yearly unit pricing × quantity). */
+export interface PackageTier {
+  id: string;
+  name: string;
+  /** Unit price per billing month (minor units, e.g. cents). */
+  monthlyAmountMinor: number;
+  /** Optional strikethrough “was” price for monthly. */
+  monthlyOriginalMinor?: number;
+  /** Unit price per billing year (minor units). */
+  yearlyAmountMinor: number;
+  yearlyOriginalMinor?: number;
+  recommended?: boolean;
+  features: string[];
+}
+
+export interface PackagesBlock extends ProposalBlockBase {
+  type: "packages";
+  currency: string;
+  title?: string;
+  monthlyLabel?: string;
+  yearlyLabel?: string;
+  /** Shown on the yearly segment of the billing toggle (e.g. “20% OFF”). */
+  yearlyBadgeText?: string;
+  quantityLabel?: string;
+  defaultQuantity?: number;
+  tiers: PackageTier[];
+}
+
+/** Persisted when the recipient selects a package on the public proposal. Keyed by block id. */
+export interface PackagesPublicSelection {
+  kind: "packages";
+  tierId: string;
+  billing: "monthly" | "yearly";
+  quantity: number;
+  updatedAtMs: number;
+}
+
+export type ProposalPublicSelections = Record<string, PackagesPublicSelection>;
+
 export type FormFieldType = "text" | "email" | "textarea" | "select";
 
 export interface FormField {
@@ -116,6 +156,7 @@ export type ProposalBlock =
   | ImageBlock
   | VideoBlock
   | PricingBlock
+  | PackagesBlock
   | FormBlock
   | SignatureBlock
   | EmbedBlock
@@ -165,6 +206,8 @@ export interface ProposalRecord {
   acceptedByName?: string;
   /** Stripe Checkout / PaymentIntent linkage when collecting payment in-proposal. */
   stripePaymentIntentId?: string;
+  /** Customer choices from public viewer (e.g. selected package tier). Keyed by block id. */
+  publicSelections?: ProposalPublicSelections;
   createdAtMs: number;
   updatedAtMs: number;
 }

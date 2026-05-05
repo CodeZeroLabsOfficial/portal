@@ -4,6 +4,7 @@ import { parseProposalDocument } from "@/lib/schemas/proposal-document";
 import type {
   ProposalBlock,
   ProposalBranding,
+  ProposalPublicSelections,
   ProposalRecord,
   ProposalStatus,
 } from "@/types/proposal";
@@ -49,6 +50,29 @@ function parseBranding(raw: unknown): ProposalBranding | undefined {
   return { logoUrl, primaryColor, fontFamily };
 }
 
+function parsePublicSelections(raw: unknown): ProposalPublicSelections | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const out: ProposalPublicSelections = {};
+  for (const [key, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (!v || typeof v !== "object") continue;
+    const o = v as Record<string, unknown>;
+    if (o.kind !== "packages") continue;
+    const tierId = asString(o.tierId);
+    const billing = o.billing === "monthly" || o.billing === "yearly" ? o.billing : undefined;
+    if (!tierId || !billing) continue;
+    const qRaw = asNumber(o.quantity);
+    const quantity = qRaw !== undefined && qRaw >= 1 ? Math.min(1_000_000, Math.floor(qRaw)) : 1;
+    out[key] = {
+      kind: "packages",
+      tierId,
+      billing,
+      quantity,
+      updatedAtMs: asNumber(o.updatedAtMs) ?? Date.now(),
+    };
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
 /**
  * Parse a Firestore `proposals/{id}` document into a typed record (Admin SDK reads).
  */
@@ -80,6 +104,7 @@ export function parseProposalRecord(id: string, data: Record<string, unknown>): 
     acceptedAtMs: asNumber(data.acceptedAtMs),
     acceptedByName: asString(data.acceptedByName),
     stripePaymentIntentId: asString(data.stripePaymentIntentId),
+    publicSelections: parsePublicSelections(data.publicSelections),
     createdAtMs: asNumber(data.createdAtMs) ?? 0,
     updatedAtMs: asNumber(data.updatedAtMs) ?? 0,
   };

@@ -26,6 +26,7 @@ import {
   LayoutTemplate,
   Loader2,
   MonitorPlay,
+  Package,
   PenLine,
   Plus,
   Save,
@@ -41,6 +42,7 @@ import type {
   FormField,
   HeaderBlock,
   ImageBlock,
+  PackagesBlock,
   PricingBlock,
   ProposalBlock,
   ProposalDocument,
@@ -89,6 +91,50 @@ function createBlock(type: ProposalBlock["type"]): ProposalBlock {
         allowQuantityEdit: true,
         lineItems: [{ id: newId(), label: "Service package", unitAmountMinor: 100_000, quantity: 1 }],
       };
+    case "packages": {
+      const t1 = newId();
+      const t2 = newId();
+      const t3 = newId();
+      return {
+        id,
+        type: "packages",
+        currency: "aud",
+        title: "Packages",
+        monthlyLabel: "Monthly",
+        yearlyLabel: "Yearly",
+        yearlyBadgeText: "20% OFF",
+        quantityLabel: "Users",
+        defaultQuantity: 1,
+        tiers: [
+          {
+            id: t1,
+            name: "Basic",
+            monthlyAmountMinor: 600,
+            monthlyOriginalMinor: 720,
+            yearlyAmountMinor: 5760,
+            yearlyOriginalMinor: 7200,
+            features: ["Basic support", "Up to 5GB per month"],
+          },
+          {
+            id: t2,
+            name: "Standard",
+            monthlyAmountMinor: 1000,
+            monthlyOriginalMinor: 1200,
+            yearlyAmountMinor: 9600,
+            yearlyOriginalMinor: 12000,
+            recommended: true,
+            features: ["24h support", "Up to 10GB per month"],
+          },
+          {
+            id: t3,
+            name: "Premium",
+            monthlyAmountMinor: 1700,
+            yearlyAmountMinor: 16000,
+            features: ["Priority 24h support", "Unlimited storage", "AI security monitoring"],
+          },
+        ],
+      };
+    }
     case "form":
       return {
         id,
@@ -365,6 +411,224 @@ function BlockFields({
         </div>
       );
     }
+    case "packages": {
+      const b = block as PackagesBlock;
+      return (
+        <div className="space-y-6">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label>Section title</Label>
+              <Input value={b.title ?? ""} onChange={(e) => patch({ ...b, title: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Currency (ISO)</Label>
+              <Input
+                value={b.currency}
+                onChange={(e) => patch({ ...b, currency: e.target.value.toLowerCase().slice(0, 3) })}
+                maxLength={3}
+              />
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="space-y-1.5">
+              <Label>Monthly label</Label>
+              <Input value={b.monthlyLabel ?? ""} onChange={(e) => patch({ ...b, monthlyLabel: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Yearly label</Label>
+              <Input value={b.yearlyLabel ?? ""} onChange={(e) => patch({ ...b, yearlyLabel: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Yearly badge</Label>
+              <Input
+                value={b.yearlyBadgeText ?? ""}
+                onChange={(e) => patch({ ...b, yearlyBadgeText: e.target.value || undefined })}
+                placeholder="20% OFF"
+              />
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label>Quantity label</Label>
+              <Input value={b.quantityLabel ?? ""} onChange={(e) => patch({ ...b, quantityLabel: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Default quantity</Label>
+              <Input
+                type="number"
+                min={1}
+                value={b.defaultQuantity ?? 1}
+                onChange={(e) => {
+                  const n = Number(e.target.value);
+                  if (!Number.isFinite(n) || n < 1) return;
+                  patch({ ...b, defaultQuantity: Math.floor(n) });
+                }}
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between gap-2">
+            <Label className="text-base">Tiers</Label>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1"
+              onClick={() =>
+                patch({
+                  ...b,
+                  tiers: [
+                    ...b.tiers,
+                    {
+                      id: newId(),
+                      name: "New tier",
+                      monthlyAmountMinor: 0,
+                      yearlyAmountMinor: 0,
+                      features: [],
+                    },
+                  ],
+                })
+              }
+            >
+              <Plus className="h-3.5 w-3.5" /> Add tier
+            </Button>
+          </div>
+
+          <div className="space-y-6">
+            {b.tiers.map((tier, idx) => (
+              <div key={tier.id} className="space-y-3 rounded-xl border border-border/60 bg-muted/10 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <Input
+                    className="max-w-xs font-medium"
+                    value={tier.name}
+                    onChange={(e) => {
+                      const tiers = [...b.tiers];
+                      tiers[idx] = { ...tier, name: e.target.value };
+                      patch({ ...b, tiers });
+                    }}
+                  />
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(tier.recommended)}
+                      onChange={(e) => {
+                        const tiers = b.tiers.map((t, i) => ({
+                          ...t,
+                          recommended: i === idx ? e.target.checked : e.target.checked ? false : t.recommended,
+                        }));
+                        patch({ ...b, tiers });
+                      }}
+                    />
+                    Recommended
+                  </label>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Monthly (major)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={tier.monthlyAmountMinor / 100}
+                      onChange={(e) => {
+                        const v = Number(e.target.value);
+                        if (!Number.isFinite(v)) return;
+                        const tiers = [...b.tiers];
+                        tiers[idx] = { ...tier, monthlyAmountMinor: Math.round(v * 100) };
+                        patch({ ...b, tiers });
+                      }}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Monthly original (optional)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={(tier.monthlyOriginalMinor ?? 0) / 100}
+                      onChange={(e) => {
+                        const v = Number(e.target.value);
+                        if (!Number.isFinite(v)) return;
+                        const tiers = [...b.tiers];
+                        tiers[idx] = {
+                          ...tier,
+                          monthlyOriginalMinor: v > 0 ? Math.round(v * 100) : undefined,
+                        };
+                        patch({ ...b, tiers });
+                      }}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Yearly (major)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={tier.yearlyAmountMinor / 100}
+                      onChange={(e) => {
+                        const v = Number(e.target.value);
+                        if (!Number.isFinite(v)) return;
+                        const tiers = [...b.tiers];
+                        tiers[idx] = { ...tier, yearlyAmountMinor: Math.round(v * 100) };
+                        patch({ ...b, tiers });
+                      }}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Yearly original (optional)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={(tier.yearlyOriginalMinor ?? 0) / 100}
+                      onChange={(e) => {
+                        const v = Number(e.target.value);
+                        if (!Number.isFinite(v)) return;
+                        const tiers = [...b.tiers];
+                        tiers[idx] = {
+                          ...tier,
+                          yearlyOriginalMinor: v > 0 ? Math.round(v * 100) : undefined,
+                        };
+                        patch({ ...b, tiers });
+                      }}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Features (one per line)</Label>
+                  <textarea
+                    className="min-h-[72px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    value={tier.features.join("\n")}
+                    onChange={(e) => {
+                      const lines = e.target.value
+                        .split("\n")
+                        .map((s) => s.trim())
+                        .filter(Boolean);
+                      const tiers = [...b.tiers];
+                      tiers[idx] = { ...tier, features: lines };
+                      patch({ ...b, tiers });
+                    }}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive"
+                  onClick={() => patch({ ...b, tiers: b.tiers.filter((t) => t.id !== tier.id) })}
+                >
+                  Remove tier
+                </Button>
+              </div>
+            ))}
+          </div>
+
+          <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={onRemove}>
+            <Trash2 className="mr-1 h-4 w-4" /> Remove packages block
+          </Button>
+        </div>
+      );
+    }
     case "form": {
       const b = block as FormBlock;
       return (
@@ -547,6 +811,8 @@ function blockLabel(type: ProposalBlock["type"]): string {
       return "Video";
     case "pricing":
       return "Pricing";
+    case "packages":
+      return "Packages";
     case "form":
       return "Form";
     case "signature":
@@ -671,6 +937,9 @@ export function ProposalDocumentEditor({
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => addBlock("pricing")}>
               <Coins className="mr-2 h-4 w-4" /> Pricing table
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => addBlock("packages")}>
+              <Package className="mr-2 h-4 w-4" /> Packages (selectable)
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => addBlock("form")}>
               <SquarePen className="mr-2 h-4 w-4" /> Form

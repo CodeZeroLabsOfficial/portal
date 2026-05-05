@@ -177,6 +177,14 @@ const PRICING_MINOR_KEYS = [
 ] as const;
 
 function extractPricingMinorFromBlock(block: ProposalBlock): number {
+  if (block.type === "packages") {
+    const q = block.defaultQuantity ?? 1;
+    let maxAnnual = 0;
+    for (const t of block.tiers) {
+      maxAnnual = Math.max(maxAnnual, t.yearlyAmountMinor * q, t.monthlyAmountMinor * 12 * q);
+    }
+    return maxAnnual > 0 ? Math.round(maxAnnual) : 0;
+  }
   if (block.type !== "pricing") {
     return 0;
   }

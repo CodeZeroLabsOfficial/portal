@@ -1,19 +1,36 @@
 "use client";
 
 import * as React from "react";
-import type { ProposalBlock, ProposalBranding, ProposalDocument } from "@/types/proposal";
+import type {
+  ProposalBlock,
+  ProposalBranding,
+  ProposalDocument,
+  ProposalPublicSelections,
+} from "@/types/proposal";
 import { sanitizeProposalHtml } from "@/lib/sanitize-proposal-html";
 import { cn } from "@/lib/utils";
 import { embedVideoSrc } from "@/components/proposal/embed-video";
 import { PricingBlockPublic } from "@/components/proposal/pricing-block-public";
+import { PackagesBlockPublic } from "@/components/proposal/packages-block-public";
 
 export interface ProposalDocumentViewProps {
   document: ProposalDocument;
   branding?: ProposalBranding;
   className?: string;
+  /** Public share link only — enables saving package selection. */
+  shareToken?: string;
+  publicSelections?: ProposalPublicSelections;
 }
 
-function BlockView({ block }: { block: ProposalBlock }) {
+function BlockView({
+  block,
+  shareToken,
+  publicSelections,
+}: {
+  block: ProposalBlock;
+  shareToken?: string;
+  publicSelections?: ProposalPublicSelections;
+}) {
   switch (block.type) {
     case "header":
       return (
@@ -106,6 +123,15 @@ function BlockView({ block }: { block: ProposalBlock }) {
     }
     case "pricing":
       return <PricingBlockPublic block={block} />;
+    case "packages":
+      return (
+        <PackagesBlockPublic
+          block={block}
+          shareToken={shareToken ?? ""}
+          initialSelection={publicSelections?.[block.id]}
+          interactive={Boolean(shareToken)}
+        />
+      );
     case "form":
       return (
         <div className="rounded-xl border border-border/70 bg-card p-4 shadow-sm">
@@ -172,7 +198,13 @@ function BlockView({ block }: { block: ProposalBlock }) {
   }
 }
 
-export function ProposalDocumentView({ document, branding, className }: ProposalDocumentViewProps) {
+export function ProposalDocumentView({
+  document,
+  branding,
+  className,
+  shareToken,
+  publicSelections,
+}: ProposalDocumentViewProps) {
   const style = React.useMemo(() => {
     if (!branding?.primaryColor && !branding?.fontFamily) return undefined;
     return {
@@ -205,7 +237,7 @@ export function ProposalDocumentView({ document, branding, className }: Proposal
       <div className="space-y-10">
         {document.blocks.map((block) => (
           <section key={block.id} className="space-y-0">
-            <BlockView block={block} />
+            <BlockView block={block} shareToken={shareToken} publicSelections={publicSelections} />
           </section>
         ))}
       </div>

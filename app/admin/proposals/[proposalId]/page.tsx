@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { WorkspaceShell } from "@/components/portal/workspace-shell";
 import { ProposalDocumentEditor } from "@/components/proposal/proposal-document-editor";
 import { ProposalShareSettings } from "@/components/proposal/proposal-share-settings";
+import type { PackagesBlock } from "@/types/proposal";
 
 interface PageProps {
   params: Promise<{ proposalId: string }>;
@@ -72,6 +73,27 @@ export default async function AdminProposalDetailPage({ params }: PageProps) {
                 <span className="text-muted-foreground">Approx. engagement · </span>
                 {Math.max(0, Math.round(proposal.totalEngagementSeconds / 60))} minutes on page
               </p>
+            ) : null}
+            {proposal.publicSelections && Object.keys(proposal.publicSelections).length > 0 ? (
+              <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Buyer selection (public link)
+                </p>
+                <ul className="mt-2 list-disc space-y-1 pl-4">
+                  {Object.entries(proposal.publicSelections).map(([blockId, sel]) => {
+                    if (sel.kind !== "packages") return null;
+                    const blk = proposal.document.blocks.find((b) => b.id === blockId);
+                    const pb: PackagesBlock | undefined = blk?.type === "packages" ? blk : undefined;
+                    const tierName = pb?.tiers.find((t) => t.id === sel.tierId)?.name ?? `${sel.tierId.slice(0, 6)}…`;
+                    return (
+                      <li key={blockId}>
+                        <span className="font-medium text-foreground">{tierName}</span> · {sel.billing} ·{" "}
+                        {sel.quantity} {pb?.quantityLabel ?? "units"}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
             ) : null}
             {proposal.customerId ? (
               <p>
