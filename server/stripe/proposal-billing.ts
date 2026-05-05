@@ -121,7 +121,7 @@ export async function createStripeInvoiceForProposal(
 
   return {
     invoiceId: finalized.id,
-    hostedInvoiceUrl: finalized.hosted_invoice_url,
+    hostedInvoiceUrl: finalized.hosted_invoice_url ?? null,
     stripeCustomerId,
   };
 }
