@@ -696,6 +696,8 @@ export async function createCustomerDocument(
     }
   }
 
+  const crmType: CustomerCrmType = input.saveAsLead ? "lead" : "contact";
+
   const col = db.collection(COLLECTIONS.customers);
   const docRef = col.doc();
   const payload = {
@@ -724,7 +726,7 @@ export async function createCustomerDocument(
     stripeCustomerId: null,
     avatarUrl: null,
     status: "active",
-    crmType: input.saveAsLead ? "lead" : "contact",
+    crmType,
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
     createdByUid: user.uid,
@@ -741,7 +743,7 @@ export async function createCustomerDocument(
         email: payload.email,
         tags: payload.tags,
         customFields,
-        crmType: payload.crmType,
+        crmType,
         status: "active",
         createdAtMs: Date.now(),
         updatedAtMs: Date.now(),
