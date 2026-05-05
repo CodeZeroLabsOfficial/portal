@@ -66,18 +66,21 @@ export interface PricingBlock extends ProposalBlockBase {
   totalMinorUnits?: number;
 }
 
-/** One selectable tier in a packages grid (monthly vs yearly unit pricing × quantity). */
+/** One selectable tier: term-based monthly pricing + included entitlements. */
 export interface PackageTier {
   id: string;
   name: string;
-  /** Unit price per billing month (minor units, e.g. cents). */
-  monthlyAmountMinor: number;
-  /** Optional strikethrough “was” price for monthly. */
-  monthlyOriginalMinor?: number;
-  /** Unit price per billing year (minor units). */
-  yearlyAmountMinor: number;
-  yearlyOriginalMinor?: number;
   recommended?: boolean;
+  includedUsers: number;
+  includedLocations: number;
+  includedAdmins: number;
+  /** Recurring per-month amount (minor units) when the buyer chooses the 12-month term. */
+  monthlyCost12Minor: number;
+  /** Recurring per-month amount (minor units) when the buyer chooses the 24-month term. */
+  monthlyCost24Minor: number;
+  /** One-time upfront charge for the 12-month term only (minor units). */
+  upfrontCost12Minor?: number;
+  /** Optional extra bullet points below the tier limits. */
   features: string[];
 }
 
@@ -85,12 +88,10 @@ export interface PackagesBlock extends ProposalBlockBase {
   type: "packages";
   currency: string;
   title?: string;
-  monthlyLabel?: string;
-  yearlyLabel?: string;
-  /** Shown on the yearly segment of the billing toggle (e.g. “20% OFF”). */
-  yearlyBadgeText?: string;
-  quantityLabel?: string;
-  defaultQuantity?: number;
+  /** Toggle label for the 12-month term (default in UI: “12 months”). */
+  plan12Label?: string;
+  /** Toggle label for the 24-month term (default in UI: “24 months”). */
+  plan24Label?: string;
   tiers: PackageTier[];
 }
 
@@ -98,8 +99,7 @@ export interface PackagesBlock extends ProposalBlockBase {
 export interface PackagesPublicSelection {
   kind: "packages";
   tierId: string;
-  billing: "monthly" | "yearly";
-  quantity: number;
+  term: "12_months" | "24_months";
   updatedAtMs: number;
 }
 
@@ -208,6 +208,8 @@ export interface ProposalRecord {
   stripePaymentIntentId?: string;
   /** Customer choices from public viewer (e.g. selected package tier). Keyed by block id. */
   publicSelections?: ProposalPublicSelections;
+  /** When created from a proposal template (audit). */
+  sourceTemplateId?: string;
   createdAtMs: number;
   updatedAtMs: number;
 }

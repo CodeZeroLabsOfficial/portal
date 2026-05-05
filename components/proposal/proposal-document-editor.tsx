@@ -53,10 +53,12 @@ import type {
 import { ProposalRichText } from "@/components/proposal/proposal-rich-text";
 import { ProposalDocumentView } from "@/components/proposal/proposal-document-view";
 import { saveProposalDocumentAction, sendProposalAction } from "@/server/actions/proposal-builder";
+import { saveProposalTemplateAction } from "@/server/actions/proposal-templates";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   DropdownMenu,
@@ -100,37 +102,41 @@ function createBlock(type: ProposalBlock["type"]): ProposalBlock {
         type: "packages",
         currency: "aud",
         title: "Packages",
-        monthlyLabel: "Monthly",
-        yearlyLabel: "Yearly",
-        yearlyBadgeText: "20% OFF",
-        quantityLabel: "Users",
-        defaultQuantity: 1,
+        plan12Label: "12 months",
+        plan24Label: "24 months",
         tiers: [
           {
             id: t1,
             name: "Basic",
-            monthlyAmountMinor: 600,
-            monthlyOriginalMinor: 720,
-            yearlyAmountMinor: 5760,
-            yearlyOriginalMinor: 7200,
-            features: ["Basic support", "Up to 5GB per month"],
+            includedUsers: 5,
+            includedLocations: 1,
+            includedAdmins: 1,
+            monthlyCost12Minor: 600,
+            monthlyCost24Minor: 500,
+            upfrontCost12Minor: 1200,
+            features: ["Email support"],
           },
           {
             id: t2,
             name: "Standard",
-            monthlyAmountMinor: 1000,
-            monthlyOriginalMinor: 1200,
-            yearlyAmountMinor: 9600,
-            yearlyOriginalMinor: 12000,
+            includedUsers: 25,
+            includedLocations: 3,
+            includedAdmins: 2,
+            monthlyCost12Minor: 1000,
+            monthlyCost24Minor: 850,
+            upfrontCost12Minor: 2500,
             recommended: true,
-            features: ["24h support", "Up to 10GB per month"],
+            features: ["24h support", "Onboarding session"],
           },
           {
             id: t3,
             name: "Premium",
-            monthlyAmountMinor: 1700,
-            yearlyAmountMinor: 16000,
-            features: ["Priority 24h support", "Unlimited storage", "AI security monitoring"],
+            includedUsers: 100,
+            includedLocations: 10,
+            includedAdmins: 5,
+            monthlyCost12Minor: 1700,
+            monthlyCost24Minor: 1450,
+            features: ["Priority support", "Dedicated success manager"],
           },
         ],
       };
@@ -429,41 +435,14 @@ function BlockFields({
               />
             </div>
           </div>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="space-y-1.5">
-              <Label>Monthly label</Label>
-              <Input value={b.monthlyLabel ?? ""} onChange={(e) => patch({ ...b, monthlyLabel: e.target.value })} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Yearly label</Label>
-              <Input value={b.yearlyLabel ?? ""} onChange={(e) => patch({ ...b, yearlyLabel: e.target.value })} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Yearly badge</Label>
-              <Input
-                value={b.yearlyBadgeText ?? ""}
-                onChange={(e) => patch({ ...b, yearlyBadgeText: e.target.value || undefined })}
-                placeholder="20% OFF"
-              />
-            </div>
-          </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label>Quantity label</Label>
-              <Input value={b.quantityLabel ?? ""} onChange={(e) => patch({ ...b, quantityLabel: e.target.value })} />
+              <Label>12-month toggle label</Label>
+              <Input value={b.plan12Label ?? ""} onChange={(e) => patch({ ...b, plan12Label: e.target.value })} placeholder="12 months" />
             </div>
             <div className="space-y-1.5">
-              <Label>Default quantity</Label>
-              <Input
-                type="number"
-                min={1}
-                value={b.defaultQuantity ?? 1}
-                onChange={(e) => {
-                  const n = Number(e.target.value);
-                  if (!Number.isFinite(n) || n < 1) return;
-                  patch({ ...b, defaultQuantity: Math.floor(n) });
-                }}
-              />
+              <Label>24-month toggle label</Label>
+              <Input value={b.plan24Label ?? ""} onChange={(e) => patch({ ...b, plan24Label: e.target.value })} placeholder="24 months" />
             </div>
           </div>
 
@@ -482,8 +461,11 @@ function BlockFields({
                     {
                       id: newId(),
                       name: "New tier",
-                      monthlyAmountMinor: 0,
-                      yearlyAmountMinor: 0,
+                      includedUsers: 0,
+                      includedLocations: 0,
+                      includedAdmins: 0,
+                      monthlyCost12Minor: 0,
+                      monthlyCost24Minor: 0,
                       features: [],
                     },
                   ],
@@ -522,77 +504,109 @@ function BlockFields({
                     Recommended
                   </label>
                 </div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Included users</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={tier.includedUsers}
+                      onChange={(e) => {
+                        const v = Number(e.target.value);
+                        if (!Number.isFinite(v) || v < 0) return;
+                        const tiers = [...b.tiers];
+                        tiers[idx] = { ...tier, includedUsers: Math.floor(v) };
+                        patch({ ...b, tiers });
+                      }}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Included locations</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={tier.includedLocations}
+                      onChange={(e) => {
+                        const v = Number(e.target.value);
+                        if (!Number.isFinite(v) || v < 0) return;
+                        const tiers = [...b.tiers];
+                        tiers[idx] = { ...tier, includedLocations: Math.floor(v) };
+                        patch({ ...b, tiers });
+                      }}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Included admins</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={tier.includedAdmins}
+                      onChange={(e) => {
+                        const v = Number(e.target.value);
+                        if (!Number.isFinite(v) || v < 0) return;
+                        const tiers = [...b.tiers];
+                        tiers[idx] = { ...tier, includedAdmins: Math.floor(v) };
+                        patch({ ...b, tiers });
+                      }}
+                    />
+                  </div>
+                </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">Monthly (major)</Label>
+                    <Label className="text-xs text-muted-foreground">Monthly cost — 12-month term</Label>
                     <Input
                       type="number"
                       min={0}
                       step="0.01"
-                      value={tier.monthlyAmountMinor / 100}
+                      value={tier.monthlyCost12Minor / 100}
                       onChange={(e) => {
                         const v = Number(e.target.value);
                         if (!Number.isFinite(v)) return;
                         const tiers = [...b.tiers];
-                        tiers[idx] = { ...tier, monthlyAmountMinor: Math.round(v * 100) };
+                        tiers[idx] = { ...tier, monthlyCost12Minor: Math.round(v * 100) };
                         patch({ ...b, tiers });
                       }}
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">Monthly original (optional)</Label>
+                    <Label className="text-xs text-muted-foreground">Monthly cost — 24-month term</Label>
                     <Input
                       type="number"
                       min={0}
                       step="0.01"
-                      value={(tier.monthlyOriginalMinor ?? 0) / 100}
+                      value={tier.monthlyCost24Minor / 100}
                       onChange={(e) => {
                         const v = Number(e.target.value);
                         if (!Number.isFinite(v)) return;
                         const tiers = [...b.tiers];
-                        tiers[idx] = {
-                          ...tier,
-                          monthlyOriginalMinor: v > 0 ? Math.round(v * 100) : undefined,
-                        };
+                        tiers[idx] = { ...tier, monthlyCost24Minor: Math.round(v * 100) };
                         patch({ ...b, tiers });
                       }}
                     />
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">Yearly (major)</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      value={tier.yearlyAmountMinor / 100}
-                      onChange={(e) => {
-                        const v = Number(e.target.value);
-                        if (!Number.isFinite(v)) return;
-                        const tiers = [...b.tiers];
-                        tiers[idx] = { ...tier, yearlyAmountMinor: Math.round(v * 100) };
-                        patch({ ...b, tiers });
-                      }}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">Yearly original (optional)</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      value={(tier.yearlyOriginalMinor ?? 0) / 100}
-                      onChange={(e) => {
-                        const v = Number(e.target.value);
-                        if (!Number.isFinite(v)) return;
-                        const tiers = [...b.tiers];
-                        tiers[idx] = {
-                          ...tier,
-                          yearlyOriginalMinor: v > 0 ? Math.round(v * 100) : undefined,
-                        };
-                        patch({ ...b, tiers });
-                      }}
-                    />
-                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Upfront cost (12-month term only)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={(tier.upfrontCost12Minor ?? 0) / 100}
+                    onChange={(e) => {
+                      const v = Number(e.target.value);
+                      if (!Number.isFinite(v)) return;
+                      const tiers = [...b.tiers];
+                      tiers[idx] = {
+                        ...tier,
+                        upfrontCost12Minor: v > 0 ? Math.round(v * 100) : undefined,
+                      };
+                      patch({ ...b, tiers });
+                    }}
+                  />
+                  <p className="text-[11px] text-muted-foreground">Leave at 0 for no upfront charge on the 12-month plan.</p>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs text-muted-foreground">Features (one per line)</Label>
@@ -829,18 +843,29 @@ function blockLabel(type: ProposalBlock["type"]): string {
 }
 
 export interface ProposalDocumentEditorProps {
-  proposalId: string;
+  variant?: "proposal" | "template";
+  proposalId?: string;
+  templateId?: string;
+  initialTemplateName?: string;
+  initialTemplateDescription?: string;
   initialTitle: string;
   initialDocument: ProposalDocument;
-  initialStatus: string;
+  initialStatus?: string;
 }
 
 export function ProposalDocumentEditor({
+  variant = "proposal",
   proposalId,
+  templateId,
+  initialTemplateName = "",
+  initialTemplateDescription = "",
   initialTitle,
   initialDocument,
-  initialStatus,
+  initialStatus = "draft",
 }: ProposalDocumentEditorProps) {
+  const isTemplate = variant === "template";
+  const [templateName, setTemplateName] = React.useState(initialTemplateName);
+  const [templateDescription, setTemplateDescription] = React.useState(initialTemplateDescription);
   const [title, setTitle] = React.useState(initialTitle);
   const [blocks, setBlocks] = React.useState<ProposalBlock[]>(initialDocument.blocks);
   const [saving, setSaving] = React.useState(false);
@@ -870,6 +895,28 @@ export function ProposalDocumentEditor({
   async function save() {
     setSaving(true);
     setMessage(null);
+    if (isTemplate) {
+      if (!templateId) {
+        setSaving(false);
+        setMessage("Missing template id.");
+        return;
+      }
+      const res = await saveProposalTemplateAction({
+        templateId,
+        name: templateName.trim() || "Untitled template",
+        description: templateDescription.trim() || undefined,
+        title,
+        document: doc,
+      });
+      setSaving(false);
+      setMessage(res.ok ? "Template saved." : res.message);
+      return;
+    }
+    if (!proposalId) {
+      setSaving(false);
+      setMessage("Missing proposal id.");
+      return;
+    }
     const res = await saveProposalDocumentAction({
       proposalId,
       title,
@@ -880,6 +927,7 @@ export function ProposalDocumentEditor({
   }
 
   async function send() {
+    if (isTemplate || !proposalId) return;
     setSending(true);
     setMessage(null);
     const saved = await saveProposalDocumentAction({ proposalId, title, document: doc });
@@ -912,10 +960,12 @@ export function ProposalDocumentEditor({
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           Save
         </Button>
-        <Button type="button" variant="secondary" disabled={sending} onClick={() => void send()} className="gap-2">
-          {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-          Save & publish
-        </Button>
+        {!isTemplate ? (
+          <Button type="button" variant="secondary" disabled={sending} onClick={() => void send()} className="gap-2">
+            {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            Save & publish
+          </Button>
+        ) : null}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button type="button" variant="outline" className="gap-2">
@@ -961,13 +1011,44 @@ export function ProposalDocumentEditor({
         {message ? <span className="text-sm text-muted-foreground">{message}</span> : null}
       </div>
 
+      {isTemplate ? (
+        <div className="grid gap-4 rounded-xl border border-border/70 bg-muted/15 p-4 md:grid-cols-2">
+          <div className="space-y-2 md:col-span-1">
+            <Label htmlFor="tmpl-name">Template name</Label>
+            <Input
+              id="tmpl-name"
+              value={templateName}
+              onChange={(e) => setTemplateName(e.target.value)}
+              placeholder="e.g. Enterprise SaaS"
+            />
+          </div>
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="tmpl-desc">Description (internal)</Label>
+            <Textarea
+              id="tmpl-desc"
+              value={templateDescription}
+              onChange={(e) => setTemplateDescription(e.target.value)}
+              placeholder="When to use this template…"
+              rows={2}
+              className="resize-y"
+            />
+          </div>
+        </div>
+      ) : null}
+
       <div className="space-y-2">
-        <Label htmlFor="proposal-title">Proposal title</Label>
+        <Label htmlFor="proposal-title">{isTemplate ? "Default proposal title" : "Proposal title"}</Label>
         <Input id="proposal-title" value={title} onChange={(e) => setTitle(e.target.value)} className="max-w-xl" />
-        {initialStatus === "draft" ? (
+        {!isTemplate && initialStatus === "draft" ? (
           <p className="text-xs text-muted-foreground">
             Save &amp; publish sends the public link, records engagement, and moves a linked opportunity to the Proposal
             stage.
+          </p>
+        ) : null}
+        {isTemplate ? (
+          <p className="text-xs text-muted-foreground">
+            Use merge tokens in titles or text: {"{{name}}"}, {"{{email}}"}, {"{{company}}"}, {"{{opportunity}}"},{" "}
+            {"{{deal_amount}}"} when generating from a customer or deal.
           </p>
         ) : null}
       </div>

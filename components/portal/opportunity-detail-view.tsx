@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, FileText, Loader2 } from "lucide-react";
 import type { CustomerRecord } from "@/types/customer";
 import type { OpportunityRecord } from "@/types/opportunity";
+import type { ProposalTemplateRecord } from "@/types/proposal-template";
 import { opportunityStageLabel } from "@/lib/crm/opportunity-stages";
 import { createDraftProposalFromOpportunityAction } from "@/server/actions/proposals-crm";
 import { Badge } from "@/components/ui/badge";
@@ -16,15 +17,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 export interface OpportunityDetailViewProps {
   opportunity: OpportunityRecord;
   customer: CustomerRecord;
+  proposalTemplates: ProposalTemplateRecord[];
 }
 
-export function OpportunityDetailView({ opportunity, customer }: OpportunityDetailViewProps) {
+export function OpportunityDetailView({ opportunity, customer, proposalTemplates }: OpportunityDetailViewProps) {
   const router = useRouter();
   const [busy, setBusy] = React.useState(false);
+  const [templateId, setTemplateId] = React.useState<string>("");
 
   async function createProposal() {
     setBusy(true);
-    const res = await createDraftProposalFromOpportunityAction(opportunity.id);
+    const res = await createDraftProposalFromOpportunityAction(
+      opportunity.id,
+      templateId.trim() ? templateId.trim() : undefined,
+    );
     setBusy(false);
     if (!res.ok) {
       window.alert(res.message);
@@ -48,16 +54,36 @@ export function OpportunityDetailView({ opportunity, customer }: OpportunityDeta
             Pipeline
           </Link>
         </Button>
-        <Button
-          type="button"
-          size="lg"
-          className="gap-2 shadow-md"
-          disabled={busy}
-          onClick={() => void createProposal()}
-        >
-          {busy ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : <FileText className="h-5 w-5" aria-hidden />}
-          Create proposal
-        </Button>
+        <div className="flex max-w-full flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+          {proposalTemplates.length > 0 ? (
+            <label className="flex min-w-0 flex-col gap-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground sm:max-w-[220px]">
+              Template
+              <select
+                className="rounded-lg border border-input bg-background px-3 py-2 text-sm font-normal normal-case text-foreground"
+                value={templateId}
+                onChange={(e) => setTemplateId(e.target.value)}
+                disabled={busy}
+              >
+                <option value="">Standard (auto-filled)</option>
+                {proposalTemplates.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+          <Button
+            type="button"
+            size="lg"
+            className="gap-2 shadow-md sm:self-end"
+            disabled={busy}
+            onClick={() => void createProposal()}
+          >
+            {busy ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : <FileText className="h-5 w-5" aria-hidden />}
+            Create proposal
+          </Button>
+        </div>
       </div>
 
       <motion.header

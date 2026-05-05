@@ -50,6 +50,15 @@ function parseBranding(raw: unknown): ProposalBranding | undefined {
   return { logoUrl, primaryColor, fontFamily };
 }
 
+function parsePackagesTerm(o: Record<string, unknown>): "12_months" | "24_months" | undefined {
+  const term = o.term;
+  if (term === "12_months" || term === "24_months") return term;
+  const billing = o.billing;
+  if (billing === "monthly") return "12_months";
+  if (billing === "yearly") return "24_months";
+  return undefined;
+}
+
 function parsePublicSelections(raw: unknown): ProposalPublicSelections | undefined {
   if (!raw || typeof raw !== "object") return undefined;
   const out: ProposalPublicSelections = {};
@@ -58,15 +67,12 @@ function parsePublicSelections(raw: unknown): ProposalPublicSelections | undefin
     const o = v as Record<string, unknown>;
     if (o.kind !== "packages") continue;
     const tierId = asString(o.tierId);
-    const billing = o.billing === "monthly" || o.billing === "yearly" ? o.billing : undefined;
-    if (!tierId || !billing) continue;
-    const qRaw = asNumber(o.quantity);
-    const quantity = qRaw !== undefined && qRaw >= 1 ? Math.min(1_000_000, Math.floor(qRaw)) : 1;
+    const term = parsePackagesTerm(o);
+    if (!tierId || !term) continue;
     out[key] = {
       kind: "packages",
       tierId,
-      billing,
-      quantity,
+      term,
       updatedAtMs: asNumber(o.updatedAtMs) ?? Date.now(),
     };
   }
@@ -105,6 +111,7 @@ export function parseProposalRecord(id: string, data: Record<string, unknown>): 
     acceptedByName: asString(data.acceptedByName),
     stripePaymentIntentId: asString(data.stripePaymentIntentId),
     publicSelections: parsePublicSelections(data.publicSelections),
+    sourceTemplateId: asString(data.sourceTemplateId),
     createdAtMs: asNumber(data.createdAtMs) ?? 0,
     updatedAtMs: asNumber(data.updatedAtMs) ?? 0,
   };

@@ -49,14 +49,100 @@ const pricingBlockSchema = z.object({
   totalMinorUnits: z.number().finite().optional(),
 });
 
+function nonNegInt(v: unknown): number {
+  return typeof v === "number" && Number.isFinite(v) ? Math.max(0, Math.floor(v)) : 0;
+}
+
+/** Migrate legacy monthly/yearly tier pricing → 12mo / 24mo monthly costs + entitlements. */
+function normalizePackageTierInput(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object") return raw;
+  const o = raw as Record<string, unknown>;
+  const features = Array.isArray(o.features)
+    ? o.features.filter((x): x is string => typeof x === "string")
+    : [];
+
+  const hasNew =
+    typeof o.monthlyCost12Minor === "number" &&
+    typeof o.monthlyCost24Minor === "number";
+
+  if (hasNew) {
+    return {
+      id: o.id,
+      name: typeof o.name === "string" ? o.name : "",
+      recommended: Boolean(o.recommended),
+      includedUsers: nonNegInt(o.includedUsers),
+      includedLocations: nonNegInt(o.includedLocations),
+      includedAdmins: nonNegInt(o.includedAdmins),
+      monthlyCost12Minor: Math.max(0, Number(o.monthlyCost12Minor)),
+      monthlyCost24Minor: Math.max(0, Number(o.monthlyCost24Minor)),
+      upfrontCost12Minor:
+        typeof o.upfrontCost12Minor === "number" && o.upfrontCost12Minor >= 0
+          ? o.upfrontCost12Minor
+          : undefined,
+      features,
+    };
+  }
+
+  const m12 =
+    typeof o.monthlyAmountMinor === "number" && Number.isFinite(o.monthlyAmountMinor)
+      ? Math.max(0, o.monthlyAmountMinor)
+      : 0;
+  const y =
+    typeof o.yearlyAmountMinor === "number" && Number.isFinite(o.yearlyAmountMinor)
+      ? Math.max(0, o.yearlyAmountMinor)
+      : 0;
+  const m24 = y > 0 ? Math.round(y / 12) : m12;
+
+  return {
+    id: o.id,
+    name: typeof o.name === "string" ? o.name : "",
+    recommended: Boolean(o.recommended),
+    includedUsers: nonNegInt(o.includedUsers),
+    includedLocations: nonNegInt(o.includedLocations),
+    includedAdmins: nonNegInt(o.includedAdmins),
+    monthlyCost12Minor: m12,
+    monthlyCost24Minor: m24,
+    upfrontCost12Minor:
+      typeof o.upfrontCost12Minor === "number" && o.upfrontCost12Minor >= 0
+        ? o.upfrontCost12Minor
+        : undefined,
+    features,
+  };
+}
+
+function normalizePackagesBlockInput(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object") return raw;
+  const o = raw as Record<string, unknown>;
+  if (o.type !== "packages") return raw;
+  const tiers = Array.isArray(o.tiers) ? o.tiers.map(normalizePackageTierInput) : [];
+  return {
+    ...o,
+    plan12Label:
+      typeof o.plan12Label === "string"
+        ? o.plan12Label
+        : typeof o.monthlyLabel === "string"
+          ? o.monthlyLabel
+          : undefined,
+    plan24Label:
+      typeof o.plan24Label === "string"
+        ? o.plan24Label
+        : typeof o.yearlyLabel === "string"
+          ? o.yearlyLabel
+          : undefined,
+    tiers,
+  };
+}
+
 const packageTierSchema = z.object({
   id: idSchema,
   name: z.string().default(""),
-  monthlyAmountMinor: z.number().finite(),
-  monthlyOriginalMinor: z.number().finite().optional(),
-  yearlyAmountMinor: z.number().finite(),
-  yearlyOriginalMinor: z.number().finite().optional(),
   recommended: z.boolean().optional(),
+  includedUsers: z.number().finite().int().min(0),
+  includedLocations: z.number().finite().int().min(0),
+  includedAdmins: z.number().finite().int().min(0),
+  monthlyCost12Minor: z.number().finite().min(0),
+  monthlyCost24Minor: z.number().finite().min(0),
+  upfrontCost12Minor: z.number().finite().min(0).optional(),
   features: z.array(z.string()).default([]),
 });
 
@@ -65,11 +151,8 @@ const packagesBlockSchema = z.object({
   type: z.literal("packages"),
   currency: z.string().min(1).default("aud"),
   title: z.string().optional(),
-  monthlyLabel: z.string().optional(),
-  yearlyLabel: z.string().optional(),
-  yearlyBadgeText: z.string().optional(),
-  quantityLabel: z.string().optional(),
-  defaultQuantity: z.number().finite().positive().optional(),
+  plan12Label: z.string().optional(),
+  plan24Label: z.string().optional(),
   tiers: z.array(packageTierSchema).default([]),
 });
 
@@ -119,7 +202,7 @@ const dividerBlockSchema = z.object({
   type: z.literal("divider"),
 });
 
-const blockSchema = z.discriminatedUnion("type", [
+const blockUnionSchema = z.discriminatedUnion("type", [
   headerBlockSchema,
   textBlockSchema,
   imageBlockSchema,
@@ -132,6 +215,14 @@ const blockSchema = z.discriminatedUnion("type", [
   paymentBlockSchema,
   dividerBlockSchema,
 ]);
+
+/** Migrates legacy packages blocks before discriminatedUnion matching. */
+const blockSchema = z.preprocess((raw) => {
+  if (raw && typeof raw === "object" && (raw as Record<string, unknown>).type === "packages") {
+    return normalizePackagesBlockInput(raw);
+  }
+  return raw;
+}, blockUnionSchema);
 
 const documentSchema = z.object({
   title: z
@@ -180,7 +271,9 @@ export function parseProposalDocument(input: unknown): ProposalDocument {
           text: typeof o.text === "string" ? o.text : "",
         });
       } else {
-        const retried = blockSchema.safeParse({ ...o, id, type });
+        const candidate =
+          type === "packages" ? normalizePackagesBlockInput({ ...o, id, type }) : { ...o, id, type };
+        const retried = blockSchema.safeParse(candidate);
         if (retried.success) blocks.push(retried.data as ProposalBlock);
       }
     }

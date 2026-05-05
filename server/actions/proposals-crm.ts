@@ -8,9 +8,12 @@ import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { getCustomerRecordForOrg } from "@/server/firestore/crm-customers";
 import { getOpportunityForStaff } from "@/server/firestore/crm-opportunities";
+import { getProposalTemplateForStaff } from "@/server/firestore/proposal-templates";
+import { cloneBrandingFromTemplate, cloneProposalDocument } from "@/lib/proposal-clone-document";
+import { applyProposalTokensToDocument } from "@/lib/proposal-template-tokens";
 import type { CustomerRecord } from "@/types/customer";
 import type { OpportunityRecord } from "@/types/opportunity";
-import type { ProposalBlock, ProposalDocument } from "@/types/proposal";
+import type { ProposalBlock, ProposalBranding, ProposalDocument } from "@/types/proposal";
 
 async function requireStaffForCrm() {
   const user = await getCurrentSessionUser();
@@ -97,11 +100,115 @@ function buildPrefilledProposalDocument(
   };
 }
 
+function buildCustomerOnlyProposalDocument(customer: CustomerRecord): ProposalDocument {
+  const contactLines = [
+    customer.company ? `Company: ${customer.company}` : null,
+    `Email: ${customer.email}`,
+    customer.phone ? `Phone: ${customer.phone}` : null,
+    formatAddressLine(customer) ? `Address: ${formatAddressLine(customer)}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const cfText = formatCustomFields(customer.customFields);
+
+  const blocks: ProposalBlock[] = [
+    {
+      id: randomUUID(),
+      type: "header",
+      text: "Proposal",
+    },
+    {
+      id: randomUUID(),
+      type: "text",
+      body: `Prepared for ${customer.name}\n\n${contactLines}`,
+    },
+  ];
+
+  if (cfText) {
+    blocks.push({
+      id: randomUUID(),
+      type: "text",
+      body: `Details\n${cfText}`,
+    });
+  }
+
+  return {
+    title: `${customer.company ?? customer.name} — Proposal`,
+    blocks,
+  };
+}
+
+/**
+ * Creates a draft proposal row from CRM customer + optional template (`{{name}}`, `{{email}}`, `{{company}}`, …).
+ */
+export async function createDraftProposalFromCustomerAction(
+  customerId: string,
+  templateId?: string | null,
+): Promise<{ ok: true; proposalId: string } | { ok: false; message: string }> {
+  const user = await requireStaffForCrm();
+  if (!user) return { ok: false, message: "Unauthorized." };
+
+  const customer = await getCustomerRecordForOrg(user, customerId);
+  if (!customer) return { ok: false, message: "Customer not found." };
+
+  const db = getFirebaseAdminFirestore();
+  if (!db) return { ok: false, message: "Database unavailable." };
+
+  let document: ProposalDocument;
+  let branding: ProposalBranding | undefined;
+  let sourceTemplateId: string | undefined;
+
+  const tid = templateId?.trim();
+  if (tid) {
+    const template = await getProposalTemplateForStaff(user, tid);
+    if (!template) return { ok: false, message: "Template not found." };
+    document = applyProposalTokensToDocument(cloneProposalDocument(template.document), { customer });
+    branding = cloneBrandingFromTemplate(template.branding);
+    sourceTemplateId = template.id;
+  } else {
+    document = buildCustomerOnlyProposalDocument(customer);
+  }
+
+  const organizationId = user.organizationId ?? "default";
+  const now = Date.now();
+  const shareToken = randomUUID().replace(/-/g, "");
+
+  const ref = db.collection(COLLECTIONS.proposals).doc();
+  const payload: Record<string, unknown> = {
+    organizationId,
+    createdByUid: user.uid,
+    title: document.title,
+    customerId: customer.id,
+    recipientEmail: customer.email.trim().toLowerCase(),
+    status: "draft",
+    shareToken,
+    document,
+    createdAtMs: now,
+    updatedAtMs: now,
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+  if (branding) payload.branding = branding;
+  if (sourceTemplateId) payload.sourceTemplateId = sourceTemplateId;
+
+  await ref.set(payload);
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/proposals");
+  revalidatePath(`/admin/proposals/${ref.id}`);
+  revalidatePath(`/admin/customers/${customer.id}`);
+
+  return { ok: true, proposalId: ref.id };
+}
+
 /**
  * Creates a draft proposal row with blocks pre-filled from the CRM customer, merged custom fields, and opportunity.
+ * Optional `templateId` replaces the default generated layout with a cloned template (tokens applied).
  */
 export async function createDraftProposalFromOpportunityAction(
   opportunityId: string,
+  templateId?: string | null,
 ): Promise<{ ok: true; proposalId: string } | { ok: false; message: string }> {
   const user = await requireStaffForCrm();
   if (!user) return { ok: false, message: "Unauthorized." };
@@ -115,13 +222,30 @@ export async function createDraftProposalFromOpportunityAction(
   const db = getFirebaseAdminFirestore();
   if (!db) return { ok: false, message: "Database unavailable." };
 
-  const document = buildPrefilledProposalDocument(customer, opportunity);
+  let document: ProposalDocument;
+  let branding: ProposalBranding | undefined;
+  let sourceTemplateId: string | undefined;
+
+  const tid = templateId?.trim();
+  if (tid) {
+    const template = await getProposalTemplateForStaff(user, tid);
+    if (!template) return { ok: false, message: "Template not found." };
+    document = applyProposalTokensToDocument(cloneProposalDocument(template.document), {
+      customer,
+      opportunity,
+    });
+    branding = cloneBrandingFromTemplate(template.branding);
+    sourceTemplateId = template.id;
+  } else {
+    document = buildPrefilledProposalDocument(customer, opportunity);
+  }
+
   const organizationId = user.organizationId ?? "default";
   const now = Date.now();
   const shareToken = randomUUID().replace(/-/g, "");
 
   const ref = db.collection(COLLECTIONS.proposals).doc();
-  await ref.set({
+  const payload: Record<string, unknown> = {
     organizationId,
     createdByUid: user.uid,
     title: document.title,
@@ -135,9 +259,14 @@ export async function createDraftProposalFromOpportunityAction(
     updatedAtMs: now,
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
-  });
+  };
+  if (branding) payload.branding = branding;
+  if (sourceTemplateId) payload.sourceTemplateId = sourceTemplateId;
+
+  await ref.set(payload);
 
   revalidatePath("/admin");
+  revalidatePath("/admin/proposals");
   revalidatePath(`/admin/proposals/${ref.id}`);
   revalidatePath(`/admin/customers/${customer.id}`);
   revalidatePath(`/admin/opportunities/${opportunityId}`);

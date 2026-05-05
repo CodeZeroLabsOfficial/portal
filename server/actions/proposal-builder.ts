@@ -34,8 +34,7 @@ const packageSelectionSchema = z.object({
   shareToken: z.string().min(8),
   blockId: z.string().min(4),
   tierId: z.string().min(4),
-  billing: z.enum(["monthly", "yearly"]),
-  quantity: z.number().finite().positive().max(1_000_000),
+  term: z.enum(["12_months", "24_months"]),
 });
 
 async function requireStaff() {
@@ -285,8 +284,6 @@ export async function saveProposalPackageSelectionAction(
     return { ok: false, message: "That package tier no longer exists." };
   }
 
-  const quantity = Math.max(1, Math.min(1_000_000, Math.floor(parsed.data.quantity)));
-
   const db = getFirebaseAdminFirestore();
   if (!db) return { ok: false, message: "Database unavailable." };
 
@@ -305,8 +302,7 @@ export async function saveProposalPackageSelectionAction(
       [parsed.data.blockId]: {
         kind: "packages",
         tierId: parsed.data.tierId,
-        billing: parsed.data.billing,
-        quantity,
+        term: parsed.data.term,
         updatedAtMs: now,
       },
     },

@@ -27,11 +27,8 @@ export function PackagesBlockPublic({
   const router = useRouter();
   const currency = block.currency.toUpperCase();
 
-  const [billing, setBilling] = React.useState<"monthly" | "yearly">(
-    initialSelection?.billing ?? "yearly",
-  );
-  const [quantity, setQuantity] = React.useState(
-    initialSelection?.quantity ?? block.defaultQuantity ?? 1,
+  const [term, setTerm] = React.useState<"12_months" | "24_months">(
+    initialSelection?.term ?? "24_months",
   );
   const [selectedTierId, setSelectedTierId] = React.useState<string | null>(
     initialSelection?.tierId ?? null,
@@ -41,34 +38,15 @@ export function PackagesBlockPublic({
 
   React.useEffect(() => {
     if (initialSelection?.tierId) setSelectedTierId(initialSelection.tierId);
-    if (initialSelection?.billing) setBilling(initialSelection.billing);
-    if (initialSelection?.quantity) setQuantity(initialSelection.quantity);
-  }, [initialSelection?.tierId, initialSelection?.billing, initialSelection?.quantity]);
+    if (initialSelection?.term) setTerm(initialSelection.term);
+  }, [initialSelection?.tierId, initialSelection?.term]);
 
-  const monthlyLabel = block.monthlyLabel ?? "Monthly";
-  const yearlyLabel = block.yearlyLabel ?? "Yearly";
-  const qtyLabel = block.quantityLabel ?? "Users";
+  const label12 = block.plan12Label ?? "12 months";
+  const label24 = block.plan24Label ?? "24 months";
   const title = block.title ?? "Packages";
 
-  function unitMinor(tier: (typeof block.tiers)[0]): { current: number; original?: number } {
-    if (billing === "monthly") {
-      return {
-        current: tier.monthlyAmountMinor,
-        original: tier.monthlyOriginalMinor,
-      };
-    }
-    return {
-      current: tier.yearlyAmountMinor,
-      original: tier.yearlyOriginalMinor,
-    };
-  }
-
-  function lineTotalMinor(tier: (typeof block.tiers)[0]): { current: number; original?: number } {
-    const u = unitMinor(tier);
-    return {
-      current: Math.round(u.current * quantity),
-      original: u.original !== undefined ? Math.round(u.original * quantity) : undefined,
-    };
+  function monthlyMinor(tier: (typeof block.tiers)[0]): number {
+    return term === "12_months" ? tier.monthlyCost12Minor : tier.monthlyCost24Minor;
   }
 
   async function selectTier(tierId: string) {
@@ -82,8 +60,7 @@ export function PackagesBlockPublic({
       shareToken,
       blockId: block.id,
       tierId,
-      billing,
-      quantity,
+      term,
     });
     setPendingTierId(null);
     if (!res.ok) {
@@ -93,8 +70,6 @@ export function PackagesBlockPublic({
     setSelectedTierId(tierId);
     router.refresh();
   }
-
-  const intervalSuffix = billing === "monthly" ? "/ month" : "/ year";
 
   return (
     <div
@@ -110,28 +85,23 @@ export function PackagesBlockPublic({
           <div className="inline-flex rounded-full bg-zinc-900/90 p-1 ring-1 ring-zinc-700/80">
             <button
               type="button"
-              onClick={() => setBilling("monthly")}
+              onClick={() => setTerm("12_months")}
               className={cn(
                 "rounded-full px-5 py-2 text-sm font-medium transition-colors",
-                billing === "monthly" ? "bg-white text-zinc-900 shadow" : "text-zinc-400 hover:text-white",
+                term === "12_months" ? "bg-white text-zinc-900 shadow" : "text-zinc-400 hover:text-white",
               )}
             >
-              {monthlyLabel}
+              {label12}
             </button>
             <button
               type="button"
-              onClick={() => setBilling("yearly")}
+              onClick={() => setTerm("24_months")}
               className={cn(
-                "relative rounded-full px-5 py-2 text-sm font-medium transition-colors",
-                billing === "yearly" ? "bg-white text-zinc-900 shadow" : "text-zinc-400 hover:text-white",
+                "rounded-full px-5 py-2 text-sm font-medium transition-colors",
+                term === "24_months" ? "bg-white text-zinc-900 shadow" : "text-zinc-400 hover:text-white",
               )}
             >
-              {yearlyLabel}
-              {block.yearlyBadgeText ? (
-                <span className="absolute -right-1 -top-2 whitespace-nowrap rounded-full bg-teal-500 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white shadow-sm">
-                  {block.yearlyBadgeText}
-                </span>
-              ) : null}
+              {label24}
             </button>
           </div>
         </div>
@@ -145,14 +115,18 @@ export function PackagesBlockPublic({
 
       {selectedTierId && interactive ? (
         <p className="mt-4 text-center text-xs text-zinc-500">
-          If you switch billing or change {qtyLabel.toLowerCase()}, click <strong className="text-zinc-300">Select</strong>{" "}
-          again on your tier to save the update.
+          If you switch term, click <strong className="text-zinc-300">Select</strong> again on your tier to save the
+          update.
         </p>
       ) : null}
 
       <div className="mt-10 grid gap-6 md:grid-cols-3 md:gap-4">
         {block.tiers.map((tier) => {
-          const totals = lineTotalMinor(tier);
+          const mm = monthlyMinor(tier);
+          const upfront =
+            term === "12_months" && typeof tier.upfrontCost12Minor === "number" && tier.upfrontCost12Minor > 0
+              ? tier.upfrontCost12Minor
+              : undefined;
           const isSelected = selectedTierId === tier.id;
           const isRecommended = Boolean(tier.recommended);
           const busy = pendingTierId === tier.id;
@@ -161,7 +135,7 @@ export function PackagesBlockPublic({
             <div key={tier.id} className="flex flex-col">
               <div
                 className={cn(
-                  "relative flex min-h-[320px] flex-col rounded-2xl border p-5 shadow-lg transition-colors md:min-h-[340px]",
+                  "relative flex min-h-[320px] flex-col rounded-2xl border p-5 shadow-lg transition-colors md:min-h-[380px]",
                   isRecommended
                     ? "border-teal-500/60 bg-teal-900/25 pt-6 ring-2 ring-teal-500/40"
                     : "border-zinc-700/80 bg-white text-zinc-900",
@@ -177,54 +151,63 @@ export function PackagesBlockPublic({
                   {tier.name}
                 </h3>
 
-                <div className="mt-4 space-y-1">
-                  {totals.original !== undefined && totals.original > totals.current ? (
-                    <p
-                      className={cn(
-                        "text-sm line-through opacity-70",
-                        isRecommended ? "text-zinc-300" : "text-zinc-500",
-                      )}
-                    >
-                      {formatCurrencyAmount(totals.original, currency)}
-                    </p>
-                  ) : null}
-                  <p className={cn("text-3xl font-semibold tabular-nums", isRecommended ? "text-white" : "text-zinc-900")}>
-                    {formatCurrencyAmount(totals.current, currency)}
-                  </p>
-                  <p className={cn("text-sm", isRecommended ? "text-teal-100/90" : "text-zinc-500")}>
-                    {intervalSuffix}
-                  </p>
-                </div>
+                <ul
+                  className={cn(
+                    "mt-4 space-y-1.5 text-sm",
+                    isRecommended ? "text-teal-50/95" : "text-zinc-600",
+                  )}
+                >
+                  <li>
+                    <span className={cn("font-medium", isRecommended ? "text-teal-100" : "text-zinc-800")}>
+                      Included users
+                    </span>
+                    : {tier.includedUsers}
+                  </li>
+                  <li>
+                    <span className={cn("font-medium", isRecommended ? "text-teal-100" : "text-zinc-800")}>
+                      Included locations
+                    </span>
+                    : {tier.includedLocations}
+                  </li>
+                  <li>
+                    <span className={cn("font-medium", isRecommended ? "text-teal-100" : "text-zinc-800")}>
+                      Included admins
+                    </span>
+                    : {tier.includedAdmins}
+                  </li>
+                </ul>
 
                 <div className="mt-6 border-t border-dashed pt-4" style={{ borderColor: isRecommended ? "rgba(45,212,191,0.25)" : undefined }}>
-                  <label
-                    className={cn(
-                      "text-xs font-medium uppercase tracking-wide",
-                      isRecommended ? "text-teal-100/80" : "text-zinc-500",
-                    )}
-                  >
-                    {qtyLabel}
-                  </label>
-                  <div className="mt-2 flex items-center gap-2">
-                    <input
-                      type="number"
-                      min={1}
-                      step={1}
-                      disabled={!interactive}
-                      value={quantity}
-                      onChange={(e) => {
-                        const n = Number(e.target.value);
-                        if (!Number.isFinite(n) || n < 1) return;
-                        setQuantity(Math.floor(n));
-                      }}
-                      className={cn(
-                        "w-full border-0 border-b bg-transparent py-1 text-lg font-medium tabular-nums outline-none focus:ring-0",
-                        isRecommended
-                          ? "border-teal-400/50 text-white placeholder:text-zinc-500"
-                          : "border-zinc-300 text-zinc-900",
+                  <p className={cn("text-3xl font-semibold tabular-nums", isRecommended ? "text-white" : "text-zinc-900")}>
+                    {formatCurrencyAmount(mm, currency)}
+                  </p>
+                  <p className={cn("text-sm", isRecommended ? "text-teal-100/90" : "text-zinc-500")}>/ month</p>
+
+                  {term === "12_months" ? (
+                    <div className="mt-4 rounded-lg border border-dashed px-3 py-2.5 text-left" style={{ borderColor: isRecommended ? "rgba(45,212,191,0.35)" : undefined }}>
+                      <p
+                        className={cn(
+                          "text-[11px] font-semibold uppercase tracking-wide",
+                          isRecommended ? "text-teal-200/90" : "text-zinc-500",
+                        )}
+                      >
+                        12-month plan
+                      </p>
+                      {upfront !== undefined ? (
+                        <p className={cn("mt-1 text-sm tabular-nums", isRecommended ? "text-white" : "text-zinc-900")}>
+                          Upfront: {formatCurrencyAmount(upfront, currency)}
+                        </p>
+                      ) : (
+                        <p className={cn("mt-1 text-sm", isRecommended ? "text-teal-100/80" : "text-zinc-500")}>
+                          No upfront charge
+                        </p>
                       )}
-                    />
-                  </div>
+                    </div>
+                  ) : (
+                    <p className={cn("mt-3 text-xs", isRecommended ? "text-teal-100/75" : "text-zinc-500")}>
+                      24-month term · billed monthly
+                    </p>
+                  )}
                 </div>
 
                 <div className="mt-auto pt-6">
@@ -247,14 +230,16 @@ export function PackagesBlockPublic({
                 </div>
               </div>
 
-              <ul className="mt-5 space-y-2.5">
-                {tier.features.map((feat) => (
-                  <li key={feat} className="flex gap-2 text-sm text-zinc-300">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-teal-400" aria-hidden />
-                    <span>{feat}</span>
-                  </li>
-                ))}
-              </ul>
+              {tier.features.length > 0 ? (
+                <ul className="mt-5 space-y-2.5">
+                  {tier.features.map((feat) => (
+                    <li key={feat} className="flex gap-2 text-sm text-zinc-300">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-teal-400" aria-hidden />
+                      <span>{feat}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </div>
           );
         })}

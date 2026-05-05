@@ -85,15 +85,26 @@ export default async function AdminProposalDetailPage({ params }: PageProps) {
                     const blk = proposal.document.blocks.find((b) => b.id === blockId);
                     const pb: PackagesBlock | undefined = blk?.type === "packages" ? blk : undefined;
                     const tierName = pb?.tiers.find((t) => t.id === sel.tierId)?.name ?? `${sel.tierId.slice(0, 6)}…`;
+                    const termLabel = sel.term === "12_months" ? "12 months" : "24 months";
                     return (
                       <li key={blockId}>
-                        <span className="font-medium text-foreground">{tierName}</span> · {sel.billing} ·{" "}
-                        {sel.quantity} {pb?.quantityLabel ?? "units"}
+                        <span className="font-medium text-foreground">{tierName}</span> · {termLabel}
                       </li>
                     );
                   })}
                 </ul>
               </div>
+            ) : null}
+            {proposal.sourceTemplateId ? (
+              <p>
+                <span className="text-muted-foreground">Created from template · </span>
+                <Link
+                  href={`/admin/proposals/templates/${proposal.sourceTemplateId}`}
+                  className="text-primary hover:underline"
+                >
+                  Open template
+                </Link>
+              </p>
             ) : null}
             {proposal.customerId ? (
               <p>

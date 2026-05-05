@@ -25,6 +25,7 @@ import type { CustomerActivityRecord, CustomerNoteRecord, CustomerRecord } from 
 import type { OpportunityRecord } from "@/types/opportunity";
 import type { InvoiceRecord } from "@/types/invoice";
 import type { ProposalRecord } from "@/types/proposal";
+import type { ProposalTemplateRecord } from "@/types/proposal-template";
 import type { SubscriptionRecord } from "@/types/subscription";
 import type { TaskRecord } from "@/types/task";
 import {
@@ -33,6 +34,7 @@ import {
   linkStripeCustomerIdAction,
   pullStripeCustomerProfileAction,
 } from "@/server/actions/customers-crm";
+import { createDraftProposalFromCustomerAction } from "@/server/actions/proposals-crm";
 import { ConvertLeadPanel } from "@/components/portal/convert-lead-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -77,6 +79,7 @@ export interface CustomerDetailViewProps {
   notes: CustomerNoteRecord[];
   activities: CustomerActivityRecord[];
   tasks: TaskRecord[];
+  proposalTemplates: ProposalTemplateRecord[];
 }
 
 export function CustomerDetailView({
@@ -88,10 +91,12 @@ export function CustomerDetailView({
   notes,
   activities,
   tasks,
+  proposalTemplates,
 }: CustomerDetailViewProps) {
   const router = useRouter();
   const [tab, setTab] = React.useState("overview");
   const [busy, setBusy] = React.useState<string | null>(null);
+  const [proposalTemplateId, setProposalTemplateId] = React.useState("");
   const [stripeInput, setStripeInput] = React.useState(customer.stripeCustomerId ?? "");
 
   React.useEffect(() => {
@@ -130,6 +135,21 @@ export function CustomerDetailView({
     setBusy(null);
     if (!r.ok && r.message) window.alert(r.message);
     else router.refresh();
+  }
+
+  async function createProposalFromCustomer() {
+    setBusy("proposal");
+    const res = await createDraftProposalFromCustomerAction(
+      customer.id,
+      proposalTemplateId.trim() ? proposalTemplateId.trim() : undefined,
+    );
+    setBusy(null);
+    if (!res.ok) {
+      window.alert(res.message);
+      return;
+    }
+    router.push(`/admin/proposals/${res.proposalId}`);
+    router.refresh();
   }
 
   async function submitNote(e: React.FormEvent) {
@@ -177,12 +197,45 @@ export function CustomerDetailView({
             {busy === "archive" ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             {customer.status === "archived" ? "Restore" : "Archive"}
           </Button>
-          <Button size="sm" className="gap-1.5 shadow-sm" asChild>
-            <Link href={`/admin?focus=proposals&email=${encodeURIComponent(customer.email)}`}>
-              <Send className="h-3.5 w-3.5" aria-hidden />
-              Send proposal
-            </Link>
-          </Button>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {proposalTemplates.length > 0 ? (
+              <label className="flex flex-col gap-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                Template
+                <select
+                  className="min-w-[160px] rounded-md border border-input bg-background px-2 py-1.5 text-xs font-normal normal-case text-foreground"
+                  value={proposalTemplateId}
+                  onChange={(e) => setProposalTemplateId(e.target.value)}
+                  disabled={busy === "proposal"}
+                >
+                  <option value="">Standard (auto-filled)</option>
+                  {proposalTemplates.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+            <Button
+              size="sm"
+              className="gap-1.5 shadow-sm"
+              disabled={busy === "proposal"}
+              onClick={() => void createProposalFromCustomer()}
+            >
+              {busy === "proposal" ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+              ) : (
+                <Send className="h-3.5 w-3.5" aria-hidden />
+              )}
+              Create proposal
+            </Button>
+            <Button variant="outline" size="sm" className="hidden sm:inline-flex" asChild>
+              <Link href="/admin/proposals">
+                <FileText className="mr-1 h-3.5 w-3.5" aria-hidden />
+                Templates
+              </Link>
+            </Button>
+          </div>
           <Button variant="secondary" size="sm" className="gap-1.5 shadow-sm" asChild>
             <Link href={`/admin/customers/${customer.id}/edit`}>
               <Pencil className="h-3.5 w-3.5" aria-hidden />
