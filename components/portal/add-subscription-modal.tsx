@@ -98,6 +98,23 @@ export function AddSubscriptionModal({
     defaultValues,
   });
 
+  const orderedProductOptions = React.useMemo(() => {
+    const rank = (name: string): number => {
+      const n = name.trim().toLowerCase();
+      if (n === "starter") return 0;
+      if (n === "professional") return 1;
+      if (n === "premium") return 2;
+      if (n === "enterprise") return 3;
+      return 100;
+    };
+    return [...productOptions].sort((a, b) => {
+      const ra = rank(a.productName);
+      const rb = rank(b.productName);
+      if (ra !== rb) return ra - rb;
+      return a.productName.localeCompare(b.productName, undefined, { sensitivity: "base" });
+    });
+  }, [productOptions]);
+
   const collectionMethod = form.watch("collectionMethod");
   const selectedProductId = form.watch("priceId");
   const selectedProduct = React.useMemo(
@@ -128,14 +145,16 @@ export function AddSubscriptionModal({
 
   React.useEffect(() => {
     if (!open) return;
-    const firstProduct = productOptions[0];
+    const firstProduct =
+      orderedProductOptions.find((p) => p.productName.trim().toLowerCase() === "starter") ??
+      orderedProductOptions[0];
     if (firstProduct && !selectedProductId) {
       form.setValue("priceId", firstProduct.productId, { shouldValidate: true });
       if (firstProduct.durations[0]) {
         form.setValue("durationMonths", firstProduct.durations[0].months, { shouldValidate: true });
       }
     }
-  }, [open, productOptions, selectedProductId, form]);
+  }, [open, orderedProductOptions, selectedProductId, form]);
 
   React.useEffect(() => {
     if (!selectedProduct) return;
@@ -388,12 +407,12 @@ export function AddSubscriptionModal({
               <select
                 id="subscriptionProduct"
                 className="flex h-9 w-full rounded-md border border-white/[0.08] bg-white/[0.04] px-3 py-1 text-sm text-white shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#141414]"
-                disabled={busy || productOptions.length === 0}
+                disabled={busy || orderedProductOptions.length === 0}
                 value={selectedProductId}
                 onChange={(e) => form.setValue("priceId", e.target.value, { shouldValidate: true })}
               >
-                {productOptions.length === 0 ? <option value="">No Stripe products found</option> : null}
-                {productOptions.map((opt) => (
+                {orderedProductOptions.length === 0 ? <option value="">No Stripe products found</option> : null}
+                {orderedProductOptions.map((opt) => (
                   <option key={opt.productId} value={opt.productId}>
                     {opt.productName}
                   </option>
