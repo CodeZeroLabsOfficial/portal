@@ -205,9 +205,61 @@ async function listAllSubscriptionsForStaff(db: AdminDb): Promise<SubscriptionRe
       interval: data.interval === "year" ? "year" : data.interval === "month" ? "month" : undefined,
       currentPeriodEndMs: asNumber(data.currentPeriodEndMs),
       cancelAtPeriodEnd: typeof data.cancelAtPeriodEnd === "boolean" ? data.cancelAtPeriodEnd : undefined,
+      mrrAmount: asNumber(data.mrrAmount),
       updatedAtMs: asNumber(data.updatedAtMs) ?? Date.now(),
     } satisfies SubscriptionRecord;
   });
+}
+
+async function listAllInvoicesForStaff(db: AdminDb): Promise<InvoiceRecord[]> {
+  const snap = await db.collection(COLLECTIONS.invoices).limit(200).get();
+  return snap.docs.map((d) => parseInvoice(d.id, d.data() as Record<string, unknown>));
+}
+
+/** Resolved CRM profile for a mirrored Stripe Customer id (`cus_…`). */
+export interface StripeCustomerLink {
+  customerId: string;
+  label: string;
+}
+
+export interface AdminBillingSnapshot {
+  subscriptions: SubscriptionRecord[];
+  invoices: InvoiceRecord[];
+  stripeCustomerLinks: Record<string, StripeCustomerLink>;
+}
+
+/** Subscriptions and invoices mirrored into Firestore, indexed for admin billing workflows. */
+export async function getAdminBillingSnapshot(user: PortalUser): Promise<AdminBillingSnapshot | null> {
+  const db = getFirebaseAdminFirestore();
+  if (!db || !canStaffAccessCrm(user)) {
+    return null;
+  }
+  try {
+    const customers = await listCustomerRecordsForStaffSorted(user);
+    if (!customers) return null;
+
+    const stripeCustomerLinks: Record<string, StripeCustomerLink> = {};
+    for (const c of customers) {
+      const sid = c.stripeCustomerId?.trim();
+      if (!sid || stripeCustomerLinks[sid]) continue;
+      const label = [c.name?.trim(), c.company?.trim()].filter(Boolean).join(" · ") || c.email?.trim() || c.id;
+      stripeCustomerLinks[sid] = { customerId: c.id, label: label.slice(0, 160) };
+    }
+
+    const [subscriptions, invoicesRaw] = await Promise.all([
+      listAllSubscriptionsForStaff(db),
+      listAllInvoicesForStaff(db),
+    ]);
+    const invoices = [...invoicesRaw].sort((a, b) => b.issuedAtMs - a.issuedAtMs);
+    subscriptions.sort((a, b) => (b.updatedAtMs ?? 0) - (a.updatedAtMs ?? 0));
+
+    return { subscriptions, invoices, stripeCustomerLinks };
+  } catch (error) {
+    logError("admin_billing_snapshot_failed", {
+      message: error instanceof Error ? error.message : "unknown",
+    });
+    return null;
+  }
 }
 
 async function listCustomerRecordsForStaffSorted(

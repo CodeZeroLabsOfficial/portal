@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
-  CalendarClock,
+  ChevronDown,
   Loader2,
   Mail,
   MessageSquare,
@@ -32,7 +32,16 @@ import {
 } from "@/server/actions/opportunities-crm";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -63,6 +72,10 @@ const ACTIVITY_KINDS: { value: OpportunityActivityKind; label: string; Icon: typ
 function activityKindMeta(kind: OpportunityActivityKind) {
   return ACTIVITY_KINDS.find((k) => k.value === kind) ?? ACTIVITY_KINDS[3];
 }
+
+/** Matches CRM-style “Add new” control — outline pill with primary tint (see design reference). */
+const ADD_NEW_BUTTON_CLASS =
+  "shrink-0 gap-1.5 border-primary/40 bg-primary/5 text-primary shadow-none hover:bg-primary/10 hover:text-primary";
 
 function stageVariantClasses(
   stage: OpportunityStage,
@@ -163,6 +176,7 @@ interface NotesSectionProps {
 
 function NotesSection({ opportunityId, notes }: NotesSectionProps) {
   const router = useRouter();
+  const [addOpen, setAddOpen] = React.useState(false);
   const [body, setBody] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -179,6 +193,7 @@ function NotesSection({ opportunityId, notes }: NotesSectionProps) {
         return;
       }
       setBody("");
+      setAddOpen(false);
       router.refresh();
     } finally {
       setBusy(false);
@@ -191,46 +206,57 @@ function NotesSection({ opportunityId, notes }: NotesSectionProps) {
   );
 
   return (
-    <Card className="border-border/80 bg-card/60">
-      <CardHeader>
-        <div className="flex items-center gap-2">
-          <StickyNote className="h-4 w-4 text-muted-foreground" aria-hidden />
-          <CardTitle className="text-base">Notes</CardTitle>
-        </div>
-        <CardDescription>Capture context, decisions, or follow-ups for this opportunity.</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <form className="space-y-3" onSubmit={submit}>
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
-          <Textarea
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            placeholder="Write a note for this opportunity…"
-            rows={4}
-            className="resize-y"
-            disabled={busy}
-          />
-          <div className="flex justify-end">
-            <Button type="submit" size="sm" disabled={busy || !body.trim()} className="gap-1.5">
-              {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Plus className="h-3.5 w-3.5" aria-hidden />}
-              Add note
+    <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+      <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 sm:px-5">
+        <h2 className="text-base font-semibold tracking-tight text-foreground">Notes</h2>
+        <Dialog open={addOpen} onOpenChange={setAddOpen}>
+          <DialogTrigger asChild>
+            <Button type="button" variant="outline" size="sm" className={ADD_NEW_BUTTON_CLASS}>
+              Add new
+              <ChevronDown className="h-4 w-4 opacity-80" aria-hidden />
             </Button>
-          </div>
-        </form>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Add note</DialogTitle>
+              <DialogDescription>Save context, decisions, or follow-ups for this opportunity.</DialogDescription>
+            </DialogHeader>
+            <form className="space-y-4" onSubmit={submit}>
+              {error ? <p className="text-sm text-destructive">{error}</p> : null}
+              <Textarea
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                placeholder="Write a note…"
+                rows={5}
+                className="resize-y"
+                disabled={busy}
+              />
+              <DialogFooter>
+                <Button type="button" variant="outline" disabled={busy} onClick={() => setAddOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={busy || !body.trim()} className="gap-1.5">
+                  {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Plus className="h-3.5 w-3.5" aria-hidden />}
+                  Save
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
 
+      <div className="bg-card px-4 py-5 sm:px-5">
         {sorted.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-border/60 bg-muted/15 px-4 py-8 text-center text-sm text-muted-foreground">
-            No notes yet.
-          </p>
+          <p className="text-sm text-muted-foreground">No records found</p>
         ) : (
           <ul className="space-y-3">
             {sorted.map((n) => (
               <li
                 key={n.id}
-                className="rounded-xl border border-border/60 bg-background/40 p-4 shadow-sm"
+                className="rounded-lg border border-border/70 bg-muted/10 p-4"
               >
                 <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                  <span className="inline-flex items-center gap-1.5">
+                  <span className="inline-flex items-center gap-1.5 font-medium">
                     <StickyNote className="h-3.5 w-3.5" aria-hidden />
                     Note
                   </span>
@@ -246,8 +272,8 @@ function NotesSection({ opportunityId, notes }: NotesSectionProps) {
             ))}
           </ul>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
@@ -264,6 +290,7 @@ function toLocalDateTimeInputValue(ms: number): string {
 
 function ActivitySection({ opportunityId, activities }: ActivitySectionProps) {
   const router = useRouter();
+  const [addOpen, setAddOpen] = React.useState(false);
   const [kind, setKind] = React.useState<OpportunityActivityKind>("meeting");
   const [title, setTitle] = React.useState("");
   const [detail, setDetail] = React.useState("");
@@ -295,6 +322,8 @@ function ActivitySection({ opportunityId, activities }: ActivitySectionProps) {
       setTitle("");
       setDetail("");
       setOccurredAt(toLocalDateTimeInputValue(Date.now()));
+      setKind("meeting");
+      setAddOpen(false);
       router.refresh();
     } finally {
       setBusy(false);
@@ -307,82 +336,93 @@ function ActivitySection({ opportunityId, activities }: ActivitySectionProps) {
   );
 
   return (
-    <Card className="border-border/80 bg-card/60">
-      <CardHeader>
-        <div className="flex items-center gap-2">
-          <CalendarClock className="h-4 w-4 text-muted-foreground" aria-hidden />
-          <CardTitle className="text-base">Activity</CardTitle>
-        </div>
-        <CardDescription>
-          Log meetings, phone calls, emails and other touchpoints with this contact.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <form className="space-y-3" onSubmit={submit}>
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
-
-          <div className="flex flex-wrap gap-2">
-            {ACTIVITY_KINDS.map(({ value, label, Icon }) => {
-              const active = kind === value;
-              return (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setKind(value)}
-                  className={cn(
-                    "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
-                    active
-                      ? "border-primary bg-primary/10 text-foreground"
-                      : "border-border/60 text-muted-foreground hover:bg-muted/50",
-                  )}
-                  aria-pressed={active}
-                >
-                  <Icon className="h-3.5 w-3.5" aria-hidden />
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-[1fr_220px]">
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Title (e.g. Discovery call with finance lead)"
-              disabled={busy}
-              maxLength={240}
-            />
-            <Input
-              type="datetime-local"
-              value={occurredAt}
-              onChange={(e) => setOccurredAt(e.target.value)}
-              disabled={busy}
-              aria-label="When"
-            />
-          </div>
-
-          <Textarea
-            value={detail}
-            onChange={(e) => setDetail(e.target.value)}
-            placeholder="Optional notes — what was discussed, next steps, links…"
-            rows={3}
-            className="resize-y"
-            disabled={busy}
-            maxLength={4000}
-          />
-
-          <div className="flex justify-end">
-            <Button type="submit" size="sm" disabled={busy || !title.trim()} className="gap-1.5">
-              {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Plus className="h-3.5 w-3.5" aria-hidden />}
-              Log activity
+    <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+      <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 sm:px-5">
+        <h2 className="text-base font-semibold tracking-tight text-foreground">Open activities</h2>
+        <Dialog open={addOpen} onOpenChange={setAddOpen}>
+          <DialogTrigger asChild>
+            <Button type="button" variant="outline" size="sm" className={ADD_NEW_BUTTON_CLASS}>
+              Add new
+              <ChevronDown className="h-4 w-4 opacity-80" aria-hidden />
             </Button>
-          </div>
-        </form>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Add activity</DialogTitle>
+              <DialogDescription>
+                Log a meeting, phone call, email, or other touchpoint with this contact.
+              </DialogDescription>
+            </DialogHeader>
+            <form className="space-y-4" onSubmit={submit}>
+              {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
+              <div className="flex flex-wrap gap-2">
+                {ACTIVITY_KINDS.map(({ value, label, Icon }) => {
+                  const active = kind === value;
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setKind(value)}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                        active
+                          ? "border-primary bg-primary/10 text-foreground"
+                          : "border-border/60 text-muted-foreground hover:bg-muted/50",
+                      )}
+                      aria-pressed={active}
+                    >
+                      <Icon className="h-3.5 w-3.5" aria-hidden />
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-[1fr_minmax(0,11rem)]">
+                <Input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Title"
+                  disabled={busy}
+                  maxLength={240}
+                />
+                <Input
+                  type="datetime-local"
+                  value={occurredAt}
+                  onChange={(e) => setOccurredAt(e.target.value)}
+                  disabled={busy}
+                  aria-label="When"
+                />
+              </div>
+
+              <Textarea
+                value={detail}
+                onChange={(e) => setDetail(e.target.value)}
+                placeholder="Optional details…"
+                rows={3}
+                className="resize-y"
+                disabled={busy}
+                maxLength={4000}
+              />
+
+              <DialogFooter>
+                <Button type="button" variant="outline" disabled={busy} onClick={() => setAddOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={busy || !title.trim()} className="gap-1.5">
+                  {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Plus className="h-3.5 w-3.5" aria-hidden />}
+                  Save
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <div className="bg-card px-4 py-5 sm:px-5">
         {sorted.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-border/60 bg-muted/15 px-4 py-8 text-center text-sm text-muted-foreground">
-            No activity logged yet.
-          </p>
+          <p className="text-sm text-muted-foreground">No records found</p>
         ) : (
           <ul className="space-y-0 border-l border-border/70 pl-6">
             {sorted.map((a) => {
@@ -411,8 +451,8 @@ function ActivitySection({ opportunityId, activities }: ActivitySectionProps) {
             })}
           </ul>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 

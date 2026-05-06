@@ -1,12 +1,9 @@
 import { redirect } from "next/navigation";
-import { CreditCard } from "lucide-react";
 import { getCurrentSessionUser } from "@/lib/auth/server-session";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { isStripeApiConfigured, isStripeWebhookConfigured } from "@/lib/stripe/server";
+import { getAdminBillingSnapshot } from "@/server/firestore/crm-customers";
+import { AdminBillingDashboard } from "@/components/portal/admin-billing-dashboard";
 import { WorkspaceShell } from "@/components/portal/workspace-shell";
-import {
-  WORKSPACE_HUB_PAGE_TITLE_CLASS,
-  WORKSPACE_PAGE_DESCRIPTION_CLASS,
-} from "@/lib/workspace-page-typography";
 
 export default async function AdminBillingPage() {
   const user = await getCurrentSessionUser();
@@ -14,36 +11,23 @@ export default async function AdminBillingPage() {
     redirect("/login?next=/admin/billing");
   }
 
+  const data = await getAdminBillingSnapshot(user);
+  const stripeApiConfigured = isStripeApiConfigured();
+  const stripeWebhookConfigured = isStripeWebhookConfigured();
+
   return (
     <WorkspaceShell
       title="Billing"
-      description="Invoices, subscriptions, and payment management."
+      description="Subscriptions, invoices, and Stripe-linked CRM profiles."
       roleLabel={user.role}
       displayName={user.displayName ?? ""}
       userLabel={user.email || user.uid}
     >
-      <div className="space-y-6">
-        <section className="rounded-xl border border-border/70 bg-card/80 p-5">
-          <h1 className={WORKSPACE_HUB_PAGE_TITLE_CLASS}>Billing</h1>
-          <p className={WORKSPACE_PAGE_DESCRIPTION_CLASS}>
-            Centralise subscription health, invoice status, and payment method visibility. Detailed
-            billing tools will connect here next.
-          </p>
-        </section>
-
-        <Card className="border-border/70 bg-card/90">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <CreditCard className="h-4 w-4 text-muted-foreground" aria-hidden />
-              Coming soon
-            </CardTitle>
-            <CardDescription>Stripe mirrors and finance workflows will surface in this view.</CardDescription>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            <p>Use the dashboard and customers views for live counts until this section is wired up.</p>
-          </CardContent>
-        </Card>
-      </div>
+      <AdminBillingDashboard
+        data={data}
+        stripeApiConfigured={stripeApiConfigured}
+        stripeWebhookConfigured={stripeWebhookConfigured}
+      />
     </WorkspaceShell>
   );
 }
