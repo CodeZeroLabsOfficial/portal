@@ -111,7 +111,7 @@ export async function sendProposalAction(
 
   if (existing.opportunityId) {
     try {
-      await updateOpportunityStage(user, existing.opportunityId, "proposal_sent");
+      await updateOpportunityStage(user, existing.opportunityId, "awaiting_signature");
     } catch {
       /* pipeline stage is best-effort */
     }

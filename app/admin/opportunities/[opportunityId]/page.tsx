@@ -2,7 +2,6 @@ import { notFound, redirect } from "next/navigation";
 import { getCurrentSessionUser } from "@/lib/auth/server-session";
 import { getCustomerRecordForOrg } from "@/server/firestore/crm-customers";
 import { getOpportunityForStaff } from "@/server/firestore/crm-opportunities";
-import { listProposalTemplatesForOrg } from "@/server/firestore/proposal-templates";
 import { OpportunityDetailView } from "@/components/portal/opportunity-detail-view";
 import { WorkspaceShell } from "@/components/portal/workspace-shell";
 
@@ -27,8 +26,6 @@ export default async function AdminOpportunityDetailPage({ params }: PageProps) 
     notFound();
   }
 
-  const proposalTemplates = await listProposalTemplatesForOrg(user);
-
   return (
     <WorkspaceShell
       title={opportunity.name}
@@ -39,11 +36,7 @@ export default async function AdminOpportunityDetailPage({ params }: PageProps) 
       showMainHeader={false}
       showRightAside={false}
     >
-      <OpportunityDetailView
-        opportunity={opportunity}
-        customer={customer}
-        proposalTemplates={proposalTemplates}
-      />
+      <OpportunityDetailView opportunity={opportunity} customer={customer} />
     </WorkspaceShell>
   );
 }

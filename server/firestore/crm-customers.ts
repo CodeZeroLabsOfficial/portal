@@ -724,6 +724,35 @@ export async function createCustomerDocument(
 
   await docRef.set(payload);
 
+  let leadOpportunityCreated = false;
+  if (crmType === "lead") {
+    try {
+      const now = Timestamp.now();
+      const opportunityName =
+        payload.company?.trim() || payload.name.trim() || payload.email.trim() || "New lead";
+      const opportunityPayload: Record<string, unknown> = {
+        customerId: docRef.id,
+        name: opportunityName,
+        stage: "qualification",
+        customFieldsSnapshot: customFields,
+        currency: "aud",
+        createdAt: now,
+        updatedAt: now,
+        createdByUid: user.uid,
+      };
+      if (user.organizationId) {
+        opportunityPayload.organizationId = user.organizationId;
+      }
+      await db.collection(COLLECTIONS.opportunities).add(opportunityPayload);
+      leadOpportunityCreated = true;
+    } catch (err) {
+      logError("create_customer_lead_opportunity_failed", {
+        customerId: docRef.id,
+        message: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
   const stripe = getStripe();
   if (stripe) {
     try {
@@ -771,6 +800,17 @@ export async function createCustomerDocument(
       detail: input.email.trim().toLowerCase(),
       actorUid: user.uid,
       createdAt: Timestamp.fromMillis(firstActivityAt.toMillis() + 1),
+    });
+  }
+
+  if (leadOpportunityCreated) {
+    await db.collection(COLLECTIONS.customerActivities).add({
+      customerId: docRef.id,
+      type: "opportunity_created",
+      title: "Lead added to pipeline",
+      detail: payload.name || payload.email,
+      actorUid: user.uid,
+      createdAt: Timestamp.fromMillis(firstActivityAt.toMillis() + 2),
     });
   }
 

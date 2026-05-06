@@ -1,20 +1,26 @@
 import type { OpportunityStage } from "@/types/opportunity";
 
-/** Ordered pipeline stages — Kanban columns follow this order. */
+/** Ordered pipeline stages — Kanban columns and detail-view stepper follow this order. */
 export const OPPORTUNITY_STAGES: readonly OpportunityStage[] = [
-  "lead_in",
-  "contacted",
-  "proposal_sent",
+  "qualification",
+  "discovery",
+  "proposal",
   "negotiation",
-  "won",
-  "lost",
+  "awaiting_signature",
+  "closed_won",
+  "closed_lost",
+  "onboarding",
 ];
 
-/** Maps legacy stored `stage` values from before the pipeline rename. */
+/** Maps legacy stored `stage` values from earlier pipeline schemas to the current stage set. */
 const LEGACY_OPPORTUNITY_STAGE: Record<string, OpportunityStage | undefined> = {
-  new: "lead_in",
-  qualified: "contacted",
-  proposal: "proposal_sent",
+  new: "qualification",
+  lead_in: "qualification",
+  qualified: "discovery",
+  contacted: "discovery",
+  proposal_sent: "awaiting_signature",
+  won: "closed_won",
+  lost: "closed_lost",
 };
 
 export function isOpportunityStage(value: string): value is OpportunityStage {
@@ -22,19 +28,21 @@ export function isOpportunityStage(value: string): value is OpportunityStage {
 }
 
 export function normalizeOpportunityStage(value: unknown): OpportunityStage {
-  if (typeof value !== "string") return "lead_in";
+  if (typeof value !== "string") return "qualification";
   if (isOpportunityStage(value)) return value;
   const mapped = LEGACY_OPPORTUNITY_STAGE[value];
-  return mapped ?? "lead_in";
+  return mapped ?? "qualification";
 }
 
 const stageLabels: Record<OpportunityStage, string> = {
-  lead_in: "Lead in",
-  contacted: "Contacted",
-  proposal_sent: "Proposal sent",
+  qualification: "Qualification",
+  discovery: "Discovery",
+  proposal: "Proposal",
   negotiation: "Negotiation",
-  won: "Won",
-  lost: "Lost",
+  awaiting_signature: "Awaiting Signature",
+  closed_won: "Closed Won",
+  closed_lost: "Closed Lost",
+  onboarding: "Onboarding",
 };
 
 export function opportunityStageLabel(stage: OpportunityStage): string {

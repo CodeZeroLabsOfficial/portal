@@ -2,14 +2,12 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ArrowLeft, FileText, Loader2 } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import type { CustomerRecord } from "@/types/customer";
-import type { OpportunityRecord } from "@/types/opportunity";
-import type { ProposalTemplateRecord } from "@/types/proposal-template";
-import { opportunityStageLabel } from "@/lib/crm/opportunity-stages";
-import { createDraftProposalFromOpportunityAction } from "@/server/actions/proposals-crm";
+import type { OpportunityRecord, OpportunityStage } from "@/types/opportunity";
+import { OPPORTUNITY_STAGES, opportunityStageLabel } from "@/lib/crm/opportunity-stages";
+import { useOpportunityStageMutation } from "@/hooks/use-opportunity-stage-mutation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,38 +15,111 @@ import {
   WORKSPACE_DETAIL_PAGE_TITLE_CLASS,
   WORKSPACE_PAGE_DESCRIPTION_STACK_CLASS,
 } from "@/lib/workspace-page-typography";
+import { cn } from "@/lib/utils";
 
 export interface OpportunityDetailViewProps {
   opportunity: OpportunityRecord;
   customer: CustomerRecord;
-  proposalTemplates: ProposalTemplateRecord[];
 }
 
-export function OpportunityDetailView({ opportunity, customer, proposalTemplates }: OpportunityDetailViewProps) {
-  const router = useRouter();
-  const [busy, setBusy] = React.useState(false);
-  const [templateId, setTemplateId] = React.useState<string>("");
+const CHEVRON_CLIP =
+  "[clip-path:polygon(0_0,calc(100%-14px)_0,100%_50%,calc(100%-14px)_100%,0_100%,14px_50%)]";
+const CHEVRON_CLIP_FIRST =
+  "[clip-path:polygon(0_0,calc(100%-14px)_0,100%_50%,calc(100%-14px)_100%,0_100%)]";
 
-  async function createProposal() {
-    setBusy(true);
-    try {
-      const res = await createDraftProposalFromOpportunityAction(
-        opportunity.id,
-        templateId.trim() ? templateId.trim() : undefined,
-      );
-      if (!res.ok) {
-        window.alert(res.message);
-        return;
-      }
-      router.push(`/admin/proposals/${res.proposalId}`);
-      router.refresh();
-    } catch (e) {
-      window.alert(e instanceof Error ? e.message : "Could not create proposal. Please try again.");
-    } finally {
-      setBusy(false);
-    }
+function stageVariantClasses(
+  stage: OpportunityStage,
+  variant: "active" | "completed" | "upcoming",
+): string {
+  if (variant === "active") {
+    if (stage === "closed_lost") return "bg-destructive/15 text-destructive";
+    if (stage === "closed_won" || stage === "onboarding") return "bg-emerald-500/15 text-emerald-500";
+    return "bg-primary/15 text-primary";
   }
+  if (variant === "completed") {
+    return "bg-muted text-foreground/80";
+  }
+  return "bg-muted/40 text-muted-foreground";
+}
 
+interface OpportunityStageProgressProps {
+  opportunity: OpportunityRecord;
+}
+
+function OpportunityStageProgress({ opportunity }: OpportunityStageProgressProps) {
+  const { moveStage, pendingId } = useOpportunityStageMutation();
+  const busy = pendingId === opportunity.id;
+  const currentIndex = OPPORTUNITY_STAGES.indexOf(opportunity.stage);
+
+  const startDate = opportunity.createdAtMs
+    ? new Date(opportunity.createdAtMs).toLocaleDateString(undefined, {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      })
+    : null;
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-border/70 bg-card/60 px-4 py-4 shadow-sm sm:px-6">
+      <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            Start
+          </p>
+          {startDate ? (
+            <p className="text-[13px] tabular-nums text-foreground">{startDate}</p>
+          ) : (
+            <p className="text-[13px] text-muted-foreground">—</p>
+          )}
+        </div>
+        <div className="text-right">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            Current stage
+          </p>
+          <p className="text-[13px] font-medium text-foreground">
+            {opportunityStageLabel(opportunity.stage)}
+          </p>
+        </div>
+      </div>
+
+      <div className="-mx-4 flex items-stretch overflow-x-auto px-4 pb-1 pt-1 sm:-mx-6 sm:px-6">
+        {OPPORTUNITY_STAGES.map((stage, i) => {
+          const active = stage === opportunity.stage;
+          const completed = i < currentIndex;
+          const variant: "active" | "completed" | "upcoming" = active
+            ? "active"
+            : completed
+              ? "completed"
+              : "upcoming";
+          return (
+            <button
+              key={stage}
+              type="button"
+              disabled={busy || active}
+              onClick={() => {
+                if (stage !== opportunity.stage) void moveStage(opportunity.id, stage);
+              }}
+              aria-current={active ? "step" : undefined}
+              aria-label={`Move stage to ${opportunityStageLabel(stage)}`}
+              className={cn(
+                "relative h-10 shrink-0 whitespace-nowrap px-6 text-[12px] font-semibold transition-colors",
+                "min-w-[140px] sm:min-w-[160px]",
+                i === 0 ? CHEVRON_CLIP_FIRST : cn("-ml-[14px]", CHEVRON_CLIP),
+                stageVariantClasses(stage, variant),
+                !active && !busy && "hover:brightness-110",
+                busy && "opacity-60",
+              )}
+            >
+              {opportunityStageLabel(stage)}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+export function OpportunityDetailView({ opportunity, customer }: OpportunityDetailViewProps) {
   const cfEntries = Object.entries({
     ...customer.customFields,
     ...opportunity.customFieldsSnapshot,
@@ -63,37 +134,9 @@ export function OpportunityDetailView({ opportunity, customer, proposalTemplates
             Pipeline
           </Link>
         </Button>
-        <div className="flex max-w-full flex-col items-stretch gap-2 sm:flex-row sm:items-center">
-          {proposalTemplates.length > 0 ? (
-            <label className="flex min-w-0 flex-col gap-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground sm:max-w-[220px]">
-              Template
-              <select
-                className="rounded-lg border border-input bg-background px-3 py-2 text-sm font-normal normal-case text-foreground"
-                value={templateId}
-                onChange={(e) => setTemplateId(e.target.value)}
-                disabled={busy}
-              >
-                <option value="">Standard (auto-filled)</option>
-                {proposalTemplates.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : null}
-          <Button
-            type="button"
-            size="lg"
-            className="gap-2 shadow-md sm:self-end"
-            disabled={busy}
-            onClick={() => void createProposal()}
-          >
-            {busy ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : <FileText className="h-5 w-5" aria-hidden />}
-            Create proposal
-          </Button>
-        </div>
       </div>
+
+      <OpportunityStageProgress opportunity={opportunity} />
 
       <motion.header
         initial={{ opacity: 0, y: 8 }}
@@ -130,7 +173,7 @@ export function OpportunityDetailView({ opportunity, customer, proposalTemplates
         <Card className="border-border/80 bg-card/60">
           <CardHeader>
             <CardTitle className="text-base">Customer</CardTitle>
-            <CardDescription>Billing and CRM profile used when generating the proposal.</CardDescription>
+            <CardDescription>Billing and CRM profile linked to this opportunity.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             <p>
@@ -184,14 +227,6 @@ export function OpportunityDetailView({ opportunity, customer, proposalTemplates
           </CardContent>
         </Card>
       ) : null}
-
-      <p className="text-center text-[13px] text-muted-foreground">
-        Draft proposals include header and text blocks pre-filled from this screen.{" "}
-        <Link href={`/admin/customers/${customer.id}`} className="text-primary underline-offset-4 hover:underline">
-          Edit customer fields
-        </Link>{" "}
-        before creating a proposal if needed.
-      </p>
     </div>
   );
 }
