@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
@@ -20,7 +19,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { initialsFromName } from "@/lib/format";
 import {
   WORKSPACE_HUB_PAGE_TITLE_CLASS,
   WORKSPACE_PAGE_DESCRIPTION_CLASS,
@@ -38,32 +36,8 @@ function subscriptionBadgeVariant(
 
 function subscriptionLabel(rollup: CustomerSubscriptionRollup): string {
   if (rollup === "none") return "No subscription";
-  if (rollup === "mixed") return "Mixed";
+  if (rollup === "mixed") return "Scheduled";
   return rollup.replace(/_/g, " ");
-}
-
-function CustomerAvatar({ row }: { row: CustomerListRow }) {
-  const url = row.avatarUrl?.trim();
-  const canUseNextImage =
-    url &&
-    (url.includes("googleusercontent.com") || url.includes("firebasestorage.googleapis.com"));
-
-  if (url && canUseNextImage) {
-    return (
-      <span className="relative inline-flex h-9 w-9 shrink-0 overflow-hidden rounded-full bg-muted ring-1 ring-border">
-        <Image src={url} alt="" width={36} height={36} className="h-9 w-9 object-cover" />
-      </span>
-    );
-  }
-
-  return (
-    <span
-      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-[11px] font-semibold text-muted-foreground ring-1 ring-border"
-      aria-hidden
-    >
-      {initialsFromName(row.name)}
-    </span>
-  );
 }
 
 export interface CustomerListPanelProps {
@@ -268,7 +242,7 @@ export function CustomerListPanel({ rows }: CustomerListPanelProps) {
                 <th className="px-4 py-2.5 font-medium">Name</th>
                 <th className="px-4 py-2.5 font-medium">Email</th>
                 <th className="px-4 py-2.5 font-medium">Company</th>
-                <th className="px-4 py-2.5 font-medium">Billing</th>
+                <th className="px-4 py-2.5 font-medium">Subscriptions</th>
                 <th className="px-4 py-2.5 font-medium">Tags</th>
                 <th className="px-4 py-2.5 font-medium">CRM</th>
                 <th className="px-4 py-2.5 font-medium">Status</th>
@@ -315,12 +289,9 @@ export function CustomerListPanel({ rows }: CustomerListPanelProps) {
                       <td className="px-4 py-3 align-middle">
                         <Link
                           href={`/admin/customers/${row.id}`}
-                          className="flex items-center gap-3 rounded-lg outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+                          className="rounded-lg font-medium text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring ring-offset-background"
                         >
-                          <CustomerAvatar row={row} />
-                          <span className="font-medium text-foreground underline-offset-4 hover:underline">
-                            {row.name}
-                          </span>
+                          {row.name}
                         </Link>
                       </td>
                       <td className="max-w-[200px] truncate px-4 py-3 align-middle text-muted-foreground">

@@ -85,24 +85,22 @@ function ProposalCreateControls({
   onCreate: () => void;
 }) {
   return (
-    <div className="flex flex-wrap items-end justify-end gap-2">
+    <div className="flex w-full flex-wrap items-center justify-between gap-2">
       {proposalTemplates.length > 0 ? (
-        <label className="flex min-w-[220px] flex-col gap-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-          Template
-          <select
-            className="rounded-md border border-input bg-background px-2 py-1.5 text-xs font-normal normal-case text-foreground"
-            value={proposalTemplateId}
-            onChange={(e) => onTemplateChange(e.target.value)}
-            disabled={busy}
-          >
-            <option value="">Standard (auto-filled)</option>
-            {proposalTemplates.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <select
+          className="min-w-[220px] rounded-md border border-input bg-background px-2 py-1.5 text-xs text-foreground"
+          value={proposalTemplateId}
+          onChange={(e) => onTemplateChange(e.target.value)}
+          disabled={busy}
+          aria-label="Proposal template"
+        >
+          <option value="">Standard (auto-filled)</option>
+          {proposalTemplates.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.name}
+            </option>
+          ))}
+        </select>
       ) : null}
       <Button size="sm" className="gap-1.5 shadow-sm" disabled={busy} onClick={() => void onCreate()}>
         {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Plus className="h-3.5 w-3.5" aria-hidden />}
@@ -296,7 +294,7 @@ export function CustomerDetailView({
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="border-border/80 bg-card/80 shadow-sm lg:col-span-2">
           <CardHeader className="border-b border-border/60 bg-muted/20">
-            <CardTitle className="text-lg">User details</CardTitle>
+            <CardTitle className="text-lg">Contact details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-5 p-6">
             <dl className="grid gap-4 sm:grid-cols-2">
