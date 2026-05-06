@@ -11,6 +11,18 @@ export interface PortalUser {
   organizationId?: string;
   /** Stripe Customer id for billing portal and invoices. */
   stripeCustomerId?: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  website?: string;
+  /** Stored as YYYY-MM-DD. */
+  dateOfBirth?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  region?: string;
+  postalCode?: string;
+  country?: string;
   createdAtMs: number;
   updatedAtMs: number;
 }

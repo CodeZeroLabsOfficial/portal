@@ -1,7 +1,12 @@
-export default function AdminSettingsProfilePage() {
-  return (
-    <p className="text-sm text-zinc-400">
-      Profile details and preferences will appear here as they ship.
-    </p>
-  );
+import { redirect } from "next/navigation";
+import { getCurrentSessionUser } from "@/lib/auth/server-session";
+import { UserProfileView } from "@/components/portal/user-profile-view";
+
+export default async function AdminSettingsProfilePage() {
+  const user = await getCurrentSessionUser();
+  if (!user) {
+    redirect("/login?next=/admin/settings/profile");
+  }
+
+  return <UserProfileView user={user} />;
 }
