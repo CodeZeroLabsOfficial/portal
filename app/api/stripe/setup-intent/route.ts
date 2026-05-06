@@ -104,35 +104,34 @@ export async function GET(req: Request) {
       return NextResponse.json({ defaultPaymentMethodId: null });
     }
 
+    const pms = await stripe.paymentMethods.list({
+      customer: stripeCustomerId,
+      type: "card",
+      limit: 20,
+    });
+
     const fromInvoiceSettings = stripeCustomer.invoice_settings?.default_payment_method;
-    let defaultPm =
+    const invoiceDefaultId =
       fromInvoiceSettings && typeof fromInvoiceSettings === "object" && "id" in fromInvoiceSettings
-        ? fromInvoiceSettings
-        : null;
+        ? fromInvoiceSettings.id
+        : undefined;
 
-    // Fallback: many customers have attached cards but no invoice_settings default set.
-    if (!defaultPm) {
-      const pms = await stripe.paymentMethods.list({
-        customer: stripeCustomerId,
-        type: "card",
-        limit: 1,
-      });
-      defaultPm = pms.data[0] ?? null;
-    }
+    const cards = pms.data.map((pm) => {
+      const card = pm.card;
+      const summary =
+        card?.brand && card?.last4
+          ? `${card.brand.toUpperCase()} •••• ${card.last4}${card.exp_month && card.exp_year ? ` · exp ${String(card.exp_month).padStart(2, "0")}/${String(card.exp_year).slice(-2)}` : ""}`
+          : "Saved card";
+      return { id: pm.id, summary };
+    });
 
-    if (!defaultPm) return NextResponse.json({ defaultPaymentMethodId: null });
-
-    const card = "card" in defaultPm ? defaultPm.card : null;
-    const summary =
-      card && card.brand && card.last4
-        ? `${card.brand.toUpperCase()} •••• ${card.last4}`
-        : defaultPm.type
-          ? defaultPm.type.replace(/_/g, " ")
-          : "Saved payment method";
+    const defaultPaymentMethodId = invoiceDefaultId ?? cards[0]?.id ?? null;
+    const defaultCard = cards.find((c) => c.id === defaultPaymentMethodId) ?? null;
 
     return NextResponse.json({
-      defaultPaymentMethodId: defaultPm.id,
-      defaultPaymentMethodSummary: summary,
+      defaultPaymentMethodId,
+      defaultPaymentMethodSummary: defaultCard?.summary ?? null,
+      cards,
     });
   } catch (error) {
     return NextResponse.json(

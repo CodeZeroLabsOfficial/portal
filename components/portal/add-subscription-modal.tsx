@@ -52,6 +52,10 @@ interface AddSubscriptionModalProps {
   customerOptions: { id: string; label: string }[];
   productOptions: SubscriptionProductOption[];
 }
+interface SavedCardOption {
+  id: string;
+  summary: string;
+}
 
 function todayIsoDate(): string {
   const d = new Date();
@@ -84,7 +88,8 @@ export function AddSubscriptionModal({
   const [cardSaving, setCardSaving] = React.useState(false);
   const [cardLoading, setCardLoading] = React.useState(false);
   const [cardholderName, setCardholderName] = React.useState("");
-  const [savedCardSummary, setSavedCardSummary] = React.useState<string | null>(null);
+  const [savedCards, setSavedCards] = React.useState<SavedCardOption[]>([]);
+  const [showAddCard, setShowAddCard] = React.useState(false);
   const stripeRef = React.useRef<StripeInstance | null>(null);
   const cardRef = React.useRef<StripeCardElement | null>(null);
 
@@ -112,7 +117,8 @@ export function AddSubscriptionModal({
       setCardReady(false);
       setCardLoading(false);
       setCardholderName("");
-      setSavedCardSummary(null);
+      setSavedCards([]);
+      setShowAddCard(false);
       if (cardRef.current) {
         cardRef.current.destroy();
         cardRef.current = null;
@@ -145,7 +151,8 @@ export function AddSubscriptionModal({
     const customerId = selectedCustomerId.trim();
     if (!customerId) {
       form.setValue("defaultPaymentMethodId", undefined, { shouldDirty: false });
-      setSavedCardSummary(null);
+      setSavedCards([]);
+      setShowAddCard(false);
       return;
     }
     let cancelled = false;
@@ -160,6 +167,7 @@ export function AddSubscriptionModal({
         const data = (await res.json()) as {
           defaultPaymentMethodId?: string | null;
           defaultPaymentMethodSummary?: string | null;
+          cards?: SavedCardOption[];
           error?: string;
         };
         if (!res.ok) {
@@ -169,7 +177,8 @@ export function AddSubscriptionModal({
         if (cancelled) return;
         const pmId = data.defaultPaymentMethodId?.trim() || undefined;
         form.setValue("defaultPaymentMethodId", pmId, { shouldDirty: false, shouldValidate: true });
-        setSavedCardSummary(data.defaultPaymentMethodSummary ?? null);
+        setSavedCards(Array.isArray(data.cards) ? data.cards : []);
+        setShowAddCard(!pmId);
       } catch (error) {
         if (!cancelled) {
           setCardError(error instanceof Error ? error.message : "Could not load existing card.");
@@ -185,12 +194,17 @@ export function AddSubscriptionModal({
   }, [open, collectionMethod, selectedCustomerId, form]);
 
   React.useEffect(() => {
-    if (collectionMethod !== "charge_automatically" || !open) return;
+    if (collectionMethod !== "charge_automatically" || !open || !showAddCard) return;
     if (!publishableKey) return;
     const key = publishableKey;
     let cancelled = false;
     async function mountCardElement() {
       if (cardRef.current) return;
+      const mountTarget = document.getElementById("subscription-card-element");
+      if (!mountTarget) {
+        // Dialog content can still be animating into the DOM; skip this cycle.
+        return;
+      }
       if (!window.Stripe) {
         await new Promise<void>((resolve, reject) => {
           const existing = document.querySelector('script[src="https://js.stripe.com/v3/"]');
@@ -224,17 +238,28 @@ export function AddSubscriptionModal({
           },
         },
       });
-      card.mount("#subscription-card-element");
+      card.mount(mountTarget);
       cardRef.current = card;
       setCardReady(true);
     }
     void mountCardElement().catch((e) => {
-      setCardError(e instanceof Error ? e.message : "Could not initialise card entry.");
+      const message = e instanceof Error ? e.message : "Could not initialise card entry.";
+      if (message.includes("#subscription-card-element")) return;
+      setCardError(message);
     });
     return () => {
       cancelled = true;
     };
-  }, [collectionMethod, open, publishableKey]);
+  }, [collectionMethod, open, publishableKey, showAddCard]);
+
+  React.useEffect(() => {
+    if (showAddCard) return;
+    if (cardRef.current) {
+      cardRef.current.destroy();
+      cardRef.current = null;
+    }
+    setCardReady(false);
+  }, [showAddCard]);
 
   async function saveCardPaymentMethod() {
     setCardError(null);
@@ -274,6 +299,17 @@ export function AddSubscriptionModal({
         return;
       }
       form.setValue("defaultPaymentMethodId", pmId, { shouldValidate: true, shouldDirty: true });
+      const customerId = selectedCustomerId.trim();
+      if (customerId) {
+        const res = await fetch(`/api/stripe/setup-intent?customerId=${encodeURIComponent(customerId)}`, {
+          method: "GET",
+        });
+        const data = (await res.json()) as { cards?: SavedCardOption[] };
+        if (res.ok && Array.isArray(data.cards)) {
+          setSavedCards(data.cards);
+        }
+      }
+      setShowAddCard(false);
     } catch (error) {
       setCardError(error instanceof Error ? error.message : "Could not save card details.");
     } finally {
@@ -448,19 +484,52 @@ export function AddSubscriptionModal({
           ) : (
             <div className="space-y-2 rounded-xl border border-white/[0.08] bg-white/[0.03] p-3">
               <Label className="text-zinc-300">Credit card details</Label>
-              <Input
-                id="cardholderName"
-                placeholder="Cardholder name"
-                autoComplete="cc-name"
-                disabled={busy || cardSaving}
-                className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
-                value={cardholderName}
-                onChange={(e) => setCardholderName(e.target.value)}
-              />
-              <div
-                id="subscription-card-element"
-                className="rounded-md border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm"
-              />
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="savedCardSelect" className="text-zinc-300">
+                  Select credit card
+                </Label>
+                <select
+                  id="savedCardSelect"
+                  className="flex h-9 w-full rounded-md border border-white/[0.08] bg-white/[0.04] px-3 py-1 text-sm text-white shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#141414]"
+                  value={showAddCard ? "__add_new__" : effectivePmId ?? ""}
+                  disabled={busy || cardLoading}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === "__add_new__") {
+                      setShowAddCard(true);
+                      form.setValue("defaultPaymentMethodId", undefined, { shouldValidate: true });
+                      return;
+                    }
+                    setShowAddCard(false);
+                    form.setValue("defaultPaymentMethodId", v || undefined, { shouldValidate: true });
+                  }}
+                >
+                  <option value="">Select card</option>
+                  {savedCards.map((card) => (
+                    <option key={card.id} value={card.id}>
+                      {card.summary}
+                    </option>
+                  ))}
+                  <option value="__add_new__">+ Add another card</option>
+                </select>
+              </div>
+              {showAddCard ? (
+                <>
+                  <Input
+                    id="cardholderName"
+                    placeholder="Cardholder name"
+                    autoComplete="cc-name"
+                    disabled={busy || cardSaving}
+                    className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+                    value={cardholderName}
+                    onChange={(e) => setCardholderName(e.target.value)}
+                  />
+                  <div
+                    id="subscription-card-element"
+                    className="rounded-md border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm"
+                  />
+                </>
+              ) : null}
               {!publishableKey ? (
                 <p className="text-xs leading-tight text-destructive">
                   Configure NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY to collect card details.
@@ -468,23 +537,22 @@ export function AddSubscriptionModal({
               ) : null}
               {cardError ? <p className="text-xs leading-tight text-destructive">{cardError}</p> : null}
               {cardLoading ? <p className="text-xs text-muted-foreground">Checking existing card…</p> : null}
-              {savedCardSummary ? (
-                <p className="text-xs text-sky-300">Saved card on file · {savedCardSummary}</p>
-              ) : null}
               {effectivePmId ? (
                 <p className="text-xs text-emerald-400">Card ready · Payment method {effectivePmId}</p>
               ) : null}
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={busy || cardSaving || !cardReady || !publishableKey}
-                  onClick={() => void saveCardPaymentMethod()}
-                >
-                  {cardSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-                  Save card
-                </Button>
-              </div>
+              {showAddCard ? (
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={busy || cardSaving || !cardReady || !publishableKey}
+                    onClick={() => void saveCardPaymentMethod()}
+                  >
+                    {cardSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+                    Save card
+                  </Button>
+                </div>
+              ) : null}
             </div>
           )}
 
