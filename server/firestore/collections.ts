@@ -32,6 +32,8 @@ export const COLLECTIONS = {
   /** Optional — admin dashboard aggregates when present. */
   tasks: "tasks",
   supportTickets: "support_tickets",
+  /** Workspace company profile — one doc per org (`organizations/{orgId}`). */
+  organizations: "organizations",
 } as const;
 
 export type CollectionName = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];

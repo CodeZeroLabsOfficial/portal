@@ -43,8 +43,5 @@ export function isAdminNavActive(href: AdminPortalNavItem["href"], pathname: str
 
 export function isAdminFooterNavActive(href: string, pathname: string): boolean {
   const normalized = pathname.endsWith("/") && pathname !== "/" ? pathname.slice(0, -1) : pathname;
-  if (href === "/admin/settings") {
-    return normalized === "/admin/settings";
-  }
-  return false;
+  return normalized === href || normalized.startsWith(`${href}/`);
 }

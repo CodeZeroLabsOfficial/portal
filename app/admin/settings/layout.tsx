@@ -18,6 +18,7 @@ export default async function AdminSettingsLayout({ children }: { children: Reac
       displayName={user.displayName ?? ""}
       userLabel={user.email || user.uid}
       showMainHeader={false}
+      showRightAside={false}
       secondaryNav={<SettingsSubnav />}
     >
       <SettingsInner>{children}</SettingsInner>

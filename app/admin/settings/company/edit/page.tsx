@@ -1,12 +1,12 @@
 import { redirect } from "next/navigation";
 import { getCurrentSessionUser } from "@/lib/auth/server-session";
-import { CompanySettingsView } from "@/components/portal/company-settings-view";
+import { EditCompanySettingsForm } from "@/components/portal/edit-company-settings-form";
 import { getWorkspaceCompanySettings } from "@/server/firestore/organization-settings";
 
-export default async function AdminSettingsCompanyPage() {
+export default async function AdminSettingsCompanyEditPage() {
   const user = await getCurrentSessionUser();
   if (!user) {
-    redirect("/login?next=/admin/settings/company");
+    redirect("/login?next=/admin/settings/company/edit");
   }
 
   const settings = await getWorkspaceCompanySettings(user);
@@ -18,5 +18,5 @@ export default async function AdminSettingsCompanyPage() {
     );
   }
 
-  return <CompanySettingsView settings={settings} />;
+  return <EditCompanySettingsForm settings={settings} />;
 }
