@@ -434,10 +434,10 @@ export function CustomerDetailView({
               {timeline.length === 0 ? (
                 <p className="py-8 text-center text-sm text-muted-foreground">No activity yet.</p>
               ) : (
-                <ul className="relative space-y-0 border-l border-border/80 pl-6">
+                <ul className="relative space-y-8 border-l border-border/80 pl-6">
                   {timeline.map((item) => (
-                    <li key={item.id} className="mb-10 last:mb-0">
-                      <span className="absolute -left-[5px] mt-1.5 h-2.5 w-2.5 rounded-full border border-border bg-background ring-2 ring-muted" />
+                    <li key={item.id} className="relative">
+                      <span className="absolute -left-[29px] top-1.5 h-2.5 w-2.5 rounded-full border border-border bg-background ring-2 ring-muted" />
                       <p className="text-xs text-muted-foreground">
                         {new Date(item.at).toLocaleString(undefined, {
                           dateStyle: "medium",
