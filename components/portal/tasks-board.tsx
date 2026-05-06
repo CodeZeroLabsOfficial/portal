@@ -35,6 +35,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
@@ -117,7 +118,15 @@ function StageColumn({
   );
 }
 
-function TaskCard({ task, disabled }: { task: TaskRecord; disabled?: boolean }) {
+function TaskCard({
+  task,
+  disabled,
+  onEdit,
+}: {
+  task: TaskRecord;
+  disabled?: boolean;
+  onEdit: (task: TaskRecord) => void;
+}) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: task.id,
     disabled,
@@ -174,6 +183,13 @@ function TaskCard({ task, disabled }: { task: TaskRecord; disabled?: boolean }) 
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                className="cursor-pointer"
+                onSelect={() => onEdit(task)}
+              >
+                Edit task
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               {task.customerId ? (
                 <DropdownMenuItem asChild>
                   <Link href={`/admin/customers/${task.customerId}`}>Open customer</Link>
@@ -260,9 +276,11 @@ export interface TasksBoardProps {
   onRequestAddToColumn?: (column: TaskBoardColumnId) => void;
   /** When true, column “Add task” buttons stay disabled (e.g. missing organization). */
   addDisabled?: boolean;
+  /** Opens edit dialog for the task (card ⋮ menu). */
+  onRequestEditTask?: (task: TaskRecord) => void;
 }
 
-export function TasksBoard({ tasks, onRequestAddToColumn, addDisabled }: TasksBoardProps) {
+export function TasksBoard({ tasks, onRequestAddToColumn, addDisabled, onRequestEditTask }: TasksBoardProps) {
   const { moveToColumn, pendingId } = useTaskStatusMutation();
   const [activeId, setActiveId] = React.useState<string | null>(null);
 
@@ -324,7 +342,12 @@ export function TasksBoard({ tasks, onRequestAddToColumn, addDisabled }: TasksBo
               addDisabled={Boolean(addDisabled)}
             >
               {list.map((task) => (
-                <TaskCard key={task.id} task={task} disabled={pendingId === task.id} />
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  disabled={pendingId === task.id}
+                  onEdit={(t) => onRequestEditTask?.(t)}
+                />
               ))}
             </StageColumn>
           );

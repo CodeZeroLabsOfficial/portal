@@ -434,9 +434,9 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
               onChange={(e) => form.setValue("linkAuthByEmail", e.target.checked, { shouldDirty: true })}
             />
             <span className="text-sm leading-snug text-zinc-300">
-              <span className="font-medium text-white">Link Firebase Auth</span>
+              <span className="font-medium text-white">Create user account</span>
               <span className="mt-0.5 block text-xs text-zinc-500">
-                If a user already exists with this email, their UID is stored on the customer for portal features.
+                Allow user access to the customer portal to manage subscriptions, billing and payment methods.
               </span>
             </span>
           </label>

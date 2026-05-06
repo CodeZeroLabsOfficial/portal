@@ -4,12 +4,14 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { createTaskAction } from "@/server/actions/tasks-crm";
+import { updateTaskAction } from "@/server/actions/tasks-crm";
 import {
   TASK_BOARD_COLUMNS,
+  statusToBoardColumn,
   taskBoardColumnLabel,
   type TaskBoardColumnId,
 } from "@/lib/tasks/task-board-columns";
+import type { TaskRecord } from "@/types/task";
 import {
   Dialog,
   DialogContent,
@@ -22,49 +24,41 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
-export interface AddTaskDialogProps {
+export interface EditTaskDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** When the user opens from a column footer, that column is pre-selected. */
-  defaultColumn: TaskBoardColumnId;
-  disabled?: boolean;
-  disabledReason?: string;
+  task: TaskRecord | null;
 }
 
-export function AddTaskDialog({
-  open,
-  onOpenChange,
-  defaultColumn,
-  disabled,
-  disabledReason,
-}: AddTaskDialogProps) {
+export function EditTaskDialog({ open, onOpenChange, task }: EditTaskDialogProps) {
   const router = useRouter();
-  const [column, setColumn] = React.useState<TaskBoardColumnId>(defaultColumn);
+  const [column, setColumn] = React.useState<TaskBoardColumnId>("todo");
   const [title, setTitle] = React.useState("");
   const [description, setDescription] = React.useState("");
   const [pending, setPending] = React.useState(false);
   const [serverError, setServerError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    if (open) {
-      setColumn(defaultColumn);
-    }
-  }, [open, defaultColumn]);
+    if (!open || !task) return;
+    setTitle(task.title);
+    setDescription(task.description ?? "");
+    setColumn(statusToBoardColumn(task.status));
+    setServerError(null);
+  }, [open, task?.id]);
 
   React.useEffect(() => {
     if (!open) {
-      setTitle("");
-      setDescription("");
       setServerError(null);
     }
   }, [open]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (disabled) return;
+    if (!task) return;
     setServerError(null);
     setPending(true);
-    const res = await createTaskAction({
+    const res = await updateTaskAction({
+      taskId: task.id,
       title,
       description: description.trim() || undefined,
       column,
@@ -74,8 +68,6 @@ export function AddTaskDialog({
       setServerError(res.message);
       return;
     }
-    setTitle("");
-    setDescription("");
     onOpenChange(false);
     router.refresh();
   }
@@ -87,7 +79,7 @@ export function AddTaskDialog({
       <DialogContent className="max-h-[min(90vh,800px)] w-[min(100vw-2rem,520px)] max-w-[520px] overflow-y-auto border-white/[0.08] bg-[#141414] p-0 sm:max-w-[520px]">
         <div className="border-b border-white/[0.06] bg-gradient-to-br from-primary/15 via-transparent to-transparent px-6 pb-5 pt-6">
           <DialogHeader className="text-left">
-            <DialogTitle className="text-xl font-semibold tracking-tight text-white">New task</DialogTitle>
+            <DialogTitle className="text-xl font-semibold tracking-tight text-white">Edit task</DialogTitle>
           </DialogHeader>
         </div>
 
@@ -106,19 +98,12 @@ export function AddTaskDialog({
             ) : null}
           </AnimatePresence>
 
-          {disabled ? (
-            <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
-              {disabledReason ??
-                "Tasks require an organization id on your user profile. Contact an administrator if this persists."}
-            </p>
-          ) : null}
-
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="task-title" className="text-zinc-300">
+            <Label htmlFor="edit-task-title" className="text-zinc-300">
               Title
             </Label>
             <Input
-              id="task-title"
+              id="edit-task-title"
               name="title"
               required
               maxLength={500}
@@ -126,21 +111,21 @@ export function AddTaskDialog({
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Design new landing page"
               autoComplete="off"
-              disabled={busy || disabled}
+              disabled={busy || !task}
               className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="task-column" className="text-zinc-300">
+            <Label htmlFor="edit-task-column" className="text-zinc-300">
               Column
             </Label>
             <select
-              id="task-column"
+              id="edit-task-column"
               name="column"
               value={column}
               onChange={(e) => setColumn(e.target.value as TaskBoardColumnId)}
-              disabled={busy || disabled}
+              disabled={busy || !task}
               className="flex h-9 w-full rounded-md border border-white/[0.08] bg-white/[0.04] px-3 py-1 text-sm text-white shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#141414]"
             >
               {TASK_BOARD_COLUMNS.map((c) => (
@@ -152,18 +137,18 @@ export function AddTaskDialog({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="task-description" className="text-zinc-300">
+            <Label htmlFor="edit-task-description" className="text-zinc-300">
               Description (optional)
             </Label>
             <Textarea
-              id="task-description"
+              id="edit-task-description"
               name="description"
               maxLength={8000}
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Short summary for the card…"
-              disabled={busy || disabled}
+              disabled={busy || !task}
               className="min-h-[100px] resize-y rounded-md border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
             />
           </div>
@@ -178,9 +163,9 @@ export function AddTaskDialog({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={busy || disabled || !title.trim()} className="min-w-[7rem] gap-2">
+            <Button type="submit" disabled={busy || !task || !title.trim()} className="min-w-[7rem] gap-2">
               {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
-              Create
+              Save
             </Button>
           </DialogFooter>
         </form>

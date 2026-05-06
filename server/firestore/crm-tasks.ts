@@ -69,6 +69,37 @@ export async function updateTaskBoardColumn(
   return { ok: true };
 }
 
+export async function updateTaskForStaff(
+  user: PortalUser,
+  taskId: string,
+  input: { title: string; description?: string; column: TaskBoardColumnId },
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const db = getFirebaseAdminFirestore();
+  if (!db || !canStaffAccessCrm(user)) return { ok: false, message: "Not allowed." };
+  const existing = await getTaskForStaff(user, taskId);
+  if (!existing) return { ok: false, message: "Task not found." };
+
+  const title = input.title.trim();
+  if (!title) return { ok: false, message: "Title is required." };
+
+  const descTrimmed = input.description?.trim() ?? "";
+  const payload: Record<string, unknown> = {
+    title,
+    status: boardColumnToStatus(input.column),
+    updatedAt: FieldValue.serverTimestamp(),
+    updatedAtMs: Date.now(),
+  };
+  if (descTrimmed.length > 0) {
+    payload.description = descTrimmed;
+  } else {
+    payload.description = FieldValue.delete();
+  }
+
+  await db.collection(COLLECTIONS.tasks).doc(taskId).update(payload);
+
+  return { ok: true };
+}
+
 export async function createTaskForStaff(
   user: PortalUser,
   input: { title: string; description?: string; column: TaskBoardColumnId },

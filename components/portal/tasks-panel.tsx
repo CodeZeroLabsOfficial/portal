@@ -11,6 +11,7 @@ import {
 } from "@/lib/workspace-page-typography";
 import { statusToBoardColumn, type TaskBoardColumnId } from "@/lib/tasks/task-board-columns";
 import { AddTaskDialog } from "@/components/portal/add-task-dialog";
+import { EditTaskDialog } from "@/components/portal/edit-task-dialog";
 import type { TaskRecord } from "@/types/task";
 import { Button } from "@/components/ui/button";
 import { TasksBoard } from "@/components/portal/tasks-board";
@@ -67,6 +68,7 @@ export function TasksPanel({ tasks, viewerUid, organizationId }: TasksPanelProps
   const [filterTab, setFilterTab] = React.useState<TaskHubFilterTab>("all");
   const [addOpen, setAddOpen] = React.useState(false);
   const [addDefaultColumn, setAddDefaultColumn] = React.useState<TaskBoardColumnId>("todo");
+  const [editingTask, setEditingTask] = React.useState<TaskRecord | null>(null);
 
   const canCreateTasks = Boolean(organizationId);
 
@@ -169,6 +171,7 @@ export function TasksPanel({ tasks, viewerUid, organizationId }: TasksPanelProps
           tasks={filtered}
           onRequestAddToColumn={openAddDialog}
           addDisabled={!canCreateTasks}
+          onRequestEditTask={(t) => setEditingTask(t)}
         />
       ) : (
         <TasksList tasks={filtered} />
@@ -180,6 +183,13 @@ export function TasksPanel({ tasks, viewerUid, organizationId }: TasksPanelProps
         defaultColumn={addDefaultColumn}
         disabled={!canCreateTasks}
         disabledReason="Your user profile must include an organization id before you can add tasks."
+      />
+      <EditTaskDialog
+        open={editingTask !== null}
+        onOpenChange={(next) => {
+          if (!next) setEditingTask(null);
+        }}
+        task={editingTask}
       />
     </div>
   );
