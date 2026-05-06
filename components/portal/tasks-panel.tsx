@@ -9,6 +9,7 @@ import {
   WORKSPACE_PAGE_DESCRIPTION_CLASS,
 } from "@/lib/workspace-page-typography";
 import { statusToBoardColumn, type TaskBoardColumnId } from "@/lib/tasks/task-board-columns";
+import { coerceTaskPriority } from "@/lib/tasks/task-priority";
 import { AddTaskDialog } from "@/components/portal/add-task-dialog";
 import { EditTaskDialog } from "@/components/portal/edit-task-dialog";
 import type { TaskRecord } from "@/types/task";
@@ -37,10 +38,7 @@ function filterTasksForTab(tasks: TaskRecord[], tab: TaskHubFilterTab, viewerUid
     case "my":
       return tasks.filter((t) => t.assignedToUid === viewerUid);
     case "looked": {
-      return tasks.filter((t) => {
-        const p = (t.priority ?? "").toLowerCase();
-        return p.includes("high") || p.includes("premium");
-      });
+      return tasks.filter((t) => coerceTaskPriority(t.priority) === "high");
     }
     case "closing":
       return tasks.filter((t) => {

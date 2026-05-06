@@ -30,6 +30,7 @@ import {
   isTaskBoardColumnId,
 } from "@/lib/tasks/task-board-columns";
 import type { TaskRecord } from "@/types/task";
+import { coerceTaskPriority, taskPriorityLabel } from "@/lib/tasks/task-priority";
 import { useTaskStatusMutation } from "@/hooks/use-task-status-mutation";
 import { deleteTaskAction } from "@/server/actions/tasks-crm";
 import { Button } from "@/components/ui/button";
@@ -50,16 +51,19 @@ function formatBoardDate(ms: number): string {
 }
 
 function priorityTagClass(priority: string | undefined): string {
-  const p = (priority ?? "normal").toLowerCase();
-  if (p.includes("premium")) return "bg-violet-100 text-violet-800 dark:bg-violet-950/50 dark:text-violet-200";
-  if (p.includes("high")) return "bg-amber-100 text-amber-900 dark:bg-amber-950/40 dark:text-amber-100";
-  return "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200";
+  const v = coerceTaskPriority(priority);
+  switch (v) {
+    case "low":
+      return "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200";
+    case "medium":
+      return "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200";
+    case "high":
+      return "bg-amber-100 text-amber-900 dark:bg-amber-950/40 dark:text-amber-100";
+  }
 }
 
 function displayPriority(priority: string | undefined): string {
-  const p = (priority ?? "normal").trim();
-  if (!p) return "Normal";
-  return p.charAt(0).toUpperCase() + p.slice(1).toLowerCase();
+  return taskPriorityLabel(coerceTaskPriority(priority));
 }
 
 function StageColumn({

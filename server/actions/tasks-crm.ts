@@ -5,11 +5,6 @@ import { z } from "zod";
 import { getCurrentSessionUser, hasRole } from "@/lib/auth/server-session";
 import { TASK_BOARD_COLUMNS, type TaskBoardColumnId } from "@/lib/tasks/task-board-columns";
 import { TASK_PRIORITY_VALUES, type TaskPriorityValue } from "@/lib/tasks/task-priority";
-
-const taskPriorityZodEnum = TASK_PRIORITY_VALUES as unknown as [
-  TaskPriorityValue,
-  ...TaskPriorityValue[],
-];
 import {
   createTaskForStaff,
   deleteTaskForStaff,
@@ -17,6 +12,11 @@ import {
   updateTaskBoardColumn,
   updateTaskForStaff,
 } from "@/server/firestore/crm-tasks";
+
+const taskPriorityZodEnum = TASK_PRIORITY_VALUES as unknown as [
+  TaskPriorityValue,
+  ...TaskPriorityValue[],
+];
 
 const taskBoardColumnZodEnum = TASK_BOARD_COLUMNS as unknown as [
   TaskBoardColumnId,
@@ -60,6 +60,7 @@ const createTaskSchema = z.object({
   column: z.enum(taskBoardColumnZodEnum),
   assignedToUid: z.string().min(1).optional(),
   priority: z.enum(taskPriorityZodEnum),
+  progressPercent: z.number().int().min(0).max(100),
 });
 
 export async function createTaskAction(
@@ -80,6 +81,7 @@ export async function createTaskAction(
     column: parsed.data.column,
     assignedToUid: parsed.data.assignedToUid,
     priority: parsed.data.priority,
+    progressPercent: parsed.data.progressPercent,
   });
   if (!res.ok) return res;
 
@@ -95,6 +97,7 @@ const updateTaskSchema = z.object({
   column: z.enum(taskBoardColumnZodEnum),
   assignedToUid: z.string().min(1).optional(),
   priority: z.enum(taskPriorityZodEnum),
+  progressPercent: z.number().int().min(0).max(100),
 });
 
 export async function updateTaskAction(
@@ -115,6 +118,7 @@ export async function updateTaskAction(
     column: parsed.data.column,
     assignedToUid: parsed.data.assignedToUid,
     priority: parsed.data.priority,
+    progressPercent: parsed.data.progressPercent,
   });
   if (!res.ok) return res;
 

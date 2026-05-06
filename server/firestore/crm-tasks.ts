@@ -7,6 +7,7 @@ import { boardColumnToStatus } from "@/lib/tasks/task-board-columns";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import type { TaskRecord } from "@/types/task";
 import type { PortalUser } from "@/types/user";
+import { DEFAULT_TASK_PRIORITY } from "@/lib/tasks/task-priority";
 
 export interface TaskAssigneeOption {
   uid: string;
@@ -84,6 +85,7 @@ export async function updateTaskForStaff(
     column: TaskBoardColumnId;
     assignedToUid?: string;
     priority?: string;
+    progressPercent?: number;
   },
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   const db = getFirebaseAdminFirestore();
@@ -98,11 +100,17 @@ export async function updateTaskForStaff(
   const priority =
     typeof input.priority === "string" && input.priority.trim().length > 0
       ? input.priority.trim().toLowerCase()
-      : "normal";
+      : DEFAULT_TASK_PRIORITY;
+  const progressPercent =
+    typeof input.progressPercent === "number" && Number.isFinite(input.progressPercent)
+      ? Math.min(100, Math.max(0, Math.round(input.progressPercent)))
+      : 0;
+
   const payload: Record<string, unknown> = {
     title,
     status: boardColumnToStatus(input.column),
     priority,
+    progressPercent,
     updatedAt: FieldValue.serverTimestamp(),
     updatedAtMs: Date.now(),
   };
@@ -134,6 +142,7 @@ export async function createTaskForStaff(
     column: TaskBoardColumnId;
     assignedToUid?: string;
     priority?: string;
+    progressPercent?: number;
   },
 ): Promise<{ ok: true; taskId: string } | { ok: false; message: string }> {
   const db = getFirebaseAdminFirestore();
@@ -155,7 +164,12 @@ export async function createTaskForStaff(
   const priority =
     typeof input.priority === "string" && input.priority.trim().length > 0
       ? input.priority.trim().toLowerCase()
-      : "normal";
+      : DEFAULT_TASK_PRIORITY;
+
+  const progressPercent =
+    typeof input.progressPercent === "number" && Number.isFinite(input.progressPercent)
+      ? Math.min(100, Math.max(0, Math.round(input.progressPercent)))
+      : 0;
 
   const docRef = await db.collection(COLLECTIONS.tasks).add({
     organizationId: user.organizationId,
@@ -163,6 +177,7 @@ export async function createTaskForStaff(
     description: description || undefined,
     status: boardColumnToStatus(input.column),
     priority,
+    progressPercent,
     assignedToUid: input.assignedToUid || user.uid,
     assigneeCount: 1,
     createdAt: FieldValue.serverTimestamp(),

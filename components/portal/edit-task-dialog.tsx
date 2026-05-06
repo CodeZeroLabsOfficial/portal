@@ -12,11 +12,13 @@ import {
   type TaskBoardColumnId,
 } from "@/lib/tasks/task-board-columns";
 import {
+  DEFAULT_TASK_PRIORITY,
   TASK_PRIORITY_VALUES,
   coerceTaskPriority,
   taskPriorityLabel,
   type TaskPriorityValue,
 } from "@/lib/tasks/task-priority";
+import { clampProgressPercent, TASK_PROGRESS_PERCENT_OPTIONS } from "@/lib/tasks/task-progress-options";
 import type { TaskRecord } from "@/types/task";
 import {
   Dialog,
@@ -40,7 +42,8 @@ export function EditTaskDialog({ open, onOpenChange, task }: EditTaskDialogProps
   const router = useRouter();
   const [column, setColumn] = React.useState<TaskBoardColumnId>("todo");
   const [title, setTitle] = React.useState("");
-  const [priority, setPriority] = React.useState<TaskPriorityValue>("normal");
+  const [priority, setPriority] = React.useState<TaskPriorityValue>(DEFAULT_TASK_PRIORITY);
+  const [progressPercent, setProgressPercent] = React.useState(0);
   const [description, setDescription] = React.useState("");
   const [pending, setPending] = React.useState(false);
   const [serverError, setServerError] = React.useState<string | null>(null);
@@ -49,6 +52,7 @@ export function EditTaskDialog({ open, onOpenChange, task }: EditTaskDialogProps
     if (!open || !task) return;
     setTitle(task.title);
     setPriority(coerceTaskPriority(task.priority));
+    setProgressPercent(clampProgressPercent(task.progressPercent));
     setDescription(task.description ?? "");
     setColumn(statusToBoardColumn(task.status));
     setServerError(null);
@@ -71,6 +75,7 @@ export function EditTaskDialog({ open, onOpenChange, task }: EditTaskDialogProps
       description: description.trim() || undefined,
       column,
       priority,
+      progressPercent,
     });
     setPending(false);
     if (!res.ok) {
@@ -160,6 +165,26 @@ export function EditTaskDialog({ open, onOpenChange, task }: EditTaskDialogProps
               {TASK_BOARD_COLUMNS.map((c) => (
                 <option key={c} value={c}>
                   {taskBoardColumnLabel(c)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="edit-task-progress" className="text-zinc-300">
+              Progress
+            </Label>
+            <select
+              id="edit-task-progress"
+              name="progressPercent"
+              value={progressPercent}
+              onChange={(e) => setProgressPercent(Number(e.target.value))}
+              disabled={busy || !task}
+              className="flex h-9 w-full rounded-md border border-white/[0.08] bg-white/[0.04] px-3 py-1 text-sm text-white shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#141414]"
+            >
+              {TASK_PROGRESS_PERCENT_OPTIONS.map((n) => (
+                <option key={n} value={n}>
+                  {n}%
                 </option>
               ))}
             </select>
