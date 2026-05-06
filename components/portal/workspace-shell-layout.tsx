@@ -271,7 +271,7 @@ export function WorkspaceShellLayout({
 
         <div className="flex min-w-0 flex-1 flex-col bg-[#0D0D16]">
           <header className="sticky top-0 z-20 border-b border-white/[0.06] bg-[#0D0D16]/95 backdrop-blur-md">
-            <div className="flex h-14 w-full items-center gap-3 px-4 sm:px-4">
+            <div className="flex h-14 w-full items-center gap-3 px-4 sm:px-6 lg:px-8">
               <div className="relative hidden min-w-0 flex-1 lg:block">
                 <Search
                   className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 stroke-[1.5] text-zinc-400"
@@ -428,7 +428,7 @@ export function WorkspaceShellLayout({
             </main>
 
             {showRightAside ? (
-              <aside className="hidden w-[300px] shrink-0 border-l border-white/[0.06] bg-[#0D0D16] px-4 py-8 xl:block">
+              <aside className="hidden w-[300px] shrink-0 border-l border-white/[0.06] bg-[#0D0D16] px-4 py-8 sm:px-6 lg:px-8 xl:block">
                 <div className="space-y-6">{rightAside ?? <DefaultWorkspaceRightAside />}</div>
               </aside>
             ) : null}
