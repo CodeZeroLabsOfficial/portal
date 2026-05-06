@@ -82,7 +82,9 @@ export function AddSubscriptionModal({
   const [cardError, setCardError] = React.useState<string | null>(null);
   const [cardReady, setCardReady] = React.useState(false);
   const [cardSaving, setCardSaving] = React.useState(false);
+  const [cardLoading, setCardLoading] = React.useState(false);
   const [cardholderName, setCardholderName] = React.useState("");
+  const [savedCardSummary, setSavedCardSummary] = React.useState<string | null>(null);
   const stripeRef = React.useRef<StripeInstance | null>(null);
   const cardRef = React.useRef<StripeCardElement | null>(null);
 
@@ -108,7 +110,9 @@ export function AddSubscriptionModal({
       setServerError(null);
       setCardError(null);
       setCardReady(false);
+      setCardLoading(false);
       setCardholderName("");
+      setSavedCardSummary(null);
       if (cardRef.current) {
         cardRef.current.destroy();
         cardRef.current = null;
@@ -135,6 +139,50 @@ export function AddSubscriptionModal({
       form.setValue("durationMonths", selectedProduct.durations[0].months, { shouldValidate: true });
     }
   }, [selectedProduct, form]);
+
+  React.useEffect(() => {
+    if (!open || collectionMethod !== "charge_automatically") return;
+    const customerId = selectedCustomerId.trim();
+    if (!customerId) {
+      form.setValue("defaultPaymentMethodId", undefined, { shouldDirty: false });
+      setSavedCardSummary(null);
+      return;
+    }
+    let cancelled = false;
+    async function loadExistingPaymentMethod() {
+      setCardLoading(true);
+      setCardError(null);
+      try {
+        const res = await fetch(
+          `/api/stripe/setup-intent?customerId=${encodeURIComponent(customerId)}`,
+          { method: "GET" },
+        );
+        const data = (await res.json()) as {
+          defaultPaymentMethodId?: string | null;
+          defaultPaymentMethodSummary?: string | null;
+          error?: string;
+        };
+        if (!res.ok) {
+          if (!cancelled) setCardError(data.error ?? "Could not load existing card.");
+          return;
+        }
+        if (cancelled) return;
+        const pmId = data.defaultPaymentMethodId?.trim() || undefined;
+        form.setValue("defaultPaymentMethodId", pmId, { shouldDirty: false, shouldValidate: true });
+        setSavedCardSummary(data.defaultPaymentMethodSummary ?? null);
+      } catch (error) {
+        if (!cancelled) {
+          setCardError(error instanceof Error ? error.message : "Could not load existing card.");
+        }
+      } finally {
+        if (!cancelled) setCardLoading(false);
+      }
+    }
+    void loadExistingPaymentMethod();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, collectionMethod, selectedCustomerId, form]);
 
   React.useEffect(() => {
     if (collectionMethod !== "charge_automatically" || !open) return;
@@ -419,6 +467,10 @@ export function AddSubscriptionModal({
                 </p>
               ) : null}
               {cardError ? <p className="text-xs leading-tight text-destructive">{cardError}</p> : null}
+              {cardLoading ? <p className="text-xs text-muted-foreground">Checking existing card…</p> : null}
+              {savedCardSummary ? (
+                <p className="text-xs text-sky-300">Saved card on file · {savedCardSummary}</p>
+              ) : null}
               {effectivePmId ? (
                 <p className="text-xs text-emerald-400">Card ready · Payment method {effectivePmId}</p>
               ) : null}

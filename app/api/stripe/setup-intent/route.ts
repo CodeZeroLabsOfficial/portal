@@ -8,6 +8,20 @@ interface Body {
   customerId?: string;
 }
 
+async function resolveStripeCustomerForCrmCustomer(userIdOrg: { organizationId?: string }, customerId: string) {
+  const stripe = getStripe();
+  if (!stripe) return { error: "Stripe is not configured on the server." as const };
+  const user = await getCurrentSessionUser();
+  if (!user || !isStaff(user)) return { error: "Unauthorized." as const };
+  const customer = await getCustomerRecordForOrg(user, customerId);
+  if (!customer) return { error: "Customer not found." as const };
+  const ensured = await ensureStripeCustomer(stripe, customer, userIdOrg.organizationId);
+  if (ensured.created || customer.stripeCustomerId !== ensured.stripeCustomerId) {
+    await syncStripeCustomerBasics(user, customer.id, ensured.stripeCustomerId);
+  }
+  return { stripe, user, customer, stripeCustomerId: ensured.stripeCustomerId } as const;
+}
+
 /** Staff-only: create SetupIntent for collecting a reusable card payment method. */
 export async function POST(req: Request) {
   const user = await getCurrentSessionUser();
@@ -31,16 +45,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Customer is required." }, { status: 400 });
   }
 
-  const customer = await getCustomerRecordForOrg(user, customerId);
-  if (!customer) {
-    return NextResponse.json({ error: "Customer not found." }, { status: 404 });
-  }
-
   try {
-    const { stripeCustomerId, created } = await ensureStripeCustomer(stripe, customer, user.organizationId);
-    if (created || customer.stripeCustomerId !== stripeCustomerId) {
-      await syncStripeCustomerBasics(user, customer.id, stripeCustomerId);
+    const resolved = await resolveStripeCustomerForCrmCustomer(user, customerId);
+    if ("error" in resolved) {
+      return NextResponse.json({ error: resolved.error }, { status: resolved.error === "Customer not found." ? 404 : 400 });
     }
+    const { stripeCustomerId, customer } = resolved;
 
     const intent = await stripe.setupIntents.create({
       customer: stripeCustomerId,
@@ -56,6 +66,67 @@ export async function POST(req: Request) {
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Could not create setup intent." },
+      { status: 500 },
+    );
+  }
+}
+
+/** Staff-only: returns customer's existing default card payment method if present. */
+export async function GET(req: Request) {
+  const user = await getCurrentSessionUser();
+  if (!user || !isStaff(user)) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+  const stripe = getStripe();
+  if (!stripe) {
+    return NextResponse.json({ error: "Stripe is not configured on the server." }, { status: 503 });
+  }
+
+  const { searchParams } = new URL(req.url);
+  const customerId = searchParams.get("customerId")?.trim();
+  if (!customerId) {
+    return NextResponse.json({ error: "Customer is required." }, { status: 400 });
+  }
+
+  try {
+    const resolved = await resolveStripeCustomerForCrmCustomer(user, customerId);
+    if ("error" in resolved) {
+      return NextResponse.json({ error: resolved.error }, { status: resolved.error === "Customer not found." ? 404 : 400 });
+    }
+    const { stripeCustomerId } = resolved;
+
+    const stripeCustomer = await stripe.customers.retrieve(stripeCustomerId, {
+      expand: ["invoice_settings.default_payment_method"],
+    });
+    if (stripeCustomer.deleted || typeof stripeCustomer === "string") {
+      return NextResponse.json({ defaultPaymentMethodId: null });
+    }
+
+    const fromInvoiceSettings = stripeCustomer.invoice_settings?.default_payment_method;
+    const defaultPm =
+      fromInvoiceSettings && typeof fromInvoiceSettings === "object" && "id" in fromInvoiceSettings
+        ? fromInvoiceSettings
+        : null;
+
+    if (!defaultPm) {
+      return NextResponse.json({ defaultPaymentMethodId: null });
+    }
+
+    const card = "card" in defaultPm ? defaultPm.card : null;
+    const summary =
+      card && card.brand && card.last4
+        ? `${card.brand.toUpperCase()} •••• ${card.last4}`
+        : defaultPm.type
+          ? defaultPm.type.replace(/_/g, " ")
+          : "Saved payment method";
+
+    return NextResponse.json({
+      defaultPaymentMethodId: defaultPm.id,
+      defaultPaymentMethodSummary: summary,
+    });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Could not fetch default payment method." },
       { status: 500 },
     );
   }
