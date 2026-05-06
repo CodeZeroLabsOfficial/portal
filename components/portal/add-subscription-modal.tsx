@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -80,21 +79,23 @@ export function AddSubscriptionModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[34rem]">
-        <DialogHeader>
-          <DialogTitle>Add subscription</DialogTitle>
-          <DialogDescription>
-            Create a Stripe subscription for a CRM customer using an existing Stripe Price id.
-          </DialogDescription>
-        </DialogHeader>
-        <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
+      <DialogContent className="max-h-[min(90vh,760px)] w-[min(100vw-2rem,720px)] max-w-[720px] overflow-y-auto border-white/[0.08] bg-[#141414] p-0 sm:max-w-[720px]">
+        <div className="border-b border-white/[0.06] bg-gradient-to-br from-primary/15 via-transparent to-transparent px-6 pb-5 pt-6">
+          <DialogHeader className="text-left">
+            <DialogTitle className="text-xl font-semibold tracking-tight text-white">New subscription</DialogTitle>
+          </DialogHeader>
+        </div>
+
+        <form className="space-y-3 px-6 py-5" onSubmit={form.handleSubmit(onSubmit)} noValidate>
           <FormServerError message={serverError} rounded="xl" />
 
-          <div className="space-y-2">
-            <Label htmlFor="customerId">Customer</Label>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="customerId" className="text-zinc-300">
+              Customer
+            </Label>
             <select
               id="customerId"
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              className="flex h-9 w-full rounded-md border border-white/[0.08] bg-white/[0.04] px-3 py-1 text-sm text-white shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#141414]"
               disabled={busy}
               value={form.watch("customerId")}
               onChange={(e) => form.setValue("customerId", e.target.value, { shouldValidate: true })}
@@ -107,29 +108,34 @@ export function AddSubscriptionModal({
               ))}
             </select>
             {form.formState.errors.customerId ? (
-              <p className="text-xs text-destructive">{form.formState.errors.customerId.message}</p>
+              <p className="text-xs leading-tight text-destructive">{form.formState.errors.customerId.message}</p>
             ) : null}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="priceId">Stripe Price id</Label>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="priceId" className="text-zinc-300">
+              Stripe Price id
+            </Label>
             <Input
               id="priceId"
               placeholder="price_1234..."
               autoComplete="off"
               disabled={busy}
+              className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
               {...form.register("priceId")}
             />
             {form.formState.errors.priceId ? (
-              <p className="text-xs text-destructive">{form.formState.errors.priceId.message}</p>
+              <p className="text-xs leading-tight text-destructive">{form.formState.errors.priceId.message}</p>
             ) : null}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="collectionMethod">Collection method</Label>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="collectionMethod" className="text-zinc-300">
+              Collection method
+            </Label>
             <select
               id="collectionMethod"
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              className="flex h-9 w-full rounded-md border border-white/[0.08] bg-white/[0.04] px-3 py-1 text-sm text-white shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#141414]"
               disabled={busy}
               value={collectionMethod}
               onChange={(e) =>
@@ -146,8 +152,10 @@ export function AddSubscriptionModal({
           </div>
 
           {collectionMethod === "send_invoice" ? (
-            <div className="space-y-2">
-              <Label htmlFor="daysUntilDue">Days until due</Label>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="daysUntilDue" className="text-zinc-300">
+                Days until due
+              </Label>
               <Input
                 id="daysUntilDue"
                 type="number"
@@ -155,34 +163,44 @@ export function AddSubscriptionModal({
                 max={90}
                 disabled={busy}
                 value={form.watch("daysUntilDue") ?? 14}
+                className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
                 onChange={(e) =>
                   form.setValue("daysUntilDue", Number(e.target.value), { shouldValidate: true })
                 }
               />
               {form.formState.errors.daysUntilDue ? (
-                <p className="text-xs text-destructive">{form.formState.errors.daysUntilDue.message}</p>
+                <p className="text-xs leading-tight text-destructive">{form.formState.errors.daysUntilDue.message}</p>
               ) : null}
             </div>
           ) : (
-            <div className="space-y-2">
-              <Label htmlFor="defaultPaymentMethodId">Default payment method id (optional)</Label>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="defaultPaymentMethodId" className="text-zinc-300">
+                Default payment method id (optional)
+              </Label>
               <Input
                 id="defaultPaymentMethodId"
                 placeholder="pm_... (card, direct debit, etc.)"
                 autoComplete="off"
                 disabled={busy}
+                className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
                 {...form.register("defaultPaymentMethodId")}
               />
             </div>
           )}
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>
+          <DialogFooter className="gap-2 pt-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="ghost"
+              className="text-zinc-400 hover:text-white"
+              onClick={() => onOpenChange(false)}
+              disabled={busy}
+            >
               Cancel
             </Button>
-            <Button type="submit" disabled={busy}>
-              {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-              Create subscription
+            <Button type="submit" disabled={busy} className="min-w-[7rem] gap-2">
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
+              Create
             </Button>
           </DialogFooter>
         </form>

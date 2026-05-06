@@ -199,10 +199,7 @@ export function SubscriptionListPanel({ rows, customerOptions }: SubscriptionLis
               {rows.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-10 text-center text-sm text-muted-foreground">
-                    <p className="mx-auto max-w-md leading-relaxed">
-                      No subscriptions yet. Stripe webhook events populate this directory after Checkout or Billing
-                      changes.
-                    </p>
+                    <p className="mx-auto max-w-md leading-relaxed">No subscriptions yet.</p>
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
