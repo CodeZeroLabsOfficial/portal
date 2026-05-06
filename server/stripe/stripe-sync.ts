@@ -62,6 +62,43 @@ function subscriptionMrrMinor(sub: Stripe.Subscription): number | undefined {
   return found ? sum : undefined;
 }
 
+/** Recurring liability expressed as approximate monthly minor units (monthly + yearly ÷12, per Stripe line semantics). */
+function subscriptionMonthlyAmountMinor(sub: Stripe.Subscription): number | undefined {
+  let sum = 0;
+  let found = false;
+  for (const item of sub.items?.data ?? []) {
+    const price = item.price;
+    const recurring = price?.recurring;
+    if (!recurring || typeof price.unit_amount !== "number") continue;
+    const qty = item.quantity ?? 1;
+    const totalMinor = price.unit_amount * qty;
+    const intervalCount = recurring.interval_count ?? 1;
+    if (recurring.interval === "month") {
+      sum += Math.round(totalMinor / intervalCount);
+      found = true;
+    } else if (recurring.interval === "year") {
+      sum += Math.round(totalMinor / (12 * intervalCount));
+      found = true;
+    }
+  }
+  return found ? sum : undefined;
+}
+
+function defaultPaymentMethodTypeFromSubscription(sub: Stripe.Subscription): string | undefined {
+  const pm = sub.default_payment_method;
+  if (pm && typeof pm === "object" && typeof (pm as Stripe.PaymentMethod).type === "string") {
+    return (pm as Stripe.PaymentMethod).type;
+  }
+  return undefined;
+}
+
+function mapCollectionMethod(
+  cm: Stripe.Subscription.CollectionMethod | null | undefined,
+): "charge_automatically" | "send_invoice" | undefined {
+  if (cm === "charge_automatically" || cm === "send_invoice") return cm;
+  return undefined;
+}
+
 function productLabelFromSubscription(sub: Stripe.Subscription): string | undefined {
   const item = sub.items?.data?.[0];
   const price = item?.price;
@@ -134,6 +171,10 @@ export async function upsertSubscriptionMirror(db: Firestore, sub: Stripe.Subscr
       typeof sub.current_period_end === "number" ? sub.current_period_end * 1000 : undefined,
     cancelAtPeriodEnd: Boolean(sub.cancel_at_period_end),
     mrrAmount: subscriptionMrrMinor(sub),
+    monthlyAmountMinor: subscriptionMonthlyAmountMinor(sub),
+    createdAtMs: typeof sub.created === "number" ? sub.created * 1000 : undefined,
+    collectionMethod: mapCollectionMethod(sub.collection_method),
+    defaultPaymentMethodType: defaultPaymentMethodTypeFromSubscription(sub),
     updatedAtMs: Date.now(),
     updatedAt: FieldValue.serverTimestamp(),
   };

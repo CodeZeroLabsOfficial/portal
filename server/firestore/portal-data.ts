@@ -83,6 +83,13 @@ function parseSubscription(id: string, data: Record<string, unknown>): Subscript
     interval: data.interval === "year" ? "year" : data.interval === "month" ? "month" : undefined,
     currentPeriodEndMs: asNumber(data.currentPeriodEndMs),
     cancelAtPeriodEnd: asBoolean(data.cancelAtPeriodEnd),
+    monthlyAmountMinor: asNumber(data.monthlyAmountMinor),
+    createdAtMs: asNumber(data.createdAtMs),
+    collectionMethod:
+      data.collectionMethod === "charge_automatically" || data.collectionMethod === "send_invoice"
+        ? data.collectionMethod
+        : undefined,
+    defaultPaymentMethodType: asString(data.defaultPaymentMethodType),
     mrrAmount: asNumber(data.mrrAmount),
     updatedAtMs: asNumber(data.updatedAtMs) ?? Date.now(),
   };

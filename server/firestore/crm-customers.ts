@@ -168,40 +168,50 @@ function customerToListRow(
   };
 }
 
+function parseSubscriptionFirestore(id: string, data: Record<string, unknown>): SubscriptionRecord {
+  return {
+    id,
+    customerId: asString(data.customerId) ?? "",
+    organizationId: asString(data.organizationId),
+    status:
+      data.status === "trialing" ||
+      data.status === "past_due" ||
+      data.status === "canceled" ||
+      data.status === "incomplete" ||
+      data.status === "incomplete_expired" ||
+      data.status === "unpaid" ||
+      data.status === "paused"
+        ? data.status
+        : "active",
+    priceId: asString(data.priceId),
+    productName: asString(data.productName),
+    currency: asString(data.currency) ?? "aud",
+    interval: data.interval === "year" ? "year" : data.interval === "month" ? "month" : undefined,
+    currentPeriodEndMs: asNumber(data.currentPeriodEndMs),
+    cancelAtPeriodEnd: typeof data.cancelAtPeriodEnd === "boolean" ? data.cancelAtPeriodEnd : undefined,
+    monthlyAmountMinor: asNumber(data.monthlyAmountMinor),
+    createdAtMs: asNumber(data.createdAtMs),
+    collectionMethod:
+      data.collectionMethod === "charge_automatically" || data.collectionMethod === "send_invoice"
+        ? data.collectionMethod
+        : undefined,
+    defaultPaymentMethodType: asString(data.defaultPaymentMethodType),
+    mrrAmount: asNumber(data.mrrAmount),
+    updatedAtMs: asNumber(data.updatedAtMs) ?? Date.now(),
+  };
+}
+
 async function listAllSubscriptionsForStaff(db: AdminDb): Promise<SubscriptionRecord[]> {
   const snap = await db.collection(COLLECTIONS.subscriptions).limit(200).get();
-  return snap.docs.map((doc) => {
-    const data = doc.data() as Record<string, unknown>;
-    return {
-      id: doc.id,
-      customerId: asString(data.customerId) ?? "",
-      organizationId: asString(data.organizationId),
-      status:
-        data.status === "trialing" ||
-        data.status === "past_due" ||
-        data.status === "canceled" ||
-        data.status === "incomplete" ||
-        data.status === "incomplete_expired" ||
-        data.status === "unpaid" ||
-        data.status === "paused"
-          ? data.status
-          : "active",
-      priceId: asString(data.priceId),
-      productName: asString(data.productName),
-      currency: asString(data.currency) ?? "aud",
-      interval: data.interval === "year" ? "year" : data.interval === "month" ? "month" : undefined,
-      currentPeriodEndMs: asNumber(data.currentPeriodEndMs),
-      cancelAtPeriodEnd: typeof data.cancelAtPeriodEnd === "boolean" ? data.cancelAtPeriodEnd : undefined,
-      mrrAmount: asNumber(data.mrrAmount),
-      updatedAtMs: asNumber(data.updatedAtMs) ?? Date.now(),
-    } satisfies SubscriptionRecord;
-  });
+  return snap.docs.map((doc) => parseSubscriptionFirestore(doc.id, doc.data() as Record<string, unknown>));
 }
 
 /** Resolved CRM profile for a mirrored Stripe Customer id (`cus_…`). */
 export interface StripeCustomerLink {
   customerId: string;
   label: string;
+  /** Company name when set, else contact name / email — for subscription directory column. */
+  accountName: string;
 }
 
 export interface AdminSubscriptionsSnapshot {
@@ -226,7 +236,12 @@ export async function getAdminSubscriptionsSnapshot(
       const sid = c.stripeCustomerId?.trim();
       if (!sid || stripeCustomerLinks[sid]) continue;
       const label = [c.name?.trim(), c.company?.trim()].filter(Boolean).join(" · ") || c.email?.trim() || c.id;
-      stripeCustomerLinks[sid] = { customerId: c.id, label: label.slice(0, 160) };
+      const accountName = c.company?.trim() || c.name?.trim() || c.email?.trim() || "—";
+      stripeCustomerLinks[sid] = {
+        customerId: c.id,
+        label: label.slice(0, 160),
+        accountName: accountName.slice(0, 160),
+      };
     }
 
     const subscriptions = await listAllSubscriptionsForStaff(db);
@@ -686,31 +701,7 @@ export async function listSubscriptionsForStripeCustomer(
       .where("customerId", "==", stripeCustomerId)
       .limit(50)
       .get();
-    return snap.docs.map((d) => {
-      const data = d.data() as Record<string, unknown>;
-      return {
-        id: d.id,
-        customerId: asString(data.customerId) ?? "",
-        organizationId: asString(data.organizationId),
-        status:
-          data.status === "trialing" ||
-          data.status === "past_due" ||
-          data.status === "canceled" ||
-          data.status === "incomplete" ||
-          data.status === "incomplete_expired" ||
-          data.status === "unpaid" ||
-          data.status === "paused"
-            ? data.status
-            : "active",
-        priceId: asString(data.priceId),
-        productName: asString(data.productName),
-        currency: asString(data.currency) ?? "aud",
-        interval: data.interval === "year" ? "year" : data.interval === "month" ? "month" : undefined,
-        currentPeriodEndMs: asNumber(data.currentPeriodEndMs),
-        cancelAtPeriodEnd: typeof data.cancelAtPeriodEnd === "boolean" ? data.cancelAtPeriodEnd : undefined,
-        updatedAtMs: asNumber(data.updatedAtMs) ?? Date.now(),
-      } satisfies SubscriptionRecord;
-    });
+    return snap.docs.map((d) => parseSubscriptionFirestore(d.id, d.data() as Record<string, unknown>));
   } catch {
     return [];
   }
