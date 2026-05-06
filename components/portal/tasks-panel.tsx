@@ -2,8 +2,7 @@
 
 import * as React from "react";
 import { motion } from "framer-motion";
-import { Filter, LayoutGrid, List, RefreshCw } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { LayoutGrid, List } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   WORKSPACE_HUB_PAGE_TITLE_CLASS,
@@ -63,7 +62,6 @@ export interface TasksPanelProps {
 }
 
 export function TasksPanel({ tasks, viewerUid, organizationId }: TasksPanelProps) {
-  const router = useRouter();
   const [mode, setMode] = React.useState<"board" | "list">("board");
   const [filterTab, setFilterTab] = React.useState<TaskHubFilterTab>("all");
   const [addOpen, setAddOpen] = React.useState(false);
@@ -141,14 +139,6 @@ export function TasksPanel({ tasks, viewerUid, organizationId }: TasksPanelProps
           })}
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <Button type="button" variant="outline" size="sm" className="gap-1.5" disabled>
-            <Filter className="h-4 w-4" aria-hidden />
-            Filter
-          </Button>
-          <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => router.refresh()}>
-            <RefreshCw className="h-4 w-4" aria-hidden />
-            Refresh
-          </Button>
           <Button
             type="button"
             size="sm"

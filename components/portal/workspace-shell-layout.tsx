@@ -324,8 +324,6 @@ export function WorkspaceShellLayout({
                       align="end"
                       className="min-w-[12rem] border-white/[0.08] bg-[#1e1e1e] text-zinc-100 shadow-lg"
                     >
-                      <DropdownMenuLabel className="text-xs font-medium text-zinc-500">Create</DropdownMenuLabel>
-                      <DropdownMenuSeparator className="bg-white/[0.08]" />
                       <DropdownMenuItem
                         className="cursor-pointer text-zinc-200 focus:bg-white/[0.08] focus:text-white"
                         onSelect={() => setAddCustomerOpen(true)}
