@@ -27,7 +27,6 @@ import type { CustomerActivityRecord, CustomerNoteRecord, CustomerRecord } from 
 import type { OpportunityRecord } from "@/types/opportunity";
 import type { InvoiceRecord } from "@/types/invoice";
 import type { ProposalRecord } from "@/types/proposal";
-import type { ProposalTemplateRecord } from "@/types/proposal-template";
 import type { SubscriptionRecord } from "@/types/subscription";
 import type { TaskRecord } from "@/types/task";
 import {
@@ -72,47 +71,17 @@ function rollupFromSubscriptions(subs: SubscriptionRecord[]): string {
 }
 
 function ProposalCreateControls({
-  proposalTemplates,
-  proposalTemplateId,
-  onTemplateChange,
   busy,
   onCreate,
 }: {
-  proposalTemplates: ProposalTemplateRecord[];
-  proposalTemplateId: string;
-  onTemplateChange: (id: string) => void;
   busy: boolean;
   onCreate: () => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      {proposalTemplates.length > 0 ? (
-        <label className="flex flex-col gap-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-          Template
-          <select
-            className="min-w-[160px] rounded-md border border-input bg-background px-2 py-1.5 text-xs font-normal normal-case text-foreground"
-            value={proposalTemplateId}
-            onChange={(e) => onTemplateChange(e.target.value)}
-            disabled={busy}
-          >
-            <option value="">Standard (auto-filled)</option>
-            {proposalTemplates.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
-        </label>
-      ) : null}
+    <div className="flex justify-end">
       <Button size="sm" className="gap-1.5 shadow-sm" disabled={busy} onClick={() => void onCreate()}>
         {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Plus className="h-3.5 w-3.5" aria-hidden />}
         Add proposal
-      </Button>
-      <Button variant="outline" size="sm" className="hidden sm:inline-flex" asChild>
-        <Link href="/admin/proposals">
-          <FileText className="mr-1 h-3.5 w-3.5" aria-hidden />
-          Templates
-        </Link>
       </Button>
     </div>
   );
@@ -127,7 +96,6 @@ export interface CustomerDetailViewProps {
   notes: CustomerNoteRecord[];
   activities: CustomerActivityRecord[];
   tasks: TaskRecord[];
-  proposalTemplates: ProposalTemplateRecord[];
 }
 
 export function CustomerDetailView({
@@ -139,12 +107,10 @@ export function CustomerDetailView({
   notes,
   activities,
   tasks,
-  proposalTemplates,
 }: CustomerDetailViewProps) {
   const router = useRouter();
   const [tab, setTab] = React.useState("overview");
   const [busy, setBusy] = React.useState<string | null>(null);
-  const [proposalTemplateId, setProposalTemplateId] = React.useState("");
   const [noteBody, setNoteBody] = React.useState("");
   const [noteKind, setNoteKind] = React.useState<CustomerNoteRecord["kind"]>("note");
   const [noteError, setNoteError] = React.useState<string | null>(null);
@@ -186,7 +152,7 @@ export function CustomerDetailView({
     try {
       const res = await createDraftProposalFromCustomerAction(
         customer.id,
-        proposalTemplateId.trim() ? proposalTemplateId.trim() : undefined,
+        undefined,
       );
       if (!res.ok) {
         window.alert(res.message);
@@ -505,7 +471,7 @@ export function CustomerDetailView({
             </CardHeader>
             <CardContent className="overflow-x-auto">
               {invoices.length === 0 ? (
-                <p className="py-6 text-center text-sm text-muted-foreground">No invoices for this Stripe customer.</p>
+                <p className="py-6 text-center text-sm text-muted-foreground">No invoices for this customer.</p>
               ) : (
                 <table className="w-full min-w-[520px] text-left text-sm">
                   <thead className="text-muted-foreground">
@@ -536,24 +502,14 @@ export function CustomerDetailView({
           <Card className="border-border/80 bg-card/60">
             <CardHeader className="pb-2">
               <CardTitle className="text-base">Add proposal</CardTitle>
-              <CardDescription>
-                Drafts are saved with this contact&apos;s id and email. Use Edit or Delete on each row below.
-              </CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-wrap gap-3">
+            <CardContent className="flex justify-end">
               <ProposalCreateControls
-                proposalTemplates={proposalTemplates}
-                proposalTemplateId={proposalTemplateId}
-                onTemplateChange={setProposalTemplateId}
                 busy={busy === "proposal"}
                 onCreate={() => void createProposalFromCustomer()}
               />
             </CardContent>
           </Card>
-          <p className="text-sm text-muted-foreground">
-            List includes proposals with this CRM <span className="font-mono text-foreground/80">customerId</span>, or{" "}
-            <span className="font-mono text-foreground/80">recipientEmail</span> matching this profile.
-          </p>
           {proposalsMatched.length === 0 ? (
             <Card className="border-dashed border-border/80 bg-muted/20">
               <CardContent className="py-12 text-center text-sm text-muted-foreground space-y-2">

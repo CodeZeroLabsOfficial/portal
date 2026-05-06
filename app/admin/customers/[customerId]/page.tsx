@@ -12,7 +12,6 @@ import {
   listTasksForCustomer,
 } from "@/server/firestore/crm-customers";
 import { listOpportunitiesForCustomer } from "@/server/firestore/crm-opportunities";
-import { listProposalTemplatesForOrg } from "@/server/firestore/proposal-templates";
 
 interface PageProps {
   params: Promise<{ customerId: string }>;
@@ -30,7 +29,7 @@ export default async function AdminCustomerDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const [notes, activities, subscriptions, invoices, proposalsMatched, tasks, opportunities, proposalTemplates] =
+  const [notes, activities, subscriptions, invoices, proposalsMatched, tasks, opportunities] =
     await Promise.all([
       listCustomerNotes(user, customerId),
       listCustomerActivities(user, customerId),
@@ -39,7 +38,6 @@ export default async function AdminCustomerDetailPage({ params }: PageProps) {
       listProposalsLinkedToCustomer(user, customerId, customer.email),
       listTasksForCustomer(user, customerId),
       listOpportunitiesForCustomer(user, customerId),
-      listProposalTemplatesForOrg(user),
     ]);
 
   return (
@@ -61,7 +59,6 @@ export default async function AdminCustomerDetailPage({ params }: PageProps) {
         notes={notes}
         activities={activities}
         tasks={tasks}
-        proposalTemplates={proposalTemplates}
       />
     </WorkspaceShell>
   );
