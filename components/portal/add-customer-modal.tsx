@@ -54,6 +54,8 @@ const defaultValues: CreateCustomerInput = {
 export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) {
   const router = useRouter();
   const [serverError, setServerError] = React.useState<string | null>(null);
+  const [firstName, setFirstName] = React.useState("");
+  const [lastName, setLastName] = React.useState("");
   const [tagInput, setTagInput] = React.useState("");
   const [customRows, setCustomRows] = React.useState<{ key: string; value: string }[]>([]);
 
@@ -65,11 +67,22 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
   React.useEffect(() => {
     if (!open) {
       form.reset(defaultValues);
+      setFirstName("");
+      setLastName("");
       setTagInput("");
       setCustomRows([]);
       setServerError(null);
     }
   }, [open, form]);
+
+  React.useEffect(() => {
+    const combined = [firstName, lastName]
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+    form.setValue("name", combined, { shouldValidate: true, shouldDirty: false });
+  }, [firstName, lastName, form]);
 
   async function onSubmit(values: CreateCustomerInput) {
     setServerError(null);
@@ -97,7 +110,7 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[min(90vh,720px)] overflow-y-auto border-white/[0.08] bg-[#141414] p-0 sm:max-w-lg">
+      <DialogContent className="max-h-[min(90vh,800px)] w-[min(100vw-2rem,880px)] max-w-[880px] overflow-y-auto border-white/[0.08] bg-[#141414] p-0 sm:max-w-[880px]">
         <div className="border-b border-white/[0.06] bg-gradient-to-br from-primary/15 via-transparent to-transparent px-6 pb-5 pt-6">
           <DialogHeader className="space-y-2 text-left">
             <DialogTitle className="text-xl font-semibold tracking-tight text-white">New customer</DialogTitle>
@@ -126,90 +139,126 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
             ) : null}
           </AnimatePresence>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="crm-name" className="text-zinc-300">
-                Name <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="crm-name"
-                autoComplete="name"
-                className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
-                placeholder="Jane Doe"
-                {...form.register("name")}
-              />
-              {form.formState.errors.name ? (
-                <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>
-              ) : null}
+          <div className="grid gap-6 sm:grid-cols-2">
+            <div className="space-y-4">
+              <input type="hidden" {...form.register("name")} />
+              <div className="space-y-2">
+                <Label htmlFor="crm-first-name" className="text-zinc-300">
+                  First name
+                </Label>
+                <Input
+                  id="crm-first-name"
+                  autoComplete="given-name"
+                  className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+                  placeholder="Jane"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="crm-last-name" className="text-zinc-300">
+                  Last name
+                </Label>
+                <Input
+                  id="crm-last-name"
+                  autoComplete="family-name"
+                  className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+                  placeholder="Doe"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                />
+                {form.formState.errors.name ? (
+                  <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>
+                ) : null}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="crm-email" className="text-zinc-300">
+                  Email <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="crm-email"
+                  type="email"
+                  autoComplete="email"
+                  className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+                  placeholder="jane@company.com"
+                  {...form.register("email")}
+                />
+                {form.formState.errors.email ? (
+                  <p className="text-xs text-destructive">{form.formState.errors.email.message}</p>
+                ) : null}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="crm-phone" className="text-zinc-300">
+                  Phone
+                </Label>
+                <Input
+                  id="crm-phone"
+                  type="tel"
+                  autoComplete="tel"
+                  className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+                  placeholder="+61 …"
+                  {...form.register("phone")}
+                />
+              </div>
             </div>
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="crm-email" className="text-zinc-300">
-                Email <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="crm-email"
-                type="email"
-                autoComplete="email"
-                className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
-                placeholder="jane@company.com"
-                {...form.register("email")}
-              />
-              {form.formState.errors.email ? (
-                <p className="text-xs text-destructive">{form.formState.errors.email.message}</p>
-              ) : null}
-            </div>
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="crm-company" className="text-zinc-300">
-                Company name
-              </Label>
-              <Input
-                id="crm-company"
-                className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
-                placeholder="Acme Pty Ltd"
-                {...form.register("company")}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="crm-company-phone" className="text-zinc-300">
-                Company phone
-              </Label>
-              <Input
-                id="crm-company-phone"
-                type="tel"
-                className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
-                placeholder="+61 …"
-                {...form.register("companyPhone")}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="crm-company-email" className="text-zinc-300">
-                Company email
-              </Label>
-              <Input
-                id="crm-company-email"
-                type="email"
-                autoComplete="off"
-                className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
-                placeholder="hello@acme.com"
-                {...form.register("companyEmail")}
-              />
-              {form.formState.errors.companyEmail ? (
-                <p className="text-xs text-destructive">{form.formState.errors.companyEmail.message}</p>
-              ) : null}
-            </div>
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="crm-company-website" className="text-zinc-300">
-                Company website
-              </Label>
-              <Input
-                id="crm-company-website"
-                className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
-                placeholder="https://acme.com"
-                {...form.register("companyWebsite")}
-              />
-              {form.formState.errors.companyWebsite ? (
-                <p className="text-xs text-destructive">{form.formState.errors.companyWebsite.message}</p>
-              ) : null}
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="crm-company" className="text-zinc-300">
+                  Company name
+                </Label>
+                <Input
+                  id="crm-company"
+                  autoComplete="organization"
+                  className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+                  placeholder="Acme Pty Ltd"
+                  {...form.register("company")}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="crm-company-email" className="text-zinc-300">
+                  Company email
+                </Label>
+                <Input
+                  id="crm-company-email"
+                  type="email"
+                  autoComplete="off"
+                  className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+                  placeholder="hello@acme.com"
+                  {...form.register("companyEmail")}
+                />
+                {form.formState.errors.companyEmail ? (
+                  <p className="text-xs text-destructive">{form.formState.errors.companyEmail.message}</p>
+                ) : null}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="crm-company-phone" className="text-zinc-300">
+                  Company phone
+                </Label>
+                <Input
+                  id="crm-company-phone"
+                  type="tel"
+                  autoComplete="off"
+                  className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+                  placeholder="+61 …"
+                  {...form.register("companyPhone")}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="crm-company-website" className="text-zinc-300">
+                  Company website
+                </Label>
+                <Input
+                  id="crm-company-website"
+                  autoComplete="off"
+                  className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+                  placeholder="https://acme.com"
+                  {...form.register("companyWebsite")}
+                />
+                {form.formState.errors.companyWebsite ? (
+                  <p className="text-xs text-destructive">{form.formState.errors.companyWebsite.message}</p>
+                ) : null}
+              </div>
             </div>
           </div>
 
@@ -247,19 +296,6 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
                 {...form.register("companyCountry")}
               />
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="crm-phone" className="text-zinc-300">
-              Contact phone
-            </Label>
-            <Input
-              id="crm-phone"
-              type="tel"
-              className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
-              placeholder="+61 …"
-              {...form.register("phone")}
-            />
           </div>
 
           <div className="space-y-2">

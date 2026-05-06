@@ -19,6 +19,7 @@ import type {
   CustomerSubscriptionRollup,
 } from "@/types/customer";
 import { deleteOpportunitiesForCustomerDb } from "@/server/firestore/crm-opportunities";
+import { deleteMirroredStripeCustomer } from "@/server/stripe/delete-stripe-customer-for-crm";
 import { ensureStripeCustomer } from "@/server/stripe/proposal-billing";
 import { parseProposalRecord } from "@/server/firestore/parse-proposal";
 import type { SubscriptionRecord } from "@/types/subscription";
@@ -940,6 +941,14 @@ export async function deleteCustomerDocument(
   if (!db || !canStaffAccessCrm(user)) return { ok: false, message: "Not allowed." };
   const customer = await getCustomerRecordForOrg(user, customerId);
   if (!customer) return { ok: false, message: "Customer not found." };
+
+  if (customer.stripeCustomerId) {
+    const stripe = getStripe();
+    if (stripe) {
+      const stripeDel = await deleteMirroredStripeCustomer(stripe, customer.stripeCustomerId);
+      if (!stripeDel.ok) return { ok: false, message: stripeDel.message };
+    }
+  }
 
   const database = db;
 
