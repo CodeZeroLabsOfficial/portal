@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { motion } from "framer-motion";
-import { LayoutGrid, List } from "lucide-react";
+import { LayoutGrid, List, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   WORKSPACE_HUB_PAGE_TITLE_CLASS,
@@ -139,8 +139,9 @@ export function TasksPanel({ tasks, viewerUid, organizationId }: TasksPanelProps
         <div className="flex flex-wrap items-center gap-3">
           <Button
             type="button"
+            variant="ghost"
             size="sm"
-            className="gap-1.5"
+            className="gap-1.5 text-[14px] font-medium text-muted-foreground hover:text-foreground"
             disabled={!canCreateTasks}
             title={
               !canCreateTasks
@@ -149,7 +150,8 @@ export function TasksPanel({ tasks, viewerUid, organizationId }: TasksPanelProps
             }
             onClick={() => openAddDialog("todo")}
           >
-            + Add New
+            <Plus className="h-4 w-4 shrink-0" aria-hidden />
+            Add task
           </Button>
         </div>
       </div>
