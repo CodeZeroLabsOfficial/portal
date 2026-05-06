@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentSessionUser } from "@/lib/auth/server-session";
 import { getAdminPortalData } from "@/server/firestore/portal-data";
-import { AdminHomeDashboard } from "@/components/portal/admin-home-dashboard";
+import { AdminHomeDashboard, AdminHomeRightAside } from "@/components/portal/admin-home-dashboard";
 import { WorkspaceShell } from "@/components/portal/workspace-shell";
 
 export default async function AdminHomePage() {
@@ -20,7 +20,7 @@ export default async function AdminHomePage() {
       displayName={user.displayName ?? ""}
       userLabel={user.email || user.uid}
       showMainHeader={false}
-      showRightAside={false}
+      rightAside={<AdminHomeRightAside data={data} />}
     >
       <AdminHomeDashboard
         data={data}
