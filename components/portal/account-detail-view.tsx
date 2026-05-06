@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft, Building2, Globe, Mail, MapPin, Pencil, Phone, Users } from "lucide-react";
 import type { AccountDetailAggregate } from "@/server/firestore/crm-customers";
+import { formatAddressLines, websiteHref } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -9,34 +10,19 @@ import {
 } from "@/lib/workspace-page-typography";
 import { cn } from "@/lib/utils";
 
-function websiteHref(raw: string): string {
-  const t = raw.trim();
-  if (!t) return "";
-  if (/^https?:\/\//i.test(t)) return t;
-  return `https://${t}`;
-}
-
-function formatMultilineAddress(account: AccountDetailAggregate): string[] {
-  const lines: string[] = [];
-  if (account.companyAddressLine1?.trim()) lines.push(account.companyAddressLine1.trim());
-  if (account.companyAddressLine2?.trim()) lines.push(account.companyAddressLine2.trim());
-  const locality = [
-    [account.companyCity, account.companyRegion].filter(Boolean).join(", "),
-    account.companyPostalCode,
-  ]
-    .filter(Boolean)
-    .join(" ");
-  const tail = [locality, account.companyCountry?.trim()].filter(Boolean).join(", ");
-  if (tail) lines.push(tail);
-  return lines;
-}
-
 export interface AccountDetailViewProps {
   account: AccountDetailAggregate;
 }
 
 export function AccountDetailView({ account }: AccountDetailViewProps) {
-  const addressLines = formatMultilineAddress(account);
+  const addressLines = formatAddressLines({
+    addressLine1: account.companyAddressLine1,
+    addressLine2: account.companyAddressLine2,
+    city: account.companyCity,
+    region: account.companyRegion,
+    postalCode: account.companyPostalCode,
+    country: account.companyCountry,
+  });
   const hasAddress = addressLines.length > 0;
 
   return (

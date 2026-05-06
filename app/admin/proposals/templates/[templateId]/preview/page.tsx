@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { getCurrentSessionUser, hasRole } from "@/lib/auth/server-session";
+import { getCurrentSessionUser, isStaff } from "@/lib/auth/server-session";
 import { getProposalTemplateForStaff } from "@/server/firestore/proposal-templates";
 import { ProposalDocumentView } from "@/components/proposal/proposal-document-view";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,7 @@ export default async function ProposalTemplatePublicPreviewPage({ params }: Page
   if (!user) {
     redirect("/login?next=/admin/proposals");
   }
-  if (!hasRole(user, ["admin", "team"])) {
+  if (!isStaff(user)) {
     redirect("/dashboard");
   }
 

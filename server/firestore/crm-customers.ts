@@ -1,4 +1,6 @@
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
+import { isStaff } from "@/lib/auth/server-session";
+import { asNumber, asString, asStringStringMap } from "@/lib/firestore/coerce";
 import { logError } from "@/lib/logging";
 import { coerceTimestampToMillis } from "@/lib/firestore/timestamp";
 import { COLLECTIONS } from "@/server/firestore/collections";
@@ -27,19 +29,6 @@ import type { SubscriptionRecord } from "@/types/subscription";
 import type { TaskRecord } from "@/types/task";
 import type { PortalUser } from "@/types/user";
 
-function asString(value: unknown): string | undefined {
-  return typeof value === "string" && value.length > 0 ? value : undefined;
-}
-
-function asNumber(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
-}
-
-/** Single-tenant CRM: any admin/team member can manage customers (no `organizationId` gate). */
-function canStaffAccessCrm(user: PortalUser): boolean {
-  return user.role === "admin" || user.role === "team";
-}
-
 type AdminDb = NonNullable<ReturnType<typeof getFirebaseAdminFirestore>>;
 
 function formatLocation(data: Pick<CustomerRecord, "city" | "region" | "country">): string {
@@ -62,21 +51,28 @@ function companyAddressSummary(c: CustomerRecord): string {
   return chunks.join(" · ") || "—";
 }
 
+/**
+ * Pre-sort a customer group newest→oldest so callers can scan once instead of
+ * re-sorting per field (`pickLatestNonEmpty` was previously sorting 6+ times
+ * per group in `getAdminAccountListRows` / `getAccountDetailForKey`).
+ */
+function sortGroupNewestFirst(customers: CustomerRecord[]): CustomerRecord[] {
+  return [...customers].sort((a, b) => (b.updatedAtMs || 0) - (a.updatedAtMs || 0));
+}
+
 function pickLatestNonEmpty(
-  customers: CustomerRecord[],
+  sortedNewestFirst: CustomerRecord[],
   pick: (row: CustomerRecord) => string | undefined,
 ): string {
-  const sorted = [...customers].sort((a, b) => (b.updatedAtMs || 0) - (a.updatedAtMs || 0));
-  for (const row of sorted) {
+  for (const row of sortedNewestFirst) {
     const v = pick(row)?.trim();
     if (v) return v;
   }
   return "";
 }
 
-function displayCompanyNameForGroup(customers: CustomerRecord[]): string {
-  const sorted = [...customers].sort((a, b) => (b.updatedAtMs || 0) - (a.updatedAtMs || 0));
-  const raw = sorted[0]?.company?.trim();
+function displayCompanyNameForGroup(sortedNewestFirst: CustomerRecord[]): string {
+  const raw = sortedNewestFirst[0]?.company?.trim();
   return raw || "—";
 }
 
@@ -89,15 +85,7 @@ function parseCustomerRecord(id: string, data: Record<string, unknown>): Custome
   const tags = Array.isArray(tagsRaw)
     ? tagsRaw.filter((t): t is string => typeof t === "string" && t.length > 0).slice(0, 30)
     : [];
-  const cfRaw = data.customFields;
-  const customFields: Record<string, string> =
-    cfRaw && typeof cfRaw === "object" && !Array.isArray(cfRaw)
-      ? Object.fromEntries(
-          Object.entries(cfRaw as Record<string, unknown>)
-            .filter(([k, v]) => typeof k === "string" && typeof v === "string")
-            .map(([k, v]) => [k, v as string]),
-        )
-      : {};
+  const customFields = asStringStringMap(data.customFields);
   const status = data.status === "archived" ? "archived" : "active";
   const crmType: CustomerCrmType = data.crmType === "lead" ? "lead" : "contact";
   const accountOnly = data.accountOnly === true;
@@ -169,7 +157,6 @@ function customerToListRow(
     email: customer.email.trim() || "—",
     phone: customer.phone?.trim() || "—",
     location: location.trim() || "—",
-    gender: "—",
     avatarUrl: customer.avatarUrl,
     company: customer.company,
     tags: customer.tags,
@@ -231,7 +218,7 @@ export interface AdminBillingSnapshot {
 /** Subscriptions and invoices mirrored into Firestore, indexed for admin billing workflows. */
 export async function getAdminBillingSnapshot(user: PortalUser): Promise<AdminBillingSnapshot | null> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canStaffAccessCrm(user)) {
+  if (!db || !isStaff(user)) {
     return null;
   }
   try {
@@ -266,7 +253,7 @@ async function listCustomerRecordsForStaffSorted(
   user: PortalUser,
 ): Promise<CustomerRecord[] | null> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canStaffAccessCrm(user)) {
+  if (!db || !isStaff(user)) {
     return null;
   }
   try {
@@ -285,7 +272,7 @@ async function listCustomerRecordsForStaffSorted(
 
 export async function getAdminCustomerListRows(user: PortalUser): Promise<CustomerListRow[]> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canStaffAccessCrm(user)) {
+  if (!db || !isStaff(user)) {
     return [];
   }
   try {
@@ -321,25 +308,26 @@ export async function getAdminAccountListRows(user: PortalUser): Promise<Account
 
   const rows: AccountListRow[] = [];
   for (const [, group] of byNorm) {
-    const displayName = displayCompanyNameForGroup(group);
+    const sorted = sortGroupNewestFirst(group);
+    const displayName = displayCompanyNameForGroup(sorted);
     const key = companyNameToAccountKey(displayName);
     if (!key) continue;
-    const addressSummary = (() => {
-      const sorted = [...group].sort((a, b) => (b.updatedAtMs || 0) - (a.updatedAtMs || 0));
-      for (const c of sorted) {
-        const s = companyAddressSummary(c);
-        if (s !== "—") return s;
+    let addressSummary = "—";
+    for (const c of sorted) {
+      const s = companyAddressSummary(c);
+      if (s !== "—") {
+        addressSummary = s;
+        break;
       }
-      return "—";
-    })();
+    }
     const realContacts = group.filter((r) => !r.accountOnly);
     rows.push({
       key,
       displayName,
       addressSummary,
-      companyPhone: pickLatestNonEmpty(group, (r) => r.companyPhone),
-      companyEmail: pickLatestNonEmpty(group, (r) => r.companyEmail),
-      companyWebsite: pickLatestNonEmpty(group, (r) => r.companyWebsite),
+      companyPhone: pickLatestNonEmpty(sorted, (r) => r.companyPhone),
+      companyEmail: pickLatestNonEmpty(sorted, (r) => r.companyEmail),
+      companyWebsite: pickLatestNonEmpty(sorted, (r) => r.companyWebsite),
       contactCount: realContacts.length,
       activeContactCount: realContacts.filter((r) => r.status === "active").length,
     });
@@ -377,21 +365,22 @@ export async function getAccountDetailForKey(
   const group = customers.filter((c) => c.company?.trim().toLowerCase() === norm);
   if (group.length === 0) return null;
 
-  const displayName = displayCompanyNameForGroup(group);
-  const contacts = group.filter((c) => !c.accountOnly);
+  const sorted = sortGroupNewestFirst(group);
+  const displayName = displayCompanyNameForGroup(sorted);
+  const contacts = sorted.filter((c) => !c.accountOnly);
   return {
     key: companyNameToAccountKey(displayName),
     displayName,
-    companyPhone: pickLatestNonEmpty(group, (r) => r.companyPhone),
-    companyEmail: pickLatestNonEmpty(group, (r) => r.companyEmail),
-    companyWebsite: pickLatestNonEmpty(group, (r) => r.companyWebsite),
-    companyAddressLine1: pickLatestNonEmpty(group, (r) => r.companyAddressLine1) || undefined,
-    companyAddressLine2: pickLatestNonEmpty(group, (r) => r.companyAddressLine2) || undefined,
-    companyCity: pickLatestNonEmpty(group, (r) => r.companyCity) || undefined,
-    companyRegion: pickLatestNonEmpty(group, (r) => r.companyRegion) || undefined,
-    companyPostalCode: pickLatestNonEmpty(group, (r) => r.companyPostalCode) || undefined,
-    companyCountry: pickLatestNonEmpty(group, (r) => r.companyCountry) || undefined,
-    contacts: [...contacts].sort((a, b) => (b.updatedAtMs || 0) - (a.updatedAtMs || 0)),
+    companyPhone: pickLatestNonEmpty(sorted, (r) => r.companyPhone),
+    companyEmail: pickLatestNonEmpty(sorted, (r) => r.companyEmail),
+    companyWebsite: pickLatestNonEmpty(sorted, (r) => r.companyWebsite),
+    companyAddressLine1: pickLatestNonEmpty(sorted, (r) => r.companyAddressLine1) || undefined,
+    companyAddressLine2: pickLatestNonEmpty(sorted, (r) => r.companyAddressLine2) || undefined,
+    companyCity: pickLatestNonEmpty(sorted, (r) => r.companyCity) || undefined,
+    companyRegion: pickLatestNonEmpty(sorted, (r) => r.companyRegion) || undefined,
+    companyPostalCode: pickLatestNonEmpty(sorted, (r) => r.companyPostalCode) || undefined,
+    companyCountry: pickLatestNonEmpty(sorted, (r) => r.companyCountry) || undefined,
+    contacts,
   };
 }
 
@@ -403,7 +392,7 @@ export async function createAccountDocument(
   | { ok: false; message: string }
 > {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canStaffAccessCrm(user)) {
+  if (!db || !isStaff(user)) {
     return { ok: false, message: "CRM is only available to admin or team members." };
   }
 
@@ -486,7 +475,7 @@ export async function updateAccountDetailsForGroup(
   input: UpdateAccountFormInput,
 ): Promise<{ ok: true; newAccountKey: string } | { ok: false; message: string }> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canStaffAccessCrm(user)) {
+  if (!db || !isStaff(user)) {
     return { ok: false, message: "CRM is only available to admin or team members." };
   }
 
@@ -553,7 +542,7 @@ export async function getCustomerRecordForOrg(
   customerId: string,
 ): Promise<CustomerRecord | null> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canStaffAccessCrm(user)) return null;
+  if (!db || !isStaff(user)) return null;
   const ref = db.collection(COLLECTIONS.customers).doc(customerId);
   const snap = await ref.get();
   if (!snap.exists) return null;
@@ -611,7 +600,7 @@ export async function listCustomerNotes(
   limit = 80,
 ): Promise<CustomerNoteRecord[]> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canStaffAccessCrm(user)) return [];
+  if (!db || !isStaff(user)) return [];
   const customer = await getCustomerRecordForOrg(user, customerId);
   if (!customer) return [];
   try {
@@ -635,7 +624,7 @@ export async function listCustomerActivities(
   limit = 80,
 ): Promise<CustomerActivityRecord[]> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canStaffAccessCrm(user)) return [];
+  if (!db || !isStaff(user)) return [];
   const customer = await getCustomerRecordForOrg(user, customerId);
   if (!customer) return [];
   try {
@@ -680,7 +669,7 @@ export async function listInvoicesForStripeCustomer(
   stripeCustomerId: string | undefined,
 ): Promise<InvoiceRecord[]> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canStaffAccessCrm(user) || !stripeCustomerId) return [];
+  if (!db || !isStaff(user) || !stripeCustomerId) return [];
   try {
     const snap = await db
       .collection(COLLECTIONS.invoices)
@@ -698,7 +687,7 @@ export async function listSubscriptionsForStripeCustomer(
   stripeCustomerId: string | undefined,
 ): Promise<SubscriptionRecord[]> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canStaffAccessCrm(user) || !stripeCustomerId) return [];
+  if (!db || !isStaff(user) || !stripeCustomerId) return [];
   try {
     const snap = await db
       .collection(COLLECTIONS.subscriptions)
@@ -745,7 +734,7 @@ export async function listProposalsLinkedToCustomer(
   recipientEmail: string,
 ): Promise<ProposalRecord[]> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canStaffAccessCrm(user)) return [];
+  if (!db || !isStaff(user)) return [];
   const emailLower = recipientEmail.trim().toLowerCase();
 
   try {
@@ -781,7 +770,7 @@ export async function listProposalsLinkedToCustomer(
 
 export async function listTasksForCustomer(user: PortalUser, customerId: string): Promise<TaskRecord[]> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canStaffAccessCrm(user)) return [];
+  if (!db || !isStaff(user)) return [];
   try {
     const snap = await db
       .collection(COLLECTIONS.tasks)
@@ -809,7 +798,7 @@ export async function createCustomerDocument(
   input: CreateCustomerInput,
 ): Promise<CreateCustomerResult | CreateCustomerError> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canStaffAccessCrm(user)) {
+  if (!db || !isStaff(user)) {
     return { ok: false, message: "CRM is only available to admin or team members." };
   }
   const customFields: Record<string, string> = {};
@@ -966,7 +955,7 @@ export async function updateCustomerDocument(
   input: UpdateCustomerFormInput,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canStaffAccessCrm(user)) {
+  if (!db || !isStaff(user)) {
     return { ok: false, message: "CRM is only available to admin or team members." };
   }
 
@@ -1059,7 +1048,7 @@ export async function appendCustomerNote(
   kind: CustomerNoteRecord["kind"],
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canStaffAccessCrm(user)) {
+  if (!db || !isStaff(user)) {
     return { ok: false, message: "Not allowed." };
   }
   const customer = await getCustomerRecordForOrg(user, customerId);
@@ -1089,7 +1078,7 @@ export async function setCustomerArchived(
   archived: boolean,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canStaffAccessCrm(user)) return { ok: false, message: "Not allowed." };
+  if (!db || !isStaff(user)) return { ok: false, message: "Not allowed." };
   const customer = await getCustomerRecordForOrg(user, customerId);
   if (!customer) return { ok: false, message: "Customer not found." };
   await db.collection(COLLECTIONS.customers).doc(customerId).update({
@@ -1111,7 +1100,7 @@ export async function deleteCustomerDocument(
   customerId: string,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canStaffAccessCrm(user)) return { ok: false, message: "Not allowed." };
+  if (!db || !isStaff(user)) return { ok: false, message: "Not allowed." };
   const customer = await getCustomerRecordForOrg(user, customerId);
   if (!customer) return { ok: false, message: "Customer not found." };
 
@@ -1149,7 +1138,7 @@ export async function syncStripeCustomerBasics(
   stripeCustomerId: string,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canStaffAccessCrm(user)) return { ok: false, message: "Not allowed." };
+  if (!db || !isStaff(user)) return { ok: false, message: "Not allowed." };
   const customer = await getCustomerRecordForOrg(user, customerId);
   if (!customer) return { ok: false, message: "Customer not found." };
   await db

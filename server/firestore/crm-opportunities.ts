@@ -1,4 +1,6 @@
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
+import { isStaff } from "@/lib/auth/server-session";
+import { asNumber, asString, asStringStringMap } from "@/lib/firestore/coerce";
 import { logError } from "@/lib/logging";
 import { coerceTimestampToMillis } from "@/lib/firestore/timestamp";
 import { normalizeOpportunityStage } from "@/lib/crm/opportunity-stages";
@@ -13,32 +15,11 @@ import type {
 } from "@/types/opportunity";
 import type { PortalUser } from "@/types/user";
 
-function asString(value: unknown): string | undefined {
-  return typeof value === "string" && value.length > 0 ? value : undefined;
-}
-
-function asNumber(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
-}
-
-function canStaffAccessCrm(user: PortalUser): boolean {
-  return user.role === "admin" || user.role === "team";
-}
-
 type AdminDb = NonNullable<ReturnType<typeof getFirebaseAdminFirestore>>;
 
 function parseOpportunity(id: string, data: Record<string, unknown>): OpportunityRecord | null {
   const customerId = asString(data.customerId);
   if (!customerId) return null;
-  const cfRaw = data.customFieldsSnapshot;
-  const customFieldsSnapshot: Record<string, string> =
-    cfRaw && typeof cfRaw === "object" && !Array.isArray(cfRaw)
-      ? Object.fromEntries(
-          Object.entries(cfRaw as Record<string, unknown>)
-            .filter(([k, v]) => typeof k === "string" && typeof v === "string")
-            .map(([k, v]) => [k, v as string]),
-        )
-      : {};
   return {
     id,
     customerId,
@@ -47,7 +28,7 @@ function parseOpportunity(id: string, data: Record<string, unknown>): Opportunit
     stage: normalizeOpportunityStage(data.stage),
     amountMinor: asNumber(data.amountMinor),
     currency: (asString(data.currency) ?? "aud").toLowerCase(),
-    customFieldsSnapshot,
+    customFieldsSnapshot: asStringStringMap(data.customFieldsSnapshot),
     notes: asString(data.notes),
     createdAtMs: coerceTimestampToMillis(data.createdAt ?? data.createdAtMs),
     updatedAtMs: coerceTimestampToMillis(data.updatedAt ?? data.updatedAtMs),
@@ -57,7 +38,7 @@ function parseOpportunity(id: string, data: Record<string, unknown>): Opportunit
 
 export async function listOpportunitiesForStaff(user: PortalUser): Promise<OpportunityRecord[]> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canStaffAccessCrm(user)) return [];
+  if (!db || !isStaff(user)) return [];
   try {
     const snap = await db.collection(COLLECTIONS.opportunities).limit(500).get();
     const rows = snap.docs
@@ -77,7 +58,7 @@ export async function listOpportunitiesForCustomer(
   customerId: string,
 ): Promise<OpportunityRecord[]> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canStaffAccessCrm(user)) return [];
+  if (!db || !isStaff(user)) return [];
   try {
     const snap = await db
       .collection(COLLECTIONS.opportunities)
@@ -98,7 +79,7 @@ export async function getOpportunityForStaff(
   opportunityId: string,
 ): Promise<OpportunityRecord | null> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canStaffAccessCrm(user)) return null;
+  if (!db || !isStaff(user)) return null;
   const snap = await db.collection(COLLECTIONS.opportunities).doc(opportunityId).get();
   if (!snap.exists) return null;
   return parseOpportunity(snap.id, snap.data() as Record<string, unknown>);
@@ -126,7 +107,7 @@ export async function convertLeadToContactWithOpportunity(
   input: ConvertLeadInput,
 ): Promise<ConvertLeadResult> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canStaffAccessCrm(user)) {
+  if (!db || !isStaff(user)) {
     return { ok: false, message: "CRM is only available to admin or team members." };
   }
 
@@ -146,15 +127,7 @@ export async function convertLeadToContactWithOpportunity(
     return { ok: false, message: "This profile is already a contact." };
   }
 
-  const customFieldsRaw = customerData.customFields;
-  const customFieldsSnapshot: Record<string, string> =
-    customFieldsRaw && typeof customFieldsRaw === "object" && !Array.isArray(customFieldsRaw)
-      ? Object.fromEntries(
-          Object.entries(customFieldsRaw as Record<string, unknown>)
-            .filter(([k, v]) => typeof k === "string" && typeof v === "string")
-            .map(([k, v]) => [k, v as string]),
-        )
-      : {};
+  const customFieldsSnapshot = asStringStringMap(customerData.customFields);
 
   const orgId = asString(customerData.organizationId) ?? user.organizationId ?? undefined;
   const initialStage = input.initialStage ?? "discovery";
@@ -231,7 +204,7 @@ export async function updateOpportunityStage(
   stage: import("@/types/opportunity").OpportunityStage,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canStaffAccessCrm(user)) return { ok: false, message: "Not allowed." };
+  if (!db || !isStaff(user)) return { ok: false, message: "Not allowed." };
   const existing = await getOpportunityForStaff(user, opportunityId);
   if (!existing) return { ok: false, message: "Opportunity not found." };
 
@@ -327,7 +300,7 @@ export async function listOpportunityNotes(
   limit = 80,
 ): Promise<OpportunityNoteRecord[]> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canStaffAccessCrm(user)) return [];
+  if (!db || !isStaff(user)) return [];
   const opp = await getOpportunityForStaff(user, opportunityId);
   if (!opp) return [];
   try {
@@ -355,7 +328,7 @@ export async function listOpportunityActivities(
   limit = 80,
 ): Promise<OpportunityActivityRecord[]> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canStaffAccessCrm(user)) return [];
+  if (!db || !isStaff(user)) return [];
   const opp = await getOpportunityForStaff(user, opportunityId);
   if (!opp) return [];
   try {
@@ -383,7 +356,7 @@ export async function appendOpportunityNote(
   body: string,
 ): Promise<{ ok: true; noteId: string } | { ok: false; message: string }> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canStaffAccessCrm(user)) {
+  if (!db || !isStaff(user)) {
     return { ok: false, message: "Not allowed." };
   }
   const opp = await getOpportunityForStaff(user, opportunityId);
@@ -419,7 +392,7 @@ export async function appendOpportunityActivity(
   },
 ): Promise<{ ok: true; activityId: string } | { ok: false; message: string }> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canStaffAccessCrm(user)) {
+  if (!db || !isStaff(user)) {
     return { ok: false, message: "Not allowed." };
   }
   const opp = await getOpportunityForStaff(user, opportunityId);
@@ -461,7 +434,7 @@ export async function syncOpportunityCustomFieldsFromCustomer(
   customer: CustomerRecord,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canStaffAccessCrm(user)) return { ok: false, message: "Not allowed." };
+  if (!db || !isStaff(user)) return { ok: false, message: "Not allowed." };
   const opp = await getOpportunityForStaff(user, opportunityId);
   if (!opp || opp.customerId !== customer.id) return { ok: false, message: "Opportunity not found." };
 

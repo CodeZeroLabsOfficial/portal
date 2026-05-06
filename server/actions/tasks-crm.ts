@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { getCurrentSessionUser, hasRole } from "@/lib/auth/server-session";
+import { requireStaffSession } from "@/lib/auth/server-session";
 import { TASK_BOARD_COLUMNS, type TaskBoardColumnId } from "@/lib/tasks/task-board-columns";
 import { TASK_PRIORITY_VALUES, type TaskPriorityValue } from "@/lib/tasks/task-priority";
 import {
@@ -23,12 +23,6 @@ const taskBoardColumnZodEnum = TASK_BOARD_COLUMNS as unknown as [
   ...TaskBoardColumnId[],
 ];
 
-async function requireStaffForCrm() {
-  const user = await getCurrentSessionUser();
-  if (!user || !hasRole(user, ["admin", "team"])) return null;
-  return user;
-}
-
 const updateTaskStatusSchema = z.object({
   taskId: z.string().min(1),
   column: z.enum(taskBoardColumnZodEnum),
@@ -37,7 +31,7 @@ const updateTaskStatusSchema = z.object({
 export async function updateTaskBoardColumnAction(
   raw: unknown,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  const user = await requireStaffForCrm();
+  const user = await requireStaffSession();
   if (!user) return { ok: false, message: "Unauthorized." };
 
   const parsed = updateTaskStatusSchema.safeParse(raw);
@@ -66,7 +60,7 @@ const createTaskSchema = z.object({
 export async function createTaskAction(
   raw: unknown,
 ): Promise<{ ok: true; taskId: string } | { ok: false; message: string }> {
-  const user = await requireStaffForCrm();
+  const user = await requireStaffSession();
   if (!user) return { ok: false, message: "Unauthorized." };
 
   const parsed = createTaskSchema.safeParse(raw);
@@ -103,7 +97,7 @@ const updateTaskSchema = z.object({
 export async function updateTaskAction(
   raw: unknown,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  const user = await requireStaffForCrm();
+  const user = await requireStaffSession();
   if (!user) return { ok: false, message: "Unauthorized." };
 
   const parsed = updateTaskSchema.safeParse(raw);
@@ -130,7 +124,7 @@ export async function updateTaskAction(
 export async function listTaskAssigneeOptionsAction(): Promise<
   { ok: true; options: Array<{ uid: string; displayName: string; email: string }> } | { ok: false; message: string }
 > {
-  const user = await requireStaffForCrm();
+  const user = await requireStaffSession();
   if (!user) return { ok: false, message: "Unauthorized." };
   const options = await listAssignableUsersForStaff(user);
   return { ok: true, options };
@@ -139,7 +133,7 @@ export async function listTaskAssigneeOptionsAction(): Promise<
 export async function deleteTaskAction(
   taskId: string,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  const user = await requireStaffForCrm();
+  const user = await requireStaffSession();
   if (!user) return { ok: false, message: "Unauthorized." };
   const trimmed = taskId?.trim();
   if (!trimmed) return { ok: false, message: "Invalid task." };

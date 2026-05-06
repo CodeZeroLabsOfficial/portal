@@ -9,8 +9,6 @@ export interface CustomerListRow {
   phone: string;
   /** City, region, country — formatted for table display. */
   location: string;
-  /** Legacy column; unused for CRM-only rows — show em dash. */
-  gender: string;
   avatarUrl?: string;
   company?: string;
   tags: string[];

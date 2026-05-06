@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { FileText } from "lucide-react";
-import { getCurrentSessionUser, hasRole } from "@/lib/auth/server-session";
+import { getCurrentSessionUser, isStaff } from "@/lib/auth/server-session";
 import { listProposalTemplatesForOrg } from "@/server/firestore/proposal-templates";
 import { WorkspaceShell } from "@/components/portal/workspace-shell";
 import {
@@ -18,7 +18,7 @@ export default async function AdminProposalsHubPage() {
   if (!user) {
     redirect("/login?next=/admin/proposals");
   }
-  if (!hasRole(user, ["admin", "team"])) {
+  if (!isStaff(user)) {
     redirect("/dashboard");
   }
 

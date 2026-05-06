@@ -1,9 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { ZodError } from "zod";
-import { getCurrentSessionUser, hasRole } from "@/lib/auth/server-session";
+import { requireStaffSession } from "@/lib/auth/server-session";
 import { addCustomerNoteSchema, createCustomerSchema, updateCustomerFormSchema } from "@/lib/schemas/customer";
+import { zodErrorToMessage } from "@/lib/zod-error";
 import { FieldValue } from "firebase-admin/firestore";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import { COLLECTIONS } from "@/server/firestore/collections";
@@ -18,19 +18,6 @@ import {
 } from "@/server/firestore/crm-customers";
 import { getStripe } from "@/lib/stripe/server";
 
-function zodErrorToMessage(error: ZodError): string {
-  const first = error.errors[0];
-  return first ? `${first.path.join(".")}: ${first.message}` : "Invalid input";
-}
-
-async function requireStaffForCrm() {
-  const user = await getCurrentSessionUser();
-  if (!user || !hasRole(user, ["admin", "team"])) {
-    return null;
-  }
-  return user;
-}
-
 function revalidateCrmCustomerPaths(customerId?: string) {
   revalidatePath("/admin/customers", "layout");
   revalidatePath("/admin/accounts", "layout");
@@ -42,7 +29,7 @@ function revalidateCrmCustomerPaths(customerId?: string) {
 export async function createCustomerAction(
   raw: unknown,
 ): Promise<{ ok: true; customerId: string } | { ok: false; message: string }> {
-  const user = await requireStaffForCrm();
+  const user = await requireStaffSession();
   if (!user) {
     return { ok: false, message: "You need an admin or team session to manage customers." };
   }
@@ -61,7 +48,7 @@ export async function createCustomerAction(
 export async function updateCustomerAction(
   raw: unknown,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  const user = await requireStaffForCrm();
+  const user = await requireStaffSession();
   if (!user) {
     return { ok: false, message: "You need an admin or team session to manage customers." };
   }
@@ -82,7 +69,7 @@ export async function updateCustomerAction(
 export async function addCustomerNoteAction(
   raw: unknown,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  const user = await requireStaffForCrm();
+  const user = await requireStaffSession();
   if (!user) {
     return { ok: false, message: "Unauthorized." };
   }
@@ -103,7 +90,7 @@ export async function archiveCustomerAction(
   customerId: string,
   archived: boolean,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  const user = await requireStaffForCrm();
+  const user = await requireStaffSession();
   if (!user) return { ok: false, message: "Unauthorized." };
   const result = await setCustomerArchived(user, customerId, archived);
   if (!result.ok) return { ok: false, message: result.message };
@@ -114,7 +101,7 @@ export async function archiveCustomerAction(
 export async function deleteCustomerAction(
   customerId: string,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  const user = await requireStaffForCrm();
+  const user = await requireStaffSession();
   if (!user) return { ok: false, message: "Unauthorized." };
   const result = await deleteCustomerDocument(user, customerId);
   if (!result.ok) return { ok: false, message: result.message };
@@ -126,7 +113,7 @@ export async function linkStripeCustomerIdAction(
   customerId: string,
   stripeCustomerId: string,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  const user = await requireStaffForCrm();
+  const user = await requireStaffSession();
   if (!user) return { ok: false, message: "Unauthorized." };
   const trimmed = stripeCustomerId.trim();
   if (!trimmed.startsWith("cus_")) {
@@ -144,7 +131,7 @@ export async function linkStripeCustomerIdAction(
 export async function pullStripeCustomerProfileAction(
   customerId: string,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  const user = await requireStaffForCrm();
+  const user = await requireStaffSession();
   if (!user) return { ok: false, message: "Unauthorized." };
 
   const customer = await getCustomerRecordForOrg(user, customerId);

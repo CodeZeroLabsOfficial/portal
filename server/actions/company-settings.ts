@@ -1,17 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { ZodError } from "zod";
 import { getCurrentSessionUser } from "@/lib/auth/server-session";
 import { updateCompanySettingsSchema } from "@/lib/schemas/company-settings";
+import { zodErrorToMessage } from "@/lib/zod-error";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { workspaceOrganizationDocId } from "@/server/firestore/organization-settings";
-
-function zodErrorToMessage(error: ZodError): string {
-  const first = error.errors[0];
-  return first ? `${first.path.join(".")}: ${first.message}` : "Invalid input";
-}
 
 export async function updateWorkspaceCompanySettingsAction(
   raw: unknown,

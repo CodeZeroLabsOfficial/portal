@@ -4,7 +4,6 @@ import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
-import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import {
   createAccountFormSchema,
@@ -19,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { FormServerError } from "@/components/ui/form-server-error";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -86,19 +86,7 @@ export function AddAccountModal({ open, onOpenChange }: AddAccountModalProps) {
           className="space-y-3 px-6 py-5"
           noValidate
         >
-          <AnimatePresence initial={false}>
-            {serverError ? (
-              <motion.div
-                initial={{ opacity: 0, y: -6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                className="rounded-xl border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-                role="alert"
-              >
-                {serverError}
-              </motion.div>
-            ) : null}
-          </AnimatePresence>
+          <FormServerError message={serverError} rounded="xl" />
 
           <div className="grid gap-x-6 gap-y-1.5 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5 sm:col-span-2">

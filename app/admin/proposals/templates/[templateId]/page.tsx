@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, ExternalLink } from "lucide-react";
-import { getCurrentSessionUser, hasRole } from "@/lib/auth/server-session";
+import { getCurrentSessionUser, isStaff } from "@/lib/auth/server-session";
 import { getProposalTemplateForStaff } from "@/server/firestore/proposal-templates";
 import { DeleteProposalTemplateButton } from "@/components/proposal/delete-proposal-template-button";
 import { ProposalDocumentEditorLazy } from "@/components/proposal/proposal-document-editor-lazy";
@@ -17,7 +17,7 @@ export default async function EditProposalTemplatePage({ params }: PageProps) {
   if (!user) {
     redirect("/login?next=/admin/proposals");
   }
-  if (!hasRole(user, ["admin", "team"])) {
+  if (!isStaff(user)) {
     redirect("/dashboard");
   }
 

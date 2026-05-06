@@ -3,7 +3,6 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 import { createTaskAction, listTaskAssigneeOptionsAction } from "@/server/actions/tasks-crm";
 import {
   TASK_BOARD_COLUMNS,
@@ -25,6 +24,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { FormServerError } from "@/components/ui/form-server-error";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -133,19 +133,7 @@ export function AddTaskDialog({
         </div>
 
         <form onSubmit={onSubmit} className="space-y-3 px-6 py-5" noValidate>
-          <AnimatePresence initial={false}>
-            {serverError ? (
-              <motion.div
-                initial={{ opacity: 0, y: -6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                className="rounded-xl border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-                role="alert"
-              >
-                {serverError}
-              </motion.div>
-            ) : null}
-          </AnimatePresence>
+          <FormServerError message={serverError} rounded="xl" />
 
           {disabled ? (
             <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">

@@ -1,27 +1,11 @@
+import { isStaff } from "@/lib/auth/server-session";
+import { asNumber, asString } from "@/lib/firestore/coerce";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import { parseProposalDocument } from "@/lib/schemas/proposal-document";
-import type { ProposalBranding } from "@/types/proposal";
+import { parseBranding } from "@/server/firestore/parse-proposal";
 import type { ProposalTemplateRecord } from "@/types/proposal-template";
 import type { PortalUser } from "@/types/user";
-
-function asString(value: unknown): string | undefined {
-  return typeof value === "string" && value.length > 0 ? value : undefined;
-}
-
-function asNumber(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
-}
-
-function parseBranding(raw: unknown): ProposalBranding | undefined {
-  if (!raw || typeof raw !== "object") return undefined;
-  const b = raw as Record<string, unknown>;
-  const logoUrl = asString(b.logoUrl);
-  const primaryColor = asString(b.primaryColor);
-  const fontFamily = asString(b.fontFamily);
-  if (!logoUrl && !primaryColor && !fontFamily) return undefined;
-  return { logoUrl, primaryColor, fontFamily };
-}
 
 export function parseProposalTemplateRecord(id: string, data: Record<string, unknown>): ProposalTemplateRecord {
   const documentRaw = data.document && typeof data.document === "object" ? data.document : {};
@@ -47,13 +31,9 @@ export function parseProposalTemplateRecord(id: string, data: Record<string, unk
   };
 }
 
-function canAccessTemplates(user: PortalUser): boolean {
-  return user.role === "admin" || user.role === "team";
-}
-
 export async function listProposalTemplatesForOrg(user: PortalUser): Promise<ProposalTemplateRecord[]> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canAccessTemplates(user)) return [];
+  if (!db || !isStaff(user)) return [];
   const orgId = user.organizationId ?? "default";
   try {
     const snap = await db
@@ -72,7 +52,7 @@ export async function getProposalTemplateForStaff(
   templateId: string,
 ): Promise<ProposalTemplateRecord | null> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canAccessTemplates(user)) return null;
+  if (!db || !isStaff(user)) return null;
   const orgId = user.organizationId ?? "default";
   try {
     const ref = db.collection(COLLECTIONS.proposalTemplates).doc(templateId);

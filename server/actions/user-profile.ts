@@ -1,16 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { ZodError } from "zod";
 import { getCurrentSessionUser } from "@/lib/auth/server-session";
 import { updateUserProfileSchema } from "@/lib/schemas/user-profile";
+import { zodErrorToMessage } from "@/lib/zod-error";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import { COLLECTIONS } from "@/server/firestore/collections";
-
-function zodErrorToMessage(error: ZodError): string {
-  const first = error.errors[0];
-  return first ? `${first.path.join(".")}: ${first.message}` : "Invalid input";
-}
 
 export async function updateCurrentUserProfileAction(
   raw: unknown,

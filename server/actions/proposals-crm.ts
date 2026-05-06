@@ -3,7 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { FieldValue } from "firebase-admin/firestore";
-import { getCurrentSessionUser, hasRole } from "@/lib/auth/server-session";
+import { requireStaffSession } from "@/lib/auth/server-session";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { getCustomerRecordForOrg } from "@/server/firestore/crm-customers";
@@ -15,12 +15,6 @@ import { logError } from "@/lib/logging";
 import type { CustomerRecord } from "@/types/customer";
 import type { OpportunityRecord } from "@/types/opportunity";
 import type { ProposalBlock, ProposalBranding, ProposalDocument } from "@/types/proposal";
-
-async function requireStaffForCrm() {
-  const user = await getCurrentSessionUser();
-  if (!user || !hasRole(user, ["admin", "team"])) return null;
-  return user;
-}
 
 /** Firestore rejects `undefined` anywhere under a document — strip before `set`. */
 function omitUndefinedDeep(value: unknown): unknown {
@@ -53,44 +47,36 @@ function formatCustomFields(cf: Record<string, string>): string {
   return entries.map(([k, v]) => `${k}: ${v}`).join("\n");
 }
 
+/** Shared `Prepared for …` block used by every default proposal document. */
+function buildContactLines(customer: CustomerRecord): string {
+  const address = formatAddressLine(customer);
+  return [
+    customer.company ? `Company: ${customer.company}` : null,
+    `Email: ${customer.email}`,
+    customer.phone ? `Phone: ${customer.phone}` : null,
+    address ? `Address: ${address}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
 function buildPrefilledProposalDocument(
   customer: CustomerRecord,
   opportunity: OpportunityRecord,
 ): ProposalDocument {
-  const contactLines = [
-    customer.company ? `Company: ${customer.company}` : null,
-    `Email: ${customer.email}`,
-    customer.phone ? `Phone: ${customer.phone}` : null,
-    formatAddressLine(customer) ? `Address: ${formatAddressLine(customer)}` : null,
-  ]
-    .filter(Boolean)
-    .join("\n");
-
-  const cfMerged = {
+  const contactLines = buildContactLines(customer);
+  const cfText = formatCustomFields({
     ...customer.customFields,
     ...opportunity.customFieldsSnapshot,
-  };
-  const cfText = formatCustomFields(cfMerged);
+  });
 
   const blocks: ProposalBlock[] = [
-    {
-      id: randomUUID(),
-      type: "header",
-      text: opportunity.name,
-    },
-    {
-      id: randomUUID(),
-      type: "text",
-      body: `Prepared for ${customer.name}\n\n${contactLines}`,
-    },
+    { id: randomUUID(), type: "header", text: opportunity.name },
+    { id: randomUUID(), type: "text", body: `Prepared for ${customer.name}\n\n${contactLines}` },
   ];
 
   if (cfText) {
-    blocks.push({
-      id: randomUUID(),
-      type: "text",
-      body: `Details\n${cfText}`,
-    });
+    blocks.push({ id: randomUUID(), type: "text", body: `Details\n${cfText}` });
   }
 
   const oppMeta: string[] = [];
@@ -106,11 +92,7 @@ function buildPrefilledProposalDocument(
     oppMeta.push(`Notes: ${opportunity.notes.trim()}`);
   }
   if (oppMeta.length) {
-    blocks.push({
-      id: randomUUID(),
-      type: "text",
-      body: `Opportunity\n${oppMeta.join("\n")}`,
-    });
+    blocks.push({ id: randomUUID(), type: "text", body: `Opportunity\n${oppMeta.join("\n")}` });
   }
 
   return {
@@ -120,42 +102,29 @@ function buildPrefilledProposalDocument(
 }
 
 function buildCustomerOnlyProposalDocument(customer: CustomerRecord): ProposalDocument {
-  const contactLines = [
-    customer.company ? `Company: ${customer.company}` : null,
-    `Email: ${customer.email}`,
-    customer.phone ? `Phone: ${customer.phone}` : null,
-    formatAddressLine(customer) ? `Address: ${formatAddressLine(customer)}` : null,
-  ]
-    .filter(Boolean)
-    .join("\n");
-
+  const contactLines = buildContactLines(customer);
   const cfText = formatCustomFields(customer.customFields);
 
   const blocks: ProposalBlock[] = [
-    {
-      id: randomUUID(),
-      type: "header",
-      text: "Proposal",
-    },
-    {
-      id: randomUUID(),
-      type: "text",
-      body: `Prepared for ${customer.name}\n\n${contactLines}`,
-    },
+    { id: randomUUID(), type: "header", text: "Proposal" },
+    { id: randomUUID(), type: "text", body: `Prepared for ${customer.name}\n\n${contactLines}` },
   ];
 
   if (cfText) {
-    blocks.push({
-      id: randomUUID(),
-      type: "text",
-      body: `Details\n${cfText}`,
-    });
+    blocks.push({ id: randomUUID(), type: "text", body: `Details\n${cfText}` });
   }
 
   return {
     title: `${customer.company ?? customer.name} — Proposal`,
     blocks,
   };
+}
+
+/** Generic error mapper for the two `createDraftProposal…Action` handlers. */
+function proposalSaveErrorMessage(err: unknown): string {
+  return err instanceof Error && err.message
+    ? err.message
+    : "Could not save the proposal. If this persists, check Firestore rules and that the document has no invalid fields.";
 }
 
 /**
@@ -165,7 +134,7 @@ export async function createDraftProposalFromCustomerAction(
   customerId: string,
   templateId?: string | null,
 ): Promise<{ ok: true; proposalId: string } | { ok: false; message: string }> {
-  const user = await requireStaffForCrm();
+  const user = await requireStaffSession();
   if (!user) return { ok: false, message: "Unauthorized." };
 
   const customer = await getCustomerRecordForOrg(user, customerId);
@@ -231,13 +200,7 @@ export async function createDraftProposalFromCustomerAction(
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     logError("createDraftProposalFromCustomerAction_failed", { message: msg });
-    return {
-      ok: false,
-      message:
-        err instanceof Error && err.message
-          ? err.message
-          : "Could not save the proposal. If this persists, check Firestore rules and that the document has no invalid fields.",
-    };
+    return { ok: false, message: proposalSaveErrorMessage(err) };
   }
 }
 
@@ -249,7 +212,7 @@ export async function createDraftProposalFromOpportunityAction(
   opportunityId: string,
   templateId?: string | null,
 ): Promise<{ ok: true; proposalId: string } | { ok: false; message: string }> {
-  const user = await requireStaffForCrm();
+  const user = await requireStaffSession();
   if (!user) return { ok: false, message: "Unauthorized." };
 
   const opportunity = await getOpportunityForStaff(user, opportunityId);
@@ -326,12 +289,6 @@ export async function createDraftProposalFromOpportunityAction(
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     logError("createDraftProposalFromOpportunityAction_failed", { message: msg });
-    return {
-      ok: false,
-      message:
-        err instanceof Error && err.message
-          ? err.message
-          : "Could not save the proposal. If this persists, check Firestore rules and that the document has no invalid fields.",
-    };
+    return { ok: false, message: proposalSaveErrorMessage(err) };
   }
 }

@@ -1,29 +1,18 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { ZodError } from "zod";
-import { getCurrentSessionUser, hasRole } from "@/lib/auth/server-session";
+import { requireStaffSession } from "@/lib/auth/server-session";
 import { createAccountFormSchema, updateAccountFormSchema } from "@/lib/schemas/account";
+import { zodErrorToMessage } from "@/lib/zod-error";
 import {
   createAccountDocument,
   updateAccountDetailsForGroup,
 } from "@/server/firestore/crm-customers";
 
-function zodErrorToMessage(error: ZodError): string {
-  const first = error.errors[0];
-  return first ? `${first.path.join(".")}: ${first.message}` : "Invalid input";
-}
-
-async function requireStaffForCrm() {
-  const user = await getCurrentSessionUser();
-  if (!user || !hasRole(user, ["admin", "team"])) return null;
-  return user;
-}
-
 export async function updateAccountAction(
   raw: unknown,
 ): Promise<{ ok: true; newAccountKey: string } | { ok: false; message: string }> {
-  const user = await requireStaffForCrm();
+  const user = await requireStaffSession();
   if (!user) {
     return { ok: false, message: "You need an admin or team session to edit accounts." };
   }
@@ -49,7 +38,7 @@ export async function createAccountAction(
   | { ok: true; accountKey: string; alreadyExisted: boolean }
   | { ok: false; message: string }
 > {
-  const user = await requireStaffForCrm();
+  const user = await requireStaffSession();
   if (!user) {
     return { ok: false, message: "You need an admin or team session to add accounts." };
   }

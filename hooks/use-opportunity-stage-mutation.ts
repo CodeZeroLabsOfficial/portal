@@ -1,24 +1,13 @@
 "use client";
 
-import * as React from "react";
-import { useRouter } from "next/navigation";
 import type { OpportunityStage } from "@/types/opportunity";
 import { updateOpportunityStageAction } from "@/server/actions/opportunities-crm";
+import { useRowStatusMutation } from "@/hooks/use-row-status-mutation";
 
 export function useOpportunityStageMutation() {
-  const router = useRouter();
-  const [pendingId, setPendingId] = React.useState<string | null>(null);
-
-  async function moveStage(opportunityId: string, stage: OpportunityStage) {
-    setPendingId(opportunityId);
-    const res = await updateOpportunityStageAction({ opportunityId, stage });
-    setPendingId(null);
-    if (!res.ok) {
-      window.alert(res.message);
-      return;
-    }
-    router.refresh();
+  const { run, pendingId } = useRowStatusMutation(updateOpportunityStageAction);
+  function moveStage(opportunityId: string, stage: OpportunityStage) {
+    return run(opportunityId, { opportunityId, stage });
   }
-
   return { moveStage, pendingId };
 }

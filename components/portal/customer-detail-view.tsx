@@ -44,18 +44,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { initialsFromName } from "@/lib/format";
 import {
   WORKSPACE_DETAIL_PAGE_TITLE_CLASS,
   WORKSPACE_PAGE_DESCRIPTION_STACK_CLASS,
 } from "@/lib/workspace-page-typography";
 import { cn } from "@/lib/utils";
-
-function initials(name: string): string {
-  const p = name.trim().split(/\s+/).filter(Boolean);
-  if (p.length === 0) return "?";
-  if (p.length === 1) return p[0].slice(0, 2).toUpperCase();
-  return `${p[0][0] ?? ""}${p[p.length - 1][0] ?? ""}`.toUpperCase();
-}
 
 function formatMinor(amount: number, currency: string): string {
   try {
@@ -278,7 +272,7 @@ export function CustomerDetailView({
                 <Image src={url} alt="" width={80} height={80} className="h-full w-full object-cover" />
               ) : (
                 <span className="flex h-full w-full items-center justify-center text-2xl font-semibold text-muted-foreground">
-                  {initials(customer.name)}
+                  {initialsFromName(customer.name)}
                 </span>
               )}
             </div>

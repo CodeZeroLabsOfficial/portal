@@ -16,10 +16,6 @@ import type { SubscriptionRecord } from "@/types/subscription";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  WORKSPACE_HUB_PAGE_TITLE_CLASS,
-  WORKSPACE_PAGE_DESCRIPTION_CLASS,
-} from "@/lib/workspace-page-typography";
 import { cn } from "@/lib/utils";
 
 function formatShortDate(ms: number | undefined): string {
@@ -122,14 +118,6 @@ export function AdminBillingDashboard({
 
   return (
     <div className="space-y-8">
-      <section className="rounded-xl border border-border/70 bg-card/80 p-5">
-        <h1 className={WORKSPACE_HUB_PAGE_TITLE_CLASS}>Billing</h1>
-        <p className={WORKSPACE_PAGE_DESCRIPTION_CLASS}>
-          Stripe-backed subscriptions and invoices mirrored into Firestore. Open a CRM profile to link
-          Stripe customers, send Checkout, or pull live billing details.
-        </p>
-      </section>
-
       {!stripeApiConfigured ? (
         <div className="flex gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />

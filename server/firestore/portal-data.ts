@@ -1,4 +1,6 @@
 import { unstable_noStore as noStore } from "next/cache";
+import { isStaff } from "@/lib/auth/server-session";
+import { asBoolean, asNumber, asString } from "@/lib/firestore/coerce";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import type { InvoiceRecord } from "@/types/invoice";
@@ -47,18 +49,6 @@ export interface AdminPortalData {
   invoices: InvoiceRecord[];
   tasks: TaskRecord[];
   supportTickets: SupportTicketRecord[];
-}
-
-function asString(value: unknown): string | undefined {
-  return typeof value === "string" && value.length > 0 ? value : undefined;
-}
-
-function asBoolean(value: unknown): boolean | undefined {
-  return typeof value === "boolean" ? value : undefined;
-}
-
-function asNumber(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
 function getTimestampMs(record: Record<string, unknown>, ...keys: string[]): number {
@@ -136,10 +126,6 @@ function parseInvoice(id: string, data: Record<string, unknown>): InvoiceRecord 
   };
 }
 
-function parseProposal(id: string, data: Record<string, unknown>): ProposalRecord {
-  return parseProposalRecord(id, data);
-}
-
 function parsePortalUser(id: string, data: Record<string, unknown>): PortalUser {
   const role = data.role === "admin" || data.role === "team" || data.role === "customer" ? data.role : "customer";
   return {
@@ -153,10 +139,6 @@ function parsePortalUser(id: string, data: Record<string, unknown>): PortalUser 
     createdAtMs: asNumber(data.createdAtMs) ?? 0,
     updatedAtMs: asNumber(data.updatedAtMs) ?? 0,
   };
-}
-
-function canReadByOrganization(user: PortalUser): boolean {
-  return user.role === "admin" || user.role === "team";
 }
 
 type AdminFirestore = NonNullable<ReturnType<typeof getFirebaseAdminFirestore>>;
@@ -197,7 +179,7 @@ async function listSubscriptionsForUser(user: PortalUser): Promise<SubscriptionR
   const col = db.collection(COLLECTIONS.subscriptions);
 
   let snap;
-  if (canReadByOrganization(user) && user.organizationId) {
+  if (isStaff(user) && user.organizationId) {
     snap = await col.where("organizationId", "==", user.organizationId).limit(100).get();
   } else if (user.stripeCustomerId) {
     snap = await col.where("customerId", "==", user.stripeCustomerId).limit(100).get();
@@ -216,7 +198,7 @@ async function listInvoicesForUser(user: PortalUser): Promise<InvoiceRecord[]> {
 
   const col = db.collection(COLLECTIONS.invoices);
   let snap;
-  if (canReadByOrganization(user) && user.organizationId) {
+  if (isStaff(user) && user.organizationId) {
     snap = await col.where("organizationId", "==", user.organizationId).limit(100).get();
   } else if (user.stripeCustomerId) {
     snap = await col.where("customerId", "==", user.stripeCustomerId).limit(100).get();
@@ -235,7 +217,7 @@ async function listPaymentsForUser(user: PortalUser): Promise<PaymentRecord[]> {
 
   const col = db.collection(COLLECTIONS.payments);
   let snap;
-  if (canReadByOrganization(user) && user.organizationId) {
+  if (isStaff(user) && user.organizationId) {
     snap = await col.where("organizationId", "==", user.organizationId).limit(100).get();
   } else if (user.stripeCustomerId) {
     snap = await col.where("customerId", "==", user.stripeCustomerId).limit(100).get();
@@ -254,13 +236,13 @@ async function listProposalsForUser(user: PortalUser): Promise<ProposalRecord[]>
 
   const col = db.collection(COLLECTIONS.proposals);
   let snap;
-  if (canReadByOrganization(user) && user.organizationId) {
+  if (isStaff(user) && user.organizationId) {
     snap = await col.where("organizationId", "==", user.organizationId).limit(100).get();
   } else {
     snap = await col.where("createdByUid", "==", user.uid).limit(100).get();
   }
 
-  return snap.docs.map((doc) => parseProposal(doc.id, doc.data() as Record<string, unknown>));
+  return snap.docs.map((doc) => parseProposalRecord(doc.id, doc.data() as Record<string, unknown>));
 }
 
 function parseSupportTicket(id: string, data: Record<string, unknown>): SupportTicketRecord {
@@ -285,7 +267,7 @@ function parseSupportTicket(id: string, data: Record<string, unknown>): SupportT
 
 async function listTasksForUser(user: PortalUser): Promise<TaskRecord[]> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canReadByOrganization(user) || !user.organizationId) {
+  if (!db || !isStaff(user) || !user.organizationId) {
     return [];
   }
   try {
@@ -302,7 +284,7 @@ async function listTasksForUser(user: PortalUser): Promise<TaskRecord[]> {
 
 async function listSupportTicketsForUser(user: PortalUser): Promise<SupportTicketRecord[]> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canReadByOrganization(user) || !user.organizationId) {
+  if (!db || !isStaff(user) || !user.organizationId) {
     return [];
   }
   try {
@@ -389,7 +371,7 @@ export async function getCustomerPortalData(user: PortalUser): Promise<CustomerP
 
 export async function getAdminPortalData(user: PortalUser): Promise<AdminPortalData> {
   const db = getFirebaseAdminFirestore();
-  if (!db || !canReadByOrganization(user)) {
+  if (!db || !isStaff(user)) {
     return {
       customers: [],
       subscriptions: [],
@@ -428,11 +410,11 @@ export async function getAdminProposalRecord(
 ): Promise<ProposalRecord | null> {
   noStore();
   const db = getFirebaseAdminFirestore();
-  if (!db || !canReadByOrganization(user)) return null;
+  if (!db || !isStaff(user)) return null;
   try {
     const snap = await db.collection(COLLECTIONS.proposals).doc(proposalId).get();
     if (!snap.exists) return null;
-    return parseProposal(snap.id, snap.data() as Record<string, unknown>);
+    return parseProposalRecord(snap.id, snap.data() as Record<string, unknown>);
   } catch {
     return null;
   }

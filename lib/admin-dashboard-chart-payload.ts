@@ -12,9 +12,7 @@ export interface AdminDashboardChartTabPayload {
 }
 
 function dayStartMs(d: Date): number {
-  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  x.setHours(0, 0, 0, 0);
-  return x.getTime();
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 }
 
 /** Last `count` calendar days ending on `now`'s date (local), oldest first. */
@@ -32,20 +30,23 @@ function buildDayStarts(now: Date, count: number): { starts: number[]; labels: s
   return { starts, labels };
 }
 
+/**
+ * Buckets `timestamps` into the contiguous day windows defined by `dayStarts`
+ * (oldest first). Each bucket spans `[dayStarts[i], dayStarts[i] + 86400000)`.
+ * Single-pass O(N) by computing the bucket index directly from the timestamp
+ * — equivalent to the previous nested-loop version, which only worked because
+ * `dayStarts` is contiguous and sorted.
+ */
 function binTimestampsInDayBuckets(timestamps: number[], dayStarts: number[]): number[] {
   const counts = new Array(dayStarts.length).fill(0);
+  if (dayStarts.length === 0) return counts;
+  const first = dayStarts[0];
+  const totalMs = dayStarts.length * 86400000;
   for (const ts of timestamps) {
-    if (typeof ts !== "number" || !Number.isFinite(ts) || ts <= 0) {
-      continue;
-    }
-    for (let i = 0; i < dayStarts.length; i++) {
-      const start = dayStarts[i];
-      const end = start + 86400000;
-      if (ts >= start && ts < end) {
-        counts[i] += 1;
-        break;
-      }
-    }
+    if (typeof ts !== "number" || !Number.isFinite(ts) || ts <= 0) continue;
+    const offset = ts - first;
+    if (offset < 0 || offset >= totalMs) continue;
+    counts[Math.floor(offset / 86400000)] += 1;
   }
   return counts;
 }

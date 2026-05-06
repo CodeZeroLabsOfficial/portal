@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { MoreHorizontal, Plus, Search, SquareArrowOutUpRight } from "lucide-react";
 import type { AccountListRow } from "@/lib/account-list";
+import { websiteHref } from "@/lib/format";
 import { AddAccountModal } from "@/components/portal/add-account-modal";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,13 +23,6 @@ import {
 
 export interface AccountListPanelProps {
   rows: AccountListRow[];
-}
-
-function websiteHref(raw: string): string {
-  const t = raw.trim();
-  if (!t) return "";
-  if (/^https?:\/\//i.test(t)) return t;
-  return `https://${t}`;
 }
 
 export function AccountListPanel({ rows }: AccountListPanelProps) {

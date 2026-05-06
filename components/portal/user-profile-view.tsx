@@ -1,30 +1,14 @@
 import Link from "next/link";
 import { Calendar, Globe, Mail, MapPin, Pencil, Phone, Shield, User } from "lucide-react";
-import type { PortalUser, UserRole } from "@/types/user";
+import type { PortalUser } from "@/types/user";
+import { roleLabel } from "@/lib/auth/role-label";
+import { formatAddressLines, websiteHref } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   WORKSPACE_DETAIL_PAGE_TITLE_CLASS,
   WORKSPACE_PAGE_DESCRIPTION_STACK_CLASS,
 } from "@/lib/workspace-page-typography";
-
-function websiteHref(raw: string): string {
-  const t = raw.trim();
-  if (!t) return "";
-  if (/^https?:\/\//i.test(t)) return t;
-  return `https://${t}`;
-}
-
-function roleLabel(role: UserRole): string {
-  switch (role) {
-    case "admin":
-      return "Admin";
-    case "team":
-      return "Team";
-    default:
-      return "Customer";
-  }
-}
 
 function profileHeadingName(user: PortalUser): string {
   const fn = user.firstName?.trim();
@@ -36,16 +20,6 @@ function profileHeadingName(user: PortalUser): string {
     return user.displayName.trim();
   }
   return user.email || "Profile";
-}
-
-function formatUserAddressLines(user: PortalUser): string[] {
-  const lines: string[] = [];
-  if (user.addressLine1?.trim()) lines.push(user.addressLine1.trim());
-  if (user.addressLine2?.trim()) lines.push(user.addressLine2.trim());
-  const locality = [[user.city, user.region].filter(Boolean).join(", "), user.postalCode].filter(Boolean).join(" ");
-  const tail = [locality, user.country?.trim()].filter(Boolean).join(", ");
-  if (tail) lines.push(tail);
-  return lines;
 }
 
 function formatDob(iso: string | undefined): string {
@@ -61,7 +35,7 @@ export interface UserProfileViewProps {
 }
 
 export function UserProfileView({ user }: UserProfileViewProps) {
-  const addressLines = formatUserAddressLines(user);
+  const addressLines = formatAddressLines(user);
   const hasAddress = addressLines.length > 0;
   const heading = profileHeadingName(user);
   const dobLabel = formatDob(user.dateOfBirth);

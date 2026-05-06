@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { z } from "zod";
-import { getCurrentSessionUser, hasRole } from "@/lib/auth/server-session";
+import { requireStaffSession } from "@/lib/auth/server-session";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { parseProposalDocument } from "@/lib/schemas/proposal-document";
@@ -37,16 +37,10 @@ const packageSelectionSchema = z.object({
   term: z.enum(["12_months", "24_months"]),
 });
 
-async function requireStaff() {
-  const user = await getCurrentSessionUser();
-  if (!user || !hasRole(user, ["admin", "team"])) return null;
-  return user;
-}
-
 export async function saveProposalDocumentAction(
   raw: unknown,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  const user = await requireStaff();
+  const user = await requireStaffSession();
   if (!user) return { ok: false, message: "Unauthorized." };
 
   const parsed = saveDocSchema.safeParse(raw);
@@ -88,7 +82,7 @@ export async function saveProposalDocumentAction(
 export async function sendProposalAction(
   proposalId: string,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  const user = await requireStaff();
+  const user = await requireStaffSession();
   if (!user) return { ok: false, message: "Unauthorized." };
 
   const existing = await getAdminProposalRecord(user, proposalId);
@@ -129,7 +123,7 @@ export async function setProposalSharePasswordAction(
   proposalId: string,
   password: string | null,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  const user = await requireStaff();
+  const user = await requireStaffSession();
   if (!user) return { ok: false, message: "Unauthorized." };
 
   const existing = await getAdminProposalRecord(user, proposalId);
@@ -318,7 +312,7 @@ export async function saveProposalPackageSelectionAction(
 export async function deleteProposalAction(
   proposalId: string,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  const user = await requireStaff();
+  const user = await requireStaffSession();
   if (!user) return { ok: false, message: "Unauthorized." };
 
   const trimmed = proposalId?.trim();

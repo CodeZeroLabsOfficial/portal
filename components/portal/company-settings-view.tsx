@@ -1,26 +1,10 @@
 import Link from "next/link";
 import { Building2, FileText, Globe, Mail, MapPin, Pencil, Phone } from "lucide-react";
 import type { WorkspaceCompanySettings } from "@/types/organization";
+import { formatAddressLines, websiteHref } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { WORKSPACE_DETAIL_PAGE_TITLE_CLASS } from "@/lib/workspace-page-typography";
-
-function websiteHref(raw: string): string {
-  const t = raw.trim();
-  if (!t) return "";
-  if (/^https?:\/\//i.test(t)) return t;
-  return `https://${t}`;
-}
-
-function formatCompanyAddressLines(s: WorkspaceCompanySettings): string[] {
-  const lines: string[] = [];
-  if (s.addressLine1.trim()) lines.push(s.addressLine1.trim());
-  if (s.addressLine2.trim()) lines.push(s.addressLine2.trim());
-  const locality = [[s.city, s.region].filter(Boolean).join(", "), s.postalCode].filter(Boolean).join(" ");
-  const tail = [locality, s.country.trim()].filter(Boolean).join(", ");
-  if (tail) lines.push(tail);
-  return lines;
-}
 
 function headingTitle(s: WorkspaceCompanySettings): string {
   const n = s.name.trim();
@@ -32,7 +16,7 @@ export interface CompanySettingsViewProps {
 }
 
 export function CompanySettingsView({ settings }: CompanySettingsViewProps) {
-  const addressLines = formatCompanyAddressLines(settings);
+  const addressLines = formatAddressLines(settings);
   const hasAddress = addressLines.length > 0;
   const title = headingTitle(settings);
 

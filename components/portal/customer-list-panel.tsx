@@ -20,18 +20,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { initialsFromName } from "@/lib/format";
 import {
   WORKSPACE_HUB_PAGE_TITLE_CLASS,
   WORKSPACE_PAGE_DESCRIPTION_CLASS,
 } from "@/lib/workspace-page-typography";
 import { cn } from "@/lib/utils";
-
-function initialsFromName(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "?";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return `${parts[0][0] ?? ""}${parts[parts.length - 1][0] ?? ""}`.toUpperCase();
-}
 
 function subscriptionBadgeVariant(
   rollup: CustomerSubscriptionRollup,

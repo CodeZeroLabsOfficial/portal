@@ -6,25 +6,16 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { updateUserProfileSchema, type UpdateUserProfileInput } from "@/lib/schemas/user-profile";
 import { updateCurrentUserProfileAction } from "@/server/actions/user-profile";
-import type { PortalUser, UserRole } from "@/types/user";
+import { roleLabel } from "@/lib/auth/role-label";
+import type { PortalUser } from "@/types/user";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { FormServerError } from "@/components/ui/form-server-error";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
-function roleLabel(role: UserRole): string {
-  switch (role) {
-    case "admin":
-      return "Admin";
-    case "team":
-      return "Team";
-    default:
-      return "Customer";
-  }
-}
 
 function portalUserToFormDefaults(user: PortalUser): UpdateUserProfileInput {
   return {
@@ -92,19 +83,7 @@ export function EditUserProfileForm({ user }: EditUserProfileFormProps) {
           </CardHeader>
           <CardContent className="p-6">
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" noValidate>
-              <AnimatePresence initial={false}>
-                {serverError ? (
-                  <motion.div
-                    initial={{ opacity: 0, y: -6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                    className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-                    role="alert"
-                  >
-                    {serverError}
-                  </motion.div>
-                ) : null}
-              </AnimatePresence>
+              <FormServerError message={serverError} />
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">

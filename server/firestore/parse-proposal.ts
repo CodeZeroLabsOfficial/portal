@@ -1,5 +1,6 @@
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
+import { asNumber, asString } from "@/lib/firestore/coerce";
 import { parseProposalDocument } from "@/lib/schemas/proposal-document";
 import type {
   ProposalBlock,
@@ -8,14 +9,6 @@ import type {
   ProposalRecord,
   ProposalStatus,
 } from "@/types/proposal";
-
-function asString(value: unknown): string | undefined {
-  return typeof value === "string" && value.length > 0 ? value : undefined;
-}
-
-function asNumber(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
-}
 
 export function parseProposalBlocks(raw: unknown): ProposalBlock[] {
   if (!Array.isArray(raw)) {
@@ -40,7 +33,12 @@ function parseStatus(raw: unknown): ProposalStatus {
   return "sent";
 }
 
-function parseBranding(raw: unknown): ProposalBranding | undefined {
+/**
+ * Parse a `ProposalBranding` object (logo / colour / font). Returns `undefined`
+ * when none of the supported fields are populated. Exported for re-use by the
+ * proposal-template parser, which stores the same shape under `branding`.
+ */
+export function parseBranding(raw: unknown): ProposalBranding | undefined {
   if (!raw || typeof raw !== "object") return undefined;
   const b = raw as Record<string, unknown>;
   const logoUrl = asString(b.logoUrl);

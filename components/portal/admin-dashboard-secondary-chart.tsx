@@ -22,16 +22,14 @@ function buildSvgPaths(
   const maxV = Math.max(...points, 1);
   const innerH = height - 10;
   const padTop = 6;
-  const dots: { x: number; y: number }[] = [];
   const coords = points.map((v, i) => {
     const x = n === 1 ? width / 2 : (i / (n - 1)) * width;
     const y = padTop + innerH - (v / maxV) * innerH;
-    dots.push({ x, y });
     return { x, y };
   });
   const line = `M ${coords.map((p) => `${p.x},${p.y}`).join(" L ")}`;
   const area = `M 0,${baseline} L ${coords.map((p) => `${p.x},${p.y}`).join(" L ")} L ${width},${baseline} Z`;
-  return { line, area, dots };
+  return { line, area, dots: coords };
 }
 
 interface AdminDashboardSecondaryChartProps {

@@ -3,17 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { FieldValue } from "firebase-admin/firestore";
 import { z } from "zod";
-import { getCurrentSessionUser, hasRole } from "@/lib/auth/server-session";
+import { requireStaffSession } from "@/lib/auth/server-session";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import { parseProposalDocument } from "@/lib/schemas/proposal-document";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { getProposalTemplateForStaff } from "@/server/firestore/proposal-templates";
-
-async function requireStaff() {
-  const user = await getCurrentSessionUser();
-  if (!user || !hasRole(user, ["admin", "team"])) return null;
-  return user;
-}
 
 const saveTemplateSchema = z.object({
   templateId: z.string().min(1),
@@ -26,7 +20,7 @@ const saveTemplateSchema = z.object({
 export async function createProposalTemplateAction(): Promise<
   { ok: true; templateId: string } | { ok: false; message: string }
 > {
-  const user = await requireStaff();
+  const user = await requireStaffSession();
   if (!user) return { ok: false, message: "Unauthorized." };
 
   const db = getFirebaseAdminFirestore();
@@ -56,7 +50,7 @@ export async function createProposalTemplateAction(): Promise<
 export async function saveProposalTemplateAction(
   raw: unknown,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  const user = await requireStaff();
+  const user = await requireStaffSession();
   if (!user) return { ok: false, message: "Unauthorized." };
 
   const parsed = saveTemplateSchema.safeParse(raw);
@@ -96,7 +90,7 @@ export async function saveProposalTemplateAction(
 export async function deleteProposalTemplateAction(
   templateId: string,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  const user = await requireStaff();
+  const user = await requireStaffSession();
   if (!user) return { ok: false, message: "Unauthorized." };
 
   const existing = await getProposalTemplateForStaff(user, templateId);

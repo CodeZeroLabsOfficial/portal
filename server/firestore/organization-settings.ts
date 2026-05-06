@@ -1,15 +1,8 @@
 import type { PortalUser } from "@/types/user";
 import type { WorkspaceCompanySettings } from "@/types/organization";
+import { asNumber, asString } from "@/lib/firestore/coerce";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import { COLLECTIONS } from "@/server/firestore/collections";
-
-function asString(value: unknown): string | undefined {
-  return typeof value === "string" && value.length > 0 ? value : undefined;
-}
-
-function asNumber(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
-}
 
 /** Document id: trimmed `organizationId`, or `"default"` for single-tenant / unset org. */
 export function workspaceOrganizationDocId(user: PortalUser): string {

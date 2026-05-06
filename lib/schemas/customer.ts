@@ -63,12 +63,6 @@ export const createCustomerSchema = z.object({
 
 export type CreateCustomerInput = z.infer<typeof createCustomerSchema>;
 
-export const updateCustomerSchema = createCustomerSchema.partial().extend({
-  id: z.string().min(1),
-});
-
-export type UpdateCustomerInput = z.infer<typeof updateCustomerSchema>;
-
 /** Full profile replace for staff edit form (excludes lead toggle — use convert flow). */
 export const updateCustomerFormSchema = createCustomerSchema.omit({ saveAsLead: true }).extend({
   id: z.string().min(1),

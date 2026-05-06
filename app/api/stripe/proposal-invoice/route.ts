@@ -1,6 +1,6 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { NextResponse } from "next/server";
-import { hasRole, getCurrentSessionUser } from "@/lib/auth/server-session";
+import { isStaff, getCurrentSessionUser } from "@/lib/auth/server-session";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import { logError } from "@/lib/logging";
 import { getStripe } from "@/lib/stripe/server";
@@ -18,7 +18,7 @@ export async function POST(request: Request) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
-  if (!hasRole(user, ["admin", "team"])) {
+  if (!isStaff(user)) {
     return NextResponse.json({ error: "Forbidden." }, { status: 403 });
   }
 

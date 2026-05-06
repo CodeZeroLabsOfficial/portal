@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { ISO3166_ALPHA2_CODES } from "@/lib/iso3166-alpha2-codes";
 import {
   DATE_FORMAT_OPTIONS,
@@ -20,6 +20,7 @@ import { updateLocalityPreferencesAction } from "@/server/actions/locality-prefe
 import type { PortalUser } from "@/types/user";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { FormServerError } from "@/components/ui/form-server-error";
 import { Label } from "@/components/ui/label";
 import {
   WORKSPACE_DETAIL_PAGE_TITLE_CLASS,
@@ -144,19 +145,7 @@ export function LocalitySettingsForm({ user, timeZones, currencyCodes }: Localit
           </CardHeader>
           <CardContent className="p-6">
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" noValidate>
-              <AnimatePresence initial={false}>
-                {serverError ? (
-                  <motion.div
-                    initial={{ opacity: 0, y: -6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                    className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-                    role="alert"
-                  >
-                    {serverError}
-                  </motion.div>
-                ) : null}
-              </AnimatePresence>
+              <FormServerError message={serverError} />
 
               <div className="grid gap-6 sm:grid-cols-2">
                 <div className="space-y-2 sm:col-span-2">

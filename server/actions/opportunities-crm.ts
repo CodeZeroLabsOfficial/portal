@@ -2,12 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { getCurrentSessionUser, hasRole } from "@/lib/auth/server-session";
+import { requireStaffSession } from "@/lib/auth/server-session";
 import { OPPORTUNITY_STAGES } from "@/lib/crm/opportunity-stages";
 import {
   addOpportunityActivitySchema,
   addOpportunityNoteSchema,
 } from "@/lib/schemas/opportunity-notes";
+import { zodFirstMessage } from "@/lib/zod-error";
 import type { OpportunityStage } from "@/types/opportunity";
 import {
   appendOpportunityActivity,
@@ -21,12 +22,6 @@ const opportunityStageZodEnum = OPPORTUNITY_STAGES as unknown as [
   ...OpportunityStage[],
 ];
 
-async function requireStaffForCrm() {
-  const user = await getCurrentSessionUser();
-  if (!user || !hasRole(user, ["admin", "team"])) return null;
-  return user;
-}
-
 const convertLeadSchema = z.object({
   customerId: z.string().min(1),
   opportunityName: z.string().trim().min(1).max(240),
@@ -39,7 +34,7 @@ const convertLeadSchema = z.object({
 export async function convertLeadToContactAction(
   raw: unknown,
 ): Promise<{ ok: true; customerId: string; opportunityId: string } | { ok: false; message: string }> {
-  const user = await requireStaffForCrm();
+  const user = await requireStaffSession();
   if (!user) {
     return { ok: false, message: "You need an admin or team session to convert leads." };
   }
@@ -75,7 +70,7 @@ const updateStageSchema = z.object({
 export async function updateOpportunityStageAction(
   raw: unknown,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  const user = await requireStaffForCrm();
+  const user = await requireStaffSession();
   if (!user) return { ok: false, message: "Unauthorized." };
 
   const parsed = updateStageSchema.safeParse(raw);
@@ -93,20 +88,15 @@ export async function updateOpportunityStageAction(
   return { ok: true };
 }
 
-function firstZodMessage(error: z.ZodError): string {
-  const first = error.errors[0];
-  return first ? `${first.path.join(".") || "input"}: ${first.message}` : "Invalid input";
-}
-
 export async function addOpportunityNoteAction(
   raw: unknown,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  const user = await requireStaffForCrm();
+  const user = await requireStaffSession();
   if (!user) return { ok: false, message: "Unauthorized." };
 
   const parsed = addOpportunityNoteSchema.safeParse(raw);
   if (!parsed.success) {
-    return { ok: false, message: firstZodMessage(parsed.error) };
+    return { ok: false, message: zodFirstMessage(parsed.error) };
   }
 
   const result = await appendOpportunityNote(user, parsed.data.opportunityId, parsed.data.body);
@@ -119,12 +109,12 @@ export async function addOpportunityNoteAction(
 export async function addOpportunityActivityAction(
   raw: unknown,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  const user = await requireStaffForCrm();
+  const user = await requireStaffSession();
   if (!user) return { ok: false, message: "Unauthorized." };
 
   const parsed = addOpportunityActivitySchema.safeParse(raw);
   if (!parsed.success) {
-    return { ok: false, message: firstZodMessage(parsed.error) };
+    return { ok: false, message: zodFirstMessage(parsed.error) };
   }
 
   const result = await appendOpportunityActivity(user, parsed.data.opportunityId, {

@@ -1,22 +1,18 @@
 import { cookies } from "next/headers";
 import { FIREBASE_SESSION_COOKIE_NAME } from "@/lib/auth/session-cookie";
 import { getFirebaseAdminAuth, getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
+import { asNumber, asString } from "@/lib/firestore/coerce";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import type { PortalUser, UserRole } from "@/types/user";
+
+/** Roles that can access admin-side CRM, billing, proposal, and operations data. */
+export const STAFF_ROLES: readonly UserRole[] = ["admin", "team"];
 
 function asRole(value: unknown): UserRole {
   if (value === "admin" || value === "team" || value === "customer") {
     return value;
   }
   return "customer";
-}
-
-function asString(value: unknown): string | undefined {
-  return typeof value === "string" && value.length > 0 ? value : undefined;
-}
-
-function asNumber(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
 function normalizePortalUser(uid: string, email: string, data?: Partial<PortalUser>): PortalUser {
@@ -89,4 +85,19 @@ export async function getCurrentSessionUser(): Promise<PortalUser | null> {
 
 export function hasRole(user: PortalUser, roles: UserRole[]): boolean {
   return roles.includes(user.role);
+}
+
+/** True when the user can access admin/team-only pages and actions. */
+export function isStaff(user: PortalUser): boolean {
+  return STAFF_ROLES.includes(user.role);
+}
+
+/**
+ * Convenience wrapper around {@link getCurrentSessionUser} that returns `null`
+ * when there is no session OR the user isn't a staff member. Use in server
+ * actions that gate everything behind admin/team access.
+ */
+export async function requireStaffSession(): Promise<PortalUser | null> {
+  const user = await getCurrentSessionUser();
+  return user && isStaff(user) ? user : null;
 }
