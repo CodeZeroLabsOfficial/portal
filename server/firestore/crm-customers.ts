@@ -174,6 +174,7 @@ function parseSubscriptionFirestore(id: string, data: Record<string, unknown>): 
     customerId: asString(data.customerId) ?? "",
     organizationId: asString(data.organizationId),
     status:
+      data.status === "scheduled" ||
       data.status === "trialing" ||
       data.status === "past_due" ||
       data.status === "canceled" ||

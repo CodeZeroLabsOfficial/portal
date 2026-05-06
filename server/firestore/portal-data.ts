@@ -67,6 +67,7 @@ function parseSubscription(id: string, data: Record<string, unknown>): Subscript
     customerId: asString(data.customerId) ?? "",
     organizationId: asString(data.organizationId),
     status:
+      data.status === "scheduled" ||
       data.status === "trialing" ||
       data.status === "past_due" ||
       data.status === "canceled" ||

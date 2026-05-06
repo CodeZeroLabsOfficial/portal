@@ -147,6 +147,35 @@ export async function createSubscriptionAction(
         expand: ["default_payment_method", "items.data.price.product"],
       });
       await upsertSubscriptionMirror(db, subscription);
+    } else {
+      const scheduledMonthlyAmountMinor =
+        typeof price.unit_amount === "number"
+          ? price.recurring?.interval === "year"
+            ? Math.round(price.unit_amount / 12)
+            : price.unit_amount
+          : undefined;
+      await db.collection(COLLECTIONS.subscriptions).doc(schedule.id).set(
+        {
+          id: schedule.id,
+          customerId: stripeCustomerId,
+          ...(user.organizationId ? { organizationId: user.organizationId } : {}),
+          status: "scheduled",
+          priceId: selectedPriceId,
+          currency: (price.currency ?? "aud").toLowerCase(),
+          interval: price.recurring?.interval === "year" ? "year" : "month",
+          collectionMethod: parsed.data.collectionMethod,
+          ...(typeof scheduledMonthlyAmountMinor === "number"
+            ? { monthlyAmountMinor: scheduledMonthlyAmountMinor }
+            : {}),
+          createdAtMs: startAtMs,
+          updatedAtMs: Date.now(),
+          updatedAt: FieldValue.serverTimestamp(),
+          stripeScheduleId: schedule.id,
+          plannedSubscriptionStartMs: startAtMs,
+          plannedDurationMonths: parsed.data.durationMonths,
+        },
+        { merge: true },
+      );
     }
     await db.collection(COLLECTIONS.customerActivities).add({
       customerId: customer.id,
