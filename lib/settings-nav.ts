@@ -16,10 +16,3 @@ export const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
   { id: "company", href: "/admin/settings/company", label: "Company settings", icon: Building2 },
   { id: "integrations", href: "/admin/settings/integrations", label: "Integrations", icon: Puzzle },
 ];
-
-export function getSettingsNavLabel(pathname: string): string | undefined {
-  const match = SETTINGS_NAV_ITEMS.find(
-    (item) => pathname === item.href || pathname.startsWith(`${item.href}/`),
-  );
-  return match?.label;
-}

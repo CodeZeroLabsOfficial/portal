@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { getCurrentSessionUser } from "@/lib/auth/server-session";
-import { SettingsInner, SettingsSubnav } from "@/components/portal/settings-subnav";
+import { SettingsSubnav } from "@/components/portal/settings-subnav";
 import { WorkspaceShell } from "@/components/portal/workspace-shell";
 
 export default async function AdminSettingsLayout({ children }: { children: ReactNode }) {
@@ -21,7 +21,7 @@ export default async function AdminSettingsLayout({ children }: { children: Reac
       showRightAside={false}
       secondaryNav={<SettingsSubnav />}
     >
-      <SettingsInner>{children}</SettingsInner>
+      {children}
     </WorkspaceShell>
   );
 }

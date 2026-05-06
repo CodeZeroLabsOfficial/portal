@@ -1,9 +1,8 @@
 "use client";
 
-import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { SETTINGS_NAV_ITEMS, getSettingsNavLabel } from "@/lib/settings-nav";
+import { SETTINGS_NAV_ITEMS } from "@/lib/settings-nav";
 import { cn } from "@/lib/utils";
 
 export function SettingsSubnav() {
@@ -31,37 +30,5 @@ export function SettingsSubnav() {
         );
       })}
     </nav>
-  );
-}
-
-export function SettingsBreadcrumb() {
-  const pathname = usePathname();
-  const section = getSettingsNavLabel(pathname);
-
-  return (
-    <div className="mb-6">
-      <p className="text-sm text-zinc-500">
-        <Link href="/admin/settings/profile" className="font-medium text-zinc-400 hover:text-white">
-          Settings
-        </Link>
-        {section ? (
-          <>
-            <span className="mx-1.5 text-zinc-600" aria-hidden>
-              /
-            </span>
-            <span className="text-white">{section}</span>
-          </>
-        ) : null}
-      </p>
-    </div>
-  );
-}
-
-export function SettingsInner({ children }: { children: ReactNode }) {
-  return (
-    <>
-      <SettingsBreadcrumb />
-      {children}
-    </>
   );
 }
