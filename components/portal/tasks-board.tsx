@@ -92,7 +92,7 @@ function StageColumn({
       <div className="flex items-center justify-between gap-2 border-b border-border/60 px-3 py-2.5">
         <span className="text-[13px] font-semibold text-foreground">{taskBoardColumnLabel(stage)}</span>
         <div className="flex items-center gap-1">
-          <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] tabular-nums text-muted-foreground">
+          <span className="rounded-full bg-primary px-2 py-0.5 text-[11px] font-medium tabular-nums text-primary-foreground">
             {count}
           </span>
           <DropdownMenu>
@@ -236,11 +236,12 @@ function TaskCard({
           </div>
           <div className="h-2 w-full overflow-hidden rounded-full bg-muted" title={`${pct}% complete`}>
             <div
-              className="h-full rounded-full bg-foreground/88 transition-[width]"
+              className="h-full rounded-full transition-[width]"
               style={{
                 width: `${pct}%`,
+                backgroundColor: "hsl(var(--primary))",
                 backgroundImage:
-                  "repeating-linear-gradient(-45deg, rgba(255,255,255,.2) 0 4px, transparent 4px 8px)",
+                  "repeating-linear-gradient(-45deg, hsl(0 0% 100% / 0.22) 0 5px, transparent 5px 11px)",
               }}
             />
           </div>
