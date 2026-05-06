@@ -81,7 +81,10 @@ export function AccountDetailView({ account }: AccountDetailViewProps) {
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="border-border/80 bg-card/80 shadow-sm lg:col-span-2">
           <CardHeader className="border-b border-border/60 bg-muted/20">
-            <CardTitle className="text-lg">Company details</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Building2 className="h-5 w-5 text-muted-foreground" aria-hidden />
+              Company details
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-5 p-6">
             <dl className="grid gap-4 sm:grid-cols-2">

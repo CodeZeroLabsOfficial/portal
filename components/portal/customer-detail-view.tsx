@@ -22,6 +22,7 @@ import {
   Plus,
   Sparkles,
   Trash2,
+  Users,
 } from "lucide-react";
 import type { CustomerActivityRecord, CustomerNoteRecord, CustomerRecord } from "@/types/customer";
 import type { OpportunityRecord } from "@/types/opportunity";
@@ -294,7 +295,10 @@ export function CustomerDetailView({
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="border-border/80 bg-card/80 shadow-sm lg:col-span-2">
           <CardHeader className="border-b border-border/60 bg-muted/20">
-            <CardTitle className="text-lg">Contact details</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Users className="h-5 w-5 text-muted-foreground" aria-hidden />
+              Contact details
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-5 p-6">
             <dl className="grid gap-4 sm:grid-cols-2">
@@ -354,7 +358,10 @@ export function CustomerDetailView({
 
         <Card className="border-border/80 bg-card/80 shadow-sm">
           <CardHeader className="border-b border-border/60 bg-muted/20">
-            <CardTitle className="text-lg">Integrations</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <CreditCard className="h-5 w-5 text-muted-foreground" aria-hidden />
+              Integrations
+            </CardTitle>
           </CardHeader>
           <CardContent className="p-4 text-sm">
             <div className="rounded-xl border border-border/60 bg-background/40 p-3">
