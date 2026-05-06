@@ -32,17 +32,14 @@ function parseStartDateToUtcMs(startDateIso: string): number | null {
   return ms;
 }
 
-function addMonthsUtc(ms: number, months: number): number {
-  const d = new Date(ms);
-  const year = d.getUTCFullYear();
-  const month = d.getUTCMonth();
-  const day = d.getUTCDate();
-  const targetMonthIndex = month + months;
-  const targetYear = year + Math.floor(targetMonthIndex / 12);
-  const normalizedMonth = ((targetMonthIndex % 12) + 12) % 12;
-  const lastDay = new Date(Date.UTC(targetYear, normalizedMonth + 1, 0)).getUTCDate();
-  const clampedDay = Math.min(day, lastDay);
-  return Date.UTC(targetYear, normalizedMonth, clampedDay, 0, 0, 0, 0);
+function recurringIntervalMonths(
+  recurring: { interval?: "day" | "week" | "month" | "year"; interval_count?: number } | null | undefined,
+): number | null {
+  if (!recurring?.interval) return null;
+  const count = Number.isFinite(recurring.interval_count) ? Number(recurring.interval_count) : 1;
+  if (recurring.interval === "month") return count;
+  if (recurring.interval === "year") return count * 12;
+  return null;
 }
 
 export async function createSubscriptionAction(
@@ -88,9 +85,7 @@ export async function createSubscriptionAction(
   if (startAtMs < todayStartMs) {
     return { ok: false, message: "Start date cannot be in the past." };
   }
-  const cancelAtMs = addMonthsUtc(startAtMs, parsed.data.durationMonths);
   const startAtUnix = Math.floor(startAtMs / 1000);
-  const cancelAtUnix = Math.floor(cancelAtMs / 1000);
 
   try {
     const { stripeCustomerId, created } = await ensureStripeCustomer(stripe, customer, user.organizationId);
@@ -101,45 +96,124 @@ export async function createSubscriptionAction(
       }
     }
 
-    const subscription = await stripe.subscriptions.create({
+    const selectedPriceId = parsed.data.priceId.trim();
+    const price = await stripe.prices.retrieve(selectedPriceId);
+    const intervalMonths = recurringIntervalMonths(price.recurring);
+    if (!intervalMonths || intervalMonths <= 0) {
+      return { ok: false, message: "Selected Stripe Price must be a recurring month/year price." };
+    }
+    if (parsed.data.durationMonths % intervalMonths !== 0) {
+      return {
+        ok: false,
+        message: `Selected duration (${parsed.data.durationMonths} months) must align with billing interval (${intervalMonths} month cycle).`,
+      };
+    }
+    const iterations = Math.max(1, Math.floor(parsed.data.durationMonths / intervalMonths));
+
+    const schedule = await stripe.subscriptionSchedules.create({
       customer: stripeCustomerId,
-      items: [{ price: parsed.data.priceId.trim() }],
-      collection_method: parsed.data.collectionMethod,
-      ...(parsed.data.collectionMethod === "send_invoice"
-        ? { days_until_due: parsed.data.daysUntilDue ?? 14 }
-        : {}),
-      ...(parsed.data.defaultPaymentMethodId ? { default_payment_method: parsed.data.defaultPaymentMethodId } : {}),
-      ...(startAtMs > nowMs
-        ? {
-            trial_end: startAtUnix,
-          }
-        : {}),
-      cancel_at: cancelAtUnix,
+      start_date: startAtMs <= nowMs ? "now" : startAtUnix,
+      end_behavior: "cancel",
+      phases: [
+        {
+          items: [{ price: selectedPriceId, quantity: 1 }],
+          iterations,
+          proration_behavior: "none",
+        },
+      ],
+      default_settings: {
+        collection_method: parsed.data.collectionMethod,
+        ...(parsed.data.collectionMethod === "send_invoice"
+          ? { days_until_due: parsed.data.daysUntilDue ?? 14 }
+          : {}),
+        ...(parsed.data.defaultPaymentMethodId
+          ? { default_payment_method: parsed.data.defaultPaymentMethodId }
+          : {}),
+      },
       metadata: {
         crm_customer_id: customer.id,
         duration_months: String(parsed.data.durationMonths),
         start_date: parsed.data.startDate,
         ...(user.organizationId ? { organization_id: user.organizationId } : {}),
       },
-      expand: ["default_payment_method", "items.data.price.product"],
     });
 
-    await upsertSubscriptionMirror(db, subscription);
+    const subscriptionId =
+      typeof schedule.subscription === "string"
+        ? schedule.subscription
+        : schedule.subscription?.id;
+    if (subscriptionId) {
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
+        expand: ["default_payment_method", "items.data.price.product"],
+      });
+      await upsertSubscriptionMirror(db, subscription);
+    }
     await db.collection(COLLECTIONS.customerActivities).add({
       customerId: customer.id,
       type: "stripe_sync",
-      title: "Stripe subscription created",
-      detail: subscription.id,
+      title: "Stripe subscription schedule created",
+      detail: subscriptionId ?? schedule.id,
       actorUid: user.uid,
       createdAt: FieldValue.serverTimestamp(),
     });
 
     revalidateSubscriptionPaths(customer.id);
-    return { ok: true, subscriptionId: subscription.id };
+    return { ok: true, subscriptionId: subscriptionId ?? schedule.id };
   } catch (error) {
     return {
       ok: false,
       message: error instanceof Error ? error.message : "Could not create subscription in Stripe.",
+    };
+  }
+}
+
+export async function cancelSubscriptionAction(
+  subscriptionId: string,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const user = await requireStaffSession();
+  if (!user) return { ok: false, message: "Unauthorized." };
+  const stripe = getStripe();
+  if (!stripe) return { ok: false, message: "Stripe is not configured on the server." };
+  const db = getFirebaseAdminFirestore();
+  if (!db) return { ok: false, message: "Database unavailable." };
+  const subId = subscriptionId.trim();
+  if (!subId.startsWith("sub_")) return { ok: false, message: "Invalid subscription id." };
+  try {
+    const updated = await stripe.subscriptions.update(subId, {
+      cancel_at_period_end: true,
+      expand: ["default_payment_method", "items.data.price.product"],
+    });
+    await upsertSubscriptionMirror(db, updated);
+    revalidateSubscriptionPaths();
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : "Could not cancel subscription.",
+    };
+  }
+}
+
+export async function deleteSubscriptionAction(
+  subscriptionId: string,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const user = await requireStaffSession();
+  if (!user) return { ok: false, message: "Unauthorized." };
+  const stripe = getStripe();
+  if (!stripe) return { ok: false, message: "Stripe is not configured on the server." };
+  const db = getFirebaseAdminFirestore();
+  if (!db) return { ok: false, message: "Database unavailable." };
+  const subId = subscriptionId.trim();
+  if (!subId.startsWith("sub_")) return { ok: false, message: "Invalid subscription id." };
+  try {
+    const canceled = await stripe.subscriptions.cancel(subId);
+    await upsertSubscriptionMirror(db, canceled);
+    revalidateSubscriptionPaths();
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : "Could not delete subscription.",
     };
   }
 }

@@ -4,12 +4,19 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { Plus, Search } from "lucide-react";
+import { MoreHorizontal, Plus, Search } from "lucide-react";
 import type { SubscriptionRecord } from "@/types/subscription";
 import { formatCurrencyAmount } from "@/lib/format";
 import { AddSubscriptionModal } from "@/components/portal/add-subscription-modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
   WORKSPACE_HUB_PAGE_TITLE_CLASS,
@@ -17,6 +24,7 @@ import {
 } from "@/lib/workspace-page-typography";
 import { cn } from "@/lib/utils";
 import type { SubscriptionProductOption } from "@/types/subscription-product";
+import { cancelSubscriptionAction, deleteSubscriptionAction } from "@/server/actions/subscriptions-crm";
 
 export interface SubscriptionListRow {
   subscription: SubscriptionRecord;
@@ -116,6 +124,7 @@ export function SubscriptionListPanel({ rows, customerOptions, productOptions }:
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [addOpen, setAddOpen] = React.useState(false);
+  const [pendingId, setPendingId] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     router.refresh();
@@ -201,7 +210,7 @@ export function SubscriptionListPanel({ rows, customerOptions, productOptions }:
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1020px] text-left text-[13px]">
+          <table className="w-full min-w-[1080px] text-left text-[13px]">
             <thead>
               <tr className="border-b border-border text-muted-foreground">
                 <th className="px-4 py-2.5 font-medium">Status</th>
@@ -211,18 +220,19 @@ export function SubscriptionListPanel({ rows, customerOptions, productOptions }:
                 <th className="px-4 py-2.5 font-medium">Collection method</th>
                 <th className="px-4 py-2.5 font-medium">Created date</th>
                 <th className="px-4 py-2.5 font-medium">End date</th>
+                <th className="w-14 px-2 py-2.5 text-center font-medium">Action</th>
               </tr>
             </thead>
             <tbody className="text-foreground">
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-sm text-muted-foreground">
+                  <td colSpan={8} className="px-4 py-10 text-center text-sm text-muted-foreground">
                     <p className="mx-auto max-w-md leading-relaxed">No subscriptions yet.</p>
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-sm text-muted-foreground">
+                  <td colSpan={8} className="px-4 py-10 text-center text-sm text-muted-foreground">
                     No subscriptions match your search.
                   </td>
                 </tr>
@@ -242,6 +252,35 @@ export function SubscriptionListPanel({ rows, customerOptions, productOptions }:
                     ) : (
                       <span className="text-muted-foreground">{row.accountName}</span>
                     );
+
+                  async function handleCancel() {
+                    setPendingId(s.id);
+                    const res = await cancelSubscriptionAction(s.id);
+                    setPendingId(null);
+                    if (!res.ok) {
+                      window.alert(res.message);
+                      return;
+                    }
+                    router.refresh();
+                  }
+
+                  async function handleDelete() {
+                    if (
+                      !window.confirm(
+                        "Delete this subscription now? This immediately cancels it in Stripe.",
+                      )
+                    ) {
+                      return;
+                    }
+                    setPendingId(s.id);
+                    const res = await deleteSubscriptionAction(s.id);
+                    setPendingId(null);
+                    if (!res.ok) {
+                      window.alert(res.message);
+                      return;
+                    }
+                    router.refresh();
+                  }
 
                   return (
                     <tr key={s.id} className="border-b border-border/60 last:border-0">
@@ -267,6 +306,44 @@ export function SubscriptionListPanel({ rows, customerOptions, productOptions }:
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 align-middle text-muted-foreground">
                         {formatTableDate(s.currentPeriodEndMs)}
+                      </td>
+                      <td className="px-2 py-3 text-center align-middle">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              disabled={pendingId === s.id}
+                              className="h-8 w-8 text-muted-foreground hover:bg-muted hover:text-foreground"
+                              aria-label={`Actions for subscription ${s.id}`}
+                            >
+                              <MoreHorizontal className="h-4 w-4" aria-hidden />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            align="end"
+                            className="min-w-[11rem] border-border/80 bg-popover text-popover-foreground shadow-lg"
+                          >
+                            <DropdownMenuItem
+                              onSelect={() =>
+                                window.open(`https://dashboard.stripe.com/subscriptions/${s.id}`, "_blank")
+                              }
+                            >
+                              Update
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => void handleCancel()}>
+                              Cancel
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onSelect={() => void handleDelete()}
+                            >
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </td>
                     </tr>
                   );
