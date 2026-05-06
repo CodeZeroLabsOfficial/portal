@@ -19,6 +19,32 @@ function revalidateSubscriptionPaths(customerId?: string) {
   }
 }
 
+function parseStartDateToUtcMs(startDateIso: string): number | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(startDateIso);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return null;
+  const ms = Date.UTC(year, month - 1, day, 0, 0, 0, 0);
+  const d = new Date(ms);
+  if (d.getUTCFullYear() !== year || d.getUTCMonth() !== month - 1 || d.getUTCDate() !== day) return null;
+  return ms;
+}
+
+function addMonthsUtc(ms: number, months: number): number {
+  const d = new Date(ms);
+  const year = d.getUTCFullYear();
+  const month = d.getUTCMonth();
+  const day = d.getUTCDate();
+  const targetMonthIndex = month + months;
+  const targetYear = year + Math.floor(targetMonthIndex / 12);
+  const normalizedMonth = ((targetMonthIndex % 12) + 12) % 12;
+  const lastDay = new Date(Date.UTC(targetYear, normalizedMonth + 1, 0)).getUTCDate();
+  const clampedDay = Math.min(day, lastDay);
+  return Date.UTC(targetYear, normalizedMonth, clampedDay, 0, 0, 0, 0);
+}
+
 export async function createSubscriptionAction(
   raw: unknown,
 ): Promise<{ ok: true; subscriptionId: string } | { ok: false; message: string }> {
@@ -30,6 +56,9 @@ export async function createSubscriptionAction(
   const parsed = createSubscriptionSchema.safeParse(raw);
   if (!parsed.success) {
     return { ok: false, message: zodErrorToMessage(parsed.error) };
+  }
+  if (!parsed.data.priceId.trim().startsWith("price_")) {
+    return { ok: false, message: "Invalid Stripe price selected for this subscription." };
   }
 
   const db = getFirebaseAdminFirestore();
@@ -45,6 +74,23 @@ export async function createSubscriptionAction(
   if (!customer) {
     return { ok: false, message: "Customer not found." };
   }
+
+  const startAtMs = parseStartDateToUtcMs(parsed.data.startDate);
+  if (!startAtMs) {
+    return { ok: false, message: "Invalid subscription start date." };
+  }
+  const nowMs = Date.now();
+  const todayStartMs = Date.UTC(
+    new Date(nowMs).getUTCFullYear(),
+    new Date(nowMs).getUTCMonth(),
+    new Date(nowMs).getUTCDate(),
+  );
+  if (startAtMs < todayStartMs) {
+    return { ok: false, message: "Start date cannot be in the past." };
+  }
+  const cancelAtMs = addMonthsUtc(startAtMs, parsed.data.durationMonths);
+  const startAtUnix = Math.floor(startAtMs / 1000);
+  const cancelAtUnix = Math.floor(cancelAtMs / 1000);
 
   try {
     const { stripeCustomerId, created } = await ensureStripeCustomer(stripe, customer, user.organizationId);
@@ -63,8 +109,18 @@ export async function createSubscriptionAction(
         ? { days_until_due: parsed.data.daysUntilDue ?? 14 }
         : {}),
       ...(parsed.data.defaultPaymentMethodId ? { default_payment_method: parsed.data.defaultPaymentMethodId } : {}),
+      ...(startAtMs > nowMs
+        ? {
+            trial_end: startAtUnix,
+            billing_cycle_anchor: startAtUnix,
+            proration_behavior: "none" as const,
+          }
+        : {}),
+      cancel_at: cancelAtUnix,
       metadata: {
         crm_customer_id: customer.id,
+        duration_months: String(parsed.data.durationMonths),
+        start_date: parsed.data.startDate,
         ...(user.organizationId ? { organization_id: user.organizationId } : {}),
       },
       expand: ["default_payment_method", "items.data.price.product"],

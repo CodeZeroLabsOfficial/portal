@@ -16,6 +16,7 @@ import {
   WORKSPACE_PAGE_DESCRIPTION_CLASS,
 } from "@/lib/workspace-page-typography";
 import { cn } from "@/lib/utils";
+import type { SubscriptionProductOption } from "@/types/subscription-product";
 
 export interface SubscriptionListRow {
   subscription: SubscriptionRecord;
@@ -27,6 +28,7 @@ export interface SubscriptionListRow {
 export interface SubscriptionListPanelProps {
   rows: SubscriptionListRow[];
   customerOptions: { id: string; label: string }[];
+  productOptions: SubscriptionProductOption[];
 }
 
 function formatTableDate(ms: number | undefined): string {
@@ -109,7 +111,7 @@ function statusBadge(status: SubscriptionRecord["status"]): { label: string; cla
   };
 }
 
-export function SubscriptionListPanel({ rows, customerOptions }: SubscriptionListPanelProps) {
+export function SubscriptionListPanel({ rows, customerOptions, productOptions }: SubscriptionListPanelProps) {
   const router = useRouter();
   const [addOpen, setAddOpen] = React.useState(false);
 
@@ -141,7 +143,12 @@ export function SubscriptionListPanel({ rows, customerOptions }: SubscriptionLis
 
   return (
     <div className="space-y-8">
-      <AddSubscriptionModal open={addOpen} onOpenChange={setAddOpen} customerOptions={customerOptions} />
+      <AddSubscriptionModal
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        customerOptions={customerOptions}
+        productOptions={productOptions}
+      />
       <motion.div
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}

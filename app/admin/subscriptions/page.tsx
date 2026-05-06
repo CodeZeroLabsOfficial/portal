@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentSessionUser } from "@/lib/auth/server-session";
 import { getAdminCustomerListRows } from "@/server/firestore/portal-data";
 import { getAdminSubscriptionsSnapshot } from "@/server/firestore/crm-customers";
+import { listStripeSubscriptionProductOptions } from "@/server/stripe/subscription-product-options";
 import { SubscriptionListPanel } from "@/components/portal/subscription-list-panel";
 import { WorkspaceShell } from "@/components/portal/workspace-shell";
 
@@ -16,9 +17,10 @@ export default async function AdminSubscriptionsPage() {
     redirect("/login?next=/admin/subscriptions");
   }
 
-  const [data, customers] = await Promise.all([
+  const [data, customers, productOptions] = await Promise.all([
     getAdminSubscriptionsSnapshot(user),
     getAdminCustomerListRows(user),
+    listStripeSubscriptionProductOptions(),
   ]);
 
   const rows =
@@ -48,7 +50,11 @@ export default async function AdminSubscriptionsPage() {
       showMainHeader={false}
       showRightAside={false}
     >
-      <SubscriptionListPanel rows={rows} customerOptions={customerOptions} />
+      <SubscriptionListPanel
+        rows={rows}
+        customerOptions={customerOptions}
+        productOptions={productOptions}
+      />
     </WorkspaceShell>
   );
 }

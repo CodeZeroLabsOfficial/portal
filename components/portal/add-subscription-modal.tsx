@@ -18,16 +18,29 @@ import {
 import { FormServerError } from "@/components/ui/form-server-error";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { formatCurrencyAmount } from "@/lib/format";
+import type { SubscriptionProductOption } from "@/types/subscription-product";
 
 interface AddSubscriptionModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   customerOptions: { id: string; label: string }[];
+  productOptions: SubscriptionProductOption[];
+}
+
+function todayIsoDate(): string {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 const defaultValues: CreateSubscriptionInput = {
   customerId: "",
   priceId: "",
+  startDate: todayIsoDate(),
+  durationMonths: 12,
   collectionMethod: "charge_automatically",
   daysUntilDue: undefined,
   defaultPaymentMethodId: undefined,
@@ -37,6 +50,7 @@ export function AddSubscriptionModal({
   open,
   onOpenChange,
   customerOptions,
+  productOptions,
 }: AddSubscriptionModalProps) {
   const router = useRouter();
   const [serverError, setServerError] = React.useState<string | null>(null);
@@ -47,6 +61,12 @@ export function AddSubscriptionModal({
   });
 
   const collectionMethod = form.watch("collectionMethod");
+  const selectedProductId = form.watch("priceId");
+  const selectedProduct = React.useMemo(
+    () => productOptions.find((p) => p.productId === selectedProductId),
+    [productOptions, selectedProductId],
+  );
+  const durationOptions = selectedProduct?.durations ?? [];
 
   React.useEffect(() => {
     if (!open) {
@@ -55,10 +75,36 @@ export function AddSubscriptionModal({
     }
   }, [open, form]);
 
+  React.useEffect(() => {
+    if (!open) return;
+    const firstProduct = productOptions[0];
+    if (firstProduct && !selectedProductId) {
+      form.setValue("priceId", firstProduct.productId, { shouldValidate: true });
+      if (firstProduct.durations[0]) {
+        form.setValue("durationMonths", firstProduct.durations[0].months, { shouldValidate: true });
+      }
+    }
+  }, [open, productOptions, selectedProductId, form]);
+
+  React.useEffect(() => {
+    if (!selectedProduct) return;
+    const current = form.getValues("durationMonths");
+    const valid = selectedProduct.durations.some((d) => d.months === current);
+    if (!valid && selectedProduct.durations[0]) {
+      form.setValue("durationMonths", selectedProduct.durations[0].months, { shouldValidate: true });
+    }
+  }, [selectedProduct, form]);
+
   async function onSubmit(values: CreateSubscriptionInput) {
     setServerError(null);
+    const duration = durationOptions.find((d) => d.months === values.durationMonths);
+    if (!duration) {
+      setServerError("Select a valid duration for the selected product.");
+      return;
+    }
     const payload: CreateSubscriptionInput = {
       ...values,
+      priceId: duration.priceId,
       daysUntilDue:
         values.collectionMethod === "send_invoice" ? values.daysUntilDue ?? 14 : undefined,
       defaultPaymentMethodId:
@@ -112,20 +158,61 @@ export function AddSubscriptionModal({
             ) : null}
           </div>
 
+          <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="subscriptionProduct" className="text-zinc-300">
+                Product
+              </Label>
+              <select
+                id="subscriptionProduct"
+                className="flex h-9 w-full rounded-md border border-white/[0.08] bg-white/[0.04] px-3 py-1 text-sm text-white shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#141414]"
+                disabled={busy || productOptions.length === 0}
+                value={selectedProductId}
+                onChange={(e) => form.setValue("priceId", e.target.value, { shouldValidate: true })}
+              >
+                {productOptions.length === 0 ? <option value="">No Stripe products found</option> : null}
+                {productOptions.map((opt) => (
+                  <option key={opt.productId} value={opt.productId}>
+                    {opt.productName}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="durationMonths" className="text-zinc-300">
+                Duration
+              </Label>
+              <select
+                id="durationMonths"
+                className="flex h-9 w-full rounded-md border border-white/[0.08] bg-white/[0.04] px-3 py-1 text-sm text-white shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#141414]"
+                disabled={busy || durationOptions.length === 0}
+                value={form.watch("durationMonths")}
+                onChange={(e) => form.setValue("durationMonths", Number(e.target.value), { shouldValidate: true })}
+              >
+                {durationOptions.length === 0 ? <option value="">No durations</option> : null}
+                {durationOptions.map((d) => (
+                  <option key={`${selectedProductId}-${d.months}`} value={d.months}>
+                    {d.months} months · {formatCurrencyAmount(d.unitAmountMinor, d.currency)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="priceId" className="text-zinc-300">
-              Stripe Price id
+            <Label htmlFor="startDate" className="text-zinc-300">
+              Start date
             </Label>
             <Input
-              id="priceId"
-              placeholder="price_1234..."
-              autoComplete="off"
+              id="startDate"
+              type="date"
               disabled={busy}
               className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
-              {...form.register("priceId")}
+              {...form.register("startDate")}
             />
-            {form.formState.errors.priceId ? (
-              <p className="text-xs leading-tight text-destructive">{form.formState.errors.priceId.message}</p>
+            {form.formState.errors.startDate ? (
+              <p className="text-xs leading-tight text-destructive">{form.formState.errors.startDate.message}</p>
             ) : null}
           </div>
 
