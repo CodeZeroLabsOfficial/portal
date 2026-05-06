@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentSessionUser, hasRole } from "@/lib/auth/server-session";
+import { AdminWorkspaceProvider } from "@/components/portal/admin-workspace-provider";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentSessionUser();
@@ -9,5 +10,5 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!hasRole(user, ["admin", "team"])) {
     redirect("/dashboard");
   }
-  return children;
+  return <AdminWorkspaceProvider organizationId={user.organizationId}>{children}</AdminWorkspaceProvider>;
 }

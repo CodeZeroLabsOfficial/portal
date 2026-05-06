@@ -30,6 +30,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AddCustomerModal } from "@/components/portal/add-customer-modal";
+import { AddTaskDialog } from "@/components/portal/add-task-dialog";
+import { useAdminWorkspace } from "@/components/portal/admin-workspace-provider";
 import { WorkspaceNav } from "@/components/portal/workspace-nav";
 import {
   WORKSPACE_MAIN_COLUMN_DESCRIPTION_CLASS,
@@ -138,8 +140,10 @@ export function WorkspaceShellLayout({
   const router = useRouter();
   const pathname = usePathname();
   const isAdminRoute = pathname.startsWith("/admin");
+  const { organizationId: adminOrganizationId } = useAdminWorkspace();
   const [collapsed, setCollapsed] = React.useState(false);
   const [addCustomerOpen, setAddCustomerOpen] = React.useState(false);
+  const [addTaskOpen, setAddTaskOpen] = React.useState(false);
 
   async function handleSignOut() {
     await signOutFromPortal();
@@ -188,7 +192,16 @@ export function WorkspaceShellLayout({
   return (
     <TooltipProvider delayDuration={0}>
       {isAdminRoute ? (
-        <AddCustomerModal open={addCustomerOpen} onOpenChange={setAddCustomerOpen} />
+        <>
+          <AddCustomerModal open={addCustomerOpen} onOpenChange={setAddCustomerOpen} />
+          <AddTaskDialog
+            open={addTaskOpen}
+            onOpenChange={setAddTaskOpen}
+            defaultColumn="todo"
+            disabled={!adminOrganizationId}
+            disabledReason="Your user profile must include an organization id before you can add tasks."
+          />
+        </>
       ) : null}
       <div className="portal-ui flex min-h-dvh w-full text-[15px] antialiased">
         <aside
@@ -333,9 +346,9 @@ export function WorkspaceShellLayout({
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="cursor-pointer text-zinc-200 focus:bg-white/[0.08] focus:text-white"
-                        asChild
+                        onSelect={() => setAddTaskOpen(true)}
                       >
-                        <Link href="/admin/tasks">New task</Link>
+                        New task
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

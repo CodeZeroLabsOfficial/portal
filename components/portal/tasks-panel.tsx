@@ -80,19 +80,6 @@ export function TasksPanel({ tasks, viewerUid, organizationId }: TasksPanelProps
     [tasks, filterTab, viewerUid],
   );
 
-  const lastUpdateMs = React.useMemo(() => {
-    if (tasks.length === 0) return null;
-    return Math.max(...tasks.map((t) => t.updatedAtMs));
-  }, [tasks]);
-
-  const lastUpdateLabel = lastUpdateMs
-    ? new Date(lastUpdateMs).toLocaleDateString(undefined, {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      })
-    : "—";
-
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -152,9 +139,6 @@ export function TasksPanel({ tasks, viewerUid, organizationId }: TasksPanelProps
           })}
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <p className="text-[12px] text-muted-foreground">
-            Last update: <span className="tabular-nums text-foreground">{lastUpdateLabel}</span>
-          </p>
           <Button type="button" variant="outline" size="sm" className="gap-1.5" disabled>
             <Filter className="h-4 w-4" aria-hidden />
             Filter

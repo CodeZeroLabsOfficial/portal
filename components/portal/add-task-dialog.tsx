@@ -11,7 +11,6 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -75,9 +74,6 @@ export function AddTaskDialog({
       <DialogContent className="gap-0 sm:max-w-md" onOpenAutoFocus={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>New task</DialogTitle>
-          <DialogDescription>
-            Tasks are stored per organization. They appear on the board and in list view for your team.
-          </DialogDescription>
         </DialogHeader>
         <form onSubmit={onSubmit} className="grid gap-4 pt-2">
           {disabled ? (
