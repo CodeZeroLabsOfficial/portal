@@ -26,7 +26,7 @@ export default async function AdminTasksPage() {
       showMainHeader={false}
       showRightAside={false}
     >
-      <TasksPanel tasks={tasks} viewerUid={user.uid} />
+      <TasksPanel tasks={tasks} viewerUid={user.uid} organizationId={user.organizationId} />
     </WorkspaceShell>
   );
 }

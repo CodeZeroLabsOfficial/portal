@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getCurrentSessionUser, hasRole } from "@/lib/auth/server-session";
 import { TASK_BOARD_COLUMNS, type TaskBoardColumnId } from "@/lib/tasks/task-board-columns";
-import { updateTaskBoardColumn } from "@/server/firestore/crm-tasks";
+import { createTaskForStaff, updateTaskBoardColumn } from "@/server/firestore/crm-tasks";
 
 const taskBoardColumnZodEnum = TASK_BOARD_COLUMNS as unknown as [
   TaskBoardColumnId,
@@ -40,4 +40,34 @@ export async function updateTaskBoardColumnAction(
   revalidatePath("/admin/tasks");
   revalidatePath("/admin/customers", "layout");
   return { ok: true };
+}
+
+const createTaskSchema = z.object({
+  title: z.string().trim().min(1, "Title is required.").max(500),
+  description: z.string().trim().max(8000).optional(),
+  column: z.enum(taskBoardColumnZodEnum),
+});
+
+export async function createTaskAction(
+  raw: unknown,
+): Promise<{ ok: true; taskId: string } | { ok: false; message: string }> {
+  const user = await requireStaffForCrm();
+  if (!user) return { ok: false, message: "Unauthorized." };
+
+  const parsed = createTaskSchema.safeParse(raw);
+  if (!parsed.success) {
+    const first = parsed.error.errors[0];
+    return { ok: false, message: first ? first.message : "Invalid input" };
+  }
+
+  const res = await createTaskForStaff(user, {
+    title: parsed.data.title,
+    description: parsed.data.description || undefined,
+    column: parsed.data.column,
+  });
+  if (!res.ok) return res;
+
+  revalidatePath("/admin/tasks");
+  revalidatePath("/admin/customers", "layout");
+  return { ok: true, taskId: res.taskId };
 }

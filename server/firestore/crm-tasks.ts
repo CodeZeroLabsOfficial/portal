@@ -68,3 +68,38 @@ export async function updateTaskBoardColumn(
 
   return { ok: true };
 }
+
+export async function createTaskForStaff(
+  user: PortalUser,
+  input: { title: string; description?: string; column: TaskBoardColumnId },
+): Promise<{ ok: true; taskId: string } | { ok: false; message: string }> {
+  const db = getFirebaseAdminFirestore();
+  if (!db || !canStaffAccessCrm(user)) {
+    return { ok: false, message: "Not allowed." };
+  }
+  if (!user.organizationId) {
+    return { ok: false, message: "Your profile needs an organization id to create tasks." };
+  }
+
+  const title = input.title.trim();
+  if (!title) {
+    return { ok: false, message: "Title is required." };
+  }
+
+  const description = input.description?.trim();
+  const now = Date.now();
+
+  const docRef = await db.collection(COLLECTIONS.tasks).add({
+    organizationId: user.organizationId,
+    title,
+    description: description || undefined,
+    status: boardColumnToStatus(input.column),
+    assignedToUid: user.uid,
+    assigneeCount: 1,
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
+    updatedAtMs: now,
+  });
+
+  return { ok: true, taskId: docRef.id };
+}

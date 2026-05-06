@@ -63,10 +63,14 @@ function StageColumn({
   stage,
   children,
   count,
+  onAdd,
+  addDisabled,
 }: {
   stage: TaskBoardColumnId;
   children: React.ReactNode;
   count: number;
+  onAdd: () => void;
+  addDisabled?: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: stage });
 
@@ -102,7 +106,9 @@ function StageColumn({
           type="button"
           variant="outline"
           className="w-full rounded-lg border-border/80 bg-card text-[13px] font-medium shadow-sm"
-          disabled
+          disabled={addDisabled}
+          onClick={onAdd}
+          title={addDisabled ? "Cannot add tasks until your account has an organization id." : undefined}
         >
           AddTask +
         </Button>
@@ -250,9 +256,13 @@ function TaskCard({ task, disabled }: { task: TaskRecord; disabled?: boolean }) 
 
 export interface TasksBoardProps {
   tasks: TaskRecord[];
+  /** Opens create flow with the chosen column as default. */
+  onRequestAddToColumn?: (column: TaskBoardColumnId) => void;
+  /** When true, column “Add task” buttons stay disabled (e.g. missing organization). */
+  addDisabled?: boolean;
 }
 
-export function TasksBoard({ tasks }: TasksBoardProps) {
+export function TasksBoard({ tasks, onRequestAddToColumn, addDisabled }: TasksBoardProps) {
   const { moveToColumn, pendingId } = useTaskStatusMutation();
   const [activeId, setActiveId] = React.useState<string | null>(null);
 
@@ -306,7 +316,13 @@ export function TasksBoard({ tasks }: TasksBoardProps) {
         {TASK_BOARD_COLUMNS.map((stage) => {
           const list = byColumn.get(stage) ?? [];
           return (
-            <StageColumn key={stage} stage={stage} count={list.length}>
+            <StageColumn
+              key={stage}
+              stage={stage}
+              count={list.length}
+              onAdd={() => onRequestAddToColumn?.(stage)}
+              addDisabled={Boolean(addDisabled)}
+            >
               {list.map((task) => (
                 <TaskCard key={task.id} task={task} disabled={pendingId === task.id} />
               ))}

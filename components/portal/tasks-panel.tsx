@@ -9,7 +9,8 @@ import {
   WORKSPACE_HUB_PAGE_TITLE_CLASS,
   WORKSPACE_PAGE_DESCRIPTION_CLASS,
 } from "@/lib/workspace-page-typography";
-import { statusToBoardColumn } from "@/lib/tasks/task-board-columns";
+import { statusToBoardColumn, type TaskBoardColumnId } from "@/lib/tasks/task-board-columns";
+import { AddTaskDialog } from "@/components/portal/add-task-dialog";
 import type { TaskRecord } from "@/types/task";
 import { Button } from "@/components/ui/button";
 import { TasksBoard } from "@/components/portal/tasks-board";
@@ -56,12 +57,23 @@ function filterTasksForTab(tasks: TaskRecord[], tab: TaskHubFilterTab, viewerUid
 export interface TasksPanelProps {
   tasks: TaskRecord[];
   viewerUid: string;
+  /** Required to create tasks (Firestore `organizationId` on new rows). */
+  organizationId?: string;
 }
 
-export function TasksPanel({ tasks, viewerUid }: TasksPanelProps) {
+export function TasksPanel({ tasks, viewerUid, organizationId }: TasksPanelProps) {
   const router = useRouter();
   const [mode, setMode] = React.useState<"board" | "list">("board");
   const [filterTab, setFilterTab] = React.useState<TaskHubFilterTab>("all");
+  const [addOpen, setAddOpen] = React.useState(false);
+  const [addDefaultColumn, setAddDefaultColumn] = React.useState<TaskBoardColumnId>("todo");
+
+  const canCreateTasks = Boolean(organizationId);
+
+  function openAddDialog(column: TaskBoardColumnId) {
+    setAddDefaultColumn(column);
+    setAddOpen(true);
+  }
 
   const filtered = React.useMemo(
     () => filterTasksForTab(tasks, filterTab, viewerUid),
@@ -151,13 +163,40 @@ export function TasksPanel({ tasks, viewerUid }: TasksPanelProps) {
             <RefreshCw className="h-4 w-4" aria-hidden />
             Refresh
           </Button>
-          <Button type="button" size="sm" className="gap-1.5" disabled>
+          <Button
+            type="button"
+            size="sm"
+            className="gap-1.5"
+            disabled={!canCreateTasks}
+            title={
+              !canCreateTasks
+                ? "Your user profile must include an organization id to create tasks."
+                : undefined
+            }
+            onClick={() => openAddDialog("todo")}
+          >
             + Add New
           </Button>
         </div>
       </div>
 
-      {mode === "board" ? <TasksBoard tasks={filtered} /> : <TasksList tasks={filtered} />}
+      {mode === "board" ? (
+        <TasksBoard
+          tasks={filtered}
+          onRequestAddToColumn={openAddDialog}
+          addDisabled={!canCreateTasks}
+        />
+      ) : (
+        <TasksList tasks={filtered} />
+      )}
+
+      <AddTaskDialog
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        defaultColumn={addDefaultColumn}
+        disabled={!canCreateTasks}
+        disabledReason="Your user profile must include an organization id before you can add tasks."
+      />
     </div>
   );
 }
