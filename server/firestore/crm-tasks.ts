@@ -78,7 +78,13 @@ export async function updateTaskBoardColumn(
 export async function updateTaskForStaff(
   user: PortalUser,
   taskId: string,
-  input: { title: string; description?: string; column: TaskBoardColumnId; assignedToUid?: string },
+  input: {
+    title: string;
+    description?: string;
+    column: TaskBoardColumnId;
+    assignedToUid?: string;
+    priority?: string;
+  },
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   const db = getFirebaseAdminFirestore();
   if (!db || !canStaffAccessCrm(user)) return { ok: false, message: "Not allowed." };
@@ -89,9 +95,14 @@ export async function updateTaskForStaff(
   if (!title) return { ok: false, message: "Title is required." };
 
   const descTrimmed = input.description?.trim() ?? "";
+  const priority =
+    typeof input.priority === "string" && input.priority.trim().length > 0
+      ? input.priority.trim().toLowerCase()
+      : "normal";
   const payload: Record<string, unknown> = {
     title,
     status: boardColumnToStatus(input.column),
+    priority,
     updatedAt: FieldValue.serverTimestamp(),
     updatedAtMs: Date.now(),
   };
@@ -100,12 +111,14 @@ export async function updateTaskForStaff(
   } else {
     payload.description = FieldValue.delete();
   }
-  if (input.assignedToUid) {
-    payload.assignedToUid = input.assignedToUid;
-    payload.assigneeCount = 1;
-  } else {
-    payload.assignedToUid = FieldValue.delete();
-    payload.assigneeCount = 0;
+  if (input.assignedToUid !== undefined) {
+    if (input.assignedToUid) {
+      payload.assignedToUid = input.assignedToUid;
+      payload.assigneeCount = 1;
+    } else {
+      payload.assignedToUid = FieldValue.delete();
+      payload.assigneeCount = 0;
+    }
   }
 
   await db.collection(COLLECTIONS.tasks).doc(taskId).update(payload);
@@ -115,7 +128,13 @@ export async function updateTaskForStaff(
 
 export async function createTaskForStaff(
   user: PortalUser,
-  input: { title: string; description?: string; column: TaskBoardColumnId; assignedToUid?: string },
+  input: {
+    title: string;
+    description?: string;
+    column: TaskBoardColumnId;
+    assignedToUid?: string;
+    priority?: string;
+  },
 ): Promise<{ ok: true; taskId: string } | { ok: false; message: string }> {
   const db = getFirebaseAdminFirestore();
   if (!db || !canStaffAccessCrm(user)) {
@@ -133,11 +152,17 @@ export async function createTaskForStaff(
   const description = input.description?.trim();
   const now = Date.now();
 
+  const priority =
+    typeof input.priority === "string" && input.priority.trim().length > 0
+      ? input.priority.trim().toLowerCase()
+      : "normal";
+
   const docRef = await db.collection(COLLECTIONS.tasks).add({
     organizationId: user.organizationId,
     title,
     description: description || undefined,
     status: boardColumnToStatus(input.column),
+    priority,
     assignedToUid: input.assignedToUid || user.uid,
     assigneeCount: 1,
     createdAt: FieldValue.serverTimestamp(),

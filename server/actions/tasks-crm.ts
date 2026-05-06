@@ -4,6 +4,12 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getCurrentSessionUser, hasRole } from "@/lib/auth/server-session";
 import { TASK_BOARD_COLUMNS, type TaskBoardColumnId } from "@/lib/tasks/task-board-columns";
+import { TASK_PRIORITY_VALUES, type TaskPriorityValue } from "@/lib/tasks/task-priority";
+
+const taskPriorityZodEnum = TASK_PRIORITY_VALUES as unknown as [
+  TaskPriorityValue,
+  ...TaskPriorityValue[],
+];
 import {
   createTaskForStaff,
   deleteTaskForStaff,
@@ -53,6 +59,7 @@ const createTaskSchema = z.object({
   description: z.string().trim().max(8000).optional(),
   column: z.enum(taskBoardColumnZodEnum),
   assignedToUid: z.string().min(1).optional(),
+  priority: z.enum(taskPriorityZodEnum),
 });
 
 export async function createTaskAction(
@@ -72,6 +79,7 @@ export async function createTaskAction(
     description: parsed.data.description || undefined,
     column: parsed.data.column,
     assignedToUid: parsed.data.assignedToUid,
+    priority: parsed.data.priority,
   });
   if (!res.ok) return res;
 
@@ -86,6 +94,7 @@ const updateTaskSchema = z.object({
   description: z.string().trim().max(8000).optional(),
   column: z.enum(taskBoardColumnZodEnum),
   assignedToUid: z.string().min(1).optional(),
+  priority: z.enum(taskPriorityZodEnum),
 });
 
 export async function updateTaskAction(
@@ -105,6 +114,7 @@ export async function updateTaskAction(
     description: parsed.data.description || undefined,
     column: parsed.data.column,
     assignedToUid: parsed.data.assignedToUid,
+    priority: parsed.data.priority,
   });
   if (!res.ok) return res;
 

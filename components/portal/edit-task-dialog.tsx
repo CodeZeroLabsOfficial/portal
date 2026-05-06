@@ -11,6 +11,12 @@ import {
   taskBoardColumnLabel,
   type TaskBoardColumnId,
 } from "@/lib/tasks/task-board-columns";
+import {
+  TASK_PRIORITY_VALUES,
+  coerceTaskPriority,
+  taskPriorityLabel,
+  type TaskPriorityValue,
+} from "@/lib/tasks/task-priority";
 import type { TaskRecord } from "@/types/task";
 import {
   Dialog,
@@ -34,6 +40,7 @@ export function EditTaskDialog({ open, onOpenChange, task }: EditTaskDialogProps
   const router = useRouter();
   const [column, setColumn] = React.useState<TaskBoardColumnId>("todo");
   const [title, setTitle] = React.useState("");
+  const [priority, setPriority] = React.useState<TaskPriorityValue>("normal");
   const [description, setDescription] = React.useState("");
   const [pending, setPending] = React.useState(false);
   const [serverError, setServerError] = React.useState<string | null>(null);
@@ -41,6 +48,7 @@ export function EditTaskDialog({ open, onOpenChange, task }: EditTaskDialogProps
   React.useEffect(() => {
     if (!open || !task) return;
     setTitle(task.title);
+    setPriority(coerceTaskPriority(task.priority));
     setDescription(task.description ?? "");
     setColumn(statusToBoardColumn(task.status));
     setServerError(null);
@@ -62,6 +70,7 @@ export function EditTaskDialog({ open, onOpenChange, task }: EditTaskDialogProps
       title,
       description: description.trim() || undefined,
       column,
+      priority,
     });
     setPending(false);
     if (!res.ok) {
@@ -114,6 +123,26 @@ export function EditTaskDialog({ open, onOpenChange, task }: EditTaskDialogProps
               disabled={busy || !task}
               className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
             />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="edit-task-priority" className="text-zinc-300">
+              Priority
+            </Label>
+            <select
+              id="edit-task-priority"
+              name="priority"
+              value={priority}
+              onChange={(e) => setPriority(e.target.value as TaskPriorityValue)}
+              disabled={busy || !task}
+              className="flex h-9 w-full rounded-md border border-white/[0.08] bg-white/[0.04] px-3 py-1 text-sm text-white shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#141414]"
+            >
+              {TASK_PRIORITY_VALUES.map((p) => (
+                <option key={p} value={p}>
+                  {taskPriorityLabel(p)}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="flex flex-col gap-1.5">

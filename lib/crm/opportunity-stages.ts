@@ -3,17 +3,18 @@ import type { OpportunityStage } from "@/types/opportunity";
 /** Ordered pipeline stages — Kanban columns and detail-view stepper follow this order. */
 export const OPPORTUNITY_STAGES: readonly OpportunityStage[] = [
   "lead_in",
-  "contacted",
+  "discovery",
   "proposal_sent",
   "negotiation",
   "won",
   "lost",
 ];
 
-/** Maps legacy stored `stage` values from before the pipeline rename. */
+/** Maps legacy stored `stage` values from earlier pipeline schemas to the current stage set. */
 const LEGACY_OPPORTUNITY_STAGE: Record<string, OpportunityStage | undefined> = {
   new: "lead_in",
-  qualified: "contacted",
+  qualified: "discovery",
+  contacted: "discovery",
   proposal: "proposal_sent",
 };
 
@@ -30,7 +31,7 @@ export function normalizeOpportunityStage(value: unknown): OpportunityStage {
 
 const stageLabels: Record<OpportunityStage, string> = {
   lead_in: "Lead in",
-  contacted: "Discovery",
+  discovery: "Discovery",
   proposal_sent: "Proposal sent",
   negotiation: "Negotiation",
   won: "Won",

@@ -11,6 +11,11 @@ import {
   type TaskBoardColumnId,
 } from "@/lib/tasks/task-board-columns";
 import {
+  TASK_PRIORITY_VALUES,
+  taskPriorityLabel,
+  type TaskPriorityValue,
+} from "@/lib/tasks/task-priority";
+import {
   Dialog,
   DialogContent,
   DialogFooter,
@@ -42,6 +47,7 @@ export function AddTaskDialog({
   const [column, setColumn] = React.useState<TaskBoardColumnId>(defaultColumn);
   const [title, setTitle] = React.useState("");
   const [description, setDescription] = React.useState("");
+  const [priority, setPriority] = React.useState<TaskPriorityValue>("normal");
   const [assignedToUid, setAssignedToUid] = React.useState("");
   const [assigneeOptions, setAssigneeOptions] = React.useState<Array<{ uid: string; displayName: string; email: string }>>([]);
   const [loadingAssignees, setLoadingAssignees] = React.useState(false);
@@ -58,6 +64,7 @@ export function AddTaskDialog({
     if (!open) {
       setTitle("");
       setDescription("");
+      setPriority("normal");
       setAssignedToUid("");
       setServerError(null);
     }
@@ -95,6 +102,7 @@ export function AddTaskDialog({
       title,
       description: description.trim() || undefined,
       column,
+      priority,
       assignedToUid: assignedToUid || undefined,
     });
     setPending(false);
@@ -157,6 +165,26 @@ export function AddTaskDialog({
               disabled={busy || disabled}
               className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
             />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="task-priority" className="text-zinc-300">
+              Priority
+            </Label>
+            <select
+              id="task-priority"
+              name="priority"
+              value={priority}
+              onChange={(e) => setPriority(e.target.value as TaskPriorityValue)}
+              disabled={busy || disabled}
+              className="flex h-9 w-full rounded-md border border-white/[0.08] bg-white/[0.04] px-3 py-1 text-sm text-white shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#141414]"
+            >
+              {TASK_PRIORITY_VALUES.map((p) => (
+                <option key={p} value={p}>
+                  {taskPriorityLabel(p)}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="flex flex-col gap-1.5">

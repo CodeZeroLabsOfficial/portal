@@ -1,6 +1,6 @@
 export type OpportunityStage =
   | "lead_in"
-  | "contacted"
+  | "discovery"
   | "proposal_sent"
   | "negotiation"
   | "won"
