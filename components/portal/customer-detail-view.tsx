@@ -27,6 +27,7 @@ import type { CustomerActivityRecord, CustomerNoteRecord, CustomerRecord } from 
 import type { OpportunityRecord } from "@/types/opportunity";
 import type { InvoiceRecord } from "@/types/invoice";
 import type { ProposalRecord } from "@/types/proposal";
+import type { ProposalTemplateRecord } from "@/types/proposal-template";
 import type { SubscriptionRecord } from "@/types/subscription";
 import type { TaskRecord } from "@/types/task";
 import {
@@ -71,14 +72,38 @@ function rollupFromSubscriptions(subs: SubscriptionRecord[]): string {
 }
 
 function ProposalCreateControls({
+  proposalTemplates,
+  proposalTemplateId,
+  onTemplateChange,
   busy,
   onCreate,
 }: {
+  proposalTemplates: ProposalTemplateRecord[];
+  proposalTemplateId: string;
+  onTemplateChange: (id: string) => void;
   busy: boolean;
   onCreate: () => void;
 }) {
   return (
-    <div className="flex justify-end">
+    <div className="flex flex-wrap items-end justify-end gap-2">
+      {proposalTemplates.length > 0 ? (
+        <label className="flex min-w-[220px] flex-col gap-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+          Template
+          <select
+            className="rounded-md border border-input bg-background px-2 py-1.5 text-xs font-normal normal-case text-foreground"
+            value={proposalTemplateId}
+            onChange={(e) => onTemplateChange(e.target.value)}
+            disabled={busy}
+          >
+            <option value="">Standard (auto-filled)</option>
+            {proposalTemplates.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
       <Button size="sm" className="gap-1.5 shadow-sm" disabled={busy} onClick={() => void onCreate()}>
         {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Plus className="h-3.5 w-3.5" aria-hidden />}
         Add proposal
@@ -96,6 +121,7 @@ export interface CustomerDetailViewProps {
   notes: CustomerNoteRecord[];
   activities: CustomerActivityRecord[];
   tasks: TaskRecord[];
+  proposalTemplates: ProposalTemplateRecord[];
 }
 
 export function CustomerDetailView({
@@ -107,10 +133,12 @@ export function CustomerDetailView({
   notes,
   activities,
   tasks,
+  proposalTemplates,
 }: CustomerDetailViewProps) {
   const router = useRouter();
   const [tab, setTab] = React.useState("overview");
   const [busy, setBusy] = React.useState<string | null>(null);
+  const [proposalTemplateId, setProposalTemplateId] = React.useState("");
   const [noteBody, setNoteBody] = React.useState("");
   const [noteKind, setNoteKind] = React.useState<CustomerNoteRecord["kind"]>("note");
   const [noteError, setNoteError] = React.useState<string | null>(null);
@@ -152,7 +180,7 @@ export function CustomerDetailView({
     try {
       const res = await createDraftProposalFromCustomerAction(
         customer.id,
-        undefined,
+        proposalTemplateId.trim() ? proposalTemplateId.trim() : undefined,
       );
       if (!res.ok) {
         window.alert(res.message);
@@ -408,7 +436,7 @@ export function CustomerDetailView({
               ) : (
                 <ul className="relative space-y-0 border-l border-border/80 pl-6">
                   {timeline.map((item) => (
-                    <li key={item.id} className="mb-8 last:mb-0">
+                    <li key={item.id} className="mb-10 last:mb-0">
                       <span className="absolute -left-[5px] mt-1.5 h-2.5 w-2.5 rounded-full border border-border bg-background ring-2 ring-muted" />
                       <p className="text-xs text-muted-foreground">
                         {new Date(item.at).toLocaleString(undefined, {
@@ -505,6 +533,9 @@ export function CustomerDetailView({
             </CardHeader>
             <CardContent className="flex justify-end">
               <ProposalCreateControls
+                proposalTemplates={proposalTemplates}
+                proposalTemplateId={proposalTemplateId}
+                onTemplateChange={setProposalTemplateId}
                 busy={busy === "proposal"}
                 onCreate={() => void createProposalFromCustomer()}
               />
