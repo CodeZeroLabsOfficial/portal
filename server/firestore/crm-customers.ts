@@ -22,6 +22,7 @@ import { deleteOpportunitiesForCustomerDb } from "@/server/firestore/crm-opportu
 import { deleteMirroredStripeCustomer } from "@/server/stripe/delete-stripe-customer-for-crm";
 import { ensureStripeCustomer } from "@/server/stripe/proposal-billing";
 import { parseProposalRecord } from "@/server/firestore/parse-proposal";
+import { parseTaskRecord } from "@/server/firestore/parse-task";
 import type { SubscriptionRecord } from "@/types/subscription";
 import type { TaskRecord } from "@/types/task";
 import type { PortalUser } from "@/types/user";
@@ -634,18 +635,6 @@ export async function listProposalsLinkedToCustomer(
   }
 }
 
-function parseTask(id: string, data: Record<string, unknown>): TaskRecord {
-  return {
-    id,
-    organizationId: asString(data.organizationId),
-    customerId: asString(data.customerId),
-    title: asString(data.title) ?? "Task",
-    status: asString(data.status) ?? "open",
-    dueAtMs: asNumber(data.dueAtMs),
-    updatedAtMs: asNumber(data.updatedAtMs) ?? Date.now(),
-  };
-}
-
 export async function listTasksForCustomer(user: PortalUser, customerId: string): Promise<TaskRecord[]> {
   const db = getFirebaseAdminFirestore();
   if (!db || !canStaffAccessCrm(user)) return [];
@@ -655,7 +644,7 @@ export async function listTasksForCustomer(user: PortalUser, customerId: string)
       .where("customerId", "==", customerId)
       .limit(80)
       .get();
-    return snap.docs.map((d) => parseTask(d.id, d.data() as Record<string, unknown>));
+    return snap.docs.map((d) => parseTaskRecord(d.id, d.data() as Record<string, unknown>));
   } catch {
     return [];
   }

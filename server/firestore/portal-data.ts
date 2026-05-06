@@ -7,6 +7,7 @@ import type { ProposalRecord } from "@/types/proposal";
 import { parseProposalRecord } from "@/server/firestore/parse-proposal";
 import type { SubscriptionRecord } from "@/types/subscription";
 import type { SupportTicketRecord, SupportTicketUrgency } from "@/types/support-ticket";
+import { parseTaskRecord } from "@/server/firestore/parse-task";
 import type { TaskRecord } from "@/types/task";
 import type { PortalUser } from "@/types/user";
 import type { CustomerListRow } from "@/lib/customer-list";
@@ -262,18 +263,6 @@ async function listProposalsForUser(user: PortalUser): Promise<ProposalRecord[]>
   return snap.docs.map((doc) => parseProposal(doc.id, doc.data() as Record<string, unknown>));
 }
 
-function parseTask(id: string, data: Record<string, unknown>): TaskRecord {
-  return {
-    id,
-    organizationId: asString(data.organizationId),
-    customerId: asString(data.customerId),
-    title: asString(data.title) ?? "Task",
-    status: asString(data.status) ?? "open",
-    dueAtMs: asNumber(data.dueAtMs),
-    updatedAtMs: asNumber(data.updatedAtMs) ?? Date.now(),
-  };
-}
-
 function parseSupportTicket(id: string, data: Record<string, unknown>): SupportTicketRecord {
   const raw = (asString(data.urgency) ?? asString(data.priority) ?? "medium").toLowerCase();
   let urgency: SupportTicketUrgency = "medium";
@@ -305,7 +294,7 @@ async function listTasksForUser(user: PortalUser): Promise<TaskRecord[]> {
       .where("organizationId", "==", user.organizationId)
       .limit(200)
       .get();
-    return snap.docs.map((doc) => parseTask(doc.id, doc.data() as Record<string, unknown>));
+    return snap.docs.map((doc) => parseTaskRecord(doc.id, doc.data() as Record<string, unknown>));
   } catch {
     return [];
   }
