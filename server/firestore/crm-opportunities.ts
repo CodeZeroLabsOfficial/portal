@@ -101,7 +101,7 @@ export async function getOpportunityForStaff(
 
 export interface ConvertLeadInput {
   opportunityName: string;
-  /** Initial pipeline stage for the new opportunity (default `qualified`). */
+  /** Initial pipeline stage for the new opportunity (default `contacted`). */
   initialStage?: import("@/types/opportunity").OpportunityStage;
   amountMinor?: number;
   currency?: string;
@@ -152,7 +152,7 @@ export async function convertLeadToContactWithOpportunity(
       : {};
 
   const orgId = asString(customerData.organizationId) ?? user.organizationId ?? undefined;
-  const initialStage = input.initialStage ?? "qualified";
+  const initialStage = input.initialStage ?? "contacted";
 
   let opportunityIdResult = "";
 

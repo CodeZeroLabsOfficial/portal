@@ -125,7 +125,7 @@ export function OpportunitiesBoard({ opportunities }: OpportunitiesBoardProps) {
     for (const o of opportunities) {
       const list = map.get(o.stage);
       if (list) list.push(o);
-      else map.get("new")!.push(o);
+      else map.get("lead_in")!.push(o);
     }
     return map;
   }, [opportunities]);

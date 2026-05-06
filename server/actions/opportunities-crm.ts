@@ -3,12 +3,17 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getCurrentSessionUser, hasRole } from "@/lib/auth/server-session";
+import { OPPORTUNITY_STAGES } from "@/lib/crm/opportunity-stages";
+import type { OpportunityStage } from "@/types/opportunity";
 import {
   convertLeadToContactWithOpportunity,
   updateOpportunityStage,
 } from "@/server/firestore/crm-opportunities";
 
-const STAGE_ENUM = ["new", "qualified", "proposal", "negotiation", "won", "lost"] as const;
+const opportunityStageZodEnum = OPPORTUNITY_STAGES as unknown as [
+  OpportunityStage,
+  ...OpportunityStage[],
+];
 
 async function requireStaffForCrm() {
   const user = await getCurrentSessionUser();
@@ -19,7 +24,7 @@ async function requireStaffForCrm() {
 const convertLeadSchema = z.object({
   customerId: z.string().min(1),
   opportunityName: z.string().trim().min(1).max(240),
-  initialStage: z.enum(STAGE_ENUM).optional(),
+  initialStage: z.enum(opportunityStageZodEnum).optional(),
   amountMinor: z.number().finite().nonnegative().optional(),
   currency: z.string().trim().length(3).optional(),
   notes: z.string().trim().max(4000).optional(),
@@ -58,7 +63,7 @@ export async function convertLeadToContactAction(
 
 const updateStageSchema = z.object({
   opportunityId: z.string().min(1),
-  stage: z.enum(STAGE_ENUM),
+  stage: z.enum(opportunityStageZodEnum),
 });
 
 export async function updateOpportunityStageAction(

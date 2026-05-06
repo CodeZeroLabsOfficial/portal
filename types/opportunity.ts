@@ -1,4 +1,10 @@
-export type OpportunityStage = "new" | "qualified" | "proposal" | "negotiation" | "won" | "lost";
+export type OpportunityStage =
+  | "lead_in"
+  | "contacted"
+  | "proposal_sent"
+  | "negotiation"
+  | "won"
+  | "lost";
 
 /** `opportunities/{id}` — deal linked to a unified CRM customer (`customers/{customerId}`). */
 export interface OpportunityRecord {
