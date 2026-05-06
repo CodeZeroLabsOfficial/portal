@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Filter, MoreHorizontal, Plus, Search, SquareArrowOutUpRight } from "lucide-react";
+import { Filter, ListChecks, MoreHorizontal, Plus, Search } from "lucide-react";
 import type { CustomerListRow } from "@/lib/customer-list";
 import type { CustomerSubscriptionRollup } from "@/types/customer";
 import { archiveCustomerAction, deleteCustomerAction } from "@/server/actions/customers-crm";
@@ -59,6 +59,7 @@ export function CustomerListPanel({ rows }: CustomerListPanelProps) {
   const [selected, setSelected] = React.useState<Set<string>>(() => new Set());
   const [addOpen, setAddOpen] = React.useState(false);
   const [pendingId, setPendingId] = React.useState<string | null>(null);
+  const [bulkBusy, setBulkBusy] = React.useState(false);
 
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -126,6 +127,27 @@ export function CustomerListPanel({ rows }: CustomerListPanelProps) {
     setPendingId(null);
     if (res.ok) router.refresh();
     else window.alert(res.message);
+  }
+
+  async function handleBulkDelete() {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    if (!window.confirm(`Delete ${ids.length} selected customer${ids.length === 1 ? "" : "s"}? This cannot be undone.`)) {
+      return;
+    }
+    setBulkBusy(true);
+    const failed: string[] = [];
+    for (const id of ids) {
+      const res = await deleteCustomerAction(id);
+      if (!res.ok) failed.push(id);
+    }
+    setBulkBusy(false);
+    if (failed.length > 0) {
+      window.alert(`Deleted ${ids.length - failed.length} of ${ids.length}. ${failed.length} failed.`);
+    } else {
+      setSelected(new Set());
+    }
+    router.refresh();
   }
 
   return (
@@ -210,17 +232,33 @@ export function CustomerListPanel({ rows }: CustomerListPanelProps) {
                 className="h-9 w-[140px] rounded-full border-border/80 bg-background/60 text-[13px] sm:w-[160px]"
                 aria-label="Filter by tag"
               />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="h-9 w-9 shrink-0 border-border/80 bg-card/80 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-                aria-label="Export (soon)"
-                disabled
-                title="Export coming soon"
-              >
-                <SquareArrowOutUpRight className="h-4 w-4" />
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9 shrink-0 border-border/80 bg-card/80 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                    aria-label="Bulk actions"
+                    title={selected.size > 0 ? `${selected.size} selected` : "Bulk actions"}
+                    disabled={bulkBusy}
+                  >
+                    <ListChecks className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  className="min-w-[11rem] border-border/80 bg-popover text-popover-foreground shadow-lg"
+                >
+                  <DropdownMenuItem
+                    disabled={selected.size === 0 || bulkBusy}
+                    className="text-destructive focus:text-destructive"
+                    onClick={() => void handleBulkDelete()}
+                  >
+                    Delete selected ({selected.size})
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>
