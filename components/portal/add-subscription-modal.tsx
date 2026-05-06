@@ -537,9 +537,6 @@ export function AddSubscriptionModal({
               ) : null}
               {cardError ? <p className="text-xs leading-tight text-destructive">{cardError}</p> : null}
               {cardLoading ? <p className="text-xs text-muted-foreground">Checking existing card…</p> : null}
-              {effectivePmId ? (
-                <p className="text-xs text-emerald-400">Card ready · Payment method {effectivePmId}</p>
-              ) : null}
               {showAddCard ? (
                 <div className="flex items-center gap-2">
                   <Button

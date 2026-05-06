@@ -336,7 +336,7 @@ export function CustomerDetailView({
             <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Integrations</p>
             <div className="rounded-xl border border-border/60 bg-background/40 p-3 text-sm">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-muted-foreground">Firebase Auth</span>
+                <span className="text-muted-foreground">Stripe</span>
                 <span className={cn("font-medium", customer.portalUserId ? "text-emerald-600" : "text-muted-foreground")}>
                   {customer.portalUserId ? "Linked" : "—"}
                 </span>
