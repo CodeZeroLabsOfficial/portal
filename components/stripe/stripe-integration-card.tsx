@@ -11,41 +11,41 @@ export interface StripeIntegrationCardProps {
 export function StripeIntegrationCard({ connected }: StripeIntegrationCardProps) {
   return (
     <div className="rounded-xl border border-white/[0.08] bg-[#14141f] p-5">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex gap-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[#635bff]/15 text-[#635bff]">
-            <CreditCard className="h-6 w-6" aria-hidden />
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[#635bff]/15 text-[#635bff]">
+              <CreditCard className="h-6 w-6" aria-hidden />
+            </div>
+            <h2 className="min-w-0 pt-0.5 text-base font-semibold text-white">Stripe</h2>
           </div>
-          <div className="min-w-0 space-y-1">
-            <h2 className="text-base font-semibold text-white">Stripe</h2>
-            <p className="text-sm text-zinc-400">
-              Sync customers, subscriptions, invoices, and payments from Stripe.
-            </p>
+          <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
+            <div className="flex items-center gap-2 text-sm">
+              <span
+                className={cn(
+                  "inline-flex h-2 w-2 rounded-full",
+                  connected ? "bg-emerald-500" : "bg-zinc-500",
+                )}
+                aria-hidden
+              />
+              <span className={connected ? "text-emerald-400" : "text-zinc-400"}>
+                {connected ? "Connected" : "Not configured"}
+              </span>
+            </div>
+            <a
+              href="https://dashboard.stripe.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+            >
+              Open Stripe Dashboard
+              <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+            </a>
           </div>
         </div>
-        <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
-          <div className="flex items-center gap-2 text-sm">
-            <span
-              className={cn(
-                "inline-flex h-2 w-2 rounded-full",
-                connected ? "bg-emerald-500" : "bg-zinc-500",
-              )}
-              aria-hidden
-            />
-            <span className={connected ? "text-emerald-400" : "text-zinc-400"}>
-              {connected ? "Connected" : "Not configured"}
-            </span>
-          </div>
-          <a
-            href="https://dashboard.stripe.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
-          >
-            Open Stripe Dashboard
-            <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-          </a>
-        </div>
+        <p className="text-sm text-zinc-400">
+          Sync customers, subscriptions, invoices, and payments from Stripe.
+        </p>
       </div>
       {!connected ? (
         <p className="mt-4 text-sm text-zinc-500">
