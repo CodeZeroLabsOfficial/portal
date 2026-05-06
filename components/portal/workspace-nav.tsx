@@ -12,7 +12,6 @@ import {
   LayoutDashboard,
   LifeBuoy,
   ListTodo,
-  Mail,
   Settings2,
   Users,
   type LucideIcon,
@@ -46,7 +45,6 @@ const adminNavIcons: Record<(typeof ADMIN_PORTAL_NAV)[number]["id"], LucideIcon>
 
 const adminFooterIcons: Record<(typeof ADMIN_PORTAL_NAV_FOOTER)[number]["id"], LucideIcon> = {
   settings: Settings2,
-  contact: Mail,
 };
 
 const sectionLabels = {
@@ -97,21 +95,8 @@ export function WorkspaceNav({ collapsed = false, userRole }: WorkspaceNavProps)
 
         <div className={cn("mt-8 shrink-0 space-y-0.5 border-t border-white/[0.06] pt-4", collapsed && "mt-4 pt-3")}>
           {ADMIN_PORTAL_NAV_FOOTER.map((item) => {
-            const Icon = adminFooterIcons[item.id] ?? Mail;
-            const isActive = item.external ? false : isAdminFooterNavActive(item.href, pathname);
-            if (item.external) {
-              return (
-                <NavRowExternal
-                  key={item.id}
-                  href={item.href}
-                  label={item.label}
-                  collapsed={collapsed}
-                  isActive={false}
-                >
-                  <Icon className={iconClassName(false)} aria-hidden />
-                </NavRowExternal>
-              );
-            }
+            const Icon = adminFooterIcons[item.id];
+            const isActive = isAdminFooterNavActive(item.href, pathname);
             return (
               <NavRow
                 key={item.href}
@@ -231,55 +216,5 @@ function NavRow({
     <Link href={href} className={linkClass} aria-current={isActive ? "page" : undefined}>
       {linkInner}
     </Link>
-  );
-}
-
-function NavRowExternal({
-  href,
-  label,
-  collapsed,
-  isActive,
-  children,
-}: {
-  href: string;
-  label: string;
-  collapsed: boolean;
-  isActive: boolean;
-  children: ReactNode;
-}) {
-  const linkClass = cn(
-    "group flex min-h-[40px] w-full items-center gap-3 rounded-lg py-2 transition-colors",
-    collapsed ? "px-2" : "px-3",
-    isActive ? "bg-white/[0.08] text-white" : "text-zinc-400 hover:bg-white/[0.05] hover:text-white",
-  );
-
-  const linkInner = (
-    <>
-      <span className="inline-flex h-[18px] w-9 shrink-0 items-center justify-center [&>svg]:shrink-0">
-        {children}
-      </span>
-      {!collapsed ? <span className="truncate text-[14px] font-medium leading-none">{label}</span> : null}
-    </>
-  );
-
-  if (collapsed) {
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <a href={href} className={linkClass} target="_blank" rel="noopener noreferrer">
-            {linkInner}
-          </a>
-        </TooltipTrigger>
-        <TooltipContent side="right" className="border-white/[0.08] bg-[#1e1e1e] text-white">
-          {label}
-        </TooltipContent>
-      </Tooltip>
-    );
-  }
-
-  return (
-    <a href={href} className={linkClass} target="_blank" rel="noopener noreferrer">
-      {linkInner}
-    </a>
   );
 }

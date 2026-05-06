@@ -13,10 +13,9 @@ export interface AdminPortalNavItem {
 }
 
 export interface AdminPortalNavFooterItem {
-  id: "settings" | "contact";
-  href: string;
+  id: "settings";
+  href: "/admin/settings";
   label: string;
-  external?: boolean;
 }
 
 export const ADMIN_PORTAL_NAV: AdminPortalNavItem[] = [
@@ -32,12 +31,6 @@ export const ADMIN_PORTAL_NAV: AdminPortalNavItem[] = [
 
 export const ADMIN_PORTAL_NAV_FOOTER: AdminPortalNavFooterItem[] = [
   { id: "settings", href: "/admin/settings", label: "Settings" },
-  {
-    id: "contact",
-    href: "https://codezerolabs.com.au",
-    label: "Contact",
-    external: true,
-  },
 ];
 
 export function isAdminNavActive(href: AdminPortalNavItem["href"], pathname: string): boolean {
