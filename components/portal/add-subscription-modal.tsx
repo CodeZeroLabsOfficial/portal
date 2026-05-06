@@ -504,9 +504,6 @@ export function AddSubscriptionModal({
             <div className="space-y-2 rounded-xl border border-white/[0.08] bg-white/[0.03] p-3">
               <Label className="text-zinc-300">Credit card details</Label>
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="savedCardSelect" className="text-zinc-300">
-                  Select credit card
-                </Label>
                 <select
                   id="savedCardSelect"
                   className="flex h-9 w-full rounded-md border border-white/[0.08] bg-white/[0.04] px-3 py-1 text-sm text-white shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#141414]"

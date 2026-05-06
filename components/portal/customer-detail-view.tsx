@@ -32,8 +32,6 @@ import type { SubscriptionRecord } from "@/types/subscription";
 import type { TaskRecord } from "@/types/task";
 import {
   addCustomerNoteAction,
-  linkStripeCustomerIdAction,
-  pullStripeCustomerProfileAction,
 } from "@/server/actions/customers-crm";
 import { deleteProposalAction } from "@/server/actions/proposal-builder";
 import { createDraftProposalFromCustomerAction } from "@/server/actions/proposals-crm";
@@ -65,6 +63,9 @@ function formatMinor(amount: number, currency: string): string {
 
 function rollupFromSubscriptions(subs: SubscriptionRecord[]): string {
   if (subs.length === 0) return "No active Stripe subscriptions";
+  const productNames = [...new Set(subs.map((s) => (s.productName ?? "").trim()).filter(Boolean))];
+  if (productNames.length === 1) return `Subscription · ${productNames[0]}`;
+  if (productNames.length > 1) return `Subscriptions · ${productNames.join(", ")}`;
   const statuses = [...new Set(subs.map((s) => s.status))];
   if (statuses.length === 1) return `Subscription · ${statuses[0]}`;
   return `Subscriptions · ${statuses.join(", ")}`;
@@ -144,11 +145,6 @@ export function CustomerDetailView({
   const [tab, setTab] = React.useState("overview");
   const [busy, setBusy] = React.useState<string | null>(null);
   const [proposalTemplateId, setProposalTemplateId] = React.useState("");
-  const [stripeInput, setStripeInput] = React.useState(customer.stripeCustomerId ?? "");
-
-  React.useEffect(() => {
-    setStripeInput(customer.stripeCustomerId ?? "");
-  }, [customer.stripeCustomerId]);
   const [noteBody, setNoteBody] = React.useState("");
   const [noteKind, setNoteKind] = React.useState<CustomerNoteRecord["kind"]>("note");
   const [noteError, setNoteError] = React.useState<string | null>(null);
@@ -344,46 +340,6 @@ export function CustomerDetailView({
               <div className="mt-2 text-xs text-muted-foreground">
                 {rollupFromSubscriptions(subscriptions)}
               </div>
-            </div>
-            <div className="space-y-2 rounded-xl border border-border/60 bg-background/40 p-3">
-              <label className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                Stripe customer id
-              </label>
-              <div className="flex gap-2">
-                <Input
-                  value={stripeInput}
-                  onChange={(e) => setStripeInput(e.target.value)}
-                  placeholder="cus_…"
-                  className="h-9 font-mono text-xs"
-                />
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  disabled={busy === "linkStripe"}
-                  className="shrink-0"
-                  onClick={() =>
-                    run("linkStripe", () => linkStripeCustomerIdAction(customer.id, stripeInput))
-                  }
-                >
-                  {busy === "linkStripe" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
-                </Button>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="w-full gap-1.5 text-xs"
-                disabled={busy === "pullStripe" || !customer.stripeCustomerId}
-                onClick={() => run("pullStripe", () => pullStripeCustomerProfileAction(customer.id))}
-              >
-                {busy === "pullStripe" ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Sparkles className="h-3.5 w-3.5" />
-                )}
-                Sync fields from Stripe
-              </Button>
             </div>
           </div>
         </div>

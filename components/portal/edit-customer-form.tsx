@@ -3,12 +3,16 @@
 import * as React from "react";
 import Link from "next/link";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Link2, Loader2, Sparkles } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { updateCustomerFormSchema, type UpdateCustomerFormInput } from "@/lib/schemas/customer";
-import { updateCustomerAction } from "@/server/actions/customers-crm";
+import {
+  linkStripeCustomerIdAction,
+  pullStripeCustomerProfileAction,
+  updateCustomerAction,
+} from "@/server/actions/customers-crm";
 import type { CustomerRecord } from "@/types/customer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,6 +58,8 @@ export interface EditCustomerFormProps {
 export function EditCustomerForm({ customer }: EditCustomerFormProps) {
   const router = useRouter();
   const [serverError, setServerError] = React.useState<string | null>(null);
+  const [stripeInput, setStripeInput] = React.useState(customer.stripeCustomerId ?? "");
+  const [stripeBusy, setStripeBusy] = React.useState<"linkStripe" | "pullStripe" | null>(null);
   const [tagInput, setTagInput] = React.useState(() => customer.tags.join(", "));
   const [customRows, setCustomRows] = React.useState<{ key: string; value: string }[]>(() =>
     Object.entries(customer.customFields)
@@ -68,6 +74,7 @@ export function EditCustomerForm({ customer }: EditCustomerFormProps) {
 
   React.useEffect(() => {
     form.reset(customerToFormDefaults(customer));
+    setStripeInput(customer.stripeCustomerId ?? "");
     setTagInput(customer.tags.join(", "));
     setCustomRows(
       Object.entries(customer.customFields)
@@ -76,6 +83,20 @@ export function EditCustomerForm({ customer }: EditCustomerFormProps) {
     );
     setServerError(null);
   }, [customer, form]);
+
+  async function runStripeAction(
+    key: "linkStripe" | "pullStripe",
+    action: () => Promise<{ ok: boolean; message?: string }>,
+  ) {
+    setStripeBusy(key);
+    const result = await action();
+    setStripeBusy(null);
+    if (!result.ok) {
+      window.alert(result.message ?? "Stripe action failed.");
+      return;
+    }
+    router.refresh();
+  }
 
   async function onSubmit(values: UpdateCustomerFormInput) {
     setServerError(null);
@@ -122,6 +143,48 @@ export function EditCustomerForm({ customer }: EditCustomerFormProps) {
           <CardContent className="p-6">
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" noValidate>
               <FormServerError message={serverError} />
+
+              <div className="space-y-2 rounded-xl border border-border/60 bg-muted/20 p-3">
+                <Label htmlFor="edit-crm-stripe-customer-id" className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                  Stripe customer id
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="edit-crm-stripe-customer-id"
+                    value={stripeInput}
+                    onChange={(e) => setStripeInput(e.target.value)}
+                    placeholder="cus_..."
+                    className="h-9 font-mono text-xs"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    disabled={busy || stripeBusy === "linkStripe"}
+                    className="shrink-0"
+                    onClick={() =>
+                      runStripeAction("linkStripe", () => linkStripeCustomerIdAction(customer.id, stripeInput))
+                    }
+                  >
+                    {stripeBusy === "linkStripe" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
+                  </Button>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full gap-1.5 text-xs"
+                  disabled={busy || stripeBusy === "pullStripe" || !customer.stripeCustomerId}
+                  onClick={() => runStripeAction("pullStripe", () => pullStripeCustomerProfileAction(customer.id))}
+                >
+                  {stripeBusy === "pullStripe" ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-3.5 w-3.5" />
+                  )}
+                  Sync fields from Stripe
+                </Button>
+              </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2 sm:col-span-2">
