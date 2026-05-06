@@ -448,7 +448,7 @@ export function CustomerDetailView({
             </Card>
             <Card className="border-border/80 bg-card/60 shadow-sm backdrop-blur-sm">
               <CardHeader className="pb-2">
-                <CardDescription>Proposals (this contact)</CardDescription>
+                <CardDescription>Proposals</CardDescription>
                 <CardTitle className="text-2xl tabular-nums">{proposalsMatched.length}</CardTitle>
               </CardHeader>
             </Card>
@@ -457,10 +457,8 @@ export function CustomerDetailView({
                 <CardDescription>Opportunities</CardDescription>
                 <CardTitle className="text-2xl tabular-nums">{opportunities.length}</CardTitle>
               </CardHeader>
-              <CardContent className="pt-0">
-                {opportunities.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">None linked yet.</p>
-                ) : (
+              {opportunities.length > 0 ? (
+                <CardContent className="pt-0">
                   <ul className="space-y-1.5 text-sm">
                     {opportunities.slice(0, 4).map((o) => (
                       <li key={o.id}>
@@ -473,8 +471,8 @@ export function CustomerDetailView({
                       <li className="text-xs text-muted-foreground">+{opportunities.length - 4} more on Pipeline</li>
                     ) : null}
                   </ul>
-                )}
-              </CardContent>
+                </CardContent>
+              ) : null}
             </Card>
           </div>
           <Card className="border-border/80 bg-card/60 shadow-sm">
