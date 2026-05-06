@@ -42,6 +42,16 @@ function recurringIntervalMonths(
   return null;
 }
 
+function productNameFromPriceObject(
+  product: unknown,
+): string | undefined {
+  if (!product || typeof product !== "object") return undefined;
+  const obj = product as { deleted?: boolean; name?: unknown; id?: unknown };
+  if (obj.deleted === true) return typeof obj.id === "string" ? obj.id : undefined;
+  if (typeof obj.name === "string" && obj.name.trim()) return obj.name.trim();
+  return typeof obj.id === "string" ? obj.id : undefined;
+}
+
 export async function createSubscriptionAction(
   raw: unknown,
 ): Promise<{ ok: true; subscriptionId: string } | { ok: false; message: string }> {
@@ -97,7 +107,7 @@ export async function createSubscriptionAction(
     }
 
     const selectedPriceId = parsed.data.priceId.trim();
-    const price = await stripe.prices.retrieve(selectedPriceId);
+    const price = await stripe.prices.retrieve(selectedPriceId, { expand: ["product"] });
     const intervalMonths = recurringIntervalMonths(price.recurring);
     if (!intervalMonths || intervalMonths <= 0) {
       return { ok: false, message: "Selected Stripe Price must be a recurring month/year price." };
@@ -161,6 +171,9 @@ export async function createSubscriptionAction(
           ...(user.organizationId ? { organizationId: user.organizationId } : {}),
           status: "scheduled",
           priceId: selectedPriceId,
+          ...(productNameFromPriceObject(price.product)
+            ? { productName: productNameFromPriceObject(price.product) }
+            : {}),
           currency: (price.currency ?? "aud").toLowerCase(),
           interval: price.recurring?.interval === "year" ? "year" : "month",
           collectionMethod: parsed.data.collectionMethod,
@@ -208,6 +221,20 @@ export async function cancelSubscriptionAction(
   const subId = subscriptionId.trim();
   if (!subId.startsWith("sub_")) return { ok: false, message: "Invalid subscription id." };
   try {
+    if (subId.startsWith("sub_sched_")) {
+      await stripe.subscriptionSchedules.cancel(subId);
+      await db.collection(COLLECTIONS.subscriptions).doc(subId).set(
+        {
+          status: "canceled",
+          updatedAtMs: Date.now(),
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
+      revalidateSubscriptionPaths();
+      return { ok: true };
+    }
+
     const updated = await stripe.subscriptions.update(subId, {
       cancel_at_period_end: true,
       expand: ["default_payment_method", "items.data.price.product"],
@@ -235,8 +262,16 @@ export async function deleteSubscriptionAction(
   const subId = subscriptionId.trim();
   if (!subId.startsWith("sub_")) return { ok: false, message: "Invalid subscription id." };
   try {
+    if (subId.startsWith("sub_sched_")) {
+      await stripe.subscriptionSchedules.cancel(subId);
+      await db.collection(COLLECTIONS.subscriptions).doc(subId).delete().catch(() => {});
+      revalidateSubscriptionPaths();
+      return { ok: true };
+    }
+
     const canceled = await stripe.subscriptions.cancel(subId);
     await upsertSubscriptionMirror(db, canceled);
+    await db.collection(COLLECTIONS.subscriptions).doc(subId).delete().catch(() => {});
     revalidateSubscriptionPaths();
     return { ok: true };
   } catch (error) {

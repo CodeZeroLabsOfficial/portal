@@ -291,7 +291,7 @@ export function SubscriptionListPanel({ rows, customerOptions, productOptions }:
                       </td>
                       <td className="max-w-[260px] px-4 py-3 align-middle">{accountCell}</td>
                       <td className="max-w-[220px] truncate px-4 py-3 align-middle text-muted-foreground">
-                        {s.productName?.trim() || s.priceId || "—"}
+                        {s.productName?.trim() || "—"}
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 align-middle tabular-nums text-muted-foreground">
                         {typeof monthlyMinor === "number"
