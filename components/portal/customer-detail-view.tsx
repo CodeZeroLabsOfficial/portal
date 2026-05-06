@@ -312,19 +312,21 @@ export function CustomerDetailView({
                   </span>
                 ) : null}
               </div>
+              {customer.companyPhone ? (
+                <p className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <Phone className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
+                  Company phone: {customer.companyPhone}
+                </p>
+              ) : null}
               <div className="flex flex-wrap gap-1.5 pt-1">
-                {customer.tags.length === 0 ? (
-                  <span className="text-xs text-muted-foreground">No tags</span>
-                ) : (
-                  customer.tags.map((t) => (
-                    <span
-                      key={t}
-                      className="rounded-full border border-border/60 bg-background/60 px-2.5 py-0.5 text-xs font-medium text-foreground/90"
-                    >
-                      {t}
-                    </span>
-                  ))
-                )}
+                {customer.tags.map((t) => (
+                  <span
+                    key={t}
+                    className="rounded-full border border-border/60 bg-background/60 px-2.5 py-0.5 text-xs font-medium text-foreground/90"
+                  >
+                    {t}
+                  </span>
+                ))}
               </div>
             </div>
           </div>
@@ -333,7 +335,7 @@ export function CustomerDetailView({
             <div className="rounded-xl border border-border/60 bg-background/40 p-3 text-sm">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-muted-foreground">Stripe</span>
-                {customer.portalUserId ? (
+                {customer.stripeCustomerId?.trim() ? (
                   <Badge variant="outline" className="border-emerald-500/40 text-emerald-600 dark:text-emerald-400">
                     Linked
                   </Badge>
