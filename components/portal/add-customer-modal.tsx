@@ -118,7 +118,7 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
 
         <form
           onSubmit={form.handleSubmit(onSubmit)}
-          className="space-y-4 px-6 py-5"
+          className="space-y-3 px-6 py-5"
           noValidate
         >
           <AnimatePresence initial={false}>
@@ -136,8 +136,8 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
           </AnimatePresence>
 
           <input type="hidden" {...form.register("name")} />
-          <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2">
+          <div className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
               <Label htmlFor="crm-first-name" className="text-zinc-300">
                 First name
               </Label>
@@ -149,9 +149,9 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
               />
-              <div className="min-h-10" />
+              <div className="min-h-5" />
             </div>
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               <Label htmlFor="crm-company" className="text-zinc-300">
                 Company name
               </Label>
@@ -162,10 +162,10 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
                 placeholder="Acme Pty Ltd"
                 {...form.register("company")}
               />
-              <div className="min-h-10" />
+              <div className="min-h-5" />
             </div>
 
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               <Label htmlFor="crm-last-name" className="text-zinc-300">
                 Last name
               </Label>
@@ -177,13 +177,13 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
               />
-              <div className="flex min-h-10 items-start">
+              <div className="flex min-h-5 items-start">
                 {form.formState.errors.name ? (
                   <p className="text-xs leading-tight text-destructive">{form.formState.errors.name.message}</p>
                 ) : null}
               </div>
             </div>
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               <Label htmlFor="crm-company-email" className="text-zinc-300">
                 Company email
               </Label>
@@ -195,7 +195,7 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
                 placeholder="hello@acme.com"
                 {...form.register("companyEmail")}
               />
-              <div className="flex min-h-10 items-start">
+              <div className="flex min-h-5 items-start">
                 {form.formState.errors.companyEmail ? (
                   <p className="text-xs leading-tight text-destructive">
                     {form.formState.errors.companyEmail.message}
@@ -204,7 +204,7 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
               </div>
             </div>
 
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               <Label htmlFor="crm-email" className="text-zinc-300">
                 Email <span className="text-destructive">*</span>
               </Label>
@@ -216,13 +216,13 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
                 placeholder="jane@company.com"
                 {...form.register("email")}
               />
-              <div className="flex min-h-10 items-start">
+              <div className="flex min-h-5 items-start">
                 {form.formState.errors.email ? (
                   <p className="text-xs leading-tight text-destructive">{form.formState.errors.email.message}</p>
                 ) : null}
               </div>
             </div>
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               <Label htmlFor="crm-company-phone" className="text-zinc-300">
                 Company phone
               </Label>
@@ -234,10 +234,10 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
                 placeholder="+61 …"
                 {...form.register("companyPhone")}
               />
-              <div className="min-h-10" />
+              <div className="min-h-5" />
             </div>
 
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               <Label htmlFor="crm-phone" className="text-zinc-300">
                 Phone
               </Label>
@@ -249,9 +249,9 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
                 placeholder="+61 …"
                 {...form.register("phone")}
               />
-              <div className="min-h-10" />
+              <div className="min-h-5" />
             </div>
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               <Label htmlFor="crm-company-website" className="text-zinc-300">
                 Company website
               </Label>
@@ -262,7 +262,7 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
                 placeholder="https://acme.com"
                 {...form.register("companyWebsite")}
               />
-              <div className="flex min-h-10 items-start">
+              <div className="flex min-h-5 items-start">
                 {form.formState.errors.companyWebsite ? (
                   <p className="text-xs leading-tight text-destructive">
                     {form.formState.errors.companyWebsite.message}
@@ -272,7 +272,7 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
             </div>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label className="text-zinc-300">Company address</Label>
             <Input
               className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
@@ -284,7 +284,7 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
               placeholder="Line 2"
               {...form.register("companyAddressLine2")}
             />
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid gap-1.5 sm:grid-cols-2">
               <Input
                 className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
                 placeholder="City"
@@ -308,7 +308,7 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
             </div>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label className="text-zinc-300">Contact address</Label>
             <Input
               className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
@@ -320,7 +320,7 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
               placeholder="Line 2"
               {...form.register("addressLine2")}
             />
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid gap-1.5 sm:grid-cols-2">
               <Input
                 className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
                 placeholder="City"
@@ -344,7 +344,7 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
             </div>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label htmlFor="crm-tags" className="text-zinc-300">
               Tags
             </Label>
@@ -357,7 +357,7 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
             />
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <div className="flex items-center justify-between gap-2">
               <Label className="text-zinc-300">Custom fields</Label>
               <Button
@@ -370,7 +370,7 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
                 Add field
               </Button>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {customRows.map((row, i) => (
                 <div key={i} className="flex gap-2">
                   <Input
