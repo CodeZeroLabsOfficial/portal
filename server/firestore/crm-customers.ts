@@ -7,7 +7,7 @@ import { getStripe } from "@/lib/stripe/server";
 import { accountKeyToNormalizedCompany, companyNameToAccountKey } from "@/lib/account-key";
 import type { AccountListRow } from "@/lib/account-list";
 import type { CustomerListRow } from "@/lib/customer-list";
-import type { UpdateAccountFormInput } from "@/lib/schemas/account";
+import type { CreateAccountFormInput, UpdateAccountFormInput } from "@/lib/schemas/account";
 import type { CreateCustomerInput, UpdateCustomerFormInput } from "@/lib/schemas/customer";
 import type { InvoiceRecord } from "@/types/invoice";
 import type { ProposalRecord } from "@/types/proposal";
@@ -100,9 +100,11 @@ function parseCustomerRecord(id: string, data: Record<string, unknown>): Custome
       : {};
   const status = data.status === "archived" ? "archived" : "active";
   const crmType: CustomerCrmType = data.crmType === "lead" ? "lead" : "contact";
+  const accountOnly = data.accountOnly === true;
   return {
     id,
     ...(organizationId ? { organizationId } : {}),
+    ...(accountOnly ? { accountOnly: true } : {}),
     name,
     email,
     company: asString(data.company),
@@ -240,7 +242,9 @@ export async function getAdminCustomerListRows(user: PortalUser): Promise<Custom
       listAllSubscriptionsForStaff(db),
     ]);
     if (!customers) return [];
-    return customers.map((c) => customerToListRow(c, subscriptions));
+    return customers
+      .filter((c) => !c.accountOnly)
+      .map((c) => customerToListRow(c, subscriptions));
   } catch (error) {
     logError("crm_list_customers_failed", {
       message: error instanceof Error ? error.message : "unknown",
@@ -276,6 +280,7 @@ export async function getAdminAccountListRows(user: PortalUser): Promise<Account
       }
       return "—";
     })();
+    const realContacts = group.filter((r) => !r.accountOnly);
     rows.push({
       key,
       displayName,
@@ -283,8 +288,8 @@ export async function getAdminAccountListRows(user: PortalUser): Promise<Account
       companyPhone: pickLatestNonEmpty(group, (r) => r.companyPhone),
       companyEmail: pickLatestNonEmpty(group, (r) => r.companyEmail),
       companyWebsite: pickLatestNonEmpty(group, (r) => r.companyWebsite),
-      contactCount: group.length,
-      activeContactCount: group.filter((r) => r.status === "active").length,
+      contactCount: realContacts.length,
+      activeContactCount: realContacts.filter((r) => r.status === "active").length,
     });
   }
 
@@ -317,24 +322,111 @@ export async function getAccountDetailForKey(
   const norm = accountKeyToNormalizedCompany(accountKey);
   if (!norm) return null;
 
-  const contacts = customers.filter((c) => c.company?.trim().toLowerCase() === norm);
-  if (contacts.length === 0) return null;
+  const group = customers.filter((c) => c.company?.trim().toLowerCase() === norm);
+  if (group.length === 0) return null;
 
-  const displayName = displayCompanyNameForGroup(contacts);
+  const displayName = displayCompanyNameForGroup(group);
+  const contacts = group.filter((c) => !c.accountOnly);
   return {
     key: companyNameToAccountKey(displayName),
     displayName,
-    companyPhone: pickLatestNonEmpty(contacts, (r) => r.companyPhone),
-    companyEmail: pickLatestNonEmpty(contacts, (r) => r.companyEmail),
-    companyWebsite: pickLatestNonEmpty(contacts, (r) => r.companyWebsite),
-    companyAddressLine1: pickLatestNonEmpty(contacts, (r) => r.companyAddressLine1) || undefined,
-    companyAddressLine2: pickLatestNonEmpty(contacts, (r) => r.companyAddressLine2) || undefined,
-    companyCity: pickLatestNonEmpty(contacts, (r) => r.companyCity) || undefined,
-    companyRegion: pickLatestNonEmpty(contacts, (r) => r.companyRegion) || undefined,
-    companyPostalCode: pickLatestNonEmpty(contacts, (r) => r.companyPostalCode) || undefined,
-    companyCountry: pickLatestNonEmpty(contacts, (r) => r.companyCountry) || undefined,
+    companyPhone: pickLatestNonEmpty(group, (r) => r.companyPhone),
+    companyEmail: pickLatestNonEmpty(group, (r) => r.companyEmail),
+    companyWebsite: pickLatestNonEmpty(group, (r) => r.companyWebsite),
+    companyAddressLine1: pickLatestNonEmpty(group, (r) => r.companyAddressLine1) || undefined,
+    companyAddressLine2: pickLatestNonEmpty(group, (r) => r.companyAddressLine2) || undefined,
+    companyCity: pickLatestNonEmpty(group, (r) => r.companyCity) || undefined,
+    companyRegion: pickLatestNonEmpty(group, (r) => r.companyRegion) || undefined,
+    companyPostalCode: pickLatestNonEmpty(group, (r) => r.companyPostalCode) || undefined,
+    companyCountry: pickLatestNonEmpty(group, (r) => r.companyCountry) || undefined,
     contacts: [...contacts].sort((a, b) => (b.updatedAtMs || 0) - (a.updatedAtMs || 0)),
   };
+}
+
+export async function createAccountDocument(
+  user: PortalUser,
+  input: CreateAccountFormInput,
+): Promise<
+  | { ok: true; accountKey: string; alreadyExisted: boolean }
+  | { ok: false; message: string }
+> {
+  const db = getFirebaseAdminFirestore();
+  if (!db || !canStaffAccessCrm(user)) {
+    return { ok: false, message: "CRM is only available to admin or team members." };
+  }
+
+  const companyTrimmed = input.company.trim();
+  if (!companyTrimmed) {
+    return { ok: false, message: "Company name is required." };
+  }
+  const accountKey = companyNameToAccountKey(companyTrimmed);
+  if (!accountKey) {
+    return { ok: false, message: "Company name is required." };
+  }
+
+  const customers = await listCustomerRecordsForStaffSorted(user);
+  if (!customers) {
+    return { ok: false, message: "Could not load customers." };
+  }
+  const existingGroup = customers.filter(
+    (c) => c.company?.trim().toLowerCase() === companyTrimmed.toLowerCase(),
+  );
+  if (existingGroup.length > 0) {
+    return { ok: true, accountKey, alreadyExisted: true };
+  }
+
+  const col = db.collection(COLLECTIONS.customers);
+  const docRef = col.doc();
+  const payload = {
+    name: "",
+    email: "",
+    company: companyTrimmed,
+    companyPhone: input.companyPhone?.trim() || null,
+    companyEmail: input.companyEmail?.trim()?.toLowerCase() || null,
+    companyWebsite: input.companyWebsite?.trim() || null,
+    companyAddressLine1: input.companyAddressLine1?.trim() || null,
+    companyAddressLine2: input.companyAddressLine2?.trim() || null,
+    companyCity: input.companyCity?.trim() || null,
+    companyRegion: input.companyRegion?.trim() || null,
+    companyPostalCode: input.companyPostalCode?.trim() || null,
+    companyCountry: input.companyCountry?.trim() || null,
+    phone: null,
+    addressLine1: null,
+    addressLine2: null,
+    city: null,
+    region: null,
+    postalCode: null,
+    country: null,
+    tags: [] as string[],
+    customFields: {} as Record<string, string>,
+    portalUserId: null,
+    stripeCustomerId: null,
+    avatarUrl: null,
+    status: "active",
+    crmType: "contact" as CustomerCrmType,
+    accountOnly: true,
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
+    createdByUid: user.uid,
+  };
+
+  try {
+    await docRef.set(payload);
+    await db.collection(COLLECTIONS.customerActivities).add({
+      customerId: docRef.id,
+      type: "created",
+      title: "Account created",
+      detail: companyTrimmed,
+      actorUid: user.uid,
+      createdAt: Timestamp.now(),
+    });
+    return { ok: true, accountKey, alreadyExisted: false };
+  } catch (error) {
+    logError("crm_create_account_failed", {
+      message: error instanceof Error ? error.message : "unknown",
+    });
+    return { ok: false, message: "Failed to create account." };
+  }
 }
 
 export async function updateAccountDetailsForGroup(

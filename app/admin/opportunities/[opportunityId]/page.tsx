@@ -1,7 +1,11 @@
 import { notFound, redirect } from "next/navigation";
 import { getCurrentSessionUser } from "@/lib/auth/server-session";
 import { getCustomerRecordForOrg } from "@/server/firestore/crm-customers";
-import { getOpportunityForStaff } from "@/server/firestore/crm-opportunities";
+import {
+  getOpportunityForStaff,
+  listOpportunityActivities,
+  listOpportunityNotes,
+} from "@/server/firestore/crm-opportunities";
 import { OpportunityDetailView } from "@/components/portal/opportunity-detail-view";
 import { WorkspaceShell } from "@/components/portal/workspace-shell";
 
@@ -21,7 +25,11 @@ export default async function AdminOpportunityDetailPage({ params }: PageProps) 
     notFound();
   }
 
-  const customer = await getCustomerRecordForOrg(user, opportunity.customerId);
+  const [customer, notes, activities] = await Promise.all([
+    getCustomerRecordForOrg(user, opportunity.customerId),
+    listOpportunityNotes(user, opportunityId),
+    listOpportunityActivities(user, opportunityId),
+  ]);
   if (!customer) {
     notFound();
   }
@@ -36,7 +44,12 @@ export default async function AdminOpportunityDetailPage({ params }: PageProps) 
       showMainHeader={false}
       showRightAside={false}
     >
-      <OpportunityDetailView opportunity={opportunity} customer={customer} />
+      <OpportunityDetailView
+        opportunity={opportunity}
+        customer={customer}
+        notes={notes}
+        activities={activities}
+      />
     </WorkspaceShell>
   );
 }

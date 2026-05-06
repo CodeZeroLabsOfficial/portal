@@ -4,8 +4,9 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { MoreHorizontal, Search, SquareArrowOutUpRight } from "lucide-react";
+import { MoreHorizontal, Plus, Search, SquareArrowOutUpRight } from "lucide-react";
 import type { AccountListRow } from "@/lib/account-list";
+import { AddAccountModal } from "@/components/portal/add-account-modal";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -38,6 +39,7 @@ export function AccountListPanel({ rows }: AccountListPanelProps) {
   }, [router]);
 
   const [query, setQuery] = React.useState("");
+  const [addOpen, setAddOpen] = React.useState(false);
 
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -59,6 +61,8 @@ export function AccountListPanel({ rows }: AccountListPanelProps) {
 
   return (
     <div className="space-y-8">
+      <AddAccountModal open={addOpen} onOpenChange={setAddOpen} />
+
       <div className="flex flex-wrap items-start justify-between gap-4">
         <motion.div
           initial={{ opacity: 0, y: 6 }}
@@ -70,6 +74,16 @@ export function AccountListPanel({ rows }: AccountListPanelProps) {
             Company profiles from customer records. Set company details when editing a customer.
           </p>
         </motion.div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="gap-1.5 text-[14px] font-medium text-muted-foreground hover:text-foreground"
+          onClick={() => setAddOpen(true)}
+        >
+          <Plus className="h-4 w-4 shrink-0" aria-hidden />
+          Add account
+        </Button>
       </div>
 
       <section className="overflow-hidden rounded-xl border border-border/80 bg-card/80 shadow-sm backdrop-blur-sm">

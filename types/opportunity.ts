@@ -23,3 +23,31 @@ export interface OpportunityRecord {
   updatedAtMs: number;
   createdByUid?: string;
 }
+
+/** Free-form note attached to a single opportunity; lives in `opportunity_notes/{noteId}`. */
+export interface OpportunityNoteRecord {
+  id: string;
+  opportunityId: string;
+  organizationId?: string;
+  authorUid: string;
+  body: string;
+  /** Derived from Firestore `createdAt` (Timestamp) or legacy `createdAtMs`. */
+  createdAtMs: number;
+}
+
+export type OpportunityActivityKind = "meeting" | "call" | "email" | "other";
+
+/** Logged interaction (meeting, call, email, etc.); lives in `opportunity_activities/{id}`. */
+export interface OpportunityActivityRecord {
+  id: string;
+  opportunityId: string;
+  organizationId?: string;
+  kind: OpportunityActivityKind;
+  title: string;
+  detail?: string;
+  /** When the interaction took place. Derived from Firestore Timestamp or legacy ms. */
+  occurredAtMs: number;
+  authorUid: string;
+  /** Derived from Firestore `createdAt` (Timestamp) or legacy `createdAtMs`. */
+  createdAtMs: number;
+}

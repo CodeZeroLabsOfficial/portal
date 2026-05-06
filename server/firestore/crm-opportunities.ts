@@ -5,7 +5,12 @@ import { normalizeOpportunityStage } from "@/lib/crm/opportunity-stages";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import type { CustomerRecord } from "@/types/customer";
-import type { OpportunityRecord } from "@/types/opportunity";
+import type {
+  OpportunityActivityKind,
+  OpportunityActivityRecord,
+  OpportunityNoteRecord,
+  OpportunityRecord,
+} from "@/types/opportunity";
 import type { PortalUser } from "@/types/user";
 
 function asString(value: unknown): string | undefined {
@@ -241,15 +246,212 @@ export async function updateOpportunityStage(
   return { ok: true };
 }
 
-export async function deleteOpportunitiesForCustomerDb(db: AdminDb, customerId: string): Promise<void> {
-  const snap = await db.collection(COLLECTIONS.opportunities).where("customerId", "==", customerId).limit(400).get();
+async function deleteSubcollectionForOpportunity(
+  db: AdminDb,
+  collection: string,
+  opportunityId: string,
+): Promise<void> {
+  const snap = await db.collection(collection).where("opportunityId", "==", opportunityId).limit(400).get();
   if (snap.empty) return;
   const batch = db.batch();
   for (const doc of snap.docs) {
     batch.delete(doc.ref);
   }
   await batch.commit();
+  if (snap.size >= 400) await deleteSubcollectionForOpportunity(db, collection, opportunityId);
+}
+
+export async function deleteOpportunitiesForCustomerDb(db: AdminDb, customerId: string): Promise<void> {
+  const snap = await db.collection(COLLECTIONS.opportunities).where("customerId", "==", customerId).limit(400).get();
+  if (snap.empty) return;
+  await Promise.all(
+    snap.docs.map(async (doc) => {
+      await Promise.all([
+        deleteSubcollectionForOpportunity(db, COLLECTIONS.opportunityNotes, doc.id),
+        deleteSubcollectionForOpportunity(db, COLLECTIONS.opportunityActivities, doc.id),
+      ]);
+    }),
+  );
+  const batch = db.batch();
+  for (const doc of snap.docs) {
+    batch.delete(doc.ref);
+  }
+  await batch.commit();
   if (snap.size >= 400) await deleteOpportunitiesForCustomerDb(db, customerId);
+}
+
+function parseOpportunityNote(id: string, data: Record<string, unknown>): OpportunityNoteRecord | null {
+  const opportunityId = asString(data.opportunityId);
+  if (!opportunityId) return null;
+  const organizationId = asString(data.organizationId);
+  return {
+    id,
+    opportunityId,
+    ...(organizationId ? { organizationId } : {}),
+    authorUid: asString(data.authorUid) ?? "",
+    body: asString(data.body) ?? "",
+    createdAtMs: coerceTimestampToMillis(data.createdAt ?? data.createdAtMs),
+  };
+}
+
+function parseOpportunityActivity(
+  id: string,
+  data: Record<string, unknown>,
+): OpportunityActivityRecord | null {
+  const opportunityId = asString(data.opportunityId);
+  if (!opportunityId) return null;
+  const organizationId = asString(data.organizationId);
+  const kindRaw = asString(data.kind);
+  const kind: OpportunityActivityKind =
+    kindRaw === "meeting" || kindRaw === "call" || kindRaw === "email" || kindRaw === "other"
+      ? kindRaw
+      : "other";
+  const createdAtMs = coerceTimestampToMillis(data.createdAt ?? data.createdAtMs);
+  const occurredAtMs = coerceTimestampToMillis(data.occurredAt ?? data.occurredAtMs) || createdAtMs;
+  return {
+    id,
+    opportunityId,
+    ...(organizationId ? { organizationId } : {}),
+    kind,
+    title: asString(data.title) ?? "Activity",
+    detail: asString(data.detail),
+    occurredAtMs,
+    authorUid: asString(data.authorUid) ?? "",
+    createdAtMs,
+  };
+}
+
+export async function listOpportunityNotes(
+  user: PortalUser,
+  opportunityId: string,
+  limit = 80,
+): Promise<OpportunityNoteRecord[]> {
+  const db = getFirebaseAdminFirestore();
+  if (!db || !canStaffAccessCrm(user)) return [];
+  const opp = await getOpportunityForStaff(user, opportunityId);
+  if (!opp) return [];
+  try {
+    const snap = await db
+      .collection(COLLECTIONS.opportunityNotes)
+      .where("opportunityId", "==", opportunityId)
+      .limit(limit)
+      .get();
+    const rows = snap.docs
+      .map((d) => parseOpportunityNote(d.id, d.data() as Record<string, unknown>))
+      .filter((n): n is OpportunityNoteRecord => n !== null);
+    return rows.sort((a, b) => b.createdAtMs - a.createdAtMs);
+  } catch (error) {
+    logError("crm_list_opportunity_notes_failed", {
+      opportunityId,
+      message: error instanceof Error ? error.message : "unknown",
+    });
+    return [];
+  }
+}
+
+export async function listOpportunityActivities(
+  user: PortalUser,
+  opportunityId: string,
+  limit = 80,
+): Promise<OpportunityActivityRecord[]> {
+  const db = getFirebaseAdminFirestore();
+  if (!db || !canStaffAccessCrm(user)) return [];
+  const opp = await getOpportunityForStaff(user, opportunityId);
+  if (!opp) return [];
+  try {
+    const snap = await db
+      .collection(COLLECTIONS.opportunityActivities)
+      .where("opportunityId", "==", opportunityId)
+      .limit(limit)
+      .get();
+    const rows = snap.docs
+      .map((d) => parseOpportunityActivity(d.id, d.data() as Record<string, unknown>))
+      .filter((a): a is OpportunityActivityRecord => a !== null);
+    return rows.sort((a, b) => b.occurredAtMs - a.occurredAtMs);
+  } catch (error) {
+    logError("crm_list_opportunity_activities_failed", {
+      opportunityId,
+      message: error instanceof Error ? error.message : "unknown",
+    });
+    return [];
+  }
+}
+
+export async function appendOpportunityNote(
+  user: PortalUser,
+  opportunityId: string,
+  body: string,
+): Promise<{ ok: true; noteId: string } | { ok: false; message: string }> {
+  const db = getFirebaseAdminFirestore();
+  if (!db || !canStaffAccessCrm(user)) {
+    return { ok: false, message: "Not allowed." };
+  }
+  const opp = await getOpportunityForStaff(user, opportunityId);
+  if (!opp) return { ok: false, message: "Opportunity not found." };
+  const trimmedBody = body.trim();
+  if (!trimmedBody) return { ok: false, message: "Note cannot be empty." };
+
+  const now = Timestamp.now();
+  const payload: Record<string, unknown> = {
+    opportunityId,
+    authorUid: user.uid,
+    body: trimmedBody,
+    createdAt: now,
+  };
+  if (opp.organizationId) payload.organizationId = opp.organizationId;
+
+  const ref = await db.collection(COLLECTIONS.opportunityNotes).add(payload);
+  await db
+    .collection(COLLECTIONS.opportunities)
+    .doc(opportunityId)
+    .update({ updatedAt: FieldValue.serverTimestamp() });
+  return { ok: true, noteId: ref.id };
+}
+
+export async function appendOpportunityActivity(
+  user: PortalUser,
+  opportunityId: string,
+  input: {
+    kind: OpportunityActivityKind;
+    title: string;
+    detail?: string;
+    occurredAtMs?: number;
+  },
+): Promise<{ ok: true; activityId: string } | { ok: false; message: string }> {
+  const db = getFirebaseAdminFirestore();
+  if (!db || !canStaffAccessCrm(user)) {
+    return { ok: false, message: "Not allowed." };
+  }
+  const opp = await getOpportunityForStaff(user, opportunityId);
+  if (!opp) return { ok: false, message: "Opportunity not found." };
+
+  const trimmedTitle = input.title.trim();
+  if (!trimmedTitle) return { ok: false, message: "Title is required." };
+
+  const occurredAt =
+    typeof input.occurredAtMs === "number" && Number.isFinite(input.occurredAtMs)
+      ? Timestamp.fromMillis(input.occurredAtMs)
+      : Timestamp.now();
+  const now = Timestamp.now();
+
+  const payload: Record<string, unknown> = {
+    opportunityId,
+    kind: input.kind,
+    title: trimmedTitle,
+    actorUid: user.uid,
+    authorUid: user.uid,
+    occurredAt,
+    createdAt: now,
+  };
+  if (input.detail?.trim()) payload.detail = input.detail.trim();
+  if (opp.organizationId) payload.organizationId = opp.organizationId;
+
+  const ref = await db.collection(COLLECTIONS.opportunityActivities).add(payload);
+  await db
+    .collection(COLLECTIONS.opportunities)
+    .doc(opportunityId)
+    .update({ updatedAt: FieldValue.serverTimestamp() });
+  return { ok: true, activityId: ref.id };
 }
 
 /** Merge latest customer custom fields into the opportunity snapshot (optional upkeep). */

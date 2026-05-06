@@ -14,6 +14,10 @@ export const COLLECTIONS = {
   customers: "customers",
   /** Sales opportunities — `customerId` references `customers`. */
   opportunities: "opportunities",
+  /** Free-form notes attached to an opportunity — keyed by `opportunityId`. */
+  opportunityNotes: "opportunity_notes",
+  /** Logged interactions (meetings, calls, emails) on an opportunity — keyed by `opportunityId`. */
+  opportunityActivities: "opportunity_activities",
   /** Timeline entries (created, note added, Stripe sync, etc.) — keyed by `customerId`. */
   customerActivities: "customer_activities",
   /** Internal notes, calls, emails — keyed by `customerId`. */

@@ -45,6 +45,11 @@ export interface CustomerRecord {
   avatarUrl?: string;
   /** Defaults to `contact` when absent in Firestore (existing rows). */
   crmType: CustomerCrmType;
+  /**
+   * When true the row only carries company-level information used by the Accounts directory and
+   * is hidden from the Customers directory. Contacts are not stored on these documents.
+   */
+  accountOnly?: boolean;
   status: CustomerLifecycleStatus;
   /** Derived from Firestore `createdAt` (Timestamp) or legacy `createdAtMs`. */
   createdAtMs: number;

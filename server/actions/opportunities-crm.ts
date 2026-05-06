@@ -4,8 +4,14 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getCurrentSessionUser, hasRole } from "@/lib/auth/server-session";
 import { OPPORTUNITY_STAGES } from "@/lib/crm/opportunity-stages";
+import {
+  addOpportunityActivitySchema,
+  addOpportunityNoteSchema,
+} from "@/lib/schemas/opportunity-notes";
 import type { OpportunityStage } from "@/types/opportunity";
 import {
+  appendOpportunityActivity,
+  appendOpportunityNote,
   convertLeadToContactWithOpportunity,
   updateOpportunityStage,
 } from "@/server/firestore/crm-opportunities";
@@ -84,5 +90,51 @@ export async function updateOpportunityStageAction(
   revalidatePath("/admin/opportunities");
   revalidatePath(`/admin/opportunities/${parsed.data.opportunityId}`);
   revalidatePath("/admin/customers");
+  return { ok: true };
+}
+
+function firstZodMessage(error: z.ZodError): string {
+  const first = error.errors[0];
+  return first ? `${first.path.join(".") || "input"}: ${first.message}` : "Invalid input";
+}
+
+export async function addOpportunityNoteAction(
+  raw: unknown,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const user = await requireStaffForCrm();
+  if (!user) return { ok: false, message: "Unauthorized." };
+
+  const parsed = addOpportunityNoteSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { ok: false, message: firstZodMessage(parsed.error) };
+  }
+
+  const result = await appendOpportunityNote(user, parsed.data.opportunityId, parsed.data.body);
+  if (!result.ok) return { ok: false, message: result.message };
+
+  revalidatePath(`/admin/opportunities/${parsed.data.opportunityId}`);
+  return { ok: true };
+}
+
+export async function addOpportunityActivityAction(
+  raw: unknown,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const user = await requireStaffForCrm();
+  if (!user) return { ok: false, message: "Unauthorized." };
+
+  const parsed = addOpportunityActivitySchema.safeParse(raw);
+  if (!parsed.success) {
+    return { ok: false, message: firstZodMessage(parsed.error) };
+  }
+
+  const result = await appendOpportunityActivity(user, parsed.data.opportunityId, {
+    kind: parsed.data.kind,
+    title: parsed.data.title,
+    detail: parsed.data.detail,
+    occurredAtMs: parsed.data.occurredAtMs,
+  });
+  if (!result.ok) return { ok: false, message: result.message };
+
+  revalidatePath(`/admin/opportunities/${parsed.data.opportunityId}`);
   return { ok: true };
 }

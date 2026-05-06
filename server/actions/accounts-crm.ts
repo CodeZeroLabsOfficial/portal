@@ -3,8 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { ZodError } from "zod";
 import { getCurrentSessionUser, hasRole } from "@/lib/auth/server-session";
-import { updateAccountFormSchema } from "@/lib/schemas/account";
-import { updateAccountDetailsForGroup } from "@/server/firestore/crm-customers";
+import { createAccountFormSchema, updateAccountFormSchema } from "@/lib/schemas/account";
+import {
+  createAccountDocument,
+  updateAccountDetailsForGroup,
+} from "@/server/firestore/crm-customers";
 
 function zodErrorToMessage(error: ZodError): string {
   const first = error.errors[0];
@@ -38,4 +41,27 @@ export async function updateAccountAction(
   revalidatePath(`/admin/accounts/${previousKey}`, "page");
   revalidatePath(`/admin/accounts/${result.newAccountKey}`, "page");
   return { ok: true, newAccountKey: result.newAccountKey };
+}
+
+export async function createAccountAction(
+  raw: unknown,
+): Promise<
+  | { ok: true; accountKey: string; alreadyExisted: boolean }
+  | { ok: false; message: string }
+> {
+  const user = await requireStaffForCrm();
+  if (!user) {
+    return { ok: false, message: "You need an admin or team session to add accounts." };
+  }
+  const parsed = createAccountFormSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { ok: false, message: zodErrorToMessage(parsed.error) };
+  }
+
+  const result = await createAccountDocument(user, parsed.data);
+  if (!result.ok) return result;
+
+  revalidatePath("/admin/accounts", "layout");
+  revalidatePath(`/admin/accounts/${result.accountKey}`, "page");
+  return { ok: true, accountKey: result.accountKey, alreadyExisted: result.alreadyExisted };
 }
