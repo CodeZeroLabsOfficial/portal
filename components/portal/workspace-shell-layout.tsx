@@ -334,7 +334,7 @@ export function WorkspaceShellLayout({
                         className="cursor-pointer text-zinc-200 focus:bg-white/[0.08] focus:text-white"
                         asChild
                       >
-                        <Link href="/admin/customers">New subscription</Link>
+                        <Link href="/admin/subscriptions?addSubscription=1">New subscription</Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="cursor-pointer text-zinc-200 focus:bg-white/[0.08] focus:text-white"

@@ -108,13 +108,13 @@ function countActiveClients(customers: PortalUser[], subscriptions: Subscription
       .filter(Boolean),
   );
   if (activeCustomerIds.size === 0) {
-    return customers.length;
+    return 0;
   }
   const matched = customers.filter(
     (c) =>
       (c.stripeCustomerId && activeCustomerIds.has(c.stripeCustomerId)) || activeCustomerIds.has(c.uid),
   ).length;
-  return matched > 0 ? matched : customers.length;
+  return matched;
 }
 
 /** Month-over-month % change in new customer sign-ups (calendar months). */

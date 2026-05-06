@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { Plus, Search } from "lucide-react";
 import type { SubscriptionRecord } from "@/types/subscription";
@@ -113,11 +113,22 @@ function statusBadge(status: SubscriptionRecord["status"]): { label: string; cla
 
 export function SubscriptionListPanel({ rows, customerOptions, productOptions }: SubscriptionListPanelProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [addOpen, setAddOpen] = React.useState(false);
 
   React.useEffect(() => {
     router.refresh();
   }, [router]);
+
+  React.useEffect(() => {
+    if (searchParams.get("addSubscription") !== "1") return;
+    setAddOpen(true);
+    const nextParams = new URLSearchParams(searchParams.toString());
+    nextParams.delete("addSubscription");
+    const query = nextParams.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  }, [pathname, router, searchParams]);
 
   const [query, setQuery] = React.useState("");
 
