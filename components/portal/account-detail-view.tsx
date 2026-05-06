@@ -82,7 +82,6 @@ export function AccountDetailView({ account }: AccountDetailViewProps) {
         <Card className="border-border/80 bg-card/80 shadow-sm lg:col-span-2">
           <CardHeader className="border-b border-border/60 bg-muted/20">
             <CardTitle className="text-lg">Company details</CardTitle>
-            <CardDescription>Stored on customer profiles; newest non-empty value is shown.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-5 p-6">
             <dl className="grid gap-4 sm:grid-cols-2">
@@ -162,7 +161,6 @@ export function AccountDetailView({ account }: AccountDetailViewProps) {
               <Users className="h-5 w-5 text-muted-foreground" aria-hidden />
               Contacts
             </CardTitle>
-            <CardDescription>People with this company on their profile.</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
             <ul className="divide-y divide-border/60">
