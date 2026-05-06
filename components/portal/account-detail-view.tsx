@@ -3,6 +3,7 @@ import { ArrowLeft, Building2, Globe, Mail, MapPin, Pencil, Phone, Users } from 
 import type { AccountDetailAggregate } from "@/server/firestore/crm-customers";
 import { formatAddressLines, websiteHref } from "@/lib/format";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   WORKSPACE_DETAIL_PAGE_TITLE_CLASS,
@@ -54,9 +55,25 @@ export function AccountDetailView({ account }: AccountDetailViewProps) {
           </span>
           <div className="min-w-0 space-y-2">
             <h1 className={WORKSPACE_DETAIL_PAGE_TITLE_CLASS}>{account.displayName}</h1>
-            <p className={WORKSPACE_PAGE_DESCRIPTION_STACK_CLASS}>
-              {account.contacts.length} contact{account.contacts.length === 1 ? "" : "s"} linked to this company name
-            </p>
+            <div className={cn(WORKSPACE_PAGE_DESCRIPTION_STACK_CLASS, "flex flex-wrap items-center gap-2")}>
+              <Badge variant="outline" className="border-emerald-500/40 text-emerald-600 dark:text-emerald-400">
+                Active
+              </Badge>
+              {account.contacts.length === 1 ? (
+                <Link href={`/admin/customers/${account.contacts[0]!.id}`} className="inline-flex">
+                  <Badge
+                    variant="secondary"
+                    className="cursor-pointer hover:bg-secondary/80 hover:text-foreground"
+                  >
+                    1 contact
+                  </Badge>
+                </Link>
+              ) : (
+                <Badge variant="secondary">
+                  {account.contacts.length} contact{account.contacts.length === 1 ? "" : "s"}
+                </Badge>
+              )}
+            </div>
           </div>
         </div>
       </div>

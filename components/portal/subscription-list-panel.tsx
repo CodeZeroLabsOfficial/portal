@@ -202,7 +202,7 @@ export function SubscriptionListPanel({ rows, customerOptions, productOptions }:
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search status, customer, product, Stripe id…"
+              placeholder="Search status, customer, product, collection method..."
               className="h-9 rounded-full border-border/80 bg-background/60 pl-9 text-[14px] text-foreground placeholder:text-muted-foreground"
               aria-label="Search subscriptions"
             />
@@ -214,7 +214,7 @@ export function SubscriptionListPanel({ rows, customerOptions, productOptions }:
             <thead>
               <tr className="border-b border-border text-muted-foreground">
                 <th className="px-4 py-2.5 font-medium">Status</th>
-                <th className="px-4 py-2.5 font-medium">Customer (Account name)</th>
+                <th className="px-4 py-2.5 font-medium">Account name</th>
                 <th className="px-4 py-2.5 font-medium">Product</th>
                 <th className="px-4 py-2.5 font-medium">Monthly amount</th>
                 <th className="px-4 py-2.5 font-medium">Collection method</th>
