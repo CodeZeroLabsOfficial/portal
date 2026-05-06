@@ -4,7 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { createTaskAction } from "@/server/actions/tasks-crm";
+import { createTaskAction, listTaskAssigneeOptionsAction } from "@/server/actions/tasks-crm";
 import {
   TASK_BOARD_COLUMNS,
   taskBoardColumnLabel,
@@ -42,6 +42,9 @@ export function AddTaskDialog({
   const [column, setColumn] = React.useState<TaskBoardColumnId>(defaultColumn);
   const [title, setTitle] = React.useState("");
   const [description, setDescription] = React.useState("");
+  const [assignedToUid, setAssignedToUid] = React.useState("");
+  const [assigneeOptions, setAssigneeOptions] = React.useState<Array<{ uid: string; displayName: string; email: string }>>([]);
+  const [loadingAssignees, setLoadingAssignees] = React.useState(false);
   const [pending, setPending] = React.useState(false);
   const [serverError, setServerError] = React.useState<string | null>(null);
 
@@ -55,9 +58,33 @@ export function AddTaskDialog({
     if (!open) {
       setTitle("");
       setDescription("");
+      setAssignedToUid("");
       setServerError(null);
     }
   }, [open]);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    if (!open || disabled) return;
+    setLoadingAssignees(true);
+    void listTaskAssigneeOptionsAction().then((res) => {
+      if (cancelled) return;
+      setLoadingAssignees(false);
+      if (!res.ok) {
+        setServerError(res.message);
+        setAssigneeOptions([]);
+        return;
+      }
+      setAssigneeOptions(res.options);
+      setAssignedToUid((current) => {
+        if (current && res.options.some((o) => o.uid === current)) return current;
+        return res.options[0]?.uid ?? "";
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, disabled]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -68,6 +95,7 @@ export function AddTaskDialog({
       title,
       description: description.trim() || undefined,
       column,
+      assignedToUid: assignedToUid || undefined,
     });
     setPending(false);
     if (!res.ok) {
@@ -152,6 +180,31 @@ export function AddTaskDialog({
           </div>
 
           <div className="flex flex-col gap-1.5">
+            <Label htmlFor="task-assignee" className="text-zinc-300">
+              Assign to
+            </Label>
+            <select
+              id="task-assignee"
+              name="assignedToUid"
+              value={assignedToUid}
+              onChange={(e) => setAssignedToUid(e.target.value)}
+              disabled={busy || disabled || loadingAssignees || assigneeOptions.length === 0}
+              className="flex h-9 w-full rounded-md border border-white/[0.08] bg-white/[0.04] px-3 py-1 text-sm text-white shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#141414]"
+            >
+              {loadingAssignees ? <option value="">Loading users…</option> : null}
+              {!loadingAssignees && assigneeOptions.length === 0 ? (
+                <option value="">No assignable users</option>
+              ) : null}
+              {assigneeOptions.map((opt) => (
+                <option key={opt.uid} value={opt.uid}>
+                  {opt.displayName}
+                  {opt.email ? ` (${opt.email})` : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
             <Label htmlFor="task-description" className="text-zinc-300">
               Description (optional)
             </Label>
@@ -178,7 +231,11 @@ export function AddTaskDialog({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={busy || disabled || !title.trim()} className="min-w-[7rem] gap-2">
+            <Button
+              type="submit"
+              disabled={busy || disabled || !title.trim() || (!loadingAssignees && assigneeOptions.length === 0)}
+              className="min-w-[7rem] gap-2"
+            >
               {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
               Create
             </Button>

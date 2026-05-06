@@ -8,6 +8,12 @@ import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import type { TaskRecord } from "@/types/task";
 import type { PortalUser } from "@/types/user";
 
+export interface TaskAssigneeOption {
+  uid: string;
+  displayName: string;
+  email: string;
+}
+
 function canStaffAccessCrm(user: PortalUser): boolean {
   return user.role === "admin" || user.role === "team";
 }
@@ -72,7 +78,7 @@ export async function updateTaskBoardColumn(
 export async function updateTaskForStaff(
   user: PortalUser,
   taskId: string,
-  input: { title: string; description?: string; column: TaskBoardColumnId },
+  input: { title: string; description?: string; column: TaskBoardColumnId; assignedToUid?: string },
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   const db = getFirebaseAdminFirestore();
   if (!db || !canStaffAccessCrm(user)) return { ok: false, message: "Not allowed." };
@@ -94,6 +100,13 @@ export async function updateTaskForStaff(
   } else {
     payload.description = FieldValue.delete();
   }
+  if (input.assignedToUid) {
+    payload.assignedToUid = input.assignedToUid;
+    payload.assigneeCount = 1;
+  } else {
+    payload.assignedToUid = FieldValue.delete();
+    payload.assigneeCount = 0;
+  }
 
   await db.collection(COLLECTIONS.tasks).doc(taskId).update(payload);
 
@@ -102,7 +115,7 @@ export async function updateTaskForStaff(
 
 export async function createTaskForStaff(
   user: PortalUser,
-  input: { title: string; description?: string; column: TaskBoardColumnId },
+  input: { title: string; description?: string; column: TaskBoardColumnId; assignedToUid?: string },
 ): Promise<{ ok: true; taskId: string } | { ok: false; message: string }> {
   const db = getFirebaseAdminFirestore();
   if (!db || !canStaffAccessCrm(user)) {
@@ -125,7 +138,7 @@ export async function createTaskForStaff(
     title,
     description: description || undefined,
     status: boardColumnToStatus(input.column),
-    assignedToUid: user.uid,
+    assignedToUid: input.assignedToUid || user.uid,
     assigneeCount: 1,
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
@@ -133,4 +146,34 @@ export async function createTaskForStaff(
   });
 
   return { ok: true, taskId: docRef.id };
+}
+
+export async function listAssignableUsersForStaff(user: PortalUser): Promise<TaskAssigneeOption[]> {
+  const db = getFirebaseAdminFirestore();
+  if (!db || !canStaffAccessCrm(user) || !user.organizationId) return [];
+  try {
+    const snap = await db
+      .collection(COLLECTIONS.users)
+      .where("organizationId", "==", user.organizationId)
+      .where("role", "in", ["admin", "team"])
+      .limit(200)
+      .get();
+
+    return snap.docs
+      .map((doc) => {
+        const data = doc.data() as Record<string, unknown>;
+        const displayName =
+          (typeof data.displayName === "string" && data.displayName.trim()) ||
+          (typeof data.email === "string" && data.email.trim()) ||
+          doc.id;
+        const email = typeof data.email === "string" ? data.email : "";
+        return { uid: doc.id, displayName, email };
+      })
+      .sort((a, b) => a.displayName.localeCompare(b.displayName, undefined, { sensitivity: "base" }));
+  } catch (error) {
+    logError("crm_list_assignable_users_failed", {
+      message: error instanceof Error ? error.message : "unknown",
+    });
+    return [];
+  }
 }

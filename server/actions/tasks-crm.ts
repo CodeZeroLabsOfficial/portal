@@ -4,7 +4,12 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getCurrentSessionUser, hasRole } from "@/lib/auth/server-session";
 import { TASK_BOARD_COLUMNS, type TaskBoardColumnId } from "@/lib/tasks/task-board-columns";
-import { createTaskForStaff, updateTaskBoardColumn, updateTaskForStaff } from "@/server/firestore/crm-tasks";
+import {
+  createTaskForStaff,
+  listAssignableUsersForStaff,
+  updateTaskBoardColumn,
+  updateTaskForStaff,
+} from "@/server/firestore/crm-tasks";
 
 const taskBoardColumnZodEnum = TASK_BOARD_COLUMNS as unknown as [
   TaskBoardColumnId,
@@ -46,6 +51,7 @@ const createTaskSchema = z.object({
   title: z.string().trim().min(1, "Title is required.").max(500),
   description: z.string().trim().max(8000).optional(),
   column: z.enum(taskBoardColumnZodEnum),
+  assignedToUid: z.string().min(1).optional(),
 });
 
 export async function createTaskAction(
@@ -64,6 +70,7 @@ export async function createTaskAction(
     title: parsed.data.title,
     description: parsed.data.description || undefined,
     column: parsed.data.column,
+    assignedToUid: parsed.data.assignedToUid,
   });
   if (!res.ok) return res;
 
@@ -77,6 +84,7 @@ const updateTaskSchema = z.object({
   title: z.string().trim().min(1, "Title is required.").max(500),
   description: z.string().trim().max(8000).optional(),
   column: z.enum(taskBoardColumnZodEnum),
+  assignedToUid: z.string().min(1).optional(),
 });
 
 export async function updateTaskAction(
@@ -95,10 +103,20 @@ export async function updateTaskAction(
     title: parsed.data.title,
     description: parsed.data.description || undefined,
     column: parsed.data.column,
+    assignedToUid: parsed.data.assignedToUid,
   });
   if (!res.ok) return res;
 
   revalidatePath("/admin/tasks");
   revalidatePath("/admin/customers", "layout");
   return { ok: true };
+}
+
+export async function listTaskAssigneeOptionsAction(): Promise<
+  { ok: true; options: Array<{ uid: string; displayName: string; email: string }> } | { ok: false; message: string }
+> {
+  const user = await requireStaffForCrm();
+  if (!user) return { ok: false, message: "Unauthorized." };
+  const options = await listAssignableUsersForStaff(user);
+  return { ok: true, options };
 }
