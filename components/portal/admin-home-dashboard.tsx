@@ -103,7 +103,7 @@ function startOfPreviousMonthMs(d: Date): number {
 function countActiveClients(customers: PortalUser[], subscriptions: SubscriptionRecord[]): number {
   const activeCustomerIds = new Set(
     subscriptions
-      .filter((s) => s.status === "active" || s.status === "trialing")
+      .filter((s) => s.status === "active")
       .map((s) => s.customerId)
       .filter(Boolean),
   );
@@ -589,7 +589,7 @@ export function AdminHomeDashboard({
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <MetricCard
           heading="Customers"
-          metricLabel="Total active customers"
+          metricLabel="Customers with active subscriptions"
           value={String(activeClients)}
           footer={clientsFooter}
           delta={clientsDeltaStr}

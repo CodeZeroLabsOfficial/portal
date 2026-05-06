@@ -2,12 +2,13 @@ import { getStripe } from "@/lib/stripe/server";
 import type { SubscriptionProductOption } from "@/types/subscription-product";
 import type Stripe from "stripe";
 
-function recurringMonths(price: { interval?: string; interval_count?: number } | undefined): number | null {
-  if (!price?.interval) return null;
-  const count = Number.isFinite(price.interval_count) ? Number(price.interval_count) : 1;
-  if (price.interval === "month") return count;
-  if (price.interval === "year") return count * 12;
-  return null;
+function contractDurationsForRecurring(
+  price: { interval?: string; interval_count?: number } | undefined,
+): number[] {
+  if (!price?.interval) return [];
+  if (price.interval !== "month" && price.interval !== "year") return [];
+  // Duration is a contract term selector (12/24 months), not raw Stripe interval_count.
+  return [12, 24];
 }
 
 function productDisplayName(product: Stripe.Price["product"]): string {
@@ -37,8 +38,8 @@ export async function listStripeSubscriptionProductOptions(): Promise<Subscripti
     const productName = productDisplayName(productObj);
     if (!productId || !productName) continue;
     if (typeof p.unit_amount !== "number") continue;
-    const months = recurringMonths(p.recurring ?? undefined);
-    if (!months) continue;
+    const durations = contractDurationsForRecurring(p.recurring ?? undefined);
+    if (durations.length === 0) continue;
 
     const current =
       grouped.get(productId) ??
@@ -48,8 +49,9 @@ export async function listStripeSubscriptionProductOptions(): Promise<Subscripti
         durations: [],
       } satisfies SubscriptionProductOption);
 
-    const existing = current.durations.find((d) => d.months === months);
-    if (!existing) {
+    for (const months of durations) {
+      const existing = current.durations.find((d) => d.months === months);
+      if (existing) continue;
       current.durations.push({
         months,
         priceId: p.id,
