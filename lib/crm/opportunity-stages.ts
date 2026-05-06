@@ -2,25 +2,19 @@ import type { OpportunityStage } from "@/types/opportunity";
 
 /** Ordered pipeline stages — Kanban columns and detail-view stepper follow this order. */
 export const OPPORTUNITY_STAGES: readonly OpportunityStage[] = [
-  "qualification",
-  "discovery",
-  "proposal",
+  "lead_in",
+  "contacted",
+  "proposal_sent",
   "negotiation",
-  "awaiting_signature",
-  "closed_won",
-  "closed_lost",
-  "onboarding",
+  "won",
+  "lost",
 ];
 
-/** Maps legacy stored `stage` values from earlier pipeline schemas to the current stage set. */
+/** Maps legacy stored `stage` values from before the pipeline rename. */
 const LEGACY_OPPORTUNITY_STAGE: Record<string, OpportunityStage | undefined> = {
-  new: "qualification",
-  lead_in: "qualification",
-  qualified: "discovery",
-  contacted: "discovery",
-  proposal_sent: "awaiting_signature",
-  won: "closed_won",
-  lost: "closed_lost",
+  new: "lead_in",
+  qualified: "contacted",
+  proposal: "proposal_sent",
 };
 
 export function isOpportunityStage(value: string): value is OpportunityStage {
@@ -28,21 +22,19 @@ export function isOpportunityStage(value: string): value is OpportunityStage {
 }
 
 export function normalizeOpportunityStage(value: unknown): OpportunityStage {
-  if (typeof value !== "string") return "qualification";
+  if (typeof value !== "string") return "lead_in";
   if (isOpportunityStage(value)) return value;
   const mapped = LEGACY_OPPORTUNITY_STAGE[value];
-  return mapped ?? "qualification";
+  return mapped ?? "lead_in";
 }
 
 const stageLabels: Record<OpportunityStage, string> = {
-  qualification: "Qualification",
-  discovery: "Discovery",
-  proposal: "Proposal",
+  lead_in: "Lead in",
+  contacted: "Contacted",
+  proposal_sent: "Proposal sent",
   negotiation: "Negotiation",
-  awaiting_signature: "Awaiting Signature",
-  closed_won: "Closed Won",
-  closed_lost: "Closed Lost",
-  onboarding: "Onboarding",
+  won: "Won",
+  lost: "Lost",
 };
 
 export function opportunityStageLabel(stage: OpportunityStage): string {

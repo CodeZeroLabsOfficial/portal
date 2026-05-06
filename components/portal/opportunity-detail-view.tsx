@@ -32,8 +32,8 @@ function stageVariantClasses(
   variant: "active" | "completed" | "upcoming",
 ): string {
   if (variant === "active") {
-    if (stage === "closed_lost") return "bg-destructive/15 text-destructive";
-    if (stage === "closed_won" || stage === "onboarding") return "bg-emerald-500/15 text-emerald-500";
+    if (stage === "lost") return "bg-destructive/15 text-destructive";
+    if (stage === "won") return "bg-emerald-500/15 text-emerald-500";
     return "bg-primary/15 text-primary";
   }
   if (variant === "completed") {

@@ -152,7 +152,7 @@ export async function convertLeadToContactWithOpportunity(
       : {};
 
   const orgId = asString(customerData.organizationId) ?? user.organizationId ?? undefined;
-  const initialStage = input.initialStage ?? "discovery";
+  const initialStage = input.initialStage ?? "contacted";
 
   let opportunityIdResult = "";
 

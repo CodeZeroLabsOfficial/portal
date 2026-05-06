@@ -31,7 +31,7 @@ export function ConvertLeadPanel({ customerId, defaultOpportunityName = "" }: Co
     const res = await convertLeadToContactAction({
       customerId,
       opportunityName: trimmed,
-      initialStage: "discovery",
+      initialStage: "contacted",
     });
     setBusy(false);
     if (!res.ok) {

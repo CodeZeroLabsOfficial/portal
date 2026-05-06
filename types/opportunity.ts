@@ -1,12 +1,10 @@
 export type OpportunityStage =
-  | "qualification"
-  | "discovery"
-  | "proposal"
+  | "lead_in"
+  | "contacted"
+  | "proposal_sent"
   | "negotiation"
-  | "awaiting_signature"
-  | "closed_won"
-  | "closed_lost"
-  | "onboarding";
+  | "won"
+  | "lost";
 
 /** `opportunities/{id}` — deal linked to a unified CRM customer (`customers/{customerId}`). */
 export interface OpportunityRecord {
