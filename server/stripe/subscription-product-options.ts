@@ -12,7 +12,7 @@ function recurringMonths(price: { interval?: string; interval_count?: number } |
 
 function parseMonthsFromText(text: string | undefined): number | null {
   if (!text) return null;
-  const m = text.match(/(\d{1,3})\s*months?/i);
+  const m = text.match(/(\d{1,3})(?:\s*|[_-]+)months?/i);
   if (!m) return null;
   const months = Number(m[1]);
   return Number.isFinite(months) && months > 0 ? months : null;
