@@ -4,10 +4,12 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Search } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import type { SubscriptionRecord } from "@/types/subscription";
 import { formatCurrencyAmount } from "@/lib/format";
+import { AddSubscriptionModal } from "@/components/portal/add-subscription-modal";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   WORKSPACE_HUB_PAGE_TITLE_CLASS,
@@ -24,6 +26,7 @@ export interface SubscriptionListRow {
 
 export interface SubscriptionListPanelProps {
   rows: SubscriptionListRow[];
+  customerOptions: { id: string; label: string }[];
 }
 
 function formatTableDate(ms: number | undefined): string {
@@ -106,8 +109,9 @@ function statusBadge(status: SubscriptionRecord["status"]): { label: string; cla
   };
 }
 
-export function SubscriptionListPanel({ rows }: SubscriptionListPanelProps) {
+export function SubscriptionListPanel({ rows, customerOptions }: SubscriptionListPanelProps) {
   const router = useRouter();
+  const [addOpen, setAddOpen] = React.useState(false);
 
   React.useEffect(() => {
     router.refresh();
@@ -137,6 +141,7 @@ export function SubscriptionListPanel({ rows }: SubscriptionListPanelProps) {
 
   return (
     <div className="space-y-8">
+      <AddSubscriptionModal open={addOpen} onOpenChange={setAddOpen} customerOptions={customerOptions} />
       <motion.div
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
@@ -145,11 +150,18 @@ export function SubscriptionListPanel({ rows }: SubscriptionListPanelProps) {
       >
         <div>
           <h1 className={WORKSPACE_HUB_PAGE_TITLE_CLASS}>Subscriptions</h1>
-          <p className={WORKSPACE_PAGE_DESCRIPTION_CLASS}>
-            Active Stripe subscriptions synced to Firestore — customer column uses account / company name from CRM when
-            linked.
-          </p>
+          <p className={WORKSPACE_PAGE_DESCRIPTION_CLASS}>Active Stripe subscriptions</p>
         </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="gap-1.5 text-[14px] font-medium text-muted-foreground hover:text-foreground"
+          onClick={() => setAddOpen(true)}
+        >
+          <Plus className="h-4 w-4 shrink-0" aria-hidden />
+          Add subscription
+        </Button>
       </motion.div>
 
       <section className="overflow-hidden rounded-xl border border-border/80 bg-card/80 shadow-sm backdrop-blur-sm">

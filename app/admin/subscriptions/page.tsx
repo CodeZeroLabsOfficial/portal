@@ -1,6 +1,7 @@
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { getCurrentSessionUser } from "@/lib/auth/server-session";
+import { getAdminCustomerListRows } from "@/server/firestore/portal-data";
 import { getAdminSubscriptionsSnapshot } from "@/server/firestore/crm-customers";
 import { SubscriptionListPanel } from "@/components/portal/subscription-list-panel";
 import { WorkspaceShell } from "@/components/portal/workspace-shell";
@@ -15,7 +16,10 @@ export default async function AdminSubscriptionsPage() {
     redirect("/login?next=/admin/subscriptions");
   }
 
-  const data = await getAdminSubscriptionsSnapshot(user);
+  const [data, customers] = await Promise.all([
+    getAdminSubscriptionsSnapshot(user),
+    getAdminCustomerListRows(user),
+  ]);
 
   const rows =
     data?.subscriptions.map((sub) => {
@@ -27,6 +31,12 @@ export default async function AdminSubscriptionsPage() {
         crmCustomerId: link?.customerId,
       };
     }) ?? [];
+  const customerOptions = customers
+    .filter((c) => c.status === "active")
+    .map((c) => ({
+      id: c.id,
+      label: [c.company?.trim(), c.name?.trim(), c.email?.trim()].filter(Boolean).join(" · "),
+    }));
 
   return (
     <WorkspaceShell
@@ -38,7 +48,7 @@ export default async function AdminSubscriptionsPage() {
       showMainHeader={false}
       showRightAside={false}
     >
-      <SubscriptionListPanel rows={rows} />
+      <SubscriptionListPanel rows={rows} customerOptions={customerOptions} />
     </WorkspaceShell>
   );
 }
