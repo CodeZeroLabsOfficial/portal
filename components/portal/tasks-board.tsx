@@ -54,11 +54,11 @@ function priorityTagClass(priority: string | undefined): string {
   const v = coerceTaskPriority(priority);
   switch (v) {
     case "low":
-      return "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200";
+      return "bg-emerald-100 text-emerald-900 dark:bg-emerald-950/55 dark:text-emerald-100";
     case "medium":
-      return "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200";
+      return "bg-orange-100 text-orange-900 dark:bg-orange-950/50 dark:text-orange-100";
     case "high":
-      return "bg-amber-100 text-amber-900 dark:bg-amber-950/40 dark:text-amber-100";
+      return "bg-red-100 text-red-900 dark:bg-red-950/50 dark:text-red-100";
   }
 }
 
