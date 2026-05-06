@@ -112,8 +112,6 @@ export async function createSubscriptionAction(
       ...(startAtMs > nowMs
         ? {
             trial_end: startAtUnix,
-            billing_cycle_anchor: startAtUnix,
-            proration_behavior: "none" as const,
           }
         : {}),
       cancel_at: cancelAtUnix,

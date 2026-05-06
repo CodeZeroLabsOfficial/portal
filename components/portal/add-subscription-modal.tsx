@@ -432,14 +432,6 @@ export function AddSubscriptionModal({
                   {cardSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
                   Save card
                 </Button>
-                <Input
-                  id="defaultPaymentMethodId"
-                  placeholder="Or paste payment method id (pm_...)"
-                  autoComplete="off"
-                  disabled={busy}
-                  className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
-                  {...form.register("defaultPaymentMethodId")}
-                />
               </div>
             </div>
           )}
