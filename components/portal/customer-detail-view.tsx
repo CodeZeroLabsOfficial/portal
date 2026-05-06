@@ -333,9 +333,13 @@ export function CustomerDetailView({
             <div className="rounded-xl border border-border/60 bg-background/40 p-3 text-sm">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-muted-foreground">Stripe</span>
-                <span className={cn("font-medium", customer.portalUserId ? "text-emerald-600" : "text-muted-foreground")}>
-                  {customer.portalUserId ? "Linked" : "—"}
-                </span>
+                {customer.portalUserId ? (
+                  <Badge variant="outline" className="border-emerald-500/40 text-emerald-600 dark:text-emerald-400">
+                    Linked
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary">Not linked</Badge>
+                )}
               </div>
               <div className="mt-2 text-xs text-muted-foreground">
                 {rollupFromSubscriptions(subscriptions)}
@@ -436,7 +440,7 @@ export function CustomerDetailView({
               ) : (
                 <ul className="relative space-y-0 border-l border-border/80 pl-6">
                   {timeline.map((item) => (
-                    <li key={item.id} className="mb-6 last:mb-0">
+                    <li key={item.id} className="mb-8 last:mb-0">
                       <span className="absolute -left-[5px] mt-1.5 h-2.5 w-2.5 rounded-full border border-border bg-background ring-2 ring-muted" />
                       <p className="text-xs text-muted-foreground">
                         {new Date(item.at).toLocaleString(undefined, {
