@@ -198,25 +198,21 @@ async function listAllSubscriptionsForStaff(db: AdminDb): Promise<SubscriptionRe
   });
 }
 
-async function listAllInvoicesForStaff(db: AdminDb): Promise<InvoiceRecord[]> {
-  const snap = await db.collection(COLLECTIONS.invoices).limit(200).get();
-  return snap.docs.map((d) => parseInvoice(d.id, d.data() as Record<string, unknown>));
-}
-
 /** Resolved CRM profile for a mirrored Stripe Customer id (`cus_…`). */
 export interface StripeCustomerLink {
   customerId: string;
   label: string;
 }
 
-export interface AdminBillingSnapshot {
+export interface AdminSubscriptionsSnapshot {
   subscriptions: SubscriptionRecord[];
-  invoices: InvoiceRecord[];
   stripeCustomerLinks: Record<string, StripeCustomerLink>;
 }
 
-/** Subscriptions and invoices mirrored into Firestore, indexed for admin billing workflows. */
-export async function getAdminBillingSnapshot(user: PortalUser): Promise<AdminBillingSnapshot | null> {
+/** Mirrored Stripe subscriptions with CRM links for the admin subscriptions view. */
+export async function getAdminSubscriptionsSnapshot(
+  user: PortalUser,
+): Promise<AdminSubscriptionsSnapshot | null> {
   const db = getFirebaseAdminFirestore();
   if (!db || !isStaff(user)) {
     return null;
@@ -233,16 +229,12 @@ export async function getAdminBillingSnapshot(user: PortalUser): Promise<AdminBi
       stripeCustomerLinks[sid] = { customerId: c.id, label: label.slice(0, 160) };
     }
 
-    const [subscriptions, invoicesRaw] = await Promise.all([
-      listAllSubscriptionsForStaff(db),
-      listAllInvoicesForStaff(db),
-    ]);
-    const invoices = [...invoicesRaw].sort((a, b) => b.issuedAtMs - a.issuedAtMs);
+    const subscriptions = await listAllSubscriptionsForStaff(db);
     subscriptions.sort((a, b) => (b.updatedAtMs ?? 0) - (a.updatedAtMs ?? 0));
 
-    return { subscriptions, invoices, stripeCustomerLinks };
+    return { subscriptions, stripeCustomerLinks };
   } catch (error) {
-    logError("admin_billing_snapshot_failed", {
+    logError("admin_subscriptions_snapshot_failed", {
       message: error instanceof Error ? error.message : "unknown",
     });
     return null;

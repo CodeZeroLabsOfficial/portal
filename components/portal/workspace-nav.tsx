@@ -7,8 +7,8 @@ import {
   BarChart3,
   Building2,
   Columns3,
-  CreditCard,
   FileText,
+  Repeat,
   LayoutDashboard,
   LifeBuoy,
   ListTodo,
@@ -38,7 +38,7 @@ const adminNavIcons: Record<(typeof ADMIN_PORTAL_NAV)[number]["id"], LucideIcon>
   opportunities: Columns3,
   proposals: FileText,
   accounts: Building2,
-  billing: CreditCard,
+  subscriptions: Repeat,
   tasks: ListTodo,
   reports: BarChart3,
 };
