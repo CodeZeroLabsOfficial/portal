@@ -68,7 +68,7 @@ export function EditCompanySettingsForm({ settings }: EditCompanySettingsFormPro
         <Button variant="ghost" size="sm" className="-ml-2 gap-1.5 text-muted-foreground hover:text-foreground" asChild>
           <Link href="/admin/settings/company">
             <ArrowLeft className="h-4 w-4" aria-hidden />
-            Back to company settings
+            Back to company
           </Link>
         </Button>
       </div>
@@ -76,7 +76,7 @@ export function EditCompanySettingsForm({ settings }: EditCompanySettingsFormPro
       <motion.div className="w-full" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
         <Card className="w-full overflow-hidden border-border/80 shadow-sm">
           <CardHeader className="border-b border-border/60 bg-muted/20">
-            <CardTitle className="text-xl">Edit company settings</CardTitle>
+            <CardTitle className="text-xl">Edit company</CardTitle>
             <CardDescription>
               Update how your organization appears on invoices, proposals, and internal records. The organization document ID is set from your account and cannot be changed here.
             </CardDescription>

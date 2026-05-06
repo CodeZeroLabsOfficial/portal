@@ -10,9 +10,9 @@ export interface SettingsNavItem {
 
 /** Secondary navigation for `/admin/settings/*` — order matches product IA; Integrations is included here. */
 export const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
+  { id: "company", href: "/admin/settings/company", label: "Company", icon: Building2 },
   { id: "profile", href: "/admin/settings/profile", label: "Profile", icon: User },
   { id: "team", href: "/admin/settings/team", label: "Team", icon: Users },
-  { id: "timezone", href: "/admin/settings/timezone", label: "Timezone", icon: Globe },
-  { id: "company", href: "/admin/settings/company", label: "Company settings", icon: Building2 },
+  { id: "locality", href: "/admin/settings/locality", label: "Locality", icon: Globe },
   { id: "integrations", href: "/admin/settings/integrations", label: "Integrations", icon: Puzzle },
 ];

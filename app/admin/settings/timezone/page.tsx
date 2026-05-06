@@ -1,7 +1,6 @@
-export default function AdminSettingsTimezonePage() {
-  return (
-    <p className="text-sm text-zinc-400">
-      Timezone preferences will appear here as they ship.
-    </p>
-  );
+import { redirect } from "next/navigation";
+
+/** @deprecated Use `/admin/settings/locality` — kept for bookmarks. */
+export default function AdminSettingsTimezoneRedirectPage() {
+  redirect("/admin/settings/locality");
 }

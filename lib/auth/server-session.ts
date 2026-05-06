@@ -40,6 +40,12 @@ function normalizePortalUser(uid: string, email: string, data?: Partial<PortalUs
     region: asString(data?.region),
     postalCode: asString(data?.postalCode),
     country: asString(data?.country),
+    timeZone: asString(data?.timeZone),
+    languageTag: asString(data?.languageTag),
+    dateFormatPreset: asString(data?.dateFormatPreset),
+    timeFormatPreset: asString(data?.timeFormatPreset),
+    localeRegionCode: asString(data?.localeRegionCode),
+    currencyCode: asString(data?.currencyCode),
     createdAtMs: asNumber(data?.createdAtMs) ?? nowMs,
     updatedAtMs: asNumber(data?.updatedAtMs) ?? nowMs,
   };

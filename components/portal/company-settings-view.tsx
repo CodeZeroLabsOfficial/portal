@@ -3,10 +3,7 @@ import { Building2, FileText, Globe, Mail, MapPin, Pencil, Phone } from "lucide-
 import type { WorkspaceCompanySettings } from "@/types/organization";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  WORKSPACE_DETAIL_PAGE_TITLE_CLASS,
-  WORKSPACE_PAGE_DESCRIPTION_STACK_CLASS,
-} from "@/lib/workspace-page-typography";
+import { WORKSPACE_DETAIL_PAGE_TITLE_CLASS } from "@/lib/workspace-page-typography";
 
 function websiteHref(raw: string): string {
   const t = raw.trim();
@@ -27,7 +24,7 @@ function formatCompanyAddressLines(s: WorkspaceCompanySettings): string[] {
 
 function headingTitle(s: WorkspaceCompanySettings): string {
   const n = s.name.trim();
-  return n || "Company settings";
+  return n || "Company";
 }
 
 export interface CompanySettingsViewProps {
@@ -38,13 +35,6 @@ export function CompanySettingsView({ settings }: CompanySettingsViewProps) {
   const addressLines = formatCompanyAddressLines(settings);
   const hasAddress = addressLines.length > 0;
   const title = headingTitle(settings);
-  const updatedLabel =
-    settings.updatedAtMs > 0
-      ? new Date(settings.updatedAtMs).toLocaleString(undefined, {
-          dateStyle: "medium",
-          timeStyle: "short",
-        })
-      : null;
 
   return (
     <div className="space-y-8">
@@ -58,14 +48,6 @@ export function CompanySettingsView({ settings }: CompanySettingsViewProps) {
           </span>
           <div className="min-w-0 space-y-2">
             <h1 className={WORKSPACE_DETAIL_PAGE_TITLE_CLASS}>{title}</h1>
-            <p className={WORKSPACE_PAGE_DESCRIPTION_STACK_CLASS}>
-              Organization · <span className="font-mono text-[13px]">{settings.organizationDocId}</span>
-              {updatedLabel ? (
-                <>
-                  <span className="text-muted-foreground"> · Last updated {updatedLabel}</span>
-                </>
-              ) : null}
-            </p>
           </div>
         </div>
         <Button variant="secondary" size="sm" className="gap-1.5 shadow-sm" asChild>
