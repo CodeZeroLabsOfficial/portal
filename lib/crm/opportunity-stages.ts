@@ -30,7 +30,7 @@ export function normalizeOpportunityStage(value: unknown): OpportunityStage {
 
 const stageLabels: Record<OpportunityStage, string> = {
   lead_in: "Lead in",
-  contacted: "Contacted",
+  contacted: "Discovery",
   proposal_sent: "Proposal sent",
   negotiation: "Negotiation",
   won: "Won",
