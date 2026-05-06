@@ -439,7 +439,7 @@ export function WorkspaceShellLayout({
             </main>
 
             {showRightAside ? (
-              <aside className="hidden w-[300px] shrink-0 border-l border-white/[0.06] bg-[#0D0D16] px-4 py-8 sm:px-6 lg:px-8 xl:block">
+              <aside className="hidden w-[260px] shrink-0 border-l border-white/[0.06] bg-[#0D0D16] px-3 py-8 sm:px-4 lg:px-5 xl:block">
                 <div className="space-y-6">{rightAside ?? <DefaultWorkspaceRightAside />}</div>
               </aside>
             ) : null}
