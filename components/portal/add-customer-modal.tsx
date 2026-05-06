@@ -215,7 +215,7 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
                 type="email"
                 autoComplete="email"
                 className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
-                placeholder="john.smith@luminaforge.com"
+                placeholder="john.smith@company.com"
                 {...form.register("email")}
               />
               {form.formState.errors.email ? (
@@ -231,7 +231,7 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
                 type="tel"
                 autoComplete="off"
                 className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
-                placeholder="+61 …"
+                placeholder="+61 400 000 000"
                 {...form.register("companyPhone")}
               />
             </div>
@@ -257,7 +257,7 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
                 id="crm-company-website"
                 autoComplete="off"
                 className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
-                placeholder="https://acme.com"
+                placeholder="https://www.company.com"
                 {...form.register("companyWebsite")}
               />
               {form.formState.errors.companyWebsite ? (

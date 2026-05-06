@@ -6,7 +6,6 @@ import {
   ChevronRight,
   LineChart,
   MoreHorizontal,
-  MoreVertical,
   Settings2,
   Users,
   Wallet,
@@ -658,29 +657,20 @@ function MetricCard({
 }: MetricCardProps) {
   const showDelta = typeof delta === "string" && delta.length > 0;
   return (
-    <div className="relative overflow-hidden rounded-[14px] border border-border/80 bg-card p-5 shadow-sm">
+    <div className="relative overflow-hidden rounded-[14px] border border-border/80 bg-card pb-5 pl-3 pr-5 pt-3 shadow-sm">
       <div
         className="pointer-events-none absolute -bottom-10 -right-8 h-36 w-36 rounded-full bg-primary/[0.07]"
         aria-hidden
       />
       <div className="relative">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-2.5">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
-              <Icon className="h-4 w-4" aria-hidden />
-            </span>
-            <span className="truncate text-[14px] font-semibold leading-tight text-foreground">{heading}</span>
-          </div>
-          <button
-            type="button"
-            className="-mr-1 -mt-0.5 shrink-0 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-            aria-label="Card actions"
-          >
-            <MoreVertical className="h-4 w-4" aria-hidden />
-          </button>
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+            <Icon className="h-4 w-4" aria-hidden />
+          </span>
+          <span className="truncate text-[14px] font-semibold leading-tight text-foreground">{heading}</span>
         </div>
 
-        <div className="mt-5 flex items-end justify-between gap-3">
+        <div className="mt-4 flex items-end justify-between gap-3">
           <div className="min-w-0 flex-1">
             <p className="text-[12px] font-normal leading-snug text-muted-foreground">{metricLabel}</p>
             <p className="mt-1.5 text-[26px] font-bold leading-none tracking-tight text-foreground tabular-nums">
