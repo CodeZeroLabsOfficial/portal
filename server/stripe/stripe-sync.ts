@@ -161,20 +161,27 @@ export async function upsertSubscriptionMirror(db: Firestore, sub: Stripe.Subscr
   const record = {
     id: sub.id,
     customerId: typeof sub.customer === "string" ? sub.customer : sub.customer?.id ?? "",
-    organizationId: metadataOrganizationId(sub),
+    ...(metadataOrganizationId(sub) ? { organizationId: metadataOrganizationId(sub) } : {}),
     status: mapSubscriptionStatus(sub.status),
-    priceId: typeof price?.id === "string" ? price.id : undefined,
-    productName: productLabelFromSubscription(sub),
+    ...(typeof price?.id === "string" ? { priceId: price.id } : {}),
+    ...(productLabelFromSubscription(sub) ? { productName: productLabelFromSubscription(sub) } : {}),
     currency: (sub.currency ?? price?.currency ?? "aud").toLowerCase(),
-    interval,
-    currentPeriodEndMs:
-      typeof sub.current_period_end === "number" ? sub.current_period_end * 1000 : undefined,
+    ...(interval ? { interval } : {}),
+    ...(typeof sub.current_period_end === "number"
+      ? { currentPeriodEndMs: sub.current_period_end * 1000 }
+      : {}),
     cancelAtPeriodEnd: Boolean(sub.cancel_at_period_end),
-    mrrAmount: subscriptionMrrMinor(sub),
-    monthlyAmountMinor: subscriptionMonthlyAmountMinor(sub),
-    createdAtMs: typeof sub.created === "number" ? sub.created * 1000 : undefined,
-    collectionMethod: mapCollectionMethod(sub.collection_method),
-    defaultPaymentMethodType: defaultPaymentMethodTypeFromSubscription(sub),
+    ...(typeof subscriptionMrrMinor(sub) === "number" ? { mrrAmount: subscriptionMrrMinor(sub) } : {}),
+    ...(typeof subscriptionMonthlyAmountMinor(sub) === "number"
+      ? { monthlyAmountMinor: subscriptionMonthlyAmountMinor(sub) }
+      : {}),
+    ...(typeof sub.created === "number" ? { createdAtMs: sub.created * 1000 } : {}),
+    ...(mapCollectionMethod(sub.collection_method)
+      ? { collectionMethod: mapCollectionMethod(sub.collection_method) }
+      : {}),
+    ...(defaultPaymentMethodTypeFromSubscription(sub)
+      ? { defaultPaymentMethodType: defaultPaymentMethodTypeFromSubscription(sub) }
+      : {}),
     updatedAtMs: Date.now(),
     updatedAt: FieldValue.serverTimestamp(),
   };

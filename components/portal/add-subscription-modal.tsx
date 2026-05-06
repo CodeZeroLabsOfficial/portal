@@ -20,6 +20,31 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatCurrencyAmount } from "@/lib/format";
 import type { SubscriptionProductOption } from "@/types/subscription-product";
+import { getFirebasePublicConfig } from "@/lib/env/client-public";
+
+interface StripeCardElement {
+  mount: (selector: string | Element) => void;
+  destroy: () => void;
+}
+interface StripeElementsInstance {
+  create: (type: "card", options?: Record<string, unknown>) => StripeCardElement;
+}
+interface StripeSetupIntentResult {
+  setupIntent?: { payment_method?: string | null };
+  error?: { message?: string };
+}
+interface StripeInstance {
+  elements: () => StripeElementsInstance;
+  confirmCardSetup: (
+    clientSecret: string,
+    data: { payment_method: { card: StripeCardElement; billing_details?: { name?: string } } },
+  ) => Promise<StripeSetupIntentResult>;
+}
+declare global {
+  interface Window {
+    Stripe?: (publishableKey: string) => StripeInstance;
+  }
+}
 
 interface AddSubscriptionModalProps {
   open: boolean;
@@ -54,6 +79,12 @@ export function AddSubscriptionModal({
 }: AddSubscriptionModalProps) {
   const router = useRouter();
   const [serverError, setServerError] = React.useState<string | null>(null);
+  const [cardError, setCardError] = React.useState<string | null>(null);
+  const [cardReady, setCardReady] = React.useState(false);
+  const [cardSaving, setCardSaving] = React.useState(false);
+  const [cardholderName, setCardholderName] = React.useState("");
+  const stripeRef = React.useRef<StripeInstance | null>(null);
+  const cardRef = React.useRef<StripeCardElement | null>(null);
 
   const form = useForm<CreateSubscriptionInput>({
     resolver: zodResolver(createSubscriptionSchema),
@@ -67,11 +98,21 @@ export function AddSubscriptionModal({
     [productOptions, selectedProductId],
   );
   const durationOptions = selectedProduct?.durations ?? [];
+  const selectedCustomerId = form.watch("customerId");
+  const effectivePmId = form.watch("defaultPaymentMethodId");
+  const publishableKey = getFirebasePublicConfig()?.stripePublishableKey?.trim();
 
   React.useEffect(() => {
     if (!open) {
       form.reset(defaultValues);
       setServerError(null);
+      setCardError(null);
+      setCardReady(false);
+      setCardholderName("");
+      if (cardRef.current) {
+        cardRef.current.destroy();
+        cardRef.current = null;
+      }
     }
   }, [open, form]);
 
@@ -94,6 +135,102 @@ export function AddSubscriptionModal({
       form.setValue("durationMonths", selectedProduct.durations[0].months, { shouldValidate: true });
     }
   }, [selectedProduct, form]);
+
+  React.useEffect(() => {
+    if (collectionMethod !== "charge_automatically" || !open) return;
+    if (!publishableKey) return;
+    let cancelled = false;
+    async function mountCardElement() {
+      if (cardRef.current) return;
+      if (!window.Stripe) {
+        await new Promise<void>((resolve, reject) => {
+          const existing = document.querySelector('script[src="https://js.stripe.com/v3/"]');
+          if (existing) {
+            existing.addEventListener("load", () => resolve(), { once: true });
+            existing.addEventListener("error", () => reject(new Error("Stripe.js failed to load.")), {
+              once: true,
+            });
+            return;
+          }
+          const script = document.createElement("script");
+          script.src = "https://js.stripe.com/v3/";
+          script.async = true;
+          script.onload = () => resolve();
+          script.onerror = () => reject(new Error("Stripe.js failed to load."));
+          document.head.appendChild(script);
+        });
+      }
+      if (cancelled) return;
+      if (!window.Stripe) {
+        setCardError("Stripe.js is unavailable.");
+        return;
+      }
+      stripeRef.current = window.Stripe(publishableKey);
+      const elements = stripeRef.current.elements();
+      const card = elements.create("card", {
+        style: {
+          base: {
+            color: "#ffffff",
+            "::placeholder": { color: "#71717a" },
+          },
+        },
+      });
+      card.mount("#subscription-card-element");
+      cardRef.current = card;
+      setCardReady(true);
+    }
+    void mountCardElement().catch((e) => {
+      setCardError(e instanceof Error ? e.message : "Could not initialise card entry.");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [collectionMethod, open, publishableKey]);
+
+  async function saveCardPaymentMethod() {
+    setCardError(null);
+    if (!selectedCustomerId.trim()) {
+      setCardError("Select a customer first.");
+      return;
+    }
+    if (!stripeRef.current || !cardRef.current) {
+      setCardError("Card input is not ready yet.");
+      return;
+    }
+    setCardSaving(true);
+    try {
+      const res = await fetch("/api/stripe/setup-intent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ customerId: selectedCustomerId }),
+      });
+      const data = (await res.json()) as { clientSecret?: string; error?: string };
+      if (!res.ok || !data.clientSecret) {
+        setCardError(data.error ?? "Could not start card setup.");
+        return;
+      }
+      const result = await stripeRef.current.confirmCardSetup(data.clientSecret, {
+        payment_method: {
+          card: cardRef.current,
+          billing_details: { name: cardholderName.trim() || undefined },
+        },
+      });
+      if (result.error?.message) {
+        setCardError(result.error.message);
+        return;
+      }
+      const pmId = result.setupIntent?.payment_method;
+      if (!pmId) {
+        setCardError("Card setup completed but no payment method id was returned.");
+        return;
+      }
+      form.setValue("defaultPaymentMethodId", pmId, { shouldValidate: true, shouldDirty: true });
+    } catch (error) {
+      setCardError(error instanceof Error ? error.message : "Could not save card details.");
+    } finally {
+      setCardSaving(false);
+    }
+  }
 
   async function onSubmit(values: CreateSubscriptionInput) {
     setServerError(null);
@@ -260,18 +397,49 @@ export function AddSubscriptionModal({
               ) : null}
             </div>
           ) : (
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="defaultPaymentMethodId" className="text-zinc-300">
-                Default payment method id (optional)
-              </Label>
+            <div className="space-y-2 rounded-xl border border-white/[0.08] bg-white/[0.03] p-3">
+              <Label className="text-zinc-300">Credit card details</Label>
               <Input
-                id="defaultPaymentMethodId"
-                placeholder="pm_... (card, direct debit, etc.)"
-                autoComplete="off"
-                disabled={busy}
+                id="cardholderName"
+                placeholder="Cardholder name"
+                autoComplete="cc-name"
+                disabled={busy || cardSaving}
                 className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
-                {...form.register("defaultPaymentMethodId")}
+                value={cardholderName}
+                onChange={(e) => setCardholderName(e.target.value)}
               />
+              <div
+                id="subscription-card-element"
+                className="rounded-md border border-white/[0.08] bg-white/[0.04] px-3 py-2.5 text-sm"
+              />
+              {!publishableKey ? (
+                <p className="text-xs leading-tight text-destructive">
+                  Configure NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY to collect card details.
+                </p>
+              ) : null}
+              {cardError ? <p className="text-xs leading-tight text-destructive">{cardError}</p> : null}
+              {effectivePmId ? (
+                <p className="text-xs text-emerald-400">Card ready · Payment method {effectivePmId}</p>
+              ) : null}
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={busy || cardSaving || !cardReady || !publishableKey}
+                  onClick={() => void saveCardPaymentMethod()}
+                >
+                  {cardSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
+                  Save card
+                </Button>
+                <Input
+                  id="defaultPaymentMethodId"
+                  placeholder="Or paste payment method id (pm_...)"
+                  autoComplete="off"
+                  disabled={busy}
+                  className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+                  {...form.register("defaultPaymentMethodId")}
+                />
+              </div>
             </div>
           )}
 
