@@ -589,7 +589,7 @@ export function AdminHomeDashboard({
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <MetricCard
           heading="Customers"
-          metricLabel="Customers with active subscriptions"
+          metricLabel="With active subscriptions"
           value={String(activeClients)}
           footer={clientsFooter}
           delta={clientsDeltaStr}

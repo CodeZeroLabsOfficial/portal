@@ -315,7 +315,7 @@ export function CustomerDetailView({
               {customer.companyPhone ? (
                 <p className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
                   <Phone className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
-                  Company phone: {customer.companyPhone}
+                  {customer.companyPhone}
                 </p>
               ) : null}
               <div className="flex flex-wrap gap-1.5 pt-1">
