@@ -19,47 +19,10 @@ function parseMonthsFromText(text: string | undefined): number | null {
 }
 
 function durationMonthsFromPrice(price: Stripe.Price): number | null {
-  const metadataCandidates = [
-    price.metadata?.term_months,
-    price.metadata?.duration_months,
-    price.metadata?.contract_months,
-    price.metadata?.months,
-  ];
-  for (const v of metadataCandidates) {
-    const n = Number(v);
-    if (Number.isFinite(n) && n > 0) return n;
-  }
-
-  const fromNickname = parseMonthsFromText(price.nickname ?? undefined);
-  if (fromNickname) return fromNickname;
-
+  // Deterministic mapping: lookup key naming convention in Stripe.
+  // Examples: premium_plan_12_months, premium_plan_24_months
   const fromLookupKey = parseMonthsFromText(price.lookup_key ?? undefined);
-  if (fromLookupKey) return fromLookupKey;
-
-  return recurringMonths(price.recurring ?? undefined);
-}
-
-interface PriceWithDerivedMonths {
-  price: Stripe.Price;
-  months: number | null;
-}
-
-function inferMissingContractTerms(rows: PriceWithDerivedMonths[]): PriceWithDerivedMonths[] {
-  const unresolved = rows.filter((r) => !r.months);
-  if (unresolved.length === 0) return rows;
-
-  // Common setup: two monthly prices represent 12 vs 24 month commitments.
-  // Higher monthly amount is usually shorter term (12m), lower is longer (24m).
-  if (rows.length === 2 && unresolved.length === 2) {
-    const sorted = [...rows].sort((a, b) => {
-      const aa = typeof a.price.unit_amount === "number" ? a.price.unit_amount : 0;
-      const bb = typeof b.price.unit_amount === "number" ? b.price.unit_amount : 0;
-      return bb - aa;
-    });
-    return sorted.map((r, i) => ({ ...r, months: i === 0 ? 12 : 24 }));
-  }
-
-  return rows.map((r) => ({ ...r, months: r.months ?? recurringMonths(r.price.recurring ?? undefined) }));
+  return fromLookupKey;
 }
 
 function productDisplayName(product: Stripe.Price["product"]): string {
@@ -108,19 +71,16 @@ export async function listStripeSubscriptionProductOptions(): Promise<Subscripti
   for (const [productId, productPrices] of rawByProduct) {
     const current = grouped.get(productId);
     if (!current) continue;
-    const resolved = inferMissingContractTerms(
-      productPrices.map((price) => ({ price, months: durationMonthsFromPrice(price) })),
-    );
-
-    for (const row of resolved) {
-      if (!row.months) continue;
-      const existing = current.durations.find((d) => d.months === row.months);
+    for (const price of productPrices) {
+      const months = durationMonthsFromPrice(price);
+      if (!months) continue;
+      const existing = current.durations.find((d) => d.months === months);
       if (existing) continue;
       current.durations.push({
-        months: row.months,
-        priceId: row.price.id,
-        currency: (row.price.currency ?? "aud").toLowerCase(),
-        unitAmountMinor: row.price.unit_amount ?? 0,
+        months,
+        priceId: price.id,
+        currency: (price.currency ?? "aud").toLowerCase(),
+        unitAmountMinor: price.unit_amount ?? 0,
       });
     }
   }
