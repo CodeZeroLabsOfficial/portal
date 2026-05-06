@@ -107,6 +107,17 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
 
   const busy = form.formState.isSubmitting;
 
+  function copyCompanyAddressToContact() {
+    const v = form.getValues();
+    const opts = { shouldDirty: true, shouldTouch: true };
+    form.setValue("addressLine1", v.companyAddressLine1 ?? "", opts);
+    form.setValue("addressLine2", v.companyAddressLine2 ?? "", opts);
+    form.setValue("city", v.companyCity ?? "", opts);
+    form.setValue("region", v.companyRegion ?? "", opts);
+    form.setValue("postalCode", v.companyPostalCode ?? "", opts);
+    form.setValue("country", v.companyCountry ?? "", opts);
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[min(90vh,800px)] w-[min(100vw-2rem,880px)] max-w-[880px] overflow-y-auto border-white/[0.08] bg-[#141414] p-0 sm:max-w-[880px]">
@@ -136,7 +147,7 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
           </AnimatePresence>
 
           <input type="hidden" {...form.register("name")} />
-          <div className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
+          <div className="grid gap-x-6 gap-y-1.5 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="crm-first-name" className="text-zinc-300">
                 First name
@@ -145,11 +156,10 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
                 id="crm-first-name"
                 autoComplete="given-name"
                 className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
-                placeholder="Jane"
+                placeholder="John"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
               />
-              <div className="min-h-5" />
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="crm-company" className="text-zinc-300">
@@ -159,10 +169,9 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
                 id="crm-company"
                 autoComplete="organization"
                 className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
-                placeholder="Acme Pty Ltd"
+                placeholder="Company Name Pty Ltd"
                 {...form.register("company")}
               />
-              <div className="min-h-5" />
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -173,15 +182,10 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
                 id="crm-last-name"
                 autoComplete="family-name"
                 className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
-                placeholder="Doe"
+                placeholder="Smith"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
               />
-              <div className="flex min-h-5 items-start">
-                {form.formState.errors.name ? (
-                  <p className="text-xs leading-tight text-destructive">{form.formState.errors.name.message}</p>
-                ) : null}
-              </div>
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="crm-company-email" className="text-zinc-300">
@@ -192,16 +196,14 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
                 type="email"
                 autoComplete="off"
                 className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
-                placeholder="hello@acme.com"
+                placeholder="info@company.com"
                 {...form.register("companyEmail")}
               />
-              <div className="flex min-h-5 items-start">
-                {form.formState.errors.companyEmail ? (
-                  <p className="text-xs leading-tight text-destructive">
-                    {form.formState.errors.companyEmail.message}
-                  </p>
-                ) : null}
-              </div>
+              {form.formState.errors.companyEmail ? (
+                <p className="text-xs leading-tight text-destructive">
+                  {form.formState.errors.companyEmail.message}
+                </p>
+              ) : null}
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -213,14 +215,12 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
                 type="email"
                 autoComplete="email"
                 className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
-                placeholder="jane@company.com"
+                placeholder="john.smith@luminaforge.com"
                 {...form.register("email")}
               />
-              <div className="flex min-h-5 items-start">
-                {form.formState.errors.email ? (
-                  <p className="text-xs leading-tight text-destructive">{form.formState.errors.email.message}</p>
-                ) : null}
-              </div>
+              {form.formState.errors.email ? (
+                <p className="text-xs leading-tight text-destructive">{form.formState.errors.email.message}</p>
+              ) : null}
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="crm-company-phone" className="text-zinc-300">
@@ -234,7 +234,6 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
                 placeholder="+61 …"
                 {...form.register("companyPhone")}
               />
-              <div className="min-h-5" />
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -246,10 +245,9 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
                 type="tel"
                 autoComplete="tel"
                 className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
-                placeholder="+61 …"
+                placeholder="+61 400 000 000"
                 {...form.register("phone")}
               />
-              <div className="min-h-5" />
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="crm-company-website" className="text-zinc-300">
@@ -262,13 +260,11 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
                 placeholder="https://acme.com"
                 {...form.register("companyWebsite")}
               />
-              <div className="flex min-h-5 items-start">
-                {form.formState.errors.companyWebsite ? (
-                  <p className="text-xs leading-tight text-destructive">
-                    {form.formState.errors.companyWebsite.message}
-                  </p>
-                ) : null}
-              </div>
+              {form.formState.errors.companyWebsite ? (
+                <p className="text-xs leading-tight text-destructive">
+                  {form.formState.errors.companyWebsite.message}
+                </p>
+              ) : null}
             </div>
           </div>
 
@@ -309,7 +305,19 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-zinc-300">Contact address</Label>
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+              <Label className="text-zinc-300">Contact address</Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 shrink-0 px-2 text-xs text-primary hover:text-primary"
+                onClick={copyCompanyAddressToContact}
+                disabled={busy}
+              >
+                Copy from above
+              </Button>
+            </div>
             <Input
               className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
               placeholder="Line 1"
