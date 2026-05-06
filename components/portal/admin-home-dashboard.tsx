@@ -466,7 +466,7 @@ export function AdminHomeDashboard({
   const clientsMom = newCustomersMomStats(data.customers, now);
   const clientsDeltaStr = `${clientsMom.pct >= 0 ? "+" : ""}${clientsMom.pct.toFixed(1)}%`;
 
-  const { mrrMinor, arrMinor } = sumMrrAndArr(data.subscriptions);
+  const { mrrMinor } = sumMrrAndArr(data.subscriptions);
   const paidMom = paidRevenueMomStats(data.invoices, now);
   const mrrGrowthStr = `${paidMom.pct >= 0 ? "+" : ""}${paidMom.pct.toFixed(1)}%`;
 
@@ -562,7 +562,7 @@ export function AdminHomeDashboard({
 
   const clientsFooter = `Last month: ${clientsMom.lastMonthNew} new sign-up${clientsMom.lastMonthNew === 1 ? "" : "s"}`;
 
-  const mrrFooter = `ARR ${formatCurrencyAmount(arrMinor, DEFAULT_CURRENCY)} · Last month paid ${formatCurrencyAmount(paidMom.lastMinor, DEFAULT_CURRENCY)}`;
+  const mrrFooter = `Last month: ${formatCurrencyAmount(paidMom.lastMinor, DEFAULT_CURRENCY)}`;
 
   const revenueFooter = `${revenueValueDetail} · Last month ${formatCurrencyAmount(revenueLastMonthComparableMinor, DEFAULT_CURRENCY)}`;
 
@@ -588,8 +588,8 @@ export function AdminHomeDashboard({
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <MetricCard
-          heading="Clients"
-          metricLabel="Total active clients"
+          heading="Customers"
+          metricLabel="Total active customers"
           value={String(activeClients)}
           footer={clientsFooter}
           delta={clientsDeltaStr}
@@ -598,8 +598,8 @@ export function AdminHomeDashboard({
           icon={Users}
         />
         <MetricCard
-          heading="Recurring"
-          metricLabel="MRR / ARR"
+          heading="Revenue"
+          metricLabel="MRR"
           value={formatCurrencyAmount(mrrMinor, DEFAULT_CURRENCY)}
           footer={mrrFooter}
           delta={mrrGrowthStr}
@@ -608,7 +608,7 @@ export function AdminHomeDashboard({
           icon={LineChart}
         />
         <MetricCard
-          heading="Revenue"
+          heading="Payments"
           metricLabel="Total revenue"
           value={formatCurrencyAmount(revenueMinor, DEFAULT_CURRENCY)}
           footer={revenueFooter}
