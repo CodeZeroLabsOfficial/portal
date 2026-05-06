@@ -6,6 +6,7 @@ import { getCurrentSessionUser, hasRole } from "@/lib/auth/server-session";
 import { TASK_BOARD_COLUMNS, type TaskBoardColumnId } from "@/lib/tasks/task-board-columns";
 import {
   createTaskForStaff,
+  deleteTaskForStaff,
   listAssignableUsersForStaff,
   updateTaskBoardColumn,
   updateTaskForStaff,
@@ -119,4 +120,18 @@ export async function listTaskAssigneeOptionsAction(): Promise<
   if (!user) return { ok: false, message: "Unauthorized." };
   const options = await listAssignableUsersForStaff(user);
   return { ok: true, options };
+}
+
+export async function deleteTaskAction(
+  taskId: string,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const user = await requireStaffForCrm();
+  if (!user) return { ok: false, message: "Unauthorized." };
+  const trimmed = taskId?.trim();
+  if (!trimmed) return { ok: false, message: "Invalid task." };
+  const res = await deleteTaskForStaff(user, trimmed);
+  if (!res.ok) return res;
+  revalidatePath("/admin/tasks");
+  revalidatePath("/admin/customers", "layout");
+  return { ok: true };
 }

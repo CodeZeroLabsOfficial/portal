@@ -177,3 +177,15 @@ export async function listAssignableUsersForStaff(user: PortalUser): Promise<Tas
     return [];
   }
 }
+
+export async function deleteTaskForStaff(
+  user: PortalUser,
+  taskId: string,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const db = getFirebaseAdminFirestore();
+  if (!db || !canStaffAccessCrm(user)) return { ok: false, message: "Not allowed." };
+  const existing = await getTaskForStaff(user, taskId);
+  if (!existing) return { ok: false, message: "Task not found." };
+  await db.collection(COLLECTIONS.tasks).doc(taskId).delete();
+  return { ok: true };
+}

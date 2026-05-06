@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   DndContext,
   DragOverlay,
@@ -30,6 +31,7 @@ import {
 } from "@/lib/tasks/task-board-columns";
 import type { TaskRecord } from "@/types/task";
 import { useTaskStatusMutation } from "@/hooks/use-task-status-mutation";
+import { deleteTaskAction } from "@/server/actions/tasks-crm";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -122,10 +124,12 @@ function TaskCard({
   task,
   disabled,
   onEdit,
+  onDelete,
 }: {
   task: TaskRecord;
   disabled?: boolean;
   onEdit: (task: TaskRecord) => void;
+  onDelete: (task: TaskRecord) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: task.id,
@@ -188,6 +192,12 @@ function TaskCard({
                 onSelect={() => onEdit(task)}
               >
                 Edit task
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="cursor-pointer text-destructive focus:text-destructive"
+                onSelect={() => onDelete(task)}
+              >
+                Delete task
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               {task.customerId ? (
@@ -281,8 +291,10 @@ export interface TasksBoardProps {
 }
 
 export function TasksBoard({ tasks, onRequestAddToColumn, addDisabled, onRequestEditTask }: TasksBoardProps) {
+  const router = useRouter();
   const { moveToColumn, pendingId } = useTaskStatusMutation();
   const [activeId, setActiveId] = React.useState<string | null>(null);
+  const [deletingId, setDeletingId] = React.useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -328,6 +340,19 @@ export function TasksBoard({ tasks, onRequestAddToColumn, addDisabled, onRequest
     setActiveId(null);
   }
 
+  async function handleDelete(task: TaskRecord) {
+    const ok = window.confirm("Delete this task permanently? This cannot be undone.");
+    if (!ok) return;
+    setDeletingId(task.id);
+    const res = await deleteTaskAction(task.id);
+    setDeletingId(null);
+    if (!res.ok) {
+      window.alert(res.message);
+      return;
+    }
+    router.refresh();
+  }
+
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={handleDragCancel}>
       <div className="flex gap-3 overflow-x-auto pb-2">
@@ -345,8 +370,9 @@ export function TasksBoard({ tasks, onRequestAddToColumn, addDisabled, onRequest
                 <TaskCard
                   key={task.id}
                   task={task}
-                  disabled={pendingId === task.id}
+                  disabled={pendingId === task.id || deletingId === task.id}
                   onEdit={(t) => onRequestEditTask?.(t)}
+                  onDelete={handleDelete}
                 />
               ))}
             </StageColumn>

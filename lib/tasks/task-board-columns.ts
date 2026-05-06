@@ -5,9 +5,9 @@ export type TaskBoardColumnId = (typeof TASK_BOARD_COLUMNS)[number];
 export function taskBoardColumnLabel(id: TaskBoardColumnId): string {
   switch (id) {
     case "todo":
-      return "To Do List";
+      return "To Do";
     case "in_progress":
-      return "In Progress List";
+      return "In Progress";
     case "review":
       return "In Review";
     case "done":
