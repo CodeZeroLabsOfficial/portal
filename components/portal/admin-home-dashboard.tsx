@@ -4,8 +4,13 @@ import {
   ArrowUpRight,
   Check,
   ChevronRight,
+  LineChart,
   MoreHorizontal,
+  MoreVertical,
   Settings2,
+  Users,
+  Wallet,
+  type LucideIcon,
 } from "lucide-react";
 import { DEFAULT_CURRENCY } from "@/lib/constants";
 import { formatCurrencyAmount } from "@/lib/format";
@@ -114,21 +119,32 @@ function countActiveClients(customers: PortalUser[], subscriptions: Subscription
 }
 
 /** Month-over-month % change in new customer sign-ups (calendar months). */
-function newCustomersMomPercent(customers: PortalUser[], now: Date): { pct: number; neutral: boolean } {
+function newCustomersMomStats(customers: PortalUser[], now: Date): {
+  pct: number;
+  neutral: boolean;
+  lastMonthNew: number;
+} {
   const thisMonthStart = startOfMonthMs(now);
   const lastMonthStart = startOfPreviousMonthMs(now);
-  const newThisMonth = customers.filter((c) => c.createdAtMs >= thisMonthStart && c.createdAtMs <= now.getTime()).length;
+  const nowMs = now.getTime();
+  const newThisMonth = customers.filter(
+    (c) => c.createdAtMs >= thisMonthStart && c.createdAtMs <= nowMs,
+  ).length;
   const newLastMonth = customers.filter(
     (c) => c.createdAtMs >= lastMonthStart && c.createdAtMs < thisMonthStart,
   ).length;
   if (newLastMonth === 0 && newThisMonth === 0) {
-    return { pct: 0, neutral: true };
+    return { pct: 0, neutral: true, lastMonthNew: 0 };
   }
   if (newLastMonth === 0) {
-    return { pct: newThisMonth > 0 ? 100 : 0, neutral: newThisMonth === 0 };
+    return {
+      pct: newThisMonth > 0 ? 100 : 0,
+      neutral: newThisMonth === 0,
+      lastMonthNew: 0,
+    };
   }
   const pct = ((newThisMonth - newLastMonth) / newLastMonth) * 100;
-  return { pct, neutral: Math.abs(pct) < 0.05 };
+  return { pct, neutral: Math.abs(pct) < 0.05, lastMonthNew: newLastMonth };
 }
 
 type SubWithAmount = SubscriptionRecord & { mrrAmount?: number; amount?: number };
@@ -295,7 +311,11 @@ function countOpenTicketsByUrgency(tickets: SupportTicketRecord[]): {
   return { critical, high, medium };
 }
 
-function paidRevenueMomPercent(invoices: InvoiceRecord[], now: Date): { pct: number; neutral: boolean } {
+function paidRevenueMomStats(invoices: InvoiceRecord[], now: Date): {
+  pct: number;
+  neutral: boolean;
+  lastMinor: number;
+} {
   const thisMonthStart = startOfMonthMs(now);
   const nowMs = now.getTime();
   const lastMonthStart = startOfPreviousMonthMs(now);
@@ -308,13 +328,13 @@ function paidRevenueMomPercent(invoices: InvoiceRecord[], now: Date): { pct: num
   const a = sumAmountDueMinor(thisSlice);
   const b = sumAmountDueMinor(lastSlice);
   if (a === 0 && b === 0) {
-    return { pct: 0, neutral: true };
+    return { pct: 0, neutral: true, lastMinor: 0 };
   }
   if (b === 0) {
-    return { pct: a > 0 ? 100 : 0, neutral: a === 0 };
+    return { pct: a > 0 ? 100 : 0, neutral: a === 0, lastMinor: 0 };
   }
   const pct = ((a - b) / b) * 100;
-  return { pct, neutral: Math.abs(pct) < 0.05 };
+  return { pct, neutral: Math.abs(pct) < 0.05, lastMinor: b };
 }
 
 export function AdminHomeRightAside({ data }: { data: AdminPortalData }) {
@@ -444,11 +464,11 @@ export function AdminHomeDashboard({
   const now = new Date();
 
   const activeClients = countActiveClients(data.customers, data.subscriptions);
-  const clientsMom = newCustomersMomPercent(data.customers, now);
-  const clientsDeltaStr = `${clientsMom.pct >= 0 ? "+" : ""}${clientsMom.pct.toFixed(1)}% vs last month`;
+  const clientsMom = newCustomersMomStats(data.customers, now);
+  const clientsDeltaStr = `${clientsMom.pct >= 0 ? "+" : ""}${clientsMom.pct.toFixed(1)}%`;
 
   const { mrrMinor, arrMinor } = sumMrrAndArr(data.subscriptions);
-  const paidMom = paidRevenueMomPercent(data.invoices, now);
+  const paidMom = paidRevenueMomStats(data.invoices, now);
   const mrrGrowthStr = `${paidMom.pct >= 0 ? "+" : ""}${paidMom.pct.toFixed(1)}%`;
 
   const monthStart = startOfMonthMs(now);
@@ -541,6 +561,12 @@ export function AdminHomeDashboard({
     ? `${paymentCount} payments · ${now.getFullYear()} YTD`
     : `${paymentCount} payments received`;
 
+  const clientsFooter = `Last month: ${clientsMom.lastMonthNew} new sign-up${clientsMom.lastMonthNew === 1 ? "" : "s"}`;
+
+  const mrrFooter = `ARR ${formatCurrencyAmount(arrMinor, DEFAULT_CURRENCY)} · Last month paid ${formatCurrencyAmount(paidMom.lastMinor, DEFAULT_CURRENCY)}`;
+
+  const revenueFooter = `${revenueValueDetail} · Last month ${formatCurrencyAmount(revenueLastMonthComparableMinor, DEFAULT_CURRENCY)}`;
+
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -561,29 +587,36 @@ export function AdminHomeDashboard({
         </Button>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <MetricCard
-          title="Total Active Clients"
+          heading="Clients"
+          metricLabel="Total active clients"
           value={String(activeClients)}
+          footer={clientsFooter}
           delta={clientsDeltaStr}
           positive={clientsMom.pct > 0}
           neutralDelta={clientsMom.neutral}
+          icon={Users}
         />
         <MetricCard
-          title="MRR / ARR"
+          heading="Recurring"
+          metricLabel="MRR / ARR"
           value={formatCurrencyAmount(mrrMinor, DEFAULT_CURRENCY)}
-          valueDetail={`ARR ${formatCurrencyAmount(arrMinor, DEFAULT_CURRENCY)}`}
+          footer={mrrFooter}
           delta={mrrGrowthStr}
           positive={paidMom.pct > 0}
           neutralDelta={paidMom.neutral}
+          icon={LineChart}
         />
         <MetricCard
-          title="Total Revenue"
+          heading="Revenue"
+          metricLabel="Total revenue"
           value={formatCurrencyAmount(revenueMinor, DEFAULT_CURRENCY)}
-          valueDetail={revenueValueDetail}
-          delta={revenueDeltaStr}
+          footer={revenueFooter}
+          delta={revenueDeltaStr?.replace(/\s+vs last month$/i, "")}
           positive={revenueDeltaStr !== undefined && revenueMomPct > 0}
           neutralDelta={revenueDeltaStr !== undefined ? revenueMomNeutral : revenueMinor === 0}
+          icon={Wallet}
         />
       </div>
 
@@ -602,51 +635,85 @@ function formatShortChartDate(d: Date): string {
   }).format(d);
 }
 
-function MetricCard({
-  title,
-  titleDetail,
-  value,
-  valueDetail,
-  delta,
-  positive,
-  neutralDelta,
-}: {
-  title: string;
-  titleDetail?: string;
+type MetricCardProps = {
+  heading: string;
+  metricLabel: string;
   value: string;
-  valueDetail?: string;
+  footer?: string;
   delta?: string;
   positive: boolean;
   neutralDelta?: boolean;
-}) {
+  icon: LucideIcon;
+};
+
+function MetricCard({
+  heading,
+  metricLabel,
+  value,
+  footer,
+  delta,
+  positive,
+  neutralDelta,
+  icon: Icon,
+}: MetricCardProps) {
   const showDelta = typeof delta === "string" && delta.length > 0;
   return (
-    <div className="rounded-xl border border-border/80 bg-card p-5 shadow-none">
-      <div>
-        <p className="text-xs font-medium text-muted-foreground">{title}</p>
-        {titleDetail ? (
-          <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground/90">{titleDetail}</p>
+    <div className="relative overflow-hidden rounded-[14px] border border-border/80 bg-card p-5 shadow-sm">
+      <div
+        className="pointer-events-none absolute -bottom-10 -right-8 h-36 w-36 rounded-full bg-primary/[0.07]"
+        aria-hidden
+      />
+      <div className="relative">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+              <Icon className="h-4 w-4" aria-hidden />
+            </span>
+            <span className="truncate text-[14px] font-semibold leading-tight text-foreground">{heading}</span>
+          </div>
+          <button
+            type="button"
+            className="-mr-1 -mt-0.5 shrink-0 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+            aria-label="Card actions"
+          >
+            <MoreVertical className="h-4 w-4" aria-hidden />
+          </button>
+        </div>
+
+        <div className="mt-5 flex items-end justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-[12px] font-normal leading-snug text-muted-foreground">{metricLabel}</p>
+            <p className="mt-1.5 text-[26px] font-bold leading-none tracking-tight text-foreground tabular-nums">
+              {value}
+            </p>
+          </div>
+          {showDelta ? (
+            <div
+              className={cn(
+                "max-w-[42%] shrink-0 text-right text-[11px] font-medium leading-tight tabular-nums",
+                neutralDelta
+                  ? "text-muted-foreground"
+                  : positive
+                    ? "text-emerald-400"
+                    : "text-destructive",
+              )}
+            >
+              <span className="inline-flex items-center justify-end gap-0.5">
+                <span className="break-words">{delta}</span>
+                {neutralDelta ? null : positive ? (
+                  <ArrowUpRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                ) : (
+                  <ArrowDownRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                )}
+              </span>
+            </div>
+          ) : null}
+        </div>
+
+        {footer ? (
+          <p className="mt-4 text-[10px] font-normal leading-snug text-muted-foreground">{footer}</p>
         ) : null}
       </div>
-      <p className="mt-3 text-2xl font-bold tabular-nums tracking-tight text-foreground">{value}</p>
-      {valueDetail ? (
-        <p className="mt-1.5 text-xs font-medium tabular-nums text-muted-foreground">{valueDetail}</p>
-      ) : null}
-      {showDelta ? (
-        <p
-          className={cn(
-            "mt-3 inline-flex items-center gap-1 text-sm font-medium",
-            neutralDelta ? "text-muted-foreground" : positive ? "text-emerald-400" : "text-destructive",
-          )}
-        >
-          {neutralDelta ? null : positive ? (
-            <ArrowUpRight className="h-4 w-4 shrink-0" aria-hidden />
-          ) : (
-            <ArrowDownRight className="h-4 w-4 shrink-0" aria-hidden />
-          )}
-          {delta}
-        </p>
-      ) : null}
     </div>
   );
 }
