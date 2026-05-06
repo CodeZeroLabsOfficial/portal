@@ -139,6 +139,7 @@ export function AddSubscriptionModal({
   React.useEffect(() => {
     if (collectionMethod !== "charge_automatically" || !open) return;
     if (!publishableKey) return;
+    const key = publishableKey;
     let cancelled = false;
     async function mountCardElement() {
       if (cardRef.current) return;
@@ -165,7 +166,7 @@ export function AddSubscriptionModal({
         setCardError("Stripe.js is unavailable.");
         return;
       }
-      stripeRef.current = window.Stripe(publishableKey);
+      stripeRef.current = window.Stripe(key);
       const elements = stripeRef.current.elements();
       const card = elements.create("card", {
         style: {
