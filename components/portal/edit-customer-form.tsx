@@ -139,7 +139,7 @@ export function EditCustomerForm({ customer }: EditCustomerFormProps) {
                   <Label htmlFor="edit-crm-name">
                     Name <span className="text-destructive">*</span>
                   </Label>
-                  <Input id="edit-crm-name" autoComplete="name" placeholder="Jane Doe" {...form.register("name")} />
+                  <Input id="edit-crm-name" autoComplete="name" placeholder="John Smith" {...form.register("name")} />
                   {form.formState.errors.name ? (
                     <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>
                   ) : null}
@@ -152,7 +152,7 @@ export function EditCustomerForm({ customer }: EditCustomerFormProps) {
                     id="edit-crm-email"
                     type="email"
                     autoComplete="email"
-                    placeholder="jane@company.com"
+                    placeholder="john.smith@company.com"
                     {...form.register("email")}
                   />
                   {form.formState.errors.email ? (
@@ -161,11 +161,11 @@ export function EditCustomerForm({ customer }: EditCustomerFormProps) {
                 </div>
                 <div className="space-y-2 sm:col-span-2">
                   <Label htmlFor="edit-crm-company">Company name</Label>
-                  <Input id="edit-crm-company" placeholder="Acme Pty Ltd" {...form.register("company")} />
+                  <Input id="edit-crm-company" placeholder="Company Name Pty Ltd" {...form.register("company")} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-crm-company-phone">Company phone</Label>
-                  <Input id="edit-crm-company-phone" type="tel" placeholder="+61 …" {...form.register("companyPhone")} />
+                  <Input id="edit-crm-company-phone" type="tel" placeholder="+61 400 000 000" {...form.register("companyPhone")} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-crm-company-email">Company email</Label>
@@ -173,7 +173,7 @@ export function EditCustomerForm({ customer }: EditCustomerFormProps) {
                     id="edit-crm-company-email"
                     type="email"
                     autoComplete="off"
-                    placeholder="hello@acme.com"
+                    placeholder="info@company.com"
                     {...form.register("companyEmail")}
                   />
                   {form.formState.errors.companyEmail ? (
@@ -182,7 +182,7 @@ export function EditCustomerForm({ customer }: EditCustomerFormProps) {
                 </div>
                 <div className="space-y-2 sm:col-span-2">
                   <Label htmlFor="edit-crm-company-website">Company website</Label>
-                  <Input id="edit-crm-company-website" placeholder="https://acme.com" {...form.register("companyWebsite")} />
+                  <Input id="edit-crm-company-website" placeholder="https://www.company.com" {...form.register("companyWebsite")} />
                   {form.formState.errors.companyWebsite ? (
                     <p className="text-xs text-destructive">{form.formState.errors.companyWebsite.message}</p>
                   ) : null}
@@ -203,7 +203,7 @@ export function EditCustomerForm({ customer }: EditCustomerFormProps) {
 
               <div className="space-y-2">
                 <Label htmlFor="edit-crm-phone">Contact phone</Label>
-                <Input id="edit-crm-phone" type="tel" placeholder="+61 …" {...form.register("phone")} />
+                <Input id="edit-crm-phone" type="tel" placeholder="+61 400 000 000" {...form.register("phone")} />
               </div>
 
               <div className="space-y-2">

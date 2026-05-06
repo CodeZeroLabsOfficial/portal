@@ -124,10 +124,19 @@ export function CompanySettingsView({ settings }: CompanySettingsViewProps) {
             <div className="space-y-1">
               <dt className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 <FileText className="h-3.5 w-3.5" aria-hidden />
-                Tax / registration ID
+                ACN
               </dt>
               <dd className="text-sm text-foreground">
-                {settings.taxId.trim() ? settings.taxId.trim() : <span className="text-muted-foreground">—</span>}
+                {settings.acn.trim() ? settings.acn.trim() : <span className="text-muted-foreground">—</span>}
+              </dd>
+            </div>
+            <div className="space-y-1">
+              <dt className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <FileText className="h-3.5 w-3.5" aria-hidden />
+                ABN
+              </dt>
+              <dd className="text-sm text-foreground">
+                {settings.abn.trim() ? settings.abn.trim() : <span className="text-muted-foreground">—</span>}
               </dd>
             </div>
             <div className="space-y-1 sm:col-span-2">

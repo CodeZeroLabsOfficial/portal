@@ -21,7 +21,8 @@ function settingsToFormDefaults(s: WorkspaceCompanySettings): UpdateCompanySetti
     phone: s.phone,
     email: s.email,
     website: s.website,
-    taxId: s.taxId,
+    acn: s.acn,
+    abn: s.abn,
     addressLine1: s.addressLine1,
     addressLine2: s.addressLine2,
     city: s.city,
@@ -78,7 +79,7 @@ export function EditCompanySettingsForm({ settings }: EditCompanySettingsFormPro
           <CardHeader className="border-b border-border/60 bg-muted/20">
             <CardTitle className="text-xl">Edit company</CardTitle>
             <CardDescription>
-              Update how your organization appears on invoices, proposals, and internal records. The organization document ID is set from your account and cannot be changed here.
+              Update how your organization appears on invoices, proposals, and internal records.
             </CardDescription>
           </CardHeader>
           <CardContent className="p-6">
@@ -97,51 +98,47 @@ export function EditCompanySettingsForm({ settings }: EditCompanySettingsFormPro
                 ) : null}
               </AnimatePresence>
 
-              <div className="space-y-2">
-                <Label htmlFor="company-org-id">Organization document ID</Label>
-                <Input
-                  id="company-org-id"
-                  value={settings.organizationDocId}
-                  disabled
-                  className="bg-muted/50 font-mono text-sm"
-                  readOnly
-                />
-              </div>
-
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2 sm:col-span-2">
                   <Label htmlFor="company-name">Company name</Label>
-                  <Input id="company-name" autoComplete="organization" placeholder="Acme Pty Ltd" {...form.register("name")} />
+                  <Input id="company-name" autoComplete="organization" placeholder="Company Name Pty Ltd" {...form.register("name")} />
                   {form.formState.errors.name ? (
                     <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>
                   ) : null}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="company-phone">Phone</Label>
-                  <Input id="company-phone" type="tel" autoComplete="tel" placeholder="+61 …" {...form.register("phone")} />
+                  <Input id="company-phone" type="tel" autoComplete="tel" placeholder="+61 400 000 000" {...form.register("phone")} />
                   {form.formState.errors.phone ? (
                     <p className="text-xs text-destructive">{form.formState.errors.phone.message}</p>
                   ) : null}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="company-email">Email</Label>
-                  <Input id="company-email" type="email" autoComplete="email" placeholder="hello@company.com" {...form.register("email")} />
+                  <Input id="company-email" type="email" autoComplete="email" placeholder="info@company.com" {...form.register("email")} />
                   {form.formState.errors.email ? (
                     <p className="text-xs text-destructive">{form.formState.errors.email.message}</p>
                   ) : null}
                 </div>
                 <div className="space-y-2 sm:col-span-2">
                   <Label htmlFor="company-website">Website</Label>
-                  <Input id="company-website" autoComplete="url" placeholder="https://example.com" {...form.register("website")} />
+                  <Input id="company-website" autoComplete="url" placeholder="https://www.company.com" {...form.register("website")} />
                   {form.formState.errors.website ? (
                     <p className="text-xs text-destructive">{form.formState.errors.website.message}</p>
                   ) : null}
                 </div>
-                <div className="space-y-2 sm:col-span-2">
-                  <Label htmlFor="company-tax">Tax / registration ID</Label>
-                  <Input id="company-tax" autoComplete="off" placeholder="ABN, EIN, VAT number…" {...form.register("taxId")} />
-                  {form.formState.errors.taxId ? (
-                    <p className="text-xs text-destructive">{form.formState.errors.taxId.message}</p>
+                <div className="space-y-2">
+                  <Label htmlFor="company-acn">ACN</Label>
+                  <Input id="company-acn" autoComplete="off" placeholder="123 456 789" {...form.register("acn")} />
+                  {form.formState.errors.acn ? (
+                    <p className="text-xs text-destructive">{form.formState.errors.acn.message}</p>
+                  ) : null}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="company-abn">ABN</Label>
+                  <Input id="company-abn" autoComplete="off" placeholder="12 345 678 901" {...form.register("abn")} />
+                  {form.formState.errors.abn ? (
+                    <p className="text-xs text-destructive">{form.formState.errors.abn.message}</p>
                   ) : null}
                 </div>
               </div>

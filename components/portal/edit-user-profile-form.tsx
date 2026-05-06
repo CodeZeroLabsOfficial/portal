@@ -109,14 +109,14 @@ export function EditUserProfileForm({ user }: EditUserProfileFormProps) {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="profile-first">First name</Label>
-                  <Input id="profile-first" autoComplete="given-name" placeholder="Jane" {...form.register("firstName")} />
+                  <Input id="profile-first" autoComplete="given-name" placeholder="John" {...form.register("firstName")} />
                   {form.formState.errors.firstName ? (
                     <p className="text-xs text-destructive">{form.formState.errors.firstName.message}</p>
                   ) : null}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="profile-last">Last name</Label>
-                  <Input id="profile-last" autoComplete="family-name" placeholder="Doe" {...form.register("lastName")} />
+                  <Input id="profile-last" autoComplete="family-name" placeholder="Smith" {...form.register("lastName")} />
                   {form.formState.errors.lastName ? (
                     <p className="text-xs text-destructive">{form.formState.errors.lastName.message}</p>
                   ) : null}
@@ -132,14 +132,14 @@ export function EditUserProfileForm({ user }: EditUserProfileFormProps) {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="profile-phone">Phone</Label>
-                  <Input id="profile-phone" type="tel" autoComplete="tel" placeholder="+61 …" {...form.register("phone")} />
+                  <Input id="profile-phone" type="tel" autoComplete="tel" placeholder="+61 400 000 000" {...form.register("phone")} />
                   {form.formState.errors.phone ? (
                     <p className="text-xs text-destructive">{form.formState.errors.phone.message}</p>
                   ) : null}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="profile-website">Website</Label>
-                  <Input id="profile-website" autoComplete="url" placeholder="https://example.com" {...form.register("website")} />
+                  <Input id="profile-website" autoComplete="url" placeholder="https://www.company.com" {...form.register("website")} />
                   {form.formState.errors.website ? (
                     <p className="text-xs text-destructive">{form.formState.errors.website.message}</p>
                   ) : null}

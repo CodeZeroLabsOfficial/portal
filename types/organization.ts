@@ -6,8 +6,10 @@ export interface WorkspaceCompanySettings {
   phone: string;
   email: string;
   website: string;
-  /** Tax / company registration id (ABN, EIN, VAT, …). */
-  taxId: string;
+  /** Australian Company Number (stored in Firestore as `acn`; legacy key `taxId` is read as fallback). */
+  acn: string;
+  /** Australian Business Number */
+  abn: string;
   addressLine1: string;
   addressLine2: string;
   city: string;

@@ -105,14 +105,14 @@ export function EditAccountForm({ account, accountKey }: EditAccountFormProps) {
                   <Label htmlFor="edit-account-company">
                     Company name <span className="text-destructive">*</span>
                   </Label>
-                  <Input id="edit-account-company" placeholder="Acme Pty Ltd" {...form.register("company")} />
+                  <Input id="edit-account-company" placeholder="Company Name Pty Ltd" {...form.register("company")} />
                   {form.formState.errors.company ? (
                     <p className="text-xs text-destructive">{form.formState.errors.company.message}</p>
                   ) : null}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-account-company-phone">Company phone</Label>
-                  <Input id="edit-account-company-phone" type="tel" placeholder="+61 …" {...form.register("companyPhone")} />
+                  <Input id="edit-account-company-phone" type="tel" placeholder="+61 400 000 000" {...form.register("companyPhone")} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-account-company-email">Company email</Label>
@@ -120,7 +120,7 @@ export function EditAccountForm({ account, accountKey }: EditAccountFormProps) {
                     id="edit-account-company-email"
                     type="email"
                     autoComplete="off"
-                    placeholder="hello@acme.com"
+                    placeholder="info@company.com"
                     {...form.register("companyEmail")}
                   />
                   {form.formState.errors.companyEmail ? (
@@ -129,7 +129,7 @@ export function EditAccountForm({ account, accountKey }: EditAccountFormProps) {
                 </div>
                 <div className="space-y-2 sm:col-span-2">
                   <Label htmlFor="edit-account-company-website">Company website</Label>
-                  <Input id="edit-account-company-website" placeholder="https://acme.com" {...form.register("companyWebsite")} />
+                  <Input id="edit-account-company-website" placeholder="https://www.company.com" {...form.register("companyWebsite")} />
                   {form.formState.errors.companyWebsite ? (
                     <p className="text-xs text-destructive">{form.formState.errors.companyWebsite.message}</p>
                   ) : null}
