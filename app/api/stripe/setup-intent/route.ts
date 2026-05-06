@@ -8,14 +8,16 @@ interface Body {
   customerId?: string;
 }
 
-async function resolveStripeCustomerForCrmCustomer(userIdOrg: { organizationId?: string }, customerId: string) {
+async function resolveStripeCustomerForCrmCustomer(
+  user: Awaited<ReturnType<typeof getCurrentSessionUser>>,
+  customerId: string,
+) {
+  if (!user || !isStaff(user)) return { error: "Unauthorized." as const };
   const stripe = getStripe();
   if (!stripe) return { error: "Stripe is not configured on the server." as const };
-  const user = await getCurrentSessionUser();
-  if (!user || !isStaff(user)) return { error: "Unauthorized." as const };
   const customer = await getCustomerRecordForOrg(user, customerId);
   if (!customer) return { error: "Customer not found." as const };
-  const ensured = await ensureStripeCustomer(stripe, customer, userIdOrg.organizationId);
+  const ensured = await ensureStripeCustomer(stripe, customer, user.organizationId);
   if (ensured.created || customer.stripeCustomerId !== ensured.stripeCustomerId) {
     await syncStripeCustomerBasics(user, customer.id, ensured.stripeCustomerId);
   }
@@ -103,14 +105,22 @@ export async function GET(req: Request) {
     }
 
     const fromInvoiceSettings = stripeCustomer.invoice_settings?.default_payment_method;
-    const defaultPm =
+    let defaultPm =
       fromInvoiceSettings && typeof fromInvoiceSettings === "object" && "id" in fromInvoiceSettings
         ? fromInvoiceSettings
         : null;
 
+    // Fallback: many customers have attached cards but no invoice_settings default set.
     if (!defaultPm) {
-      return NextResponse.json({ defaultPaymentMethodId: null });
+      const pms = await stripe.paymentMethods.list({
+        customer: stripeCustomerId,
+        type: "card",
+        limit: 1,
+      });
+      defaultPm = pms.data[0] ?? null;
     }
+
+    if (!defaultPm) return NextResponse.json({ defaultPaymentMethodId: null });
 
     const card = "card" in defaultPm ? defaultPm.card : null;
     const summary =
