@@ -82,6 +82,8 @@ function parseSubscription(id: string, data: Record<string, unknown>): Subscript
     productName: asString(data.productName),
     currency: asString(data.currency) ?? "aud",
     interval: data.interval === "year" ? "year" : data.interval === "month" ? "month" : undefined,
+    subscriptionStart: asNumber(data.subscriptionStart) ?? asNumber(data.plannedSubscriptionStartMs),
+    subscriptionEnd: asNumber(data.subscriptionEnd) ?? asNumber(data.subscriptionEndMs),
     currentPeriodEndMs: asNumber(data.currentPeriodEndMs),
     cancelAtPeriodEnd: asBoolean(data.cancelAtPeriodEnd),
     monthlyAmountMinor: asNumber(data.monthlyAmountMinor),

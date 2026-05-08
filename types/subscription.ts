@@ -21,6 +21,10 @@ export interface SubscriptionRecord {
   productName?: string;
   currency: string;
   interval?: "month" | "year";
+  /** Contract/schedule start (epoch millis), when known. */
+  subscriptionStart?: number;
+  /** Fixed contract term end (epoch millis), when known. */
+  subscriptionEnd?: number;
   currentPeriodEndMs?: number;
   cancelAtPeriodEnd?: boolean;
   /** Normalized recurring amount per month (minor units), including from annual prices (÷12). */

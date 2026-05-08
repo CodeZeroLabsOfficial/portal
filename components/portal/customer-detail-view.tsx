@@ -502,7 +502,9 @@ export function CustomerDetailView({
                         <td className="py-2 pr-4">{s.productName ?? "—"}</td>
                         <td className="py-2 pr-4 capitalize">{s.status}</td>
                         <td className="py-2 text-muted-foreground">
-                          {s.currentPeriodEndMs ? new Date(s.currentPeriodEndMs).toLocaleDateString() : "—"}
+                          {s.subscriptionEnd || s.currentPeriodEndMs
+                            ? new Date(s.subscriptionEnd ?? s.currentPeriodEndMs ?? 0).toLocaleDateString()
+                            : "—"}
                         </td>
                       </tr>
                     ))}

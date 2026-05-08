@@ -167,6 +167,8 @@ export async function upsertSubscriptionMirror(db: Firestore, sub: Stripe.Subscr
     ...(productLabelFromSubscription(sub) ? { productName: productLabelFromSubscription(sub) } : {}),
     currency: (sub.currency ?? price?.currency ?? "aud").toLowerCase(),
     ...(interval ? { interval } : {}),
+    ...(typeof sub.start_date === "number" ? { subscriptionStart: sub.start_date * 1000 } : {}),
+    ...(typeof sub.cancel_at === "number" ? { subscriptionEnd: sub.cancel_at * 1000 } : {}),
     ...(typeof sub.current_period_end === "number"
       ? { currentPeriodEndMs: sub.current_period_end * 1000 }
       : {}),

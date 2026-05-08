@@ -305,7 +305,7 @@ export function SubscriptionListPanel({ rows, customerOptions, productOptions }:
                         {formatTableDate(s.createdAtMs)}
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 align-middle text-muted-foreground">
-                        {formatTableDate(s.currentPeriodEndMs)}
+                        {formatTableDate(s.subscriptionEnd ?? s.currentPeriodEndMs)}
                       </td>
                       <td className="px-2 py-3 text-center align-middle">
                         <DropdownMenu>

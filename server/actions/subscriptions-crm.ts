@@ -42,6 +42,19 @@ function recurringIntervalMonths(
   return null;
 }
 
+function addUtcMonthsClamped(startMs: number, months: number): number {
+  const start = new Date(startMs);
+  const startYear = start.getUTCFullYear();
+  const startMonth = start.getUTCMonth();
+  const startDay = start.getUTCDate();
+  const targetMonthIndex = startMonth + months;
+  const targetYear = startYear + Math.floor(targetMonthIndex / 12);
+  const targetMonth = ((targetMonthIndex % 12) + 12) % 12;
+  const targetMonthLastDay = new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate();
+  const targetDay = Math.min(startDay, targetMonthLastDay);
+  return Date.UTC(targetYear, targetMonth, targetDay, 0, 0, 0, 0);
+}
+
 function productNameFromPriceObject(
   product: unknown,
 ): string | undefined {
@@ -119,6 +132,7 @@ export async function createSubscriptionAction(
       };
     }
     const iterations = Math.max(1, Math.floor(parsed.data.durationMonths / intervalMonths));
+    const subscriptionEnd = addUtcMonthsClamped(startAtMs, parsed.data.durationMonths);
 
     const schedule = await stripe.subscriptionSchedules.create({
       customer: stripeCustomerId,
@@ -157,6 +171,17 @@ export async function createSubscriptionAction(
         expand: ["default_payment_method", "items.data.price.product"],
       });
       await upsertSubscriptionMirror(db, subscription);
+      await db.collection(COLLECTIONS.subscriptions).doc(subscriptionId).set(
+        {
+          stripeScheduleId: schedule.id,
+          subscriptionStart: startAtMs,
+          plannedDurationMonths: parsed.data.durationMonths,
+          subscriptionEnd,
+          updatedAtMs: Date.now(),
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
     } else {
       const scheduledMonthlyAmountMinor =
         typeof price.unit_amount === "number"
@@ -184,8 +209,9 @@ export async function createSubscriptionAction(
           updatedAtMs: Date.now(),
           updatedAt: FieldValue.serverTimestamp(),
           stripeScheduleId: schedule.id,
-          plannedSubscriptionStartMs: startAtMs,
+          subscriptionStart: startAtMs,
           plannedDurationMonths: parsed.data.durationMonths,
+          subscriptionEnd,
         },
         { merge: true },
       );
