@@ -81,7 +81,7 @@ import {
 } from "@/components/proposal/proposal-block-inline-editors";
 import { BlockToolbar } from "@/components/proposal/proposal-block-toolbar";
 import { DeleteProposalTemplateButton } from "@/components/proposal/delete-proposal-template-button";
-import { PROPOSAL_PUBLIC_CONTENT_CLASSES } from "@/lib/proposal-public-layout";
+import { PROPOSAL_PUBLIC_DOCUMENT_OUTER_CLASSES } from "@/lib/proposal-public-layout";
 import { saveProposalDocumentAction, sendProposalAction } from "@/server/actions/proposal-builder";
 import { saveProposalTemplateAction } from "@/server/actions/proposal-templates";
 import { Button } from "@/components/ui/button";
@@ -1867,7 +1867,7 @@ export function ProposalDocumentEditor({
           value="preview"
           className="mt-4 overflow-x-visible rounded-2xl border border-border/70 bg-muted/15 py-6 md:py-10"
         >
-          <div className={PROPOSAL_PUBLIC_CONTENT_CLASSES}>
+          <div className={PROPOSAL_PUBLIC_DOCUMENT_OUTER_CLASSES}>
             <ProposalDocumentView document={doc} />
           </div>
         </TabsContent>

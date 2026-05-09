@@ -7,6 +7,7 @@ import { ProposalPublicFooter } from "@/components/proposal/proposal-public-foot
 import { isProposalUnlockedForRequest } from "@/lib/proposal-public-session";
 import {
   PROPOSAL_PUBLIC_CONTENT_CLASSES,
+  PROPOSAL_PUBLIC_DOCUMENT_OUTER_CLASSES,
   PROPOSAL_PUBLIC_SHELL_CLASSES,
 } from "@/lib/proposal-public-layout";
 import { getProposalRecordByShareToken } from "@/server/firestore/parse-proposal";
@@ -54,26 +55,30 @@ export default async function PublicProposalPage(props: PublicProposalPageProps)
 
   return (
     <main className={`${PROPOSAL_PUBLIC_SHELL_CLASSES} min-h-dvh`}>
-      <div className={PROPOSAL_PUBLIC_CONTENT_CLASSES}>
-        {!unlocked ? (
+      {!unlocked ? (
+        <div className={PROPOSAL_PUBLIC_CONTENT_CLASSES}>
           <ProposalPasswordGate shareToken={proposal.shareToken} />
-        ) : (
-          <>
-            <ProposalAnalyticsTracker shareToken={proposal.shareToken} />
+        </div>
+      ) : (
+        <>
+          <ProposalAnalyticsTracker shareToken={proposal.shareToken} />
+          <div className={PROPOSAL_PUBLIC_DOCUMENT_OUTER_CLASSES}>
             <ProposalDocumentView
               document={proposal.document}
               branding={proposal.branding}
               shareToken={proposal.shareToken}
               publicSelections={proposal.publicSelections}
             />
+          </div>
+          <div className={`${PROPOSAL_PUBLIC_CONTENT_CLASSES} mt-10`}>
             <ProposalPublicFooter
               shareToken={proposal.shareToken}
               status={proposal.status}
               acceptedByName={proposal.acceptedByName}
             />
-          </>
-        )}
-      </div>
+          </div>
+        </>
+      )}
     </main>
   );
 }

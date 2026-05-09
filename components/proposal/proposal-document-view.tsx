@@ -9,10 +9,7 @@ import type {
   ProposalPublicSelections,
   SectionBlock,
 } from "@/types/proposal";
-import {
-  PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES,
-  PROPOSAL_SECTION_VIEWPORT_BLEED_CLASSES,
-} from "@/lib/proposal-public-layout";
+import { PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES } from "@/lib/proposal-public-layout";
 import { sanitizeProposalHtml } from "@/lib/sanitize-proposal-html";
 import { WORKSPACE_DETAIL_PAGE_TITLE_CLASS } from "@/lib/workspace-page-typography";
 import { cn } from "@/lib/utils";
@@ -29,7 +26,7 @@ export interface ProposalDocumentViewProps {
   /** Public share link only — enables saving package selection. */
   shareToken?: string;
   publicSelections?: ProposalPublicSelections;
-  /** When true, grouped `section` blocks span viewport width outside the prose column */
+  /** When true, root `section` bands span the full width of `<main>`; copy stays in the inner column */
   viewportSectionBleed?: boolean;
 }
 
@@ -319,46 +316,63 @@ export function ProposalDocumentView({
   return (
     <article
       style={style}
-      className={cn("space-y-8", className)}
+      className={cn("w-full space-y-8", className)}
     >
-      {branding?.logoUrl ? (
-        <div className="flex justify-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={branding.logoUrl} alt="" className="h-10 max-w-[200px] object-contain" />
-        </div>
-      ) : null}
-      <header>
-        <h1
-          className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl"
-          style={branding?.primaryColor ? { color: branding.primaryColor } : undefined}
-        >
-          {document.title}
-        </h1>
-      </header>
-      <div className="space-y-10">
-        {document.blocks.map((block) => {
-          const child = (
-            <BlockView
-              block={block}
-              shareToken={shareToken}
-              publicSelections={publicSelections}
-              viewportSectionBleed={viewportSectionBleed}
-            />
-          );
-          if (viewportSectionBleed && block.type === "section") {
+      <div className={PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES}>
+        {branding?.logoUrl ? (
+          <div className="flex justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={branding.logoUrl} alt="" className="h-10 max-w-[200px] object-contain" />
+          </div>
+        ) : null}
+        <header className={branding?.logoUrl ? "mt-8" : ""}>
+          <h1
+            className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl"
+            style={branding?.primaryColor ? { color: branding.primaryColor } : undefined}
+          >
+            {document.title}
+          </h1>
+        </header>
+      </div>
+      {viewportSectionBleed ? (
+        <div className="flex w-full flex-col gap-10">
+          {document.blocks.map((block) => {
+            const child = (
+              <BlockView
+                block={block}
+                shareToken={shareToken}
+                publicSelections={publicSelections}
+                viewportSectionBleed={viewportSectionBleed}
+              />
+            );
+            if (block.type === "section") {
+              return (
+                <section key={block.id} className="w-full">
+                  {child}
+                </section>
+              );
+            }
             return (
-              <section key={block.id} className={PROPOSAL_SECTION_VIEWPORT_BLEED_CLASSES}>
+              <section key={block.id} className={PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES}>
                 {child}
               </section>
             );
-          }
-          return (
+          })}
+        </div>
+      ) : (
+        <div className={cn(PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES, "space-y-10")}>
+          {document.blocks.map((block) => (
             <section key={block.id} className="space-y-0">
-              {child}
+              <BlockView
+                block={block}
+                shareToken={shareToken}
+                publicSelections={publicSelections}
+                viewportSectionBleed={false}
+              />
             </section>
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      )}
     </article>
   );
 }
