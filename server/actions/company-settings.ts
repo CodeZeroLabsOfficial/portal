@@ -5,6 +5,7 @@ import { getCurrentSessionUser } from "@/lib/auth/server-session";
 import { updateCompanySettingsSchema } from "@/lib/schemas/company-settings";
 import { zodErrorToMessage } from "@/lib/zod-error";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
+import { runAdminWrite } from "@/lib/firebase/admin-write";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { workspaceOrganizationDocId } from "@/server/firestore/organization-settings";
 
@@ -30,25 +31,32 @@ export async function updateWorkspaceCompanySettingsAction(
   const docId = workspaceOrganizationDocId(user);
   const nowMs = Date.now();
 
-  await db.collection(COLLECTIONS.organizations).doc(docId).set(
-    {
-      organizationDocId: docId,
-      name: v.name.trim(),
-      phone: v.phone.trim(),
-      email: v.email.trim(),
-      website: v.website.trim(),
-      acn: v.acn.trim(),
-      abn: v.abn.trim(),
-      addressLine1: v.addressLine1.trim(),
-      addressLine2: v.addressLine2.trim(),
-      city: v.city.trim(),
-      region: v.region.trim(),
-      postalCode: v.postalCode.trim(),
-      country: v.country.trim(),
-      updatedAtMs: nowMs,
-    },
-    { merge: true },
+  const write = await runAdminWrite(
+    "company_settings_save_failed",
+    { organizationDocId: docId, uid: user.uid },
+    "Could not save company settings.",
+    () =>
+      db.collection(COLLECTIONS.organizations).doc(docId).set(
+        {
+          organizationDocId: docId,
+          name: v.name.trim(),
+          phone: v.phone.trim(),
+          email: v.email.trim(),
+          website: v.website.trim(),
+          acn: v.acn.trim(),
+          abn: v.abn.trim(),
+          addressLine1: v.addressLine1.trim(),
+          addressLine2: v.addressLine2.trim(),
+          city: v.city.trim(),
+          region: v.region.trim(),
+          postalCode: v.postalCode.trim(),
+          country: v.country.trim(),
+          updatedAtMs: nowMs,
+        },
+        { merge: true },
+      ),
   );
+  if (!write.ok) return write;
 
   revalidatePath("/admin/settings", "layout");
   revalidatePath("/admin/settings/company");

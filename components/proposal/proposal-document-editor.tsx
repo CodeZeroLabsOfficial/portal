@@ -41,6 +41,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type {
+  BlockStyle,
   FormBlock,
   FormField,
   HeaderBlock,
@@ -59,6 +60,7 @@ import {
   PackagesInlineEditor,
   PricingInlineEditor,
 } from "@/components/proposal/proposal-block-inline-editors";
+import { BlockToolbar } from "@/components/proposal/proposal-block-toolbar";
 import { saveProposalDocumentAction, sendProposalAction } from "@/server/actions/proposal-builder";
 import { saveProposalTemplateAction } from "@/server/actions/proposal-templates";
 import { Button } from "@/components/ui/button";
@@ -77,6 +79,35 @@ import { escapeHtml } from "@/lib/escape-html";
 
 function newId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `b-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+/**
+ * Deep-clone a block while minting fresh ids for the block itself and any nested
+ * collections (tiers, line items, form fields). Used by the toolbar's Duplicate action.
+ */
+function cloneBlockWithFreshIds(block: ProposalBlock): ProposalBlock {
+  switch (block.type) {
+    case "pricing":
+      return {
+        ...block,
+        id: newId(),
+        lineItems: (block.lineItems ?? []).map((li) => ({ ...li, id: newId() })),
+      };
+    case "packages":
+      return {
+        ...block,
+        id: newId(),
+        tiers: (block.tiers ?? []).map((t) => ({ ...t, id: newId(), features: [...(t.features ?? [])] })),
+      };
+    case "form":
+      return {
+        ...block,
+        id: newId(),
+        fields: (block.fields ?? []).map((f) => ({ ...f, id: newId(), options: f.options ? [...f.options] : undefined })),
+      };
+    default:
+      return { ...block, id: newId() } as ProposalBlock;
+  }
 }
 
 interface BlockOption {
@@ -204,14 +235,25 @@ function createBlock(type: ProposalBlock["type"]): ProposalBlock {
   }
 }
 
+/**
+ * Sortable wrapper that surfaces a Qwilr-style floating toolbar above the block
+ * when it is selected. Clicking anywhere inside selects the block; clicking
+ * outside (handled by the parent) clears the selection.
+ */
 function SortableShell({
   id,
   children,
   label,
+  selected,
+  onSelect,
+  toolbar,
 }: {
   id: string;
   children: React.ReactNode;
   label: string;
+  selected: boolean;
+  onSelect: () => void;
+  toolbar?: React.ReactNode;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const style = {
@@ -220,27 +262,43 @@ function SortableShell({
   };
 
   return (
-    <Card
-      ref={setNodeRef}
-      style={style}
-      className={cn("border-border/70 bg-card/80 shadow-sm", isDragging && "opacity-60 ring-2 ring-primary/30")}
-    >
-      <CardContent className="space-y-3 p-4">
-        <div className="flex items-center gap-2 border-b border-border/50 pb-3">
-          <button
-            type="button"
-            className="touch-none rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-            aria-label={`Reorder ${label}`}
-            {...attributes}
-            {...listeners}
-          >
-            <GripVertical className="h-4 w-4" />
-          </button>
-          <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</span>
+    <div ref={setNodeRef} style={style} className="relative">
+      {selected && toolbar ? (
+        <div className="pointer-events-none absolute -top-5 left-1/2 z-20 -translate-x-1/2 -translate-y-full">
+          {toolbar}
         </div>
-        {children}
-      </CardContent>
-    </Card>
+      ) : null}
+      <Card
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelect();
+        }}
+        className={cn(
+          "cursor-pointer border bg-card/80 shadow-sm transition-shadow",
+          selected ? "border-primary/60 ring-2 ring-primary/40" : "border-border/70 hover:border-border",
+          isDragging && "opacity-60 ring-2 ring-primary/30",
+        )}
+      >
+        <CardContent className="space-y-3 p-4">
+          <div className="flex items-center gap-2 border-b border-border/50 pb-3">
+            <button
+              type="button"
+              className="touch-none rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+              aria-label={`Reorder ${label}`}
+              onClick={(e) => e.stopPropagation()}
+              {...attributes}
+              {...listeners}
+            >
+              <GripVertical className="h-4 w-4" />
+            </button>
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              {label}
+            </span>
+          </div>
+          {children}
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
@@ -729,6 +787,7 @@ export function ProposalDocumentEditor({
   const [templateDescription, setTemplateDescription] = React.useState(initialTemplateDescription);
   const [title, setTitle] = React.useState(initialTitle);
   const [blocks, setBlocks] = React.useState<ProposalBlock[]>(initialDocument.blocks);
+  const [selectedBlockId, setSelectedBlockId] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [sending, setSending] = React.useState(false);
   const [message, setMessage] = React.useState<string | null>(null);
@@ -808,6 +867,7 @@ export function ProposalDocumentEditor({
 
   function removeBlock(id: string) {
     setBlocks((prev) => prev.filter((b) => b.id !== id));
+    setSelectedBlockId((current) => (current === id ? null : current));
   }
 
   function addBlockAt(type: ProposalBlock["type"], index: number) {
@@ -817,6 +877,52 @@ export function ProposalDocumentEditor({
       next.splice(safeIndex, 0, createBlock(type));
       return next;
     });
+  }
+
+  function moveBlock(id: string, direction: -1 | 1) {
+    setBlocks((prev) => {
+      const idx = prev.findIndex((b) => b.id === id);
+      if (idx < 0) return prev;
+      const target = idx + direction;
+      if (target < 0 || target >= prev.length) return prev;
+      return arrayMove(prev, idx, target);
+    });
+  }
+
+  /** Duplicate the block immediately after the source. New ids are minted recursively. */
+  function duplicateBlock(id: string) {
+    setBlocks((prev) => {
+      const idx = prev.findIndex((b) => b.id === id);
+      if (idx < 0) return prev;
+      const source = prev[idx];
+      const cloned = cloneBlockWithFreshIds(source);
+      const next = [...prev];
+      next.splice(idx + 1, 0, cloned);
+      return next;
+    });
+    setSelectedBlockId(null);
+  }
+
+  function applyBlockStyle(id: string, style: BlockStyle | undefined) {
+    setBlocks((prev) =>
+      prev.map((b) => {
+        if (b.id !== id) return b;
+        if (b.type === "pricing" || b.type === "packages") {
+          if (style === undefined) {
+            const { style: _drop, ...rest } = b;
+            void _drop;
+            return rest as ProposalBlock;
+          }
+          return { ...b, style } as ProposalBlock;
+        }
+        return b;
+      }),
+    );
+  }
+
+  function getBlockStyle(block: ProposalBlock): BlockStyle | undefined {
+    if (block.type === "pricing" || block.type === "packages") return block.style;
+    return undefined;
   }
 
   return (
@@ -886,23 +992,55 @@ export function ProposalDocumentEditor({
           {blocks.length === 0 ? (
             <InsertBlockSlot variant="empty" onAdd={(type) => addBlockAt(type, 0)} />
           ) : (
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-              <SortableContext items={blocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
-                <InsertBlockSlot onAdd={(type) => addBlockAt(type, 0)} />
-                {blocks.map((block, idx) => (
-                  <React.Fragment key={block.id}>
-                    <SortableShell id={block.id} label={blockLabel(block.type)}>
-                      <BlockFields
-                        block={block}
-                        onChange={(next) => updateBlock(block.id, next)}
-                        onRemove={() => removeBlock(block.id)}
-                      />
-                    </SortableShell>
-                    <InsertBlockSlot onAdd={(type) => addBlockAt(type, idx + 1)} />
-                  </React.Fragment>
-                ))}
-              </SortableContext>
-            </DndContext>
+            <div onClick={() => setSelectedBlockId(null)}>
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+                <SortableContext items={blocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
+                  <InsertBlockSlot onAdd={(type) => addBlockAt(type, 0)} />
+                  {blocks.map((block, idx) => {
+                    const isSelected = selectedBlockId === block.id;
+                    const supportsStyle = block.type === "pricing" || block.type === "packages";
+                    return (
+                      <React.Fragment key={block.id}>
+                        <SortableShell
+                          id={block.id}
+                          label={blockLabel(block.type)}
+                          selected={isSelected}
+                          onSelect={() => setSelectedBlockId(block.id)}
+                          toolbar={
+                            <BlockToolbar
+                              blockType={
+                                block.type === "pricing"
+                                  ? "pricing"
+                                  : block.type === "packages"
+                                    ? "packages"
+                                    : "other"
+                              }
+                              canMoveUp={idx > 0}
+                              canMoveDown={idx < blocks.length - 1}
+                              onMoveUp={() => moveBlock(block.id, -1)}
+                              onMoveDown={() => moveBlock(block.id, 1)}
+                              onDuplicate={() => duplicateBlock(block.id)}
+                              onDelete={() => removeBlock(block.id)}
+                              style={supportsStyle ? getBlockStyle(block) : undefined}
+                              onStyleChange={
+                                supportsStyle ? (next) => applyBlockStyle(block.id, next) : undefined
+                              }
+                            />
+                          }
+                        >
+                          <BlockFields
+                            block={block}
+                            onChange={(next) => updateBlock(block.id, next)}
+                            onRemove={() => removeBlock(block.id)}
+                          />
+                        </SortableShell>
+                        <InsertBlockSlot onAdd={(type) => addBlockAt(type, idx + 1)} />
+                      </React.Fragment>
+                    );
+                  })}
+                </SortableContext>
+              </DndContext>
+            </div>
           )}
         </TabsContent>
         <TabsContent value="preview" className="mt-4 rounded-2xl border border-border/70 bg-muted/15 p-6 md:p-10">

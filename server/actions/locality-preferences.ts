@@ -6,6 +6,7 @@ import { getAllCurrencyCodes, getAllTimeZones, isIso3166Alpha2 } from "@/lib/loc
 import { updateLocalityPreferencesSchema } from "@/lib/schemas/locality-preferences";
 import { zodErrorToMessage } from "@/lib/zod-error";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
+import { runAdminWrite } from "@/lib/firebase/admin-write";
 import { COLLECTIONS } from "@/server/firestore/collections";
 
 export async function updateLocalityPreferencesAction(
@@ -51,18 +52,25 @@ export async function updateLocalityPreferencesAction(
   }
 
   const nowMs = Date.now();
-  await db.collection(COLLECTIONS.users).doc(user.uid).set(
-    {
-      timeZone: tz,
-      languageTag: lang,
-      dateFormatPreset: dateFmt,
-      timeFormatPreset: timeFmt,
-      localeRegionCode: region,
-      currencyCode: currency,
-      updatedAtMs: nowMs,
-    },
-    { merge: true },
+  const write = await runAdminWrite(
+    "locality_preferences_save_failed",
+    { uid: user.uid },
+    "Could not save locality preferences.",
+    () =>
+      db.collection(COLLECTIONS.users).doc(user.uid).set(
+        {
+          timeZone: tz,
+          languageTag: lang,
+          dateFormatPreset: dateFmt,
+          timeFormatPreset: timeFmt,
+          localeRegionCode: region,
+          currencyCode: currency,
+          updatedAtMs: nowMs,
+        },
+        { merge: true },
+      ),
   );
+  if (!write.ok) return write;
 
   revalidatePath("/admin/settings", "layout");
   revalidatePath("/admin/settings/locality");

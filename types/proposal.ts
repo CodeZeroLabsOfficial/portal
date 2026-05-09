@@ -18,6 +18,21 @@ export interface ProposalBlockBase {
   type: ProposalBlockType;
 }
 
+/**
+ * Per-block visual style overrides. When omitted the block renders with the
+ * built-in defaults (visual variant, theme colours). Currently consumed by the
+ * Quote (pricing) and Plans (packages) blocks — opens via the inline section
+ * toolbar's "Style" picker.
+ */
+export interface BlockStyle {
+  /** Layout density / chrome. `visual` adds a hero container, `simple` is flat. */
+  variant?: "visual" | "simple";
+  /** Backdrop / hero accent (CSS colour, e.g. `#4543F7`). */
+  primaryColor?: string;
+  /** Highlight tone for the recommended tier / total row. */
+  highlightColor?: string;
+}
+
 export interface HeaderBlock extends ProposalBlockBase {
   type: "header";
   text: string;
@@ -64,6 +79,8 @@ export interface PricingBlock extends ProposalBlockBase {
   title?: string;
   /** Legacy keys used by dashboard heuristics (optional). */
   totalMinorUnits?: number;
+  /** Visual style overrides (variant + colours). */
+  style?: BlockStyle;
 }
 
 /** One selectable tier: term-based monthly pricing + included entitlements. */
@@ -93,6 +110,8 @@ export interface PackagesBlock extends ProposalBlockBase {
   /** Toggle label for the 24-month term (default in UI: “24 months”). */
   plan24Label?: string;
   tiers: PackageTier[];
+  /** Visual style overrides (variant + colours). */
+  style?: BlockStyle;
 }
 
 /** Persisted when the recipient selects a package on the public proposal. Keyed by block id. */

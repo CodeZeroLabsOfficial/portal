@@ -13,7 +13,7 @@ import { getAdminProposalRecord } from "@/server/firestore/portal-data";
 import { getProposalRecordByShareToken } from "@/server/firestore/parse-proposal";
 import { updateOpportunityStage } from "@/server/firestore/crm-opportunities";
 import { PROPOSAL_UNLOCK_COOKIE } from "@/lib/proposal-public-session";
-import { logError } from "@/lib/logging";
+import { runAdminWrite } from "@/lib/firebase/admin-write";
 
 const saveDocSchema = z.object({
   proposalId: z.string().min(1),
@@ -64,28 +64,23 @@ export async function saveProposalDocumentAction(
   const db = getFirebaseAdminFirestore();
   if (!db) return { ok: false, message: "Database unavailable." };
 
-  try {
-    await db
-      .collection(COLLECTIONS.proposals)
-      .doc(parsed.data.proposalId)
-      .update({
-        title: parsed.data.title,
-        document: normalized,
-        documentVersion: FieldValue.increment(1),
-        updatedAtMs: Date.now(),
-        updatedAt: FieldValue.serverTimestamp(),
-      });
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : "unknown";
-    logError("proposal_save_failed", { proposalId: parsed.data.proposalId, message: reason });
-    /**
-     * In development, surface the underlying Firestore message so the inline
-     * status reveals the real cause (e.g. an admin-SDK validation error).
-     * In production we only show a generic message.
-     */
-    const detail = process.env.NODE_ENV === "production" ? "Please try again." : reason;
-    return { ok: false, message: `Could not save proposal. ${detail}` };
-  }
+  const write = await runAdminWrite(
+    "proposal_save_failed",
+    { proposalId: parsed.data.proposalId },
+    "Could not save proposal.",
+    () =>
+      db
+        .collection(COLLECTIONS.proposals)
+        .doc(parsed.data.proposalId)
+        .update({
+          title: parsed.data.title,
+          document: normalized,
+          documentVersion: FieldValue.increment(1),
+          updatedAtMs: Date.now(),
+          updatedAt: FieldValue.serverTimestamp(),
+        }),
+  );
+  if (!write.ok) return write;
 
   revalidatePath("/admin");
   revalidatePath(`/admin/proposals/${parsed.data.proposalId}`);
@@ -109,12 +104,19 @@ export async function sendProposalAction(
   const snap = await ref.get();
   const prevSent = (snap.data() as Record<string, unknown> | undefined)?.sentAtMs;
 
-  await ref.update({
-    status: "sent",
-    sentAtMs: typeof prevSent === "number" ? prevSent : now,
-    updatedAtMs: now,
-    updatedAt: FieldValue.serverTimestamp(),
-  });
+  const write = await runAdminWrite(
+    "proposal_send_failed",
+    { proposalId },
+    "Could not publish proposal.",
+    () =>
+      ref.update({
+        status: "sent",
+        sentAtMs: typeof prevSent === "number" ? prevSent : now,
+        updatedAtMs: now,
+        updatedAt: FieldValue.serverTimestamp(),
+      }),
+  );
+  if (!write.ok) return write;
 
   if (existing.opportunityId) {
     try {
@@ -146,25 +148,39 @@ export async function setProposalSharePasswordAction(
   if (!db) return { ok: false, message: "Database unavailable." };
 
   if (password === null || password === "") {
-    await db
-      .collection(COLLECTIONS.proposals)
-      .doc(proposalId)
-      .update({
-        sharePasswordHash: FieldValue.delete(),
-        updatedAtMs: Date.now(),
-        updatedAt: FieldValue.serverTimestamp(),
-      });
+    const write = await runAdminWrite(
+      "proposal_share_password_clear_failed",
+      { proposalId },
+      "Could not clear the share password.",
+      () =>
+        db
+          .collection(COLLECTIONS.proposals)
+          .doc(proposalId)
+          .update({
+            sharePasswordHash: FieldValue.delete(),
+            updatedAtMs: Date.now(),
+            updatedAt: FieldValue.serverTimestamp(),
+          }),
+    );
+    if (!write.ok) return write;
   } else {
     if (password.length < 6) return { ok: false, message: "Password must be at least 6 characters." };
     const sharePasswordHash = hashSharePassword(password);
-    await db
-      .collection(COLLECTIONS.proposals)
-      .doc(proposalId)
-      .update({
-        sharePasswordHash,
-        updatedAtMs: Date.now(),
-        updatedAt: FieldValue.serverTimestamp(),
-      });
+    const write = await runAdminWrite(
+      "proposal_share_password_set_failed",
+      { proposalId },
+      "Could not set the share password.",
+      () =>
+        db
+          .collection(COLLECTIONS.proposals)
+          .doc(proposalId)
+          .update({
+            sharePasswordHash,
+            updatedAtMs: Date.now(),
+            updatedAt: FieldValue.serverTimestamp(),
+          }),
+    );
+    if (!write.ok) return write;
   }
 
   revalidatePath(`/admin/proposals/${proposalId}`);
@@ -216,26 +232,41 @@ export async function acceptProposalPublicAction(
   if (!db) return { ok: false, message: "Service unavailable." };
 
   const now = Date.now();
-  await db
-    .collection(COLLECTIONS.proposals)
-    .doc(proposal.id)
-    .update({
-      status: "accepted",
-      acceptedAtMs: now,
-      acceptedByName: parsed.data.signerName,
-      updatedAtMs: now,
-      updatedAt: FieldValue.serverTimestamp(),
-    });
+  const write = await runAdminWrite(
+    "proposal_accept_failed",
+    { proposalId: proposal.id, shareToken: parsed.data.shareToken },
+    "Could not record acceptance.",
+    () =>
+      db
+        .collection(COLLECTIONS.proposals)
+        .doc(proposal.id)
+        .update({
+          status: "accepted",
+          acceptedAtMs: now,
+          acceptedByName: parsed.data.signerName,
+          updatedAtMs: now,
+          updatedAt: FieldValue.serverTimestamp(),
+        }),
+  );
+  if (!write.ok) return write;
 
   if (proposal.customerId) {
-    await db.collection(COLLECTIONS.customerActivities).add({
-      customerId: proposal.customerId,
-      organizationId: proposal.organizationId,
-      type: "other",
-      title: "Proposal accepted",
-      detail: `${proposal.title} — ${parsed.data.signerName}`,
-      createdAt: Timestamp.now(),
-    });
+    /** Activity entry is best-effort — failure here must not roll back the
+     *  acceptance we just recorded. */
+    await runAdminWrite(
+      "proposal_accept_activity_failed",
+      { proposalId: proposal.id, customerId: proposal.customerId },
+      "Could not record acceptance activity.",
+      () =>
+        db.collection(COLLECTIONS.customerActivities).add({
+          customerId: proposal.customerId,
+          organizationId: proposal.organizationId,
+          type: "other",
+          title: "Proposal accepted",
+          detail: `${proposal.title} — ${parsed.data.signerName}`,
+          createdAt: Timestamp.now(),
+        }),
+    );
   }
 
   const webhook = process.env.PROPOSAL_ACCEPTED_WEBHOOK_URL;
@@ -303,19 +334,26 @@ export async function saveProposalPackageSelectionAction(
       : {};
 
   const now = Date.now();
-  await ref.update({
-    publicSelections: {
-      ...prev,
-      [parsed.data.blockId]: {
-        kind: "packages",
-        tierId: parsed.data.tierId,
-        term: parsed.data.term,
+  const write = await runAdminWrite(
+    "proposal_package_selection_failed",
+    { proposalId: proposal.id, blockId: parsed.data.blockId, tierId: parsed.data.tierId },
+    "Could not save your selection.",
+    () =>
+      ref.update({
+        publicSelections: {
+          ...prev,
+          [parsed.data.blockId]: {
+            kind: "packages",
+            tierId: parsed.data.tierId,
+            term: parsed.data.term,
+            updatedAtMs: now,
+          },
+        },
         updatedAtMs: now,
-      },
-    },
-    updatedAtMs: now,
-    updatedAt: FieldValue.serverTimestamp(),
-  });
+        updatedAt: FieldValue.serverTimestamp(),
+      }),
+  );
+  if (!write.ok) return write;
 
   revalidatePath(`/p/${parsed.data.shareToken}`);
   revalidatePath(`/admin/proposals/${proposal.id}`);
@@ -337,14 +375,13 @@ export async function deleteProposalAction(
   const db = getFirebaseAdminFirestore();
   if (!db) return { ok: false, message: "Database unavailable." };
 
-  try {
-    await db.collection(COLLECTIONS.proposals).doc(trimmed).delete();
-  } catch (e) {
-    return {
-      ok: false,
-      message: e instanceof Error ? e.message : "Could not delete the proposal.",
-    };
-  }
+  const write = await runAdminWrite(
+    "proposal_delete_failed",
+    { proposalId: trimmed },
+    "Could not delete the proposal.",
+    () => db.collection(COLLECTIONS.proposals).doc(trimmed).delete(),
+  );
+  if (!write.ok) return write;
 
   revalidatePath("/admin");
   revalidatePath("/admin/proposals");

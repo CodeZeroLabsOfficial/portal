@@ -4,6 +4,7 @@ import * as React from "react";
 import type { PricingBlock } from "@/types/proposal";
 import { formatCurrencyAmount } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { resolveBlockStyle, withAlpha } from "@/lib/block-style";
 
 type LineState = Record<string, number>;
 
@@ -30,11 +31,29 @@ export function PricingBlockPublic({ block, className }: PricingBlockPublicProps
   }, 0);
 
   const editable = block.allowQuantityEdit !== false;
+  const style = resolveBlockStyle(block.style);
+  const isVisual = style.variant === "visual";
+
+  const headerStyle: React.CSSProperties | undefined = isVisual
+    ? {
+        background: withAlpha(style.primaryColor, 0.08),
+        borderBottomColor: withAlpha(style.primaryColor, 0.2),
+      }
+    : undefined;
+  const totalRowStyle: React.CSSProperties = {
+    background: withAlpha(style.highlightColor, isVisual ? 0.15 : 0.08),
+  };
+  const containerStyle: React.CSSProperties | undefined = isVisual
+    ? { borderColor: withAlpha(style.primaryColor, 0.25) }
+    : undefined;
 
   return (
-    <div className={cn("overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm", className)}>
+    <div
+      className={cn("overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm", className)}
+      style={containerStyle}
+    >
       {block.title ? (
-        <div className="border-b border-border/60 bg-muted/30 px-4 py-3">
+        <div className="border-b border-border/60 px-4 py-3" style={headerStyle}>
           <p className="text-base font-semibold text-foreground">{block.title}</p>
         </div>
       ) : null}
@@ -101,7 +120,7 @@ export function PricingBlockPublic({ block, className }: PricingBlockPublicProps
             })}
           </tbody>
           <tfoot>
-            <tr className="bg-muted/15">
+            <tr style={totalRowStyle}>
               <td
                 colSpan={editable ? 3 : 2}
                 className="px-4 py-3 text-right text-[13px] font-semibold text-foreground"

@@ -5,6 +5,7 @@ import { getCurrentSessionUser } from "@/lib/auth/server-session";
 import { updateUserProfileSchema } from "@/lib/schemas/user-profile";
 import { zodErrorToMessage } from "@/lib/zod-error";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
+import { runAdminWrite } from "@/lib/firebase/admin-write";
 import { COLLECTIONS } from "@/server/firestore/collections";
 
 export async function updateCurrentUserProfileAction(
@@ -30,24 +31,31 @@ export async function updateCurrentUserProfileAction(
   const displayName = parts.length > 0 ? parts.join(" ") : "";
 
   const nowMs = Date.now();
-  await db.collection(COLLECTIONS.users).doc(user.uid).set(
-    {
-      firstName: v.firstName.trim(),
-      lastName: v.lastName.trim(),
-      phone: v.phone.trim(),
-      website: v.website.trim(),
-      dateOfBirth: v.dateOfBirth.trim(),
-      addressLine1: v.addressLine1.trim(),
-      addressLine2: v.addressLine2.trim(),
-      city: v.city.trim(),
-      region: v.region.trim(),
-      postalCode: v.postalCode.trim(),
-      country: v.country.trim(),
-      displayName,
-      updatedAtMs: nowMs,
-    },
-    { merge: true },
+  const write = await runAdminWrite(
+    "user_profile_save_failed",
+    { uid: user.uid },
+    "Could not save profile.",
+    () =>
+      db.collection(COLLECTIONS.users).doc(user.uid).set(
+        {
+          firstName: v.firstName.trim(),
+          lastName: v.lastName.trim(),
+          phone: v.phone.trim(),
+          website: v.website.trim(),
+          dateOfBirth: v.dateOfBirth.trim(),
+          addressLine1: v.addressLine1.trim(),
+          addressLine2: v.addressLine2.trim(),
+          city: v.city.trim(),
+          region: v.region.trim(),
+          postalCode: v.postalCode.trim(),
+          country: v.country.trim(),
+          displayName,
+          updatedAtMs: nowMs,
+        },
+        { merge: true },
+      ),
   );
+  if (!write.ok) return write;
 
   revalidatePath("/admin/settings", "layout");
   revalidatePath("/admin/settings/profile");

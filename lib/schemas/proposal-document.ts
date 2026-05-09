@@ -39,6 +39,15 @@ const pricingLineSchema = z.object({
   optional: z.boolean().optional(),
 });
 
+/** Reasonable colour string (allow any short CSS colour ≤ 32 chars). */
+const colorString = z.string().trim().min(3).max(32);
+
+const blockStyleSchema = z.object({
+  variant: z.enum(["visual", "simple"]).optional(),
+  primaryColor: colorString.optional(),
+  highlightColor: colorString.optional(),
+});
+
 const pricingBlockSchema = z.object({
   id: idSchema,
   type: z.literal("pricing"),
@@ -47,6 +56,7 @@ const pricingBlockSchema = z.object({
   allowQuantityEdit: z.boolean().optional(),
   title: z.string().optional(),
   totalMinorUnits: z.number().finite().optional(),
+  style: blockStyleSchema.optional(),
 });
 
 function nonNegInt(v: unknown): number {
@@ -65,49 +75,42 @@ function normalizePackageTierInput(raw: unknown): unknown {
     typeof o.monthlyCost12Minor === "number" &&
     typeof o.monthlyCost24Minor === "number";
 
+  let monthlyCost12Minor: number;
+  let monthlyCost24Minor: number;
   if (hasNew) {
-    return {
-      id: o.id,
-      name: typeof o.name === "string" ? o.name : "",
-      recommended: Boolean(o.recommended),
-      includedUsers: nonNegInt(o.includedUsers),
-      includedLocations: nonNegInt(o.includedLocations),
-      includedAdmins: nonNegInt(o.includedAdmins),
-      monthlyCost12Minor: Math.max(0, Number(o.monthlyCost12Minor)),
-      monthlyCost24Minor: Math.max(0, Number(o.monthlyCost24Minor)),
-      upfrontCost12Minor:
-        typeof o.upfrontCost12Minor === "number" && o.upfrontCost12Minor >= 0
-          ? o.upfrontCost12Minor
-          : undefined,
-      features,
-    };
+    monthlyCost12Minor = Math.max(0, Number(o.monthlyCost12Minor));
+    monthlyCost24Minor = Math.max(0, Number(o.monthlyCost24Minor));
+  } else {
+    const m12 =
+      typeof o.monthlyAmountMinor === "number" && Number.isFinite(o.monthlyAmountMinor)
+        ? Math.max(0, o.monthlyAmountMinor)
+        : 0;
+    const y =
+      typeof o.yearlyAmountMinor === "number" && Number.isFinite(o.yearlyAmountMinor)
+        ? Math.max(0, o.yearlyAmountMinor)
+        : 0;
+    monthlyCost12Minor = m12;
+    monthlyCost24Minor = y > 0 ? Math.round(y / 12) : m12;
   }
 
-  const m12 =
-    typeof o.monthlyAmountMinor === "number" && Number.isFinite(o.monthlyAmountMinor)
-      ? Math.max(0, o.monthlyAmountMinor)
-      : 0;
-  const y =
-    typeof o.yearlyAmountMinor === "number" && Number.isFinite(o.yearlyAmountMinor)
-      ? Math.max(0, o.yearlyAmountMinor)
-      : 0;
-  const m24 = y > 0 ? Math.round(y / 12) : m12;
-
-  return {
+  /** Build the tier with optional fields conditionally so we never persist
+   *  explicit `undefined` keys (which Firestore rejects unless
+   *  `ignoreUndefinedProperties` is set). */
+  const tier: Record<string, unknown> = {
     id: o.id,
     name: typeof o.name === "string" ? o.name : "",
-    recommended: Boolean(o.recommended),
     includedUsers: nonNegInt(o.includedUsers),
     includedLocations: nonNegInt(o.includedLocations),
     includedAdmins: nonNegInt(o.includedAdmins),
-    monthlyCost12Minor: m12,
-    monthlyCost24Minor: m24,
-    upfrontCost12Minor:
-      typeof o.upfrontCost12Minor === "number" && o.upfrontCost12Minor >= 0
-        ? o.upfrontCost12Minor
-        : undefined,
+    monthlyCost12Minor,
+    monthlyCost24Minor,
     features,
   };
+  if (o.recommended === true) tier.recommended = true;
+  if (typeof o.upfrontCost12Minor === "number" && o.upfrontCost12Minor >= 0) {
+    tier.upfrontCost12Minor = o.upfrontCost12Minor;
+  }
+  return tier;
 }
 
 function normalizePackagesBlockInput(raw: unknown): unknown {
@@ -115,22 +118,31 @@ function normalizePackagesBlockInput(raw: unknown): unknown {
   const o = raw as Record<string, unknown>;
   if (o.type !== "packages") return raw;
   const tiers = Array.isArray(o.tiers) ? o.tiers.map(normalizePackageTierInput) : [];
-  return {
-    ...o,
-    plan12Label:
-      typeof o.plan12Label === "string"
-        ? o.plan12Label
-        : typeof o.monthlyLabel === "string"
-          ? o.monthlyLabel
-          : undefined,
-    plan24Label:
-      typeof o.plan24Label === "string"
-        ? o.plan24Label
-        : typeof o.yearlyLabel === "string"
-          ? o.yearlyLabel
-          : undefined,
-    tiers,
-  };
+
+  /** Spread the source first, then strip optional fields we want to manage
+   *  explicitly so they never end up as `undefined` keys on the output. */
+  const block: Record<string, unknown> = { ...o, tiers };
+  delete block.plan12Label;
+  delete block.plan24Label;
+  delete block.monthlyLabel;
+  delete block.yearlyLabel;
+
+  const plan12 =
+    typeof o.plan12Label === "string"
+      ? o.plan12Label
+      : typeof o.monthlyLabel === "string"
+        ? o.monthlyLabel
+        : undefined;
+  const plan24 =
+    typeof o.plan24Label === "string"
+      ? o.plan24Label
+      : typeof o.yearlyLabel === "string"
+        ? o.yearlyLabel
+        : undefined;
+  if (plan12) block.plan12Label = plan12;
+  if (plan24) block.plan24Label = plan24;
+
+  return block;
 }
 
 const packageTierSchema = z.object({
@@ -154,6 +166,7 @@ const packagesBlockSchema = z.object({
   plan12Label: z.string().optional(),
   plan24Label: z.string().optional(),
   tiers: z.array(packageTierSchema).default([]),
+  style: blockStyleSchema.optional(),
 });
 
 const formFieldSchema = z.object({

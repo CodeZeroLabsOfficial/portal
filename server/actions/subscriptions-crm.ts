@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireStaffSession } from "@/lib/auth/server-session";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import { getStripe } from "@/lib/stripe/server";
+import { logError } from "@/lib/logging";
 import { createSubscriptionSchema } from "@/lib/schemas/subscription";
 import { zodErrorToMessage } from "@/lib/zod-error";
 import { COLLECTIONS } from "@/server/firestore/collections";
@@ -228,10 +229,9 @@ export async function createSubscriptionAction(
     revalidateSubscriptionPaths(customer.id);
     return { ok: true, subscriptionId: subscriptionId ?? schedule.id };
   } catch (error) {
-    return {
-      ok: false,
-      message: error instanceof Error ? error.message : "Could not create subscription in Stripe.",
-    };
+    const message = error instanceof Error ? error.message : "Could not create subscription in Stripe.";
+    logError("subscription_create_failed", { customerId: customer.id, message });
+    return { ok: false, message };
   }
 }
 
@@ -269,10 +269,9 @@ export async function cancelSubscriptionAction(
     revalidateSubscriptionPaths();
     return { ok: true };
   } catch (error) {
-    return {
-      ok: false,
-      message: error instanceof Error ? error.message : "Could not cancel subscription.",
-    };
+    const message = error instanceof Error ? error.message : "Could not cancel subscription.";
+    logError("subscription_cancel_failed", { subscriptionId: subId, message });
+    return { ok: false, message };
   }
 }
 
@@ -301,9 +300,8 @@ export async function deleteSubscriptionAction(
     revalidateSubscriptionPaths();
     return { ok: true };
   } catch (error) {
-    return {
-      ok: false,
-      message: error instanceof Error ? error.message : "Could not delete subscription.",
-    };
+    const message = error instanceof Error ? error.message : "Could not delete subscription.";
+    logError("subscription_delete_failed", { subscriptionId: subId, message });
+    return { ok: false, message };
   }
 }

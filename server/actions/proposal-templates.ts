@@ -5,6 +5,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { z } from "zod";
 import { requireStaffSession } from "@/lib/auth/server-session";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
+import { runAdminWrite } from "@/lib/firebase/admin-write";
 import { parseProposalDocument } from "@/lib/schemas/proposal-document";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { getProposalTemplateForStaff } from "@/server/firestore/proposal-templates";
@@ -28,20 +29,27 @@ export async function createProposalTemplateAction(): Promise<
 
   const now = Date.now();
   const ref = db.collection(COLLECTIONS.proposalTemplates).doc();
-  await ref.set({
-    organizationId: user.organizationId ?? "default",
-    createdByUid: user.uid,
-    name: "New template",
-    description: "",
-    document: {
-      title: "Untitled proposal",
-      blocks: [],
-    },
-    createdAtMs: now,
-    updatedAtMs: now,
-    createdAt: FieldValue.serverTimestamp(),
-    updatedAt: FieldValue.serverTimestamp(),
-  });
+  const write = await runAdminWrite(
+    "proposal_template_create_failed",
+    { templateId: ref.id, uid: user.uid },
+    "Could not create the template.",
+    () =>
+      ref.set({
+        organizationId: user.organizationId ?? "default",
+        createdByUid: user.uid,
+        name: "New template",
+        description: "",
+        document: {
+          title: "Untitled proposal",
+          blocks: [],
+        },
+        createdAtMs: now,
+        updatedAtMs: now,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      }),
+  );
+  if (!write.ok) return write;
 
   revalidatePath("/admin/proposals");
   return { ok: true, templateId: ref.id };
@@ -71,16 +79,25 @@ export async function saveProposalTemplateAction(
   const db = getFirebaseAdminFirestore();
   if (!db) return { ok: false, message: "Database unavailable." };
 
-  await db
-    .collection(COLLECTIONS.proposalTemplates)
-    .doc(parsed.data.templateId)
-    .update({
-      name: parsed.data.name,
-      description: parsed.data.description?.trim() ? parsed.data.description.trim() : FieldValue.delete(),
-      document: normalized,
-      updatedAtMs: Date.now(),
-      updatedAt: FieldValue.serverTimestamp(),
-    });
+  const write = await runAdminWrite(
+    "proposal_template_save_failed",
+    { templateId: parsed.data.templateId },
+    "Could not save the template.",
+    () =>
+      db
+        .collection(COLLECTIONS.proposalTemplates)
+        .doc(parsed.data.templateId)
+        .update({
+          name: parsed.data.name,
+          description: parsed.data.description?.trim()
+            ? parsed.data.description.trim()
+            : FieldValue.delete(),
+          document: normalized,
+          updatedAtMs: Date.now(),
+          updatedAt: FieldValue.serverTimestamp(),
+        }),
+  );
+  if (!write.ok) return write;
 
   revalidatePath("/admin/proposals");
   revalidatePath(`/admin/proposals/templates/${parsed.data.templateId}`);
@@ -99,7 +116,14 @@ export async function deleteProposalTemplateAction(
   const db = getFirebaseAdminFirestore();
   if (!db) return { ok: false, message: "Database unavailable." };
 
-  await db.collection(COLLECTIONS.proposalTemplates).doc(templateId).delete();
+  const write = await runAdminWrite(
+    "proposal_template_delete_failed",
+    { templateId },
+    "Could not delete the template.",
+    () => db.collection(COLLECTIONS.proposalTemplates).doc(templateId).delete(),
+  );
+  if (!write.ok) return write;
+
   revalidatePath("/admin/proposals");
   return { ok: true };
 }

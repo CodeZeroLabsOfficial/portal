@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, Plus, Sparkles, Trash2, X } from "lucide-react";
+import { Check, Plus, Sparkles, X } from "lucide-react";
 import type {
   PackageTier,
   PackagesBlock,
@@ -11,6 +11,7 @@ import type {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatCurrencyAmount } from "@/lib/format";
+import { readableForeground, resolveBlockStyle, withAlpha } from "@/lib/block-style";
 
 function newId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `b-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -238,7 +239,8 @@ function InlinePrice({ minor, onChange, currency, ariaLabel, className, tone = "
 export interface PackagesInlineEditorProps {
   block: PackagesBlock;
   onChange: (next: PackagesBlock) => void;
-  onRemove: () => void;
+  /** Kept for backwards-compat with callers that don't yet use the floating toolbar. */
+  onRemove?: () => void;
 }
 
 function defaultTier(): PackageTier {
@@ -254,10 +256,12 @@ function defaultTier(): PackageTier {
   };
 }
 
-export function PackagesInlineEditor({ block, onChange, onRemove }: PackagesInlineEditorProps) {
+export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorProps) {
   const tiers = block.tiers ?? [];
   const currency = (block.currency ?? "aud").toUpperCase();
   const [term, setTerm] = React.useState<"12_months" | "24_months">("24_months");
+  const style = resolveBlockStyle(block.style);
+  const isVisual = style.variant === "visual";
 
   function patch(next: Partial<PackagesBlock>) {
     onChange({ ...block, ...next });
@@ -281,43 +285,61 @@ export function PackagesInlineEditor({ block, onChange, onRemove }: PackagesInli
   const label12 = block.plan12Label ?? "12 months";
   const label24 = block.plan24Label ?? "24 months";
 
-  return (
-    <div className="relative overflow-hidden rounded-2xl border border-zinc-800 bg-gradient-to-b from-zinc-950 to-zinc-900 p-6 text-zinc-100 shadow-xl md:p-10">
-      {/* Block-level controls */}
-      <div className="absolute right-3 top-3 flex items-center gap-1">
-        <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wider text-zinc-200">
-          {currency}
-        </span>
-        <button
-          type="button"
-          onClick={onRemove}
-          aria-label="Remove plans block"
-          className="rounded-md p-1.5 text-zinc-400 transition-colors hover:bg-white/10 hover:text-red-400"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
-      </div>
+  /** Visual variant uses primaryColor as a soft hero tint behind the cards. */
+  const containerStyle: React.CSSProperties | undefined = isVisual
+    ? {
+        background: `linear-gradient(180deg, ${withAlpha(style.primaryColor, 0.08)} 0%, ${withAlpha(
+          style.primaryColor,
+          0.02,
+        )} 100%)`,
+        borderColor: withAlpha(style.primaryColor, 0.18),
+      }
+    : undefined;
 
-      {/* Title */}
-      <div className="text-center">
+  return (
+    <div
+      className={cn(
+        "relative overflow-hidden text-foreground transition-colors",
+        isVisual
+          ? "rounded-2xl border bg-card p-6 shadow-sm md:p-10"
+          : "rounded-xl border border-border/70 bg-card p-4 md:p-6",
+      )}
+      style={containerStyle}
+    >
+      {/* Header: title + term toggle. The remove icon now lives in the floating toolbar. */}
+      <div className={cn(isVisual ? "text-center" : "text-left")}>
         <InlineText
-          tone="dark"
+          tone="light"
           value={block.title ?? ""}
           placeholder="Section title"
           onChange={(v) => patch({ title: v })}
           ariaLabel="Section title"
-          className="inline-block text-xl font-semibold tracking-tight text-white md:text-2xl"
-          inputClassName="inline-block text-xl font-semibold tracking-tight text-white md:text-2xl text-center"
+          className={cn(
+            "inline-block font-semibold tracking-tight text-foreground",
+            isVisual ? "text-xl md:text-2xl" : "text-lg md:text-xl",
+          )}
+          inputClassName={cn(
+            "inline-block font-semibold tracking-tight text-foreground",
+            isVisual ? "text-xl md:text-2xl text-center" : "text-lg md:text-xl",
+          )}
         />
 
-        {/* Term toggle (active term decides which monthly price is in focus) */}
-        <div className="mx-auto mt-6 flex max-w-md justify-center">
-          <div className="inline-flex items-center gap-1 rounded-full bg-zinc-900/90 p-1 ring-1 ring-zinc-700/80">
+        <div
+          className={cn(
+            "flex max-w-md",
+            isVisual ? "mx-auto mt-6 justify-center" : "mt-3",
+          )}
+        >
+          <div
+            className="inline-flex items-center gap-1 rounded-full p-1 ring-1"
+            style={{ borderColor: "transparent", background: "rgba(15,23,42,0.04)", boxShadow: "inset 0 0 0 1px rgba(15,23,42,0.08)" }}
+          >
             <TermPill
               active={term === "12_months"}
               onActivate={() => setTerm("12_months")}
               label={label12}
               onLabelChange={(v) => patch({ plan12Label: v })}
+              activeColor={style.primaryColor}
               ariaLabel="12-month term toggle label"
             />
             <TermPill
@@ -325,31 +347,37 @@ export function PackagesInlineEditor({ block, onChange, onRemove }: PackagesInli
               onActivate={() => setTerm("24_months")}
               label={label24}
               onLabelChange={(v) => patch({ plan24Label: v })}
+              activeColor={style.primaryColor}
               ariaLabel="24-month term toggle label"
             />
           </div>
         </div>
 
-        {/* Currency editor — small, inline */}
-        <p className="mt-3 text-[11px] text-zinc-500">
+        <p className={cn("text-[11px] text-muted-foreground", isVisual ? "mt-3" : "mt-2")}>
           Currency:{" "}
           <InlineText
-            tone="dark"
+            tone="light"
             value={(block.currency ?? "aud").toLowerCase()}
             onChange={(v) => patch({ currency: v.toLowerCase().slice(0, 3) })}
             ariaLabel="Currency code"
-            className="inline-block text-[11px] uppercase tracking-wider text-zinc-300"
+            className="inline-block text-[11px] uppercase tracking-wider text-muted-foreground"
           />
         </p>
       </div>
 
-      <div className="mt-10 grid gap-6 md:grid-cols-3 md:gap-4">
+      <div
+        className={cn(
+          "grid gap-6 md:grid-cols-3 md:gap-4",
+          isVisual ? "mt-10" : "mt-6",
+        )}
+      >
         {tiers.map((tier) => (
           <TierCard
             key={tier.id}
             tier={tier}
             term={term}
             currency={currency}
+            highlightColor={style.highlightColor}
             onChange={(next) => patchTier(tier.id, next)}
             onRemove={() => removeTier(tier.id)}
             onToggleRecommended={() => toggleRecommended(tier.id)}
@@ -359,10 +387,10 @@ export function PackagesInlineEditor({ block, onChange, onRemove }: PackagesInli
         <button
           type="button"
           onClick={addTier}
-          className="flex min-h-[320px] flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-zinc-700/70 bg-zinc-900/30 p-6 text-zinc-400 transition-colors hover:border-teal-500/60 hover:bg-teal-900/15 hover:text-teal-200 md:min-h-[380px]"
+          className="flex min-h-[320px] flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border/70 bg-muted/20 p-6 text-muted-foreground transition-colors hover:border-primary/60 hover:bg-primary/5 hover:text-foreground md:min-h-[380px]"
           aria-label="Add tier"
         >
-          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-foreground/5">
             <Plus className="h-5 w-5" />
           </span>
           <span className="text-sm font-medium">Add tier</span>
@@ -377,12 +405,14 @@ function TermPill({
   onActivate,
   label,
   onLabelChange,
+  activeColor,
   ariaLabel,
 }: {
   active: boolean;
   onActivate: () => void;
   label: string;
   onLabelChange: (next: string) => void;
+  activeColor: string;
   ariaLabel: string;
 }) {
   const [editing, setEditing] = React.useState(false);
@@ -390,6 +420,8 @@ function TermPill({
   React.useEffect(() => {
     if (!editing) setDraft(label);
   }, [editing, label]);
+
+  const activeForeground = readableForeground(activeColor);
 
   if (editing) {
     return (
@@ -411,7 +443,12 @@ function TermPill({
           }
         }}
         aria-label={ariaLabel}
-        className="rounded-full bg-white px-5 py-2 text-sm font-medium text-zinc-900 outline-none ring-2 ring-teal-400"
+        className="rounded-full px-5 py-2 text-sm font-medium outline-none ring-2"
+        style={{
+          backgroundColor: activeColor,
+          color: activeForeground,
+          boxShadow: `0 0 0 2px ${withAlpha(activeColor, 0.4)}`,
+        }}
       />
     );
   }
@@ -424,8 +461,13 @@ function TermPill({
       aria-label={ariaLabel}
       className={cn(
         "rounded-full px-5 py-2 text-sm font-medium transition-colors",
-        active ? "bg-white text-zinc-900 shadow" : "text-zinc-400 hover:text-white",
+        active ? "shadow-sm" : "text-muted-foreground hover:text-foreground",
       )}
+      style={
+        active
+          ? { backgroundColor: activeColor, color: activeForeground }
+          : undefined
+      }
       title={active ? "Click again to rename" : "Click to switch term"}
     >
       {label}
@@ -437,6 +479,7 @@ function TierCard({
   tier,
   term,
   currency,
+  highlightColor,
   onChange,
   onRemove,
   onToggleRecommended,
@@ -444,6 +487,7 @@ function TierCard({
   tier: PackageTier;
   term: "12_months" | "24_months";
   currency: string;
+  highlightColor: string;
   onChange: (next: Partial<PackageTier>) => void;
   onRemove: () => void;
   onToggleRecommended: () => void;
@@ -454,17 +498,27 @@ function TierCard({
   const otherTermLabel = term === "12_months" ? "24-month monthly" : "12-month monthly";
   const features = tier.features ?? [];
 
+  /** Recommended cards adopt the highlight colour as a solid background. */
+  const recommendedFg = readableForeground(highlightColor);
+  const recommendedTone = recommendedFg === "#ffffff" ? "dark" : "light";
+  const recommendedDimText =
+    recommendedFg === "#ffffff" ? "rgba(255,255,255,0.78)" : "rgba(15,23,42,0.62)";
+  const recommendedFaintBorder =
+    recommendedFg === "#ffffff" ? "rgba(255,255,255,0.32)" : "rgba(15,23,42,0.22)";
+
+  const cardStyle: React.CSSProperties | undefined = isRecommended
+    ? { backgroundColor: highlightColor, color: recommendedFg, borderColor: highlightColor }
+    : undefined;
+
   return (
     <div className="group/tier flex flex-col">
       <div
         className={cn(
-          "relative flex min-h-[320px] flex-col rounded-2xl border p-5 shadow-lg transition-colors md:min-h-[380px]",
-          isRecommended
-            ? "border-teal-500/60 bg-teal-900/25 pt-6 ring-2 ring-teal-500/40"
-            : "border-zinc-700/80 bg-white text-zinc-900",
+          "relative flex min-h-[320px] flex-col rounded-2xl border p-5 shadow-md transition-colors md:min-h-[380px]",
+          isRecommended ? "pt-6" : "border-border/70 bg-card text-foreground",
         )}
+        style={cardStyle}
       >
-        {/* Recommended badge — toggles on click */}
         <button
           type="button"
           onClick={onToggleRecommended}
@@ -473,76 +527,77 @@ function TierCard({
           className={cn(
             "absolute left-1/2 top-0 inline-flex -translate-x-1/2 -translate-y-1/2 items-center gap-1 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide shadow transition-all",
             isRecommended
-              ? "bg-teal-500 text-white"
-              : "border border-dashed border-zinc-400 bg-white text-zinc-500 opacity-0 group-hover/tier:opacity-100",
+              ? ""
+              : "border border-dashed border-border bg-background text-muted-foreground opacity-0 group-hover/tier:opacity-100",
           )}
+          style={
+            isRecommended ? { backgroundColor: highlightColor, color: recommendedFg } : undefined
+          }
         >
           <Sparkles className="h-3 w-3" />
           {isRecommended ? "Recommended" : "Mark recommended"}
         </button>
 
-        {/* Tier-level remove */}
         <button
           type="button"
           onClick={onRemove}
           aria-label="Remove tier"
           className={cn(
             "absolute right-2 top-2 rounded-md p-1.5 opacity-0 transition-opacity hover:text-red-500 group-hover/tier:opacity-100",
-            isRecommended ? "text-teal-100 hover:text-red-300" : "text-zinc-400",
+            isRecommended ? "" : "text-muted-foreground",
           )}
+          style={isRecommended ? { color: recommendedDimText } : undefined}
         >
-          <Trash2 className="h-3.5 w-3.5" />
+          <X className="h-3.5 w-3.5" />
         </button>
 
-        {/* Tier name */}
         <InlineText
-          tone={isRecommended ? "dark" : "light"}
+          tone={recommendedTone}
           value={tier.name}
           placeholder="Tier name"
           onChange={(v) => onChange({ name: v })}
           ariaLabel="Tier name"
-          className={cn("text-lg font-semibold", isRecommended ? "text-white" : "text-zinc-900")}
+          className={cn("text-lg font-semibold", isRecommended ? "" : "text-foreground")}
           inputClassName={cn(
             "w-full text-lg font-semibold",
-            isRecommended ? "text-white" : "text-zinc-900",
+            isRecommended ? "" : "text-foreground",
           )}
         />
 
-        {/* Stats */}
         <ul
           className={cn(
             "mt-4 space-y-1.5 text-sm",
-            isRecommended ? "text-teal-50/95" : "text-zinc-600",
+            isRecommended ? "" : "text-muted-foreground",
           )}
+          style={isRecommended ? { color: recommendedFg } : undefined}
         >
           <StatRow
             label="Included users"
             value={tier.includedUsers ?? 0}
             onChange={(v) => onChange({ includedUsers: v })}
-            tone={isRecommended ? "dark" : "light"}
+            tone={isRecommended ? recommendedTone : "light"}
           />
           <StatRow
             label="Included locations"
             value={tier.includedLocations ?? 0}
             onChange={(v) => onChange({ includedLocations: v })}
-            tone={isRecommended ? "dark" : "light"}
+            tone={isRecommended ? recommendedTone : "light"}
           />
           <StatRow
             label="Included admins"
             value={tier.includedAdmins ?? 0}
             onChange={(v) => onChange({ includedAdmins: v })}
-            tone={isRecommended ? "dark" : "light"}
+            tone={isRecommended ? recommendedTone : "light"}
           />
         </ul>
 
-        {/* Price block */}
         <div
           className="mt-6 border-t border-dashed pt-4"
-          style={{ borderColor: isRecommended ? "rgba(45,212,191,0.25)" : undefined }}
+          style={{ borderColor: isRecommended ? recommendedFaintBorder : undefined }}
         >
           <div className="flex items-baseline gap-1">
             <InlinePrice
-              tone={isRecommended ? "dark" : "light"}
+              tone={recommendedTone}
               minor={monthlyMinor}
               currency={currency}
               onChange={(v) =>
@@ -553,19 +608,24 @@ function TierCard({
               ariaLabel="Monthly price"
               className={cn(
                 "text-3xl font-semibold tabular-nums",
-                isRecommended ? "text-white" : "text-zinc-900",
+                isRecommended ? "" : "text-foreground",
               )}
             />
           </div>
-          <p className={cn("text-sm", isRecommended ? "text-teal-100/90" : "text-zinc-500")}>
+          <p
+            className={cn("text-sm", isRecommended ? "" : "text-muted-foreground")}
+            style={isRecommended ? { color: recommendedDimText } : undefined}
+          >
             / month — {term === "12_months" ? "12-month plan" : "24-month plan"}
           </p>
 
-          {/* Inline editor for the OTHER term so both prices are reachable without leaving */}
-          <p className={cn("mt-2 text-[11px]", isRecommended ? "text-teal-100/70" : "text-zinc-400")}>
+          <p
+            className={cn("mt-2 text-[11px]", isRecommended ? "" : "text-muted-foreground")}
+            style={isRecommended ? { color: recommendedDimText } : undefined}
+          >
             {otherTermLabel}:{" "}
             <InlinePrice
-              tone={isRecommended ? "dark" : "light"}
+              tone={recommendedTone}
               minor={otherMonthlyMinor}
               currency={currency}
               onChange={(v) =>
@@ -574,66 +634,69 @@ function TierCard({
                 )
               }
               ariaLabel="Other-term monthly price"
-              className={cn(
-                "text-[11px] tabular-nums",
-                isRecommended ? "text-teal-50" : "text-zinc-600",
-              )}
+              className={cn("text-[11px] tabular-nums", isRecommended ? "" : "text-foreground")}
             />
           </p>
 
           {term === "12_months" ? (
             <div
               className="mt-4 rounded-lg border border-dashed px-3 py-2.5 text-left"
-              style={{ borderColor: isRecommended ? "rgba(45,212,191,0.35)" : undefined }}
+              style={{ borderColor: isRecommended ? recommendedFaintBorder : undefined }}
             >
               <p
                 className={cn(
                   "text-[11px] font-semibold uppercase tracking-wide",
-                  isRecommended ? "text-teal-200/90" : "text-zinc-500",
+                  isRecommended ? "" : "text-muted-foreground",
                 )}
+                style={isRecommended ? { color: recommendedDimText } : undefined}
               >
                 Upfront (12-month)
               </p>
               <InlinePrice
-                tone={isRecommended ? "dark" : "light"}
+                tone={recommendedTone}
                 minor={tier.upfrontCost12Minor ?? 0}
                 currency={currency}
                 onChange={(v) => onChange({ upfrontCost12Minor: v > 0 ? v : undefined })}
                 ariaLabel="Upfront cost (12-month)"
                 className={cn(
                   "mt-1 text-sm tabular-nums",
-                  isRecommended ? "text-white" : "text-zinc-900",
+                  isRecommended ? "" : "text-foreground",
                 )}
               />
             </div>
           ) : null}
         </div>
 
-        {/* Disabled "Select" preview button (so admin sees what customer sees) */}
         <div className="mt-auto pt-6">
           <Button
             type="button"
             disabled
-            variant={isRecommended ? "default" : "outline"}
-            className={cn(
-              "w-full font-semibold",
+            variant="outline"
+            className={cn("w-full font-semibold")}
+            style={
               isRecommended
-                ? "bg-white text-zinc-900 hover:bg-zinc-100"
-                : "border border-zinc-300 bg-white text-zinc-900 hover:bg-zinc-50",
-            )}
+                ? { backgroundColor: "#ffffff", color: "#0f172a", borderColor: "#ffffff" }
+                : undefined
+            }
           >
             Select
           </Button>
         </div>
       </div>
 
-      {/* Features list — below the card, matches public layout */}
       <ul className="mt-5 space-y-2.5">
         {features.map((feat, idx) => (
-          <li key={`${idx}-${feat}`} className="group/feat flex items-start gap-2 text-sm text-zinc-300">
-            <Check className="mt-0.5 h-4 w-4 shrink-0 text-teal-400" aria-hidden />
+          <li
+            key={`${idx}-${feat}`}
+            className="group/feat flex items-start gap-2 text-sm text-foreground"
+          >
+            <Check
+              className="mt-0.5 h-4 w-4 shrink-0"
+              style={{ color: highlightColor }}
+              aria-hidden
+            />
             <InlineText
-              tone="dark"
+              tone="light"
               value={feat}
               placeholder="Feature"
               onChange={(v) => {
@@ -646,8 +709,8 @@ function TierCard({
                 onChange({ features: next });
               }}
               ariaLabel={`Feature ${idx + 1}`}
-              className="flex-1 text-sm text-zinc-200"
-              inputClassName="w-full text-sm text-zinc-100"
+              className="flex-1 text-sm text-foreground"
+              inputClassName="w-full text-sm text-foreground"
             />
             <button
               type="button"
@@ -657,7 +720,7 @@ function TierCard({
                 onChange({ features: next });
               }}
               aria-label="Remove feature"
-              className="rounded p-0.5 text-zinc-500 opacity-0 transition-opacity hover:text-red-400 group-hover/feat:opacity-100"
+              className="rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover/feat:opacity-100"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -667,7 +730,7 @@ function TierCard({
           <button
             type="button"
             onClick={() => onChange({ features: [...features, "New feature"] })}
-            className="flex w-full items-center gap-2 rounded-md border border-dashed border-zinc-700 bg-transparent px-2 py-1.5 text-left text-sm text-zinc-500 transition-colors hover:border-teal-500/60 hover:bg-zinc-900/40 hover:text-teal-300"
+            className="flex w-full items-center gap-2 rounded-md border border-dashed border-border bg-transparent px-2 py-1.5 text-left text-sm text-muted-foreground transition-colors hover:border-primary/60 hover:bg-muted/30 hover:text-foreground"
           >
             <Plus className="h-3.5 w-3.5" />
             Add a feature
@@ -691,7 +754,7 @@ function StatRow({
 }) {
   return (
     <li className="flex items-center justify-between gap-2">
-      <span className={cn("font-medium", tone === "dark" ? "text-teal-100" : "text-zinc-800")}>{label}</span>
+      <span className="font-medium">{label}</span>
       <InlineNumber
         tone={tone}
         value={value}
@@ -700,7 +763,6 @@ function StatRow({
         step={1}
         width="w-20"
         ariaLabel={label}
-        className={cn(tone === "dark" ? "text-white" : "text-zinc-900")}
       />
     </li>
   );
@@ -714,13 +776,16 @@ function StatRow({
 export interface PricingInlineEditorProps {
   block: PricingBlock;
   onChange: (next: PricingBlock) => void;
-  onRemove: () => void;
+  /** Kept for backwards-compat with callers that don't yet use the floating toolbar. */
+  onRemove?: () => void;
 }
 
-export function PricingInlineEditor({ block, onChange, onRemove }: PricingInlineEditorProps) {
+export function PricingInlineEditor({ block, onChange }: PricingInlineEditorProps) {
   const lineItems = block.lineItems ?? [];
   const currency = (block.currency ?? "aud").toUpperCase();
   const editable = block.allowQuantityEdit !== false;
+  const style = resolveBlockStyle(block.style);
+  const isVisual = style.variant === "visual";
 
   const previewTotal = lineItems.reduce((sum, li) => {
     const q = typeof li.quantity === "number" && li.quantity > 0 ? li.quantity : 1;
@@ -749,10 +814,33 @@ export function PricingInlineEditor({ block, onChange, onRemove }: PricingInline
     });
   }
 
+  /** Visual variant tints the title bar with the primary colour; simple stays neutral. */
+  const headerStyle: React.CSSProperties | undefined = isVisual
+    ? {
+        background: withAlpha(style.primaryColor, 0.08),
+        borderBottomColor: withAlpha(style.primaryColor, 0.2),
+      }
+    : undefined;
+  const totalRowStyle: React.CSSProperties = {
+    background: withAlpha(style.highlightColor, isVisual ? 0.15 : 0.08),
+  };
+
   return (
-    <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
-      {/* Header — title + currency + qty toggle + remove */}
-      <div className="flex items-center justify-between gap-2 border-b border-border/60 bg-muted/30 px-4 py-3">
+    <div
+      className={cn(
+        "overflow-hidden rounded-xl border bg-card shadow-sm",
+        isVisual ? "border-border/70" : "border-border/60",
+      )}
+      style={
+        isVisual
+          ? { borderColor: withAlpha(style.primaryColor, 0.25) }
+          : undefined
+      }
+    >
+      <div
+        className="flex items-center justify-between gap-2 border-b border-border/60 px-4 py-3"
+        style={headerStyle}
+      >
         <InlineText
           tone="light"
           value={block.title ?? ""}
@@ -781,14 +869,6 @@ export function PricingInlineEditor({ block, onChange, onRemove }: PricingInline
               className="text-[10px] uppercase"
             />
           </span>
-          <button
-            type="button"
-            onClick={onRemove}
-            aria-label="Remove quote block"
-            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
         </div>
       </div>
 
@@ -883,7 +963,7 @@ export function PricingInlineEditor({ block, onChange, onRemove }: PricingInline
             </tr>
           </tbody>
           <tfoot>
-            <tr className="bg-muted/15">
+            <tr style={totalRowStyle}>
               <td colSpan={3} className="px-4 py-3 text-right text-[13px] font-semibold text-foreground">
                 Total (preview)
               </td>
