@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { applicationDefault, cert, getApps, initializeApp, type App } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
-import { getFirestore } from "firebase-admin/firestore";
+import { getFirestore, type Firestore } from "firebase-admin/firestore";
 import { getServerEnv } from "@/lib/env/server";
 import { logError } from "@/lib/logging";
 
@@ -81,7 +81,26 @@ export function getFirebaseAdminAuth() {
   return app ? getAuth(app) : null;
 }
 
-export function getFirebaseAdminFirestore() {
+/**
+ * Cache the configured Firestore instance per App so we only call `settings()`
+ * once. Calling `settings()` more than once (or after the first read/write)
+ * throws, so we guard with a `WeakMap`.
+ */
+const firestoreInstances = new WeakMap<App, Firestore>();
+
+export function getFirebaseAdminFirestore(): Firestore | null {
   const app = getFirebaseAdminApp();
-  return app ? getFirestore(app) : null;
+  if (!app) return null;
+  const cached = firestoreInstances.get(app);
+  if (cached) return cached;
+  const db = getFirestore(app);
+  /**
+   * Skip `undefined` values on writes. Several normalizers (e.g. proposal
+   * package tiers) intentionally produce optional fields whose value may be
+   * `undefined`; without this setting the Admin SDK throws on the first such
+   * field and the surrounding write fails entirely.
+   */
+  db.settings({ ignoreUndefinedProperties: true });
+  firestoreInstances.set(app, db);
+  return db;
 }

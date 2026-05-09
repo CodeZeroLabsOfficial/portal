@@ -13,6 +13,7 @@ import { getAdminProposalRecord } from "@/server/firestore/portal-data";
 import { getProposalRecordByShareToken } from "@/server/firestore/parse-proposal";
 import { updateOpportunityStage } from "@/server/firestore/crm-opportunities";
 import { PROPOSAL_UNLOCK_COOKIE } from "@/lib/proposal-public-session";
+import { logError } from "@/lib/logging";
 
 const saveDocSchema = z.object({
   proposalId: z.string().min(1),
@@ -63,16 +64,24 @@ export async function saveProposalDocumentAction(
   const db = getFirebaseAdminFirestore();
   if (!db) return { ok: false, message: "Database unavailable." };
 
-  await db
-    .collection(COLLECTIONS.proposals)
-    .doc(parsed.data.proposalId)
-    .update({
-      title: parsed.data.title,
-      document: normalized,
-      documentVersion: FieldValue.increment(1),
-      updatedAtMs: Date.now(),
-      updatedAt: FieldValue.serverTimestamp(),
+  try {
+    await db
+      .collection(COLLECTIONS.proposals)
+      .doc(parsed.data.proposalId)
+      .update({
+        title: parsed.data.title,
+        document: normalized,
+        documentVersion: FieldValue.increment(1),
+        updatedAtMs: Date.now(),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+  } catch (error) {
+    logError("proposal_save_failed", {
+      proposalId: parsed.data.proposalId,
+      message: error instanceof Error ? error.message : "unknown",
     });
+    return { ok: false, message: "Could not save proposal. Please try again." };
+  }
 
   revalidatePath("/admin");
   revalidatePath(`/admin/proposals/${parsed.data.proposalId}`);
