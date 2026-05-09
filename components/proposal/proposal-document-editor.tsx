@@ -993,14 +993,14 @@ export function ProposalDocumentEditor({
               </Link>
             </Button>
             <div className="ml-auto flex flex-wrap items-center gap-2">
-              <Button type="button" size="sm" disabled={saving} onClick={() => void save()} className="gap-2">
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                Save
-              </Button>
               <DeleteProposalTemplateButton
                 templateId={templateId}
                 templateName={templateName.trim() || initialTemplateName || "Untitled template"}
               />
+              <Button type="button" size="sm" disabled={saving} onClick={() => void save()} className="gap-2">
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                Save
+              </Button>
             </div>
           </div>
           {message ? <span className="block text-sm text-muted-foreground">{message}</span> : null}
