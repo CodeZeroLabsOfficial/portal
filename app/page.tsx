@@ -24,7 +24,7 @@ export default function HomePage() {
             </h1>
             <p className="mt-4 text-pretty text-muted-foreground sm:text-lg">
               {APP_NAME} brings Stripe-backed billing, Firestore-backed collaboration, and
-              Qwilr-style interactive proposals into one fast, accessible web experience for your
+              interactive proposals into one fast, accessible web experience for your
               team and customers.
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">

@@ -19,7 +19,10 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
+  ChevronLeft,
+  ChevronRight,
   Coins,
+  CreditCard,
   GripVertical,
   Heading,
   Image as ImageIcon,
@@ -33,9 +36,9 @@ import {
   ScrollText,
   Send,
   SeparatorHorizontal,
-  Sparkles,
   SquarePen,
   Trash2,
+  type LucideIcon,
 } from "lucide-react";
 import type {
   FormBlock,
@@ -63,7 +66,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
@@ -72,6 +74,35 @@ import { escapeHtml } from "@/lib/escape-html";
 function newId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `b-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
+
+interface BlockOption {
+  type: ProposalBlock["type"];
+  label: string;
+  icon: LucideIcon;
+  /** Tailwind text color class for the tile icon. */
+  accent: string;
+  /** Tailwind background tint paired with the accent (used on the icon chip). */
+  accentBg: string;
+}
+
+/** Six most-used blocks shown as the primary tile grid in the insert popover. */
+const PRIMARY_BLOCK_OPTIONS: BlockOption[] = [
+  { type: "text", label: "Text", icon: ScrollText, accent: "text-violet-500", accentBg: "bg-violet-500/10" },
+  { type: "header", label: "Heading", icon: Heading, accent: "text-sky-500", accentBg: "bg-sky-500/10" },
+  { type: "pricing", label: "Quote", icon: Coins, accent: "text-emerald-500", accentBg: "bg-emerald-500/10" },
+  { type: "packages", label: "Plans", icon: Package, accent: "text-amber-500", accentBg: "bg-amber-500/10" },
+  { type: "video", label: "Video", icon: MonitorPlay, accent: "text-rose-500", accentBg: "bg-rose-500/10" },
+  { type: "signature", label: "Accept", icon: PenLine, accent: "text-cyan-500", accentBg: "bg-cyan-500/10" },
+];
+
+/** Secondary options revealed via "Add block from library". */
+const LIBRARY_BLOCK_OPTIONS: BlockOption[] = [
+  { type: "image", label: "Image", icon: ImageIcon, accent: "text-fuchsia-500", accentBg: "bg-fuchsia-500/10" },
+  { type: "form", label: "Form", icon: SquarePen, accent: "text-indigo-500", accentBg: "bg-indigo-500/10" },
+  { type: "embed", label: "Embed", icon: LayoutTemplate, accent: "text-teal-500", accentBg: "bg-teal-500/10" },
+  { type: "payment", label: "Payment", icon: CreditCard, accent: "text-orange-500", accentBg: "bg-orange-500/10" },
+  { type: "divider", label: "Divider", icon: SeparatorHorizontal, accent: "text-slate-400", accentBg: "bg-slate-500/10" },
+];
 
 function createBlock(type: ProposalBlock["type"]): ProposalBlock {
   const id = newId();
@@ -814,6 +845,177 @@ function BlockFields({
   }
 }
 
+/**
+ * Insert popover triggered by the round "+" button between blocks.
+ * Shows a 3×2 grid of primary block tiles and reveals a secondary library list
+ * via "Add block from library".
+ */
+function AddBlockMenu({
+  onAdd,
+  trigger,
+  align = "center",
+}: {
+  onAdd: (type: ProposalBlock["type"]) => void;
+  trigger: React.ReactNode;
+  align?: "start" | "center" | "end";
+}) {
+  const [open, setOpen] = React.useState(false);
+  const [view, setView] = React.useState<"main" | "library">("main");
+
+  function handleOpenChange(next: boolean) {
+    setOpen(next);
+    if (!next) {
+      window.setTimeout(() => setView("main"), 150);
+    }
+  }
+
+  function handlePick(type: ProposalBlock["type"]) {
+    onAdd(type);
+    setOpen(false);
+  }
+
+  return (
+    <DropdownMenu open={open} onOpenChange={handleOpenChange}>
+      <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
+      <DropdownMenuContent
+        align={align}
+        sideOffset={8}
+        className="w-[320px] p-0"
+        onCloseAutoFocus={(e) => e.preventDefault()}
+      >
+        {view === "main" ? (
+          <div className="p-3">
+            <p className="px-1 pb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Add a block
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {PRIMARY_BLOCK_OPTIONS.map((opt) => (
+                <BlockTile key={opt.type} option={opt} onSelect={() => handlePick(opt.type)} />
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => setView("library")}
+              className="mt-2 flex w-full items-center justify-center gap-1 rounded-md border-t border-border/60 px-2 py-2 pt-3 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Add block from library
+              <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ) : (
+          <div className="p-2">
+            <button
+              type="button"
+              onClick={() => setView("main")}
+              className="mb-1 flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" /> Back
+            </button>
+            <p className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Content
+            </p>
+            <div className="space-y-0.5">
+              {LIBRARY_BLOCK_OPTIONS.map((opt) => (
+                <LibraryRow key={opt.type} option={opt} onSelect={() => handlePick(opt.type)} />
+              ))}
+            </div>
+          </div>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function BlockTile({ option, onSelect }: { option: BlockOption; onSelect: () => void }) {
+  const Icon = option.icon;
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className="group flex flex-col items-center justify-center gap-1.5 rounded-lg border border-transparent bg-muted/40 px-2 py-3 text-xs font-medium text-foreground transition-all hover:border-border hover:bg-accent hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <span
+        className={cn(
+          "flex h-8 w-8 items-center justify-center rounded-md transition-transform group-hover:scale-105",
+          option.accentBg,
+        )}
+      >
+        <Icon className={cn("h-4 w-4", option.accent)} />
+      </span>
+      <span className="text-[11px] uppercase tracking-wide">{option.label}</span>
+    </button>
+  );
+}
+
+function LibraryRow({ option, onSelect }: { option: BlockOption; onSelect: () => void }) {
+  const Icon = option.icon;
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-foreground transition-colors hover:bg-accent focus:outline-none focus-visible:bg-accent"
+    >
+      <span className={cn("flex h-6 w-6 items-center justify-center rounded", option.accentBg)}>
+        <Icon className={cn("h-3.5 w-3.5", option.accent)} />
+      </span>
+      {option.label}
+    </button>
+  );
+}
+
+/**
+ * Hairline + circular "+" affordance rendered between (and around) blocks.
+ * Hovering the slot highlights the line and reveals the trigger; clicking
+ * opens the AddBlockMenu, which inserts at this exact position.
+ */
+function InsertBlockSlot({
+  onAdd,
+  variant = "between",
+}: {
+  onAdd: (type: ProposalBlock["type"]) => void;
+  variant?: "between" | "empty";
+}) {
+  if (variant === "empty") {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border/70 bg-muted/15 px-4 py-12 text-center">
+        <p className="text-sm font-medium text-foreground">Start building your proposal</p>
+        <p className="max-w-xs text-xs text-muted-foreground">
+          Add a Text, Heading, Quote, Plans, Video or Accept block to get started.
+        </p>
+        <AddBlockMenu
+          onAdd={onAdd}
+          trigger={
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground shadow-sm transition-colors hover:border-primary/60 hover:bg-primary hover:text-primary-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label="Add a block"
+            >
+              <Plus className="h-4 w-4" /> Add block
+            </button>
+          }
+        />
+      </div>
+    );
+  }
+  return (
+    <div className="group/insert relative flex items-center justify-center py-1.5">
+      <div className="pointer-events-none absolute inset-x-6 top-1/2 h-px -translate-y-1/2 bg-border opacity-0 transition-opacity group-hover/insert:opacity-100 group-focus-within/insert:opacity-100" />
+      <AddBlockMenu
+        onAdd={onAdd}
+        trigger={
+          <button
+            type="button"
+            aria-label="Add block here"
+            className="relative z-10 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-background text-muted-foreground opacity-0 shadow-sm transition-all hover:border-primary hover:bg-primary hover:text-primary-foreground hover:opacity-100 focus:outline-none focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:border-primary data-[state=open]:bg-primary data-[state=open]:text-primary-foreground data-[state=open]:opacity-100 group-hover/insert:opacity-100"
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </button>
+        }
+      />
+    </div>
+  );
+}
+
 function blockLabel(type: ProposalBlock["type"]): string {
   switch (type) {
     case "header":
@@ -950,8 +1152,13 @@ export function ProposalDocumentEditor({
     setBlocks((prev) => prev.filter((b) => b.id !== id));
   }
 
-  function addBlock(type: ProposalBlock["type"]) {
-    setBlocks((prev) => [...prev, createBlock(type)]);
+  function addBlockAt(type: ProposalBlock["type"], index: number) {
+    setBlocks((prev) => {
+      const next = [...prev];
+      const safeIndex = Math.max(0, Math.min(index, next.length));
+      next.splice(safeIndex, 0, createBlock(type));
+      return next;
+    });
   }
 
   return (
@@ -967,48 +1174,6 @@ export function ProposalDocumentEditor({
             Save & publish
           </Button>
         ) : null}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button type="button" variant="outline" className="gap-2">
-              <Plus className="h-4 w-4" /> Add block
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-52">
-            <DropdownMenuItem onClick={() => addBlock("header")}>
-              <Heading className="mr-2 h-4 w-4" /> Heading
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => addBlock("text")}>
-              <ScrollText className="mr-2 h-4 w-4" /> Rich text
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => addBlock("image")}>
-              <ImageIcon className="mr-2 h-4 w-4" /> Image
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => addBlock("video")}>
-              <MonitorPlay className="mr-2 h-4 w-4" /> Video
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => addBlock("pricing")}>
-              <Coins className="mr-2 h-4 w-4" /> Pricing table
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => addBlock("packages")}>
-              <Package className="mr-2 h-4 w-4" /> Packages (selectable)
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => addBlock("form")}>
-              <SquarePen className="mr-2 h-4 w-4" /> Form
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => addBlock("signature")}>
-              <PenLine className="mr-2 h-4 w-4" /> Signature / terms
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => addBlock("embed")}>
-              <LayoutTemplate className="mr-2 h-4 w-4" /> Embed
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => addBlock("payment")}>
-              <Sparkles className="mr-2 h-4 w-4" /> Payment placeholder
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => addBlock("divider")}>
-              <SeparatorHorizontal className="mr-2 h-4 w-4" /> Divider
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
         {message ? <span className="text-sm text-muted-foreground">{message}</span> : null}
       </div>
 
@@ -1059,23 +1224,28 @@ export function ProposalDocumentEditor({
           <TabsTrigger value="edit">Edit blocks</TabsTrigger>
           <TabsTrigger value="preview">Live preview</TabsTrigger>
         </TabsList>
-        <TabsContent value="edit" className="mt-4 space-y-4">
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-            <SortableContext items={blocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
-              {blocks.map((block) => (
-                <SortableShell key={block.id} id={block.id} label={blockLabel(block.type)}>
-                  <BlockFields
-                    block={block}
-                    onChange={(next) => updateBlock(block.id, next)}
-                    onRemove={() => removeBlock(block.id)}
-                  />
-                </SortableShell>
-              ))}
-            </SortableContext>
-          </DndContext>
+        <TabsContent value="edit" className="mt-4">
           {blocks.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Add blocks to build your proposal.</p>
-          ) : null}
+            <InsertBlockSlot variant="empty" onAdd={(type) => addBlockAt(type, 0)} />
+          ) : (
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+              <SortableContext items={blocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
+                <InsertBlockSlot onAdd={(type) => addBlockAt(type, 0)} />
+                {blocks.map((block, idx) => (
+                  <React.Fragment key={block.id}>
+                    <SortableShell id={block.id} label={blockLabel(block.type)}>
+                      <BlockFields
+                        block={block}
+                        onChange={(next) => updateBlock(block.id, next)}
+                        onRemove={() => removeBlock(block.id)}
+                      />
+                    </SortableShell>
+                    <InsertBlockSlot onAdd={(type) => addBlockAt(type, idx + 1)} />
+                  </React.Fragment>
+                ))}
+              </SortableContext>
+            </DndContext>
+          )}
         </TabsContent>
         <TabsContent value="preview" className="mt-4 rounded-2xl border border-border/70 bg-muted/15 p-6 md:p-10">
           <ProposalDocumentView document={doc} />
