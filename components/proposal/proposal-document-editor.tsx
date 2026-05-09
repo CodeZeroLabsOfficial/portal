@@ -30,6 +30,7 @@ import {
   Heading,
   Image as ImageIcon,
   LayoutTemplate,
+  Layers,
   Loader2,
   MonitorPlay,
   Package,
@@ -53,7 +54,9 @@ import type {
   PackagesBlock,
   PricingBlock,
   ProposalBlock,
+  ProposalContentBlock,
   ProposalDocument,
+  SectionBlock,
   SignatureBlock,
   TextBlock,
   VideoBlock,
@@ -66,6 +69,10 @@ import {
 } from "@/components/proposal/proposal-block-inline-editors";
 import { BlockToolbar } from "@/components/proposal/proposal-block-toolbar";
 import { DeleteProposalTemplateButton } from "@/components/proposal/delete-proposal-template-button";
+import {
+  PROPOSAL_PUBLIC_COLUMN_CLASSES,
+  PROPOSAL_PUBLIC_GUTTER_CLASSES,
+} from "@/lib/proposal-public-layout";
 import { saveProposalDocumentAction, sendProposalAction } from "@/server/actions/proposal-builder";
 import { saveProposalTemplateAction } from "@/server/actions/proposal-templates";
 import { Button } from "@/components/ui/button";
@@ -111,6 +118,12 @@ function cloneBlockWithFreshIds(block: ProposalBlock): ProposalBlock {
         id: newId(),
         fields: (block.fields ?? []).map((f) => ({ ...f, id: newId(), options: f.options ? [...f.options] : undefined })),
       };
+    case "section":
+      return {
+        ...block,
+        id: newId(),
+        children: block.children.map((c) => cloneBlockWithFreshIds(c as ProposalBlock) as ProposalContentBlock),
+      };
     default:
       return { ...block, id: newId() } as ProposalBlock;
   }
@@ -130,7 +143,7 @@ interface BlockOption {
   factory?: () => ProposalBlock;
 }
 
-/** Pricing block presets: standard quote totals vs optional add-ons line-items table (Qwilr-style). */
+/** Pricing block presets: standard quote totals vs optional add-ons line-items table (interactive proposal). */
 function createAddonsTableBlock(): ProposalBlock {
   const id = newId();
   return {
@@ -170,6 +183,18 @@ const PRIMARY_BLOCK_OPTIONS: BlockOption[] = [
   { id: "video", type: "video", label: "Video", icon: MonitorPlay, accent: "text-rose-500", accentBg: "bg-rose-500/10" },
   { id: "signature", type: "signature", label: "Accept", icon: PenLine, accent: "text-cyan-500", accentBg: "bg-cyan-500/10" },
 ];
+
+/** First tile in the root insert menu: section container for multiple blocks (interactive proposal). */
+const SECTION_BLOCK_OPTION: BlockOption = {
+  id: "section",
+  type: "section",
+  label: "Section",
+  icon: Layers,
+  accent: "text-sky-400",
+  accentBg: "bg-sky-500/10",
+};
+
+const TOP_PRIMARY_BLOCK_OPTIONS: BlockOption[] = [SECTION_BLOCK_OPTION, ...PRIMARY_BLOCK_OPTIONS];
 
 /** Secondary options revealed via "Add block from library". */
 const LIBRARY_BLOCK_OPTIONS: BlockOption[] = [
@@ -271,15 +296,25 @@ function createBlock(type: ProposalBlock["type"]): ProposalBlock {
       return { id, type: "payment", label: "Secure payment" };
     case "divider":
       return { id, type: "divider" };
+    case "section":
+      return {
+        id,
+        type: "section",
+        children: [],
+        style: {
+          variant: "visual",
+          primaryColor: DEFAULT_PRIMARY_COLOR,
+          highlightColor: DEFAULT_HIGHLIGHT_COLOR,
+        },
+      };
     default:
       return { id, type: "text", html: "<p></p>" };
   }
 }
 
 /**
- * Sortable wrapper that surfaces a Qwilr-style floating toolbar above the block
- * when it is selected. Clicking anywhere inside selects the block; clicking
- * outside (handled by the parent) clears the selection.
+ * Sortable wrapper that surfaces a floating toolbar above the block when it is selected (interactive proposal builder).
+ * Clicking anywhere inside selects the block; clicking outside (handled by the parent) clears the selection.
  */
 function SortableShell({
   id,
@@ -343,18 +378,180 @@ function SortableShell({
   );
 }
 
+function SectionBlockFields({
+  block,
+  onChange,
+  onRemove,
+  selectedBlockId,
+  onSelectBlock,
+  getBlockStyle,
+  applyBlockStyle,
+}: {
+  block: SectionBlock;
+  onChange: (next: ProposalBlock) => void;
+  onRemove: () => void;
+  selectedBlockId: string | null;
+  onSelectBlock: (id: string | null) => void;
+  getBlockStyle: (b: ProposalBlock) => BlockStyle | undefined;
+  applyBlockStyle: (id: string, style: BlockStyle | undefined) => void;
+}) {
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  const children = block.children;
+
+  function setChildren(nextChildren: ProposalContentBlock[]) {
+    onChange({ ...block, children: nextChildren });
+  }
+
+  function updateChild(childId: string, next: ProposalContentBlock) {
+    setChildren(children.map((c) => (c.id === childId ? next : c)));
+  }
+
+  function removeChild(childId: string) {
+    setChildren(children.filter((c) => c.id !== childId));
+    if (selectedBlockId === childId) onSelectBlock(null);
+  }
+
+  function addChildAt(b: ProposalBlock, index: number) {
+    const c = b as ProposalContentBlock;
+    const next = [...children];
+    next.splice(Math.max(0, Math.min(index, next.length)), 0, c);
+    setChildren(next);
+  }
+
+  function moveChild(childId: string, direction: -1 | 1) {
+    const idx = children.findIndex((c) => c.id === childId);
+    if (idx < 0) return;
+    const target = idx + direction;
+    if (target < 0 || target >= children.length) return;
+    setChildren(arrayMove(children, idx, target));
+  }
+
+  function duplicateChild(childId: string) {
+    const idx = children.findIndex((c) => c.id === childId);
+    if (idx < 0) return;
+    const cloned = cloneBlockWithFreshIds(children[idx] as ProposalBlock) as ProposalContentBlock;
+    const next = [...children];
+    next.splice(idx + 1, 0, cloned);
+    setChildren(next);
+    onSelectBlock(null);
+  }
+
+  function onChildDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = children.findIndex((c) => c.id === active.id);
+    const newIndex = children.findIndex((c) => c.id === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+    setChildren(arrayMove(children, oldIndex, newIndex));
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-muted-foreground">
+        Combine headings, text, media, quote, plans, and more in this section. Add blocks below or reorder with the
+        handles.
+      </p>
+      {children.length === 0 ? (
+        <InsertBlockSlot variant="empty" placement="insideSection" onAdd={(b) => addChildAt(b, 0)} />
+      ) : (
+        <div className="rounded-xl border border-dashed border-border/60 bg-muted/15 p-2">
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onChildDragEnd}>
+            <SortableContext items={children.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+              <InsertBlockSlot placement="insideSection" onAdd={(b) => addChildAt(b, 0)} />
+              {children.map((child, idx) => {
+                const isSelected = selectedBlockId === child.id;
+                const supportsStyle = child.type === "pricing" || child.type === "packages";
+                return (
+                  <React.Fragment key={child.id}>
+                    <SortableShell
+                      id={child.id}
+                      label={blockLabel(child.type)}
+                      selected={isSelected}
+                      onSelect={() => onSelectBlock(child.id)}
+                      toolbar={
+                        <BlockToolbar
+                          blockType={
+                            child.type === "pricing"
+                              ? "pricing"
+                              : child.type === "packages"
+                                ? "packages"
+                                : "other"
+                          }
+                          canMoveUp={idx > 0}
+                          canMoveDown={idx < children.length - 1}
+                          onMoveUp={() => moveChild(child.id, -1)}
+                          onMoveDown={() => moveChild(child.id, 1)}
+                          onDuplicate={() => duplicateChild(child.id)}
+                          onDelete={() => removeChild(child.id)}
+                          style={supportsStyle ? getBlockStyle(child) : undefined}
+                          onStyleChange={
+                            supportsStyle ? (next) => applyBlockStyle(child.id, next) : undefined
+                          }
+                        />
+                      }
+                    >
+                      <BlockFields
+                        block={child}
+                        onChange={(next) => updateChild(child.id, next as ProposalContentBlock)}
+                        onRemove={() => removeChild(child.id)}
+                        selection={{ selectedId: selectedBlockId, onSelect: onSelectBlock }}
+                        getBlockStyle={getBlockStyle}
+                        applyBlockStyle={applyBlockStyle}
+                      />
+                    </SortableShell>
+                    <InsertBlockSlot placement="insideSection" onAdd={(b) => addChildAt(b, idx + 1)} />
+                  </React.Fragment>
+                );
+              })}
+            </SortableContext>
+          </DndContext>
+        </div>
+      )}
+      <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={onRemove}>
+        <Trash2 className="mr-1 h-4 w-4" /> Remove entire section
+      </Button>
+    </div>
+  );
+}
+
 function BlockFields({
   block,
   onChange,
   onRemove,
+  selection,
+  getBlockStyle,
+  applyBlockStyle,
 }: {
   block: ProposalBlock;
   onChange: (next: ProposalBlock) => void;
   onRemove: () => void;
+  selection?: { selectedId: string | null; onSelect: (id: string | null) => void };
+  getBlockStyle: (b: ProposalBlock) => BlockStyle | undefined;
+  applyBlockStyle: (id: string, style: BlockStyle | undefined) => void;
 }) {
   const patch = (next: ProposalBlock) => onChange(next);
 
   switch (block.type) {
+    case "section": {
+      const b = block as SectionBlock;
+      return (
+        <SectionBlockFields
+          block={b}
+          onChange={patch}
+          onRemove={onRemove}
+          selectedBlockId={selection?.selectedId ?? null}
+          onSelectBlock={selection?.onSelect ?? (() => {})}
+          getBlockStyle={getBlockStyle}
+          applyBlockStyle={applyBlockStyle}
+        />
+      );
+    }
     case "header": {
       const b = block as HeaderBlock;
       return (
@@ -611,10 +808,13 @@ function AddBlockMenu({
   onAdd,
   trigger,
   align = "center",
+  placement = "document",
 }: {
   onAdd: (block: ProposalBlock) => void;
   trigger: React.ReactNode;
   align?: "start" | "center" | "end";
+  /** `document` includes the Section tile; `insideSection` does not (no nested sections). */
+  placement?: "document" | "insideSection";
 }) {
   const [open, setOpen] = React.useState(false);
   const [view, setView] = React.useState<"main" | "library">("main");
@@ -646,7 +846,7 @@ function AddBlockMenu({
               Add a block
             </p>
             <div className="grid grid-cols-3 gap-2">
-              {PRIMARY_BLOCK_OPTIONS.map((opt) => (
+              {(placement === "document" ? TOP_PRIMARY_BLOCK_OPTIONS : PRIMARY_BLOCK_OPTIONS).map((opt) => (
                 <BlockTile key={opt.id} option={opt} onSelect={() => handlePick(opt)} />
               ))}
             </div>
@@ -728,18 +928,41 @@ function LibraryRow({ option, onSelect }: { option: BlockOption; onSelect: () =>
 function InsertBlockSlot({
   onAdd,
   variant = "between",
+  placement = "document",
 }: {
   onAdd: (block: ProposalBlock) => void;
   variant?: "between" | "empty";
+  placement?: "document" | "insideSection";
 }) {
   if (variant === "empty") {
+    if (placement === "insideSection") {
+      return (
+        <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border/70 bg-muted/10 px-3 py-10 text-center">
+          <p className="text-xs text-muted-foreground">This section is empty. Add your first block.</p>
+          <AddBlockMenu
+            placement={placement}
+            onAdd={onAdd}
+            trigger={
+              <button
+                type="button"
+                className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground shadow-sm transition-colors hover:border-primary/60 hover:bg-primary hover:text-primary-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                aria-label="Add block to section"
+              >
+                <Plus className="h-3.5 w-3.5" /> Add block
+              </button>
+            }
+          />
+        </div>
+      );
+    }
     return (
       <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border/70 bg-muted/15 px-4 py-12 text-center">
         <p className="text-sm font-medium text-foreground">Start building your proposal</p>
         <p className="max-w-xs text-xs text-muted-foreground">
-          Add Text, Heading, Quote, optional add-ons Table, Plans, Video, or Accept blocks to get started.
+          Add a Section, Text, Heading, Quote, Table, Plans, Video, or Accept blocks to get started.
         </p>
         <AddBlockMenu
+          placement={placement}
           onAdd={onAdd}
           trigger={
             <button
@@ -758,6 +981,7 @@ function InsertBlockSlot({
     <div className="group/insert relative flex items-center justify-center py-1.5">
       <div className="pointer-events-none absolute inset-x-6 top-1/2 h-px -translate-y-1/2 bg-border opacity-0 transition-opacity group-hover/insert:opacity-100 group-focus-within/insert:opacity-100" />
       <AddBlockMenu
+        placement={placement}
         onAdd={onAdd}
         trigger={
           <button
@@ -797,6 +1021,8 @@ function blockLabel(type: ProposalBlock["type"]): string {
       return "Payment";
     case "divider":
       return "Divider";
+    case "section":
+      return "Section";
     default:
       return "Block";
   }
@@ -947,14 +1173,33 @@ export function ProposalDocumentEditor({
   function applyBlockStyle(id: string, style: BlockStyle | undefined) {
     setBlocks((prev) =>
       prev.map((b) => {
-        if (b.id !== id) return b;
-        if (b.type === "pricing" || b.type === "packages") {
-          if (style === undefined) {
-            const { style: _drop, ...rest } = b;
-            void _drop;
-            return rest as ProposalBlock;
+        if (b.id === id) {
+          if (b.type === "pricing" || b.type === "packages" || b.type === "section") {
+            if (style === undefined) {
+              const { style: _drop, ...rest } = b;
+              void _drop;
+              return rest as ProposalBlock;
+            }
+            return { ...b, style } as ProposalBlock;
           }
-          return { ...b, style } as ProposalBlock;
+          return b;
+        }
+        if (b.type === "section") {
+          const idx = b.children.findIndex((c) => c.id === id);
+          if (idx < 0) return b;
+          const child = b.children[idx];
+          if (child.type !== "pricing" && child.type !== "packages") return b;
+          const patched =
+            style === undefined
+              ? (() => {
+                  const { style: _drop, ...rest } = child;
+                  void _drop;
+                  return rest;
+                })()
+              : { ...child, style };
+          const nextChildren = [...b.children];
+          nextChildren[idx] = patched as ProposalContentBlock;
+          return { ...b, children: nextChildren };
         }
         return b;
       }),
@@ -962,7 +1207,9 @@ export function ProposalDocumentEditor({
   }
 
   function getBlockStyle(block: ProposalBlock): BlockStyle | undefined {
-    if (block.type === "pricing" || block.type === "packages") return block.style;
+    if (block.type === "pricing" || block.type === "packages" || block.type === "section") {
+      return block.style;
+    }
     return undefined;
   }
 
@@ -1078,7 +1325,8 @@ export function ProposalDocumentEditor({
                   <InsertBlockSlot onAdd={(b) => addBlockAt(b, 0)} />
                   {blocks.map((block, idx) => {
                     const isSelected = selectedBlockId === block.id;
-                    const supportsStyle = block.type === "pricing" || block.type === "packages";
+                    const supportsStyle =
+                      block.type === "pricing" || block.type === "packages" || block.type === "section";
                     return (
                       <React.Fragment key={block.id}>
                         <SortableShell
@@ -1093,7 +1341,9 @@ export function ProposalDocumentEditor({
                                   ? "pricing"
                                   : block.type === "packages"
                                     ? "packages"
-                                    : "other"
+                                    : block.type === "section"
+                                      ? "section"
+                                      : "other"
                               }
                               canMoveUp={idx > 0}
                               canMoveDown={idx < blocks.length - 1}
@@ -1112,6 +1362,12 @@ export function ProposalDocumentEditor({
                             block={block}
                             onChange={(next) => updateBlock(block.id, next)}
                             onRemove={() => removeBlock(block.id)}
+                            selection={{
+                              selectedId: selectedBlockId,
+                              onSelect: setSelectedBlockId,
+                            }}
+                            getBlockStyle={getBlockStyle}
+                            applyBlockStyle={applyBlockStyle}
                           />
                         </SortableShell>
                         <InsertBlockSlot onAdd={(b) => addBlockAt(b, idx + 1)} />
@@ -1123,8 +1379,15 @@ export function ProposalDocumentEditor({
             </div>
           )}
         </TabsContent>
-        <TabsContent value="preview" className="mt-4 rounded-2xl border border-border/70 bg-muted/15 p-6 md:p-10">
-          <ProposalDocumentView document={doc} />
+        <TabsContent
+          value="preview"
+          className="mt-4 rounded-2xl border border-border/70 bg-muted/15 py-6 md:py-10"
+        >
+          <div className={PROPOSAL_PUBLIC_GUTTER_CLASSES}>
+            <div className={PROPOSAL_PUBLIC_COLUMN_CLASSES}>
+              <ProposalDocumentView document={doc} />
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

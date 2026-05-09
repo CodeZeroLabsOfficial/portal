@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { ProposalBlock, ProposalDocument } from "@/types/proposal";
+import type { ProposalBlock, ProposalContentBlock, ProposalDocument } from "@/types/proposal";
 
 const idSchema = z.string().min(4);
 
@@ -216,6 +216,35 @@ const dividerBlockSchema = z.object({
   type: z.literal("divider"),
 });
 
+/** Blocks inside a section — same as top-level except no nested `section`. */
+const nestedBlockUnionSchema = z.discriminatedUnion("type", [
+  headerBlockSchema,
+  textBlockSchema,
+  imageBlockSchema,
+  videoBlockSchema,
+  pricingBlockSchema,
+  packagesBlockSchema,
+  formBlockSchema,
+  signatureBlockSchema,
+  embedBlockSchema,
+  paymentBlockSchema,
+  dividerBlockSchema,
+]);
+
+const nestedBlockSchema = z.preprocess((raw) => {
+  if (raw && typeof raw === "object" && (raw as Record<string, unknown>).type === "packages") {
+    return normalizePackagesBlockInput(raw);
+  }
+  return raw;
+}, nestedBlockUnionSchema);
+
+const sectionBlockSchema = z.object({
+  id: idSchema,
+  type: z.literal("section"),
+  children: z.array(nestedBlockSchema).default([]),
+  style: blockStyleSchema.optional(),
+});
+
 const blockUnionSchema = z.discriminatedUnion("type", [
   headerBlockSchema,
   textBlockSchema,
@@ -228,6 +257,7 @@ const blockUnionSchema = z.discriminatedUnion("type", [
   embedBlockSchema,
   paymentBlockSchema,
   dividerBlockSchema,
+  sectionBlockSchema,
 ]);
 
 /** Migrates legacy packages blocks before discriminatedUnion matching. */
@@ -283,6 +313,28 @@ export function parseProposalDocument(input: unknown): ProposalDocument {
           id,
           type: "header",
           text: typeof o.text === "string" ? o.text : "",
+        });
+      } else if (type === "section") {
+        const childrenRaw = Array.isArray(o.children) ? o.children : [];
+        const children: ProposalContentBlock[] = [];
+        for (const ch of childrenRaw) {
+          const parsedChild = nestedBlockSchema.safeParse(ch);
+          if (parsedChild.success) {
+            children.push(parsedChild.data as ProposalContentBlock);
+          }
+        }
+        const styleLoose = o.style;
+        const styleSafe = blockStyleSchema.safeParse(styleLoose);
+        blocks.push({
+          id,
+          type: "section",
+          children,
+          ...(styleSafe.success &&
+          (styleSafe.data.variant !== undefined ||
+            styleSafe.data.primaryColor !== undefined ||
+            styleSafe.data.highlightColor !== undefined)
+            ? { style: styleSafe.data }
+            : {}),
         });
       } else {
         const candidate =

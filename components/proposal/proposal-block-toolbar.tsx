@@ -21,7 +21,7 @@ import type { BlockStyle } from "@/types/proposal";
 
 export interface BlockToolbarProps {
   /** What kind of block this toolbar is editing — controls which slots show. */
-  blockType: "pricing" | "packages" | "other";
+  blockType: "pricing" | "packages" | "section" | "other";
   canMoveUp: boolean;
   canMoveDown: boolean;
   onMoveUp: () => void;
@@ -48,7 +48,8 @@ export function BlockToolbar({
   onStyleChange,
 }: BlockToolbarProps) {
   const supportsStyle =
-    (blockType === "pricing" || blockType === "packages") && typeof onStyleChange === "function";
+    (blockType === "pricing" || blockType === "packages" || blockType === "section") &&
+    typeof onStyleChange === "function";
 
   return (
     <div

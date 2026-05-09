@@ -1,6 +1,7 @@
 /** Discriminated proposal block payloads stored under `document.blocks`. */
 
 export type ProposalBlockType =
+  | "section"
   | "header"
   | "text"
   | "image"
@@ -171,7 +172,29 @@ export interface DividerBlock extends ProposalBlockBase {
   type: "divider";
 }
 
+/** Blocks allowed inside a section (sections do not nest). */
+export type ProposalContentBlock =
+  | HeaderBlock
+  | TextBlock
+  | ImageBlock
+  | VideoBlock
+  | PricingBlock
+  | PackagesBlock
+  | FormBlock
+  | SignatureBlock
+  | EmbedBlock
+  | PaymentBlock
+  | DividerBlock;
+
+export interface SectionBlock extends ProposalBlockBase {
+  type: "section";
+  children: ProposalContentBlock[];
+  /** Optional hero / layout styling (same shape as quote & plans blocks). */
+  style?: BlockStyle;
+}
+
 export type ProposalBlock =
+  | SectionBlock
   | HeaderBlock
   | TextBlock
   | ImageBlock

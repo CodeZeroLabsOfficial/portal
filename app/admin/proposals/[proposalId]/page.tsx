@@ -12,6 +12,7 @@ import { ProposalStripeActions } from "@/components/proposal/proposal-stripe-act
 import { ProposalShareSettings } from "@/components/proposal/proposal-share-settings";
 import { getServerEnv } from "@/lib/env/server";
 import { isStripeApiConfigured } from "@/lib/stripe/server";
+import { findProposalBlockById } from "@/lib/proposal-blocks";
 import type { PackagesBlock } from "@/types/proposal";
 
 interface PageProps {
@@ -112,7 +113,7 @@ export default async function AdminProposalDetailPage({ params, searchParams }: 
                 <ul className="mt-2 list-disc space-y-1 pl-4">
                   {Object.entries(proposal.publicSelections).map(([blockId, sel]) => {
                     if (sel.kind !== "packages") return null;
-                    const blk = proposal.document.blocks.find((b) => b.id === blockId);
+                    const blk = findProposalBlockById(proposal.document.blocks, blockId);
                     const pb: PackagesBlock | undefined = blk?.type === "packages" ? blk : undefined;
                     const tierName =
                       pb?.tiers?.find((t) => t.id === sel.tierId)?.name ?? `${sel.tierId.slice(0, 6)}…`;

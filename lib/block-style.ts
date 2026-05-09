@@ -5,7 +5,7 @@ export const DEFAULT_PRIMARY_COLOR = "#4543F7";
 /** Default Plans / Quote highlight tone — used for the recommended tier and totals row. */
 export const DEFAULT_HIGHLIGHT_COLOR = "#4543F7";
 
-/** Preset swatches surfaced in the Style popover (mirrors Qwilr-style chips). */
+/** Preset swatches surfaced in the Style popover for the interactive proposal editor. */
 export const STYLE_PRESET_COLORS: ReadonlyArray<{ value: string; label: string }> = [
   { value: "#4543F7", label: "Indigo" },
   { value: "#0F172A", label: "Slate" },

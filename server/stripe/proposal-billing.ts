@@ -1,5 +1,6 @@
-import type Stripe from "stripe";
+import Stripe from "stripe";
 import { DEFAULT_CURRENCY } from "@/lib/constants";
+import { findProposalBlockById, iterateProposalContentBlocks } from "@/lib/proposal-blocks";
 import type { CustomerRecord } from "@/types/customer";
 import type { PackagesBlock, PricingBlock, ProposalRecord } from "@/types/proposal";
 
@@ -8,7 +9,7 @@ export function computeProposalTotalMinor(proposal: ProposalRecord): number {
   let total = 0;
   const blocks = proposal.document.blocks;
 
-  for (const block of blocks) {
+  for (const block of iterateProposalContentBlocks(blocks)) {
     if (block.type === "pricing") {
       const pb = block as PricingBlock;
       for (const line of pb.lineItems) {
@@ -23,7 +24,7 @@ export function computeProposalTotalMinor(proposal: ProposalRecord): number {
   if (proposal.publicSelections) {
     for (const [blockId, sel] of Object.entries(proposal.publicSelections)) {
       if (sel.kind !== "packages") continue;
-      const raw = blocks.find((b) => b.id === blockId);
+      const raw = findProposalBlockById(blocks, blockId);
       if (!raw || raw.type !== "packages") continue;
       const pb = raw as PackagesBlock;
       const tier = pb.tiers.find((t) => t.id === sel.tierId);
@@ -39,7 +40,7 @@ export function computeProposalTotalMinor(proposal: ProposalRecord): number {
 }
 
 export function resolveProposalCurrency(proposal: ProposalRecord): string {
-  for (const b of proposal.document.blocks) {
+  for (const b of iterateProposalContentBlocks(proposal.document.blocks)) {
     if (b.type === "pricing" || b.type === "packages") {
       return b.currency.toLowerCase();
     }

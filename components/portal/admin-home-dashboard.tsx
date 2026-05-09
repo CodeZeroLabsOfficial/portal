@@ -16,6 +16,7 @@ import { formatCurrencyAmount } from "@/lib/format";
 import { buildAdminDashboardChartTabs } from "@/lib/admin-dashboard-chart-payload";
 import type { InvoiceRecord } from "@/types/invoice";
 import type { ProposalBlock, ProposalRecord } from "@/types/proposal";
+import { iterateProposalContentBlocks } from "@/lib/proposal-blocks";
 import type { SupportTicketRecord } from "@/types/support-ticket";
 import type { TaskRecord } from "@/types/task";
 import type { PortalUser } from "@/types/user";
@@ -232,7 +233,11 @@ function sumPendingProposalValueMinor(proposals: ProposalRecord[]): number {
     .filter((p) => p.status === "draft" || p.status === "sent" || p.status === "viewed")
     .reduce(
       (sum, p) =>
-        sum + p.document.blocks.reduce((s, bl) => s + extractPricingMinorFromBlock(bl), 0),
+        sum +
+        [...iterateProposalContentBlocks(p.document.blocks)].reduce(
+          (s, bl) => s + extractPricingMinorFromBlock(bl),
+          0,
+        ),
       0,
     );
 }

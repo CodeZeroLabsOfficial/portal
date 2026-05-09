@@ -8,6 +8,7 @@ import { requireStaffSession } from "@/lib/auth/server-session";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { parseProposalDocument } from "@/lib/schemas/proposal-document";
+import { findProposalBlockById } from "@/lib/proposal-blocks";
 import { hashSharePassword, sealProposalAccess, verifySharePassword } from "@/lib/proposal-share-crypto";
 import { getAdminProposalRecord } from "@/server/firestore/portal-data";
 import { getProposalRecordByShareToken } from "@/server/firestore/parse-proposal";
@@ -312,7 +313,7 @@ export async function saveProposalPackageSelectionAction(
     return { ok: false, message: "Proposal not available." };
   }
 
-  const block = proposal.document.blocks.find((b) => b.id === parsed.data.blockId);
+  const block = findProposalBlockById(proposal.document.blocks, parsed.data.blockId);
   if (!block || block.type !== "packages") {
     return { ok: false, message: "Package block not found." };
   }

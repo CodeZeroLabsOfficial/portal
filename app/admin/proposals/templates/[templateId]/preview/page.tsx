@@ -4,6 +4,11 @@ import { ArrowLeft } from "lucide-react";
 import { getCurrentSessionUser, isStaff } from "@/lib/auth/server-session";
 import { getProposalTemplateForStaff } from "@/server/firestore/proposal-templates";
 import { ProposalDocumentView } from "@/components/proposal/proposal-document-view";
+import {
+  PROPOSAL_PUBLIC_COLUMN_CLASSES,
+  PROPOSAL_PUBLIC_GUTTER_CLASSES,
+  PROPOSAL_PUBLIC_SHELL_CLASSES,
+} from "@/lib/proposal-public-layout";
 import { Button } from "@/components/ui/button";
 
 interface PageProps {
@@ -44,8 +49,12 @@ export default async function ProposalTemplatePublicPreviewPage({ params }: Page
           </Button>
         </div>
       </div>
-      <main className="proposal-print-root mx-auto min-h-[60vh] max-w-6xl px-4 py-12 sm:px-6 print:max-w-none print:py-8">
-        <ProposalDocumentView document={template.document} branding={template.branding} />
+      <main className={`${PROPOSAL_PUBLIC_SHELL_CLASSES} min-h-[60vh]`}>
+        <div className={PROPOSAL_PUBLIC_GUTTER_CLASSES}>
+          <div className={PROPOSAL_PUBLIC_COLUMN_CLASSES}>
+            <ProposalDocumentView document={template.document} branding={template.branding} />
+          </div>
+        </div>
       </main>
     </div>
   );

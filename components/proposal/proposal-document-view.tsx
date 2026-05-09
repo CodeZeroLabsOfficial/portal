@@ -4,11 +4,13 @@ import * as React from "react";
 import type {
   ProposalBlock,
   ProposalBranding,
+  ProposalContentBlock,
   ProposalDocument,
   ProposalPublicSelections,
 } from "@/types/proposal";
 import { sanitizeProposalHtml } from "@/lib/sanitize-proposal-html";
 import { WORKSPACE_DETAIL_PAGE_TITLE_CLASS } from "@/lib/workspace-page-typography";
+import { resolveBlockStyle, withAlpha } from "@/lib/block-style";
 import { cn } from "@/lib/utils";
 import { embedVideoSrc } from "@/components/proposal/embed-video";
 import { PricingBlockPublic } from "@/components/proposal/pricing-block-public";
@@ -28,11 +30,40 @@ function BlockView({
   shareToken,
   publicSelections,
 }: {
-  block: ProposalBlock;
+  block: ProposalBlock | ProposalContentBlock;
   shareToken?: string;
   publicSelections?: ProposalPublicSelections;
 }) {
   switch (block.type) {
+    case "section": {
+      const style = resolveBlockStyle(block.style);
+      const visual = style.variant === "visual";
+      return (
+        <div
+          className={cn(
+            "space-y-6 rounded-2xl",
+            visual &&
+              "border border-border/70 px-4 py-8 shadow-sm md:px-10 md:py-12",
+          )}
+          style={
+            visual
+              ? {
+                  background: `linear-gradient(165deg, ${withAlpha(style.primaryColor, 0.22)} 0%, transparent 55%)`,
+                }
+              : undefined
+          }
+        >
+          {block.children.map((c) => (
+            <BlockView
+              key={c.id}
+              block={c}
+              shareToken={shareToken}
+              publicSelections={publicSelections}
+            />
+          ))}
+        </div>
+      );
+    }
     case "header":
       return (
         <h2 className={cn("scroll-mt-20", WORKSPACE_DETAIL_PAGE_TITLE_CLASS)}>
@@ -228,7 +259,7 @@ export function ProposalDocumentView({
       className={cn("space-y-8", className)}
     >
       {branding?.logoUrl ? (
-        <div className="flex justify-center">
+        <div className="flex justify-start">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={branding.logoUrl} alt="" className="h-10 max-w-[200px] object-contain" />
         </div>
