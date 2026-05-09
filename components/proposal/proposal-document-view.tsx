@@ -10,7 +10,6 @@ import type {
 } from "@/types/proposal";
 import { sanitizeProposalHtml } from "@/lib/sanitize-proposal-html";
 import { WORKSPACE_DETAIL_PAGE_TITLE_CLASS } from "@/lib/workspace-page-typography";
-import { resolveBlockStyle, withAlpha } from "@/lib/block-style";
 import { cn } from "@/lib/utils";
 import { embedVideoSrc } from "@/components/proposal/embed-video";
 import { PricingBlockPublic } from "@/components/proposal/pricing-block-public";
@@ -35,24 +34,10 @@ function BlockView({
   publicSelections?: ProposalPublicSelections;
 }) {
   switch (block.type) {
+    /** Legacy `section` payloads (pre-flatten) — render children as a seamless vertical stack. */
     case "section": {
-      const style = resolveBlockStyle(block.style);
-      const visual = style.variant === "visual";
       return (
-        <div
-          className={cn(
-            "space-y-6 rounded-2xl",
-            visual &&
-              "border border-border/70 px-4 py-8 shadow-sm md:px-10 md:py-12",
-          )}
-          style={
-            visual
-              ? {
-                  background: `linear-gradient(165deg, ${withAlpha(style.primaryColor, 0.22)} 0%, transparent 55%)`,
-                }
-              : undefined
-          }
-        >
+        <div className="space-y-10">
           {block.children.map((c) => (
             <BlockView
               key={c.id}

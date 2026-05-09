@@ -91,7 +91,7 @@ export default async function AdminProposalDetailPage({ params, searchParams }: 
           <CardContent className="space-y-4 text-sm">
             <p>
               <span className="text-muted-foreground">Blocks · </span>
-              {blockCount} sections.
+              {blockCount} {blockCount === 1 ? "block" : "blocks"}.
             </p>
             {typeof proposal.viewCount === "number" ? (
               <p>

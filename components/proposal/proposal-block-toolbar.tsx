@@ -22,6 +22,8 @@ import type { BlockStyle } from "@/types/proposal";
 export interface BlockToolbarProps {
   /** What kind of block this toolbar is editing — controls which slots show. */
   blockType: "pricing" | "packages" | "section" | "other";
+  /** Label for the delete control (toolbar is reused for legacy section styling). */
+  deleteLabel?: string;
   canMoveUp: boolean;
   canMoveDown: boolean;
   onMoveUp: () => void;
@@ -37,6 +39,7 @@ export interface BlockToolbarProps {
 
 export function BlockToolbar({
   blockType,
+  deleteLabel = "Delete block",
   canMoveUp,
   canMoveDown,
   onMoveUp,
@@ -105,7 +108,7 @@ export function BlockToolbar({
       ) : null}
       <ToolbarDivider />
       <ToolbarIconButton
-        label="Delete section"
+        label={deleteLabel}
         onClick={(e) => {
           e.stopPropagation();
           onDelete();

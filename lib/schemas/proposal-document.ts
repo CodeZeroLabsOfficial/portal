@@ -276,6 +276,21 @@ const documentSchema = z.object({
   blocks: z.array(blockSchema),
 });
 
+/** Hoists legacy `section` blocks into a single seamless list (children become top-level blocks). */
+export function flattenProposalDocumentSections(blocks: ProposalBlock[]): ProposalBlock[] {
+  const next: ProposalBlock[] = [];
+  for (const b of blocks) {
+    if (b.type === "section") {
+      for (const child of b.children) {
+        next.push(child as ProposalBlock);
+      }
+    } else {
+      next.push(b);
+    }
+  }
+  return next;
+}
+
 export function parseProposalDocument(input: unknown): ProposalDocument {
   const fallbackTitle =
     input && typeof input === "object" && typeof (input as { title?: unknown }).title === "string"
@@ -284,7 +299,8 @@ export function parseProposalDocument(input: unknown): ProposalDocument {
 
   const parsed = documentSchema.safeParse(input);
   if (parsed.success) {
-    return parsed.data as ProposalDocument;
+    const doc = parsed.data as ProposalDocument;
+    return { ...doc, blocks: flattenProposalDocumentSections(doc.blocks) };
   }
 
   /** Lenient path for legacy rows — normalize single blocks where possible. */
@@ -347,7 +363,7 @@ export function parseProposalDocument(input: unknown): ProposalDocument {
 
   return {
     title: fallbackTitle || "Untitled proposal",
-    blocks,
+    blocks: flattenProposalDocumentSections(blocks),
   };
 }
 
