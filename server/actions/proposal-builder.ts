@@ -76,11 +76,15 @@ export async function saveProposalDocumentAction(
         updatedAt: FieldValue.serverTimestamp(),
       });
   } catch (error) {
-    logError("proposal_save_failed", {
-      proposalId: parsed.data.proposalId,
-      message: error instanceof Error ? error.message : "unknown",
-    });
-    return { ok: false, message: "Could not save proposal. Please try again." };
+    const reason = error instanceof Error ? error.message : "unknown";
+    logError("proposal_save_failed", { proposalId: parsed.data.proposalId, message: reason });
+    /**
+     * In development, surface the underlying Firestore message so the inline
+     * status reveals the real cause (e.g. an admin-SDK validation error).
+     * In production we only show a generic message.
+     */
+    const detail = process.env.NODE_ENV === "production" ? "Please try again." : reason;
+    return { ok: false, message: `Could not save proposal. ${detail}` };
   }
 
   revalidatePath("/admin");

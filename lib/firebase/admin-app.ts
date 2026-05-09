@@ -82,25 +82,44 @@ export function getFirebaseAdminAuth() {
 }
 
 /**
- * Cache the configured Firestore instance per App so we only call `settings()`
- * once. Calling `settings()` more than once (or after the first read/write)
- * throws, so we guard with a `WeakMap`.
+ * Cache the configured Firestore instance on `globalThis` so the
+ * `settings()` call survives Next.js dev-server hot-reloads. `getFirestore`
+ * is internally cached per App, so calling it again returns the same
+ * instance — but `settings()` can only be called once per instance, so we
+ * track which apps we've already configured.
  */
-const firestoreInstances = new WeakMap<App, Firestore>();
+const FIRESTORE_CONFIGURED = Symbol.for("__codezero.firebaseAdmin.firestoreConfigured__");
+type GlobalWithFirestoreFlag = typeof globalThis & {
+  [FIRESTORE_CONFIGURED]?: WeakSet<App>;
+};
 
 export function getFirebaseAdminFirestore(): Firestore | null {
   const app = getFirebaseAdminApp();
   if (!app) return null;
-  const cached = firestoreInstances.get(app);
-  if (cached) return cached;
   const db = getFirestore(app);
-  /**
-   * Skip `undefined` values on writes. Several normalizers (e.g. proposal
-   * package tiers) intentionally produce optional fields whose value may be
-   * `undefined`; without this setting the Admin SDK throws on the first such
-   * field and the surrounding write fails entirely.
-   */
-  db.settings({ ignoreUndefinedProperties: true });
-  firestoreInstances.set(app, db);
+  const g = globalThis as GlobalWithFirestoreFlag;
+  const configured = g[FIRESTORE_CONFIGURED] ?? (g[FIRESTORE_CONFIGURED] = new WeakSet<App>());
+  if (!configured.has(app)) {
+    try {
+      /**
+       * Skip `undefined` values on writes. Several normalizers (e.g. proposal
+       * package tiers) intentionally produce optional fields whose value may
+       * be `undefined`; without this setting the Admin SDK throws on the
+       * first such field and the surrounding write fails entirely.
+       */
+      db.settings({ ignoreUndefinedProperties: true });
+    } catch (error) {
+      /**
+       * `settings()` throws if it has already been called on this Firestore
+       * instance — which can happen after an HMR reload that wiped our
+       * cache. Either way, the prior `settings()` call's flags persist, so
+       * this is safe to ignore.
+       */
+      logError("firebase_admin_firestore_settings_skipped", {
+        message: error instanceof Error ? error.message : "unknown",
+      });
+    }
+    configured.add(app);
+  }
   return db;
 }
