@@ -45,7 +45,13 @@ function BlockView({
           <div
             className={cn(
               "proposal-rich-text max-w-none text-sm leading-relaxed text-foreground",
-              "[&_a]:text-primary [&_a]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-border [&_blockquote]:pl-4 [&_h2]:mt-6 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:mt-4 [&_h3]:text-lg [&_h3]:font-semibold [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-3 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5",
+              "[&_a]:text-primary [&_a]:underline",
+              "[&_blockquote]:my-4 [&_blockquote]:border-l-4 [&_blockquote]:border-border [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-muted-foreground",
+              "[&_h1]:mt-8 [&_h1]:text-3xl [&_h1]:font-semibold",
+              "[&_h2]:mt-6 [&_h2]:text-2xl [&_h2]:font-semibold",
+              "[&_h3]:mt-4 [&_h3]:text-xl [&_h3]:font-semibold",
+              "[&_h4]:mt-4 [&_h4]:text-base [&_h4]:font-semibold",
+              "[&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-3 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5",
             )}
             dangerouslySetInnerHTML={{ __html: sanitizeProposalHtml(block.html) }}
           />

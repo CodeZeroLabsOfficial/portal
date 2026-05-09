@@ -1,14 +1,370 @@
 "use client";
 
 import * as React from "react";
-import { EditorContent, useEditor } from "@tiptap/react";
+import { type Editor, EditorContent, useEditor } from "@tiptap/react";
+import { BubbleMenu } from "@tiptap/react";
+import { Extension } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
 import Underline from "@tiptap/extension-underline";
-import { Bold, Italic, Link as LinkIcon, Underline as UnderlineIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import TextStyle from "@tiptap/extension-text-style";
+import Color from "@tiptap/extension-color";
+import TextAlign from "@tiptap/extension-text-align";
+import {
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
+  Bold,
+  ChevronDown,
+  ChevronUp,
+  Italic,
+  Link as LinkIcon,
+  List,
+  ListOrdered,
+  Quote,
+  Strikethrough,
+  Underline as UnderlineIcon,
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+
+declare module "@tiptap/core" {
+  interface Commands<ReturnType> {
+    fontSize: {
+      setFontSize: (size: string | null) => ReturnType;
+    };
+  }
+}
+
+/**
+ * Custom mark extension that adds a `fontSize` attribute to TipTap's TextStyle mark
+ * so we can store inline font-size styling alongside color etc. — TipTap v2 doesn't
+ * ship an official font-size extension, so we attach the attribute here.
+ */
+const FontSize = Extension.create({
+  name: "fontSize",
+  addOptions() {
+    return { types: ["textStyle"] };
+  },
+  addGlobalAttributes() {
+    return [
+      {
+        types: this.options.types,
+        attributes: {
+          fontSize: {
+            default: null,
+            parseHTML: (el) => {
+              const m = (el as HTMLElement).style.fontSize?.match(/^(\d+(?:\.\d+)?)px$/);
+              return m ? m[1] : null;
+            },
+            renderHTML: (attrs) =>
+              attrs.fontSize ? { style: `font-size: ${attrs.fontSize}px` } : {},
+          },
+        },
+      },
+    ];
+  },
+  addCommands() {
+    return {
+      setFontSize:
+        (size) =>
+        ({ chain }) => {
+          if (size === null) {
+            return chain()
+              .setMark("textStyle", { fontSize: null })
+              .removeEmptyTextStyle()
+              .run();
+          }
+          return chain().setMark("textStyle", { fontSize: size }).run();
+        },
+    };
+  },
+});
+
+interface HeadingOption {
+  value: "p" | "h1" | "h2" | "h3" | "h4" | "blockquote";
+  label: string;
+  shortLabel: string;
+}
+
+const HEADING_OPTIONS: HeadingOption[] = [
+  { value: "h1", shortLabel: "H1", label: "Title" },
+  { value: "h2", shortLabel: "H2", label: "Subtitle" },
+  { value: "h3", shortLabel: "H3", label: "Heading" },
+  { value: "h4", shortLabel: "H4", label: "Subheading" },
+  { value: "p", shortLabel: "T1", label: "Body text" },
+  { value: "blockquote", shortLabel: "T2", label: "Pull quote" },
+];
+
+function getActiveHeading(editor: Editor): HeadingOption {
+  if (editor.isActive("blockquote")) return HEADING_OPTIONS[5];
+  for (let i = 0; i < 4; i += 1) {
+    const opt = HEADING_OPTIONS[i];
+    const level = Number(opt.value.slice(1));
+    if (editor.isActive("heading", { level })) return opt;
+  }
+  return HEADING_OPTIONS[4];
+}
+
+function applyHeadingOption(editor: Editor, opt: HeadingOption) {
+  const c = editor.chain().focus();
+  if (opt.value === "p") {
+    c.setParagraph().run();
+    return;
+  }
+  if (opt.value === "blockquote") {
+    if (editor.isActive("blockquote")) {
+      c.toggleBlockquote().run();
+    } else {
+      c.setParagraph().toggleBlockquote().run();
+    }
+    return;
+  }
+  c.toggleHeading({ level: Number(opt.value.slice(1)) as 1 | 2 | 3 | 4 }).run();
+}
+
+const ALIGN_OPTIONS: { value: "left" | "center" | "right"; icon: typeof AlignLeft; label: string }[] = [
+  { value: "left", icon: AlignLeft, label: "Left" },
+  { value: "center", icon: AlignCenter, label: "Center" },
+  { value: "right", icon: AlignRight, label: "Right" },
+];
+
+function ToolbarButton({
+  active,
+  onClick,
+  ariaLabel,
+  children,
+  disabled,
+}: {
+  active?: boolean;
+  onClick: () => void;
+  ariaLabel: string;
+  children: React.ReactNode;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={onClick}
+      disabled={disabled}
+      aria-pressed={active}
+      aria-label={ariaLabel}
+      className={cn(
+        "inline-flex h-7 w-7 items-center justify-center rounded text-zinc-300 transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:bg-white/10",
+        active && "bg-white/15 text-white",
+        disabled && "cursor-not-allowed opacity-40",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function ToolbarDivider() {
+  return <span aria-hidden className="mx-0.5 h-5 w-px bg-white/10" />;
+}
+
+function HeadingPicker({ editor }: { editor: Editor }) {
+  const active = getActiveHeading(editor);
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          aria-label="Text style"
+          className="inline-flex items-center gap-1.5 rounded px-2 py-1 text-sm text-zinc-100 transition-colors hover:bg-white/10"
+        >
+          <span className="inline-flex h-5 w-7 items-center justify-center rounded bg-white/10 text-[11px] font-semibold tabular-nums text-zinc-100">
+            {active.shortLabel}
+          </span>
+          <span>{active.label}</span>
+          <ChevronDown className="h-3.5 w-3.5 text-zinc-400" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="start"
+        sideOffset={6}
+        className="min-w-[200px] border-zinc-700 bg-zinc-900 p-1 text-zinc-100"
+      >
+        {HEADING_OPTIONS.map((opt) => {
+          const isActive = active.value === opt.value;
+          return (
+            <DropdownMenuItem
+              key={opt.value}
+              onSelect={(e) => {
+                e.preventDefault();
+                applyHeadingOption(editor, opt);
+              }}
+              className={cn(
+                "flex items-center gap-2 rounded text-zinc-200 focus:bg-white/10 focus:text-white",
+                isActive && "bg-white/10 text-white",
+              )}
+            >
+              <span
+                className={cn(
+                  "inline-block w-7 text-center text-xs font-semibold",
+                  isActive ? "text-sky-400" : "text-zinc-400",
+                )}
+              >
+                {opt.shortLabel}
+              </span>
+              <span>{opt.label}</span>
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function FontSizeControl({ editor }: { editor: Editor }) {
+  const current = editor.getAttributes("textStyle").fontSize as string | undefined;
+  const value = Number(current ?? 16);
+  function clamp(n: number) {
+    return Math.max(8, Math.min(120, Math.round(n)));
+  }
+  function set(next: number) {
+    editor.chain().focus().setFontSize(String(clamp(next))).run();
+  }
+  return (
+    <div
+      className="inline-flex items-center gap-0.5 rounded text-zinc-200"
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      <input
+        type="number"
+        min={8}
+        max={120}
+        value={value}
+        onChange={(e) => {
+          const n = Number(e.target.value);
+          if (Number.isFinite(n) && n > 0) set(n);
+        }}
+        className="w-10 rounded bg-transparent px-1 py-0.5 text-center text-sm tabular-nums outline-none focus:bg-white/10"
+        aria-label="Font size"
+      />
+      <span className="flex flex-col">
+        <button
+          type="button"
+          onClick={() => set(value + 1)}
+          aria-label="Increase font size"
+          className="rounded p-0.5 text-zinc-400 hover:bg-white/10 hover:text-white"
+        >
+          <ChevronUp className="h-3 w-3" />
+        </button>
+        <button
+          type="button"
+          onClick={() => set(value - 1)}
+          aria-label="Decrease font size"
+          className="rounded p-0.5 text-zinc-400 hover:bg-white/10 hover:text-white"
+        >
+          <ChevronDown className="h-3 w-3" />
+        </button>
+      </span>
+    </div>
+  );
+}
+
+function ColorControl({ editor }: { editor: Editor }) {
+  const current = (editor.getAttributes("textStyle").color as string | undefined) ?? "#ffffff";
+  return (
+    <label
+      className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded text-zinc-200 transition-colors hover:bg-white/10"
+      aria-label="Text color"
+      onMouseDown={(e) => e.preventDefault()}
+    >
+      <span
+        className="flex h-4 w-4 items-end justify-center text-xs font-bold leading-none"
+        style={{ borderBottom: `3px solid ${current}` }}
+      >
+        A
+      </span>
+      <input
+        type="color"
+        value={current}
+        onChange={(e) => editor.chain().focus().setColor(e.target.value).run()}
+        className="sr-only"
+      />
+    </label>
+  );
+}
+
+function AlignmentPicker({ editor }: { editor: Editor }) {
+  const current =
+    ALIGN_OPTIONS.find((a) => editor.isActive({ textAlign: a.value })) ?? ALIGN_OPTIONS[0];
+  const Icon = current.icon;
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          aria-label="Text alignment"
+          className="inline-flex h-7 w-7 items-center justify-center rounded text-zinc-300 transition-colors hover:bg-white/10 hover:text-white"
+        >
+          <Icon className="h-4 w-4" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="start"
+        sideOffset={6}
+        className="border-zinc-700 bg-zinc-900 p-1 text-zinc-100"
+      >
+        {ALIGN_OPTIONS.map((a) => {
+          const Ic = a.icon;
+          const isActive = current.value === a.value;
+          return (
+            <DropdownMenuItem
+              key={a.value}
+              onSelect={(e) => {
+                e.preventDefault();
+                editor.chain().focus().setTextAlign(a.value).run();
+              }}
+              className={cn(
+                "rounded text-zinc-200 focus:bg-white/10 focus:text-white",
+                isActive && "bg-white/10 text-white",
+              )}
+            >
+              <Ic className="mr-2 h-4 w-4" />
+              {a.label}
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function LinkButton({ editor }: { editor: Editor }) {
+  const active = editor.isActive("link");
+  return (
+    <ToolbarButton
+      active={active}
+      ariaLabel="Link"
+      onClick={() => {
+        const existing = (editor.getAttributes("link").href as string | undefined) ?? "";
+        const next = window.prompt("Link URL", existing);
+        if (next === null) return;
+        const url = next.trim();
+        if (!url) {
+          editor.chain().focus().extendMarkRange("link").unsetLink().run();
+          return;
+        }
+        editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+      }}
+    >
+      <LinkIcon className="h-4 w-4" />
+    </ToolbarButton>
+  );
+}
 
 export interface ProposalRichTextProps {
   /** Initial HTML; remount the component (key) when switching blocks. */
@@ -23,25 +379,23 @@ export function ProposalRichText({ html, onChange, placeholder, className }: Pro
     immediatelyRender: false,
     extensions: [
       StarterKit.configure({
-        heading: { levels: [2, 3] },
+        heading: { levels: [1, 2, 3, 4] },
         bulletList: { keepMarks: true },
         orderedList: { keepMarks: true },
       }),
       Underline,
-      Link.configure({
-        openOnClick: false,
-        autolink: true,
-        linkOnPaste: true,
-      }),
-      Placeholder.configure({
-        placeholder: placeholder ?? "Write your section…",
-      }),
+      TextStyle,
+      Color.configure({ types: ["textStyle"] }),
+      FontSize,
+      TextAlign.configure({ types: ["heading", "paragraph"], alignments: ["left", "center", "right"] }),
+      Link.configure({ openOnClick: false, autolink: true, linkOnPaste: true }),
+      Placeholder.configure({ placeholder: placeholder ?? "Write your section…" }),
     ],
     content: html?.trim() ? html : "<p></p>",
     editorProps: {
       attributes: {
         class: cn(
-          "max-w-none min-h-[140px] rounded-lg border border-border/60 bg-background px-3 py-2 text-sm leading-relaxed text-foreground focus-within:ring-2 focus-within:ring-ring/40 [&_.ProseMirror]:min-h-[120px] [&_.ProseMirror]:outline-none [&_p]:mb-2 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-primary [&_a]:underline",
+          "max-w-none min-h-[140px] rounded-lg border border-border/60 bg-background px-3 py-2 text-sm leading-relaxed text-foreground focus-within:ring-2 focus-within:ring-ring/40 [&_.ProseMirror]:min-h-[120px] [&_.ProseMirror]:outline-none [&_p]:mb-2 [&_h1]:my-3 [&_h1]:text-3xl [&_h1]:font-semibold [&_h2]:my-2 [&_h2]:text-2xl [&_h2]:font-semibold [&_h3]:my-2 [&_h3]:text-xl [&_h3]:font-semibold [&_h4]:my-2 [&_h4]:text-base [&_h4]:font-semibold [&_blockquote]:border-l-4 [&_blockquote]:border-border [&_blockquote]:pl-4 [&_blockquote]:italic [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-primary [&_a]:underline",
           className,
         ),
       },
@@ -56,58 +410,73 @@ export function ProposalRichText({ html, onChange, placeholder, className }: Pro
   }
 
   return (
-    <div className="space-y-2">
-      <div className="flex flex-wrap gap-1">
-        <Button
-          type="button"
-          variant={editor.isActive("bold") ? "secondary" : "ghost"}
-          size="sm"
-          className="h-8 px-2"
-          onClick={() => editor.chain().focus().toggleBold().run()}
-          aria-label="Bold"
-        >
-          <Bold className="h-4 w-4" />
-        </Button>
-        <Button
-          type="button"
-          variant={editor.isActive("italic") ? "secondary" : "ghost"}
-          size="sm"
-          className="h-8 px-2"
-          onClick={() => editor.chain().focus().toggleItalic().run()}
-          aria-label="Italic"
-        >
-          <Italic className="h-4 w-4" />
-        </Button>
-        <Button
-          type="button"
-          variant={editor.isActive("underline") ? "secondary" : "ghost"}
-          size="sm"
-          className="h-8 px-2"
-          onClick={() => editor.chain().focus().toggleUnderline().run()}
-          aria-label="Underline"
-        >
-          <UnderlineIcon className="h-4 w-4" />
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="h-8 px-2"
-          onClick={() => {
-            const prev = window.prompt("Link URL");
-            if (prev === null) return;
-            const url = prev.trim();
-            if (!url) {
-              editor.chain().focus().extendMarkRange("link").unsetLink().run();
-              return;
-            }
-            editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
-          }}
-          aria-label="Link"
-        >
-          <LinkIcon className="h-4 w-4" />
-        </Button>
-      </div>
+    <div className="relative">
+      <BubbleMenu
+        editor={editor}
+        tippyOptions={{ duration: 80, placement: "top", maxWidth: 720 }}
+        shouldShow={({ editor: ed, from, to }) => from !== to && ed.isEditable}
+      >
+        <div className="flex items-center gap-0.5 rounded-lg border border-zinc-800 bg-zinc-950/95 p-1 text-zinc-100 shadow-2xl backdrop-blur">
+          <HeadingPicker editor={editor} />
+          <ToolbarDivider />
+          <FontSizeControl editor={editor} />
+          <ToolbarDivider />
+          <ColorControl editor={editor} />
+          <ToolbarButton
+            active={editor.isActive("bold")}
+            onClick={() => editor.chain().focus().toggleBold().run()}
+            ariaLabel="Bold"
+          >
+            <Bold className="h-4 w-4" />
+          </ToolbarButton>
+          <ToolbarButton
+            active={editor.isActive("italic")}
+            onClick={() => editor.chain().focus().toggleItalic().run()}
+            ariaLabel="Italic"
+          >
+            <Italic className="h-4 w-4" />
+          </ToolbarButton>
+          <ToolbarButton
+            active={editor.isActive("underline")}
+            onClick={() => editor.chain().focus().toggleUnderline().run()}
+            ariaLabel="Underline"
+          >
+            <UnderlineIcon className="h-4 w-4" />
+          </ToolbarButton>
+          <ToolbarButton
+            active={editor.isActive("strike")}
+            onClick={() => editor.chain().focus().toggleStrike().run()}
+            ariaLabel="Strikethrough"
+          >
+            <Strikethrough className="h-4 w-4" />
+          </ToolbarButton>
+          <ToolbarDivider />
+          <AlignmentPicker editor={editor} />
+          <LinkButton editor={editor} />
+          <ToolbarDivider />
+          <ToolbarButton
+            active={editor.isActive("bulletList")}
+            onClick={() => editor.chain().focus().toggleBulletList().run()}
+            ariaLabel="Bulleted list"
+          >
+            <List className="h-4 w-4" />
+          </ToolbarButton>
+          <ToolbarButton
+            active={editor.isActive("orderedList")}
+            onClick={() => editor.chain().focus().toggleOrderedList().run()}
+            ariaLabel="Numbered list"
+          >
+            <ListOrdered className="h-4 w-4" />
+          </ToolbarButton>
+          <ToolbarButton
+            active={editor.isActive("blockquote")}
+            onClick={() => editor.chain().focus().toggleBlockquote().run()}
+            ariaLabel="Pull quote"
+          >
+            <Quote className="h-4 w-4" />
+          </ToolbarButton>
+        </div>
+      </BubbleMenu>
       <EditorContent editor={editor} />
     </div>
   );

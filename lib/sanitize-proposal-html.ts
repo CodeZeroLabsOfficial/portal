@@ -2,12 +2,47 @@ import DOMPurify from "isomorphic-dompurify";
 
 /**
  * Sanitize rich text from proposal text blocks before rendering in the browser or PDF shell.
+ *
+ * Inline `style` is allowed so TipTap inline marks (font size, color, alignment) survive
+ * the round-trip — but only the small CSS allowlist below is preserved. DOMPurify also
+ * strips dangerous values (`url()`, `expression()`, etc.) at parse time.
  */
+const ALLOWED_CSS_PROPERTIES = new Set([
+  "color",
+  "background-color",
+  "font-size",
+  "font-weight",
+  "font-style",
+  "text-align",
+  "text-decoration",
+  "line-height",
+  "letter-spacing",
+]);
+
+function filterStyleAttribute(value: string): string {
+  return value
+    .split(";")
+    .map((decl) => decl.trim())
+    .filter(Boolean)
+    .map((decl) => {
+      const idx = decl.indexOf(":");
+      if (idx <= 0) return null;
+      const prop = decl.slice(0, idx).trim().toLowerCase();
+      const val = decl.slice(idx + 1).trim();
+      if (!ALLOWED_CSS_PROPERTIES.has(prop)) return null;
+      if (/url\s*\(|expression\s*\(|javascript:/i.test(val)) return null;
+      return `${prop}: ${val}`;
+    })
+    .filter((decl): decl is string => decl !== null)
+    .join("; ");
+}
+
 export function sanitizeProposalHtml(html: string): string {
-  return DOMPurify.sanitize(html, {
+  const cleaned = DOMPurify.sanitize(html, {
     ALLOWED_TAGS: [
       "p",
       "br",
+      "span",
       "strong",
       "em",
       "u",
@@ -24,7 +59,17 @@ export function sanitizeProposalHtml(html: string): string {
       "code",
       "pre",
     ],
-    ALLOWED_ATTR: ["href", "title", "target", "rel", "class"],
+    ALLOWED_ATTR: ["href", "title", "target", "rel", "class", "style"],
     ALLOW_DATA_ATTR: false,
+    RETURN_DOM_FRAGMENT: false,
+    RETURN_DOM: false,
+  });
+
+  // Tighten the `style` attribute to our allowlist by post-processing the cleaned HTML.
+  // DOMPurify already neutralised script-y values; this pass enforces the property allowlist
+  // so future TipTap marks can't sneak through unsupported CSS.
+  return cleaned.replace(/ style="([^"]*)"/g, (_match, raw: string) => {
+    const safe = filterStyleAttribute(raw);
+    return safe ? ` style="${safe}"` : "";
   });
 }
