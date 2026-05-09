@@ -11,8 +11,8 @@ export const PROPOSAL_PUBLIC_SHELL_CLASSES =
   "proposal-print-root w-full py-12 sm:py-14 print:py-8";
 
 export const PROPOSAL_PUBLIC_CONTENT_CLASSES =
-  `${PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES} overflow-x-hidden print:max-w-none`;
+  `${PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES} print:max-w-none`;
 
-/** Horizontal escape from centered `PROPOSAL_PUBLIC_CONTENT_CLASSES`; keep inner prose inside `PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES`. */
+/** Horizontal escape from centered `PROPOSAL_PUBLIC_CONTENT_CLASSES`; keep prose inside `PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES`. Avoid `overflow-x-hidden` on ancestors or this clip will negate full-bleed. */
 export const PROPOSAL_SECTION_VIEWPORT_BLEED_CLASSES =
-  "relative left-1/2 w-[100vw] max-w-[100vw] -translate-x-1/2 overflow-x-hidden";
+  "relative w-screen shrink-0 max-w-[100vw] box-border ml-[calc(50%-50vw)] mr-[calc(50%-50vw)]";

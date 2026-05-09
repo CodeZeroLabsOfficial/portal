@@ -1866,7 +1866,7 @@ export function ProposalDocumentEditor({
         </TabsContent>
         <TabsContent
           value="preview"
-          className="mt-4 rounded-2xl border border-border/70 bg-muted/15 py-6 md:py-10"
+          className="mt-4 overflow-x-visible rounded-2xl border border-border/70 bg-muted/15 py-6 md:py-10"
         >
           <div className={PROPOSAL_PUBLIC_CONTENT_CLASSES}>
             <ProposalDocumentView document={doc} />

@@ -45,7 +45,7 @@ export function ProposalSectionShell({
   return (
     <div
       className={cn(
-        "proposal-section-shell relative isolate min-h-[220px] w-full overflow-hidden",
+        "proposal-section-shell relative isolate min-h-[220px] w-full min-w-0 overflow-hidden",
         surfaceChrome,
         shellRadius,
         prefersLight &&
