@@ -37,6 +37,26 @@ export interface BlockStyle {
   highlightColor?: string;
 }
 
+/** Full-bleed section backdrop (editable per section block). */
+export type SectionBackdropKind = "color" | "image" | "video";
+
+export interface SectionBackground {
+  kind: SectionBackdropKind;
+  /** Solid fill when `kind` is `color`. */
+  color?: string;
+  /** Image or looping video asset URL when `kind` is `image` | `video`. */
+  mediaUrl?: string;
+  /** Overlay tint. */
+  tintColor?: string;
+  tintStyle?: "normal" | "blend";
+  /** 0–100 */
+  tintOpacity?: number;
+  /** 0–24 — blur applied only to raster / footage background layers. */
+  blurStrength?: number;
+  /** Optional frosted inset behind stacked content on top of the backdrop. */
+  contentCard?: boolean;
+}
+
 export interface HeaderBlock extends ProposalBlockBase {
   type: "header";
   text: string;
@@ -238,6 +258,8 @@ export interface SectionBlock extends ProposalBlockBase {
   children: ProposalContentBlock[];
   /** Optional hero / layout styling (same shape as quote & plans blocks). */
   style?: BlockStyle;
+  /** Optional cinematic backdrop beneath nested content. */
+  background?: SectionBackground;
 }
 
 export type ProposalBlock =

@@ -42,6 +42,7 @@ export interface BlockToolbarProps {
   onOpenSettings?: () => void;
   style?: BlockStyle;
   onStyleChange?: (next: BlockStyle | undefined) => void;
+  backdropPickerSlot?: React.ReactNode;
 }
 
 export function BlockToolbar({
@@ -60,6 +61,7 @@ export function BlockToolbar({
   onOpenSettings,
   style,
   onStyleChange,
+  backdropPickerSlot,
 }: BlockToolbarProps) {
   const supportsStyle =
     (blockType === "pricing" || blockType === "packages" || blockType === "section") &&
@@ -162,6 +164,7 @@ export function BlockToolbar({
       {supportsStyle ? (
         <StylePickerTrigger style={style} onStyleChange={onStyleChange!} elevated={elevated} />
       ) : null}
+      {backdropPickerSlot ? backdropPickerSlot : null}
       {onOpenSettings ? (
         <ToolbarIconButton
           elevated={elevated}

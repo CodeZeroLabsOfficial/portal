@@ -15,6 +15,7 @@ import { ChevronDown } from "lucide-react";
 import { embedVideoSrc } from "@/components/proposal/embed-video";
 import { PricingBlockPublic } from "@/components/proposal/pricing-block-public";
 import { PackagesBlockPublic } from "@/components/proposal/packages-block-public";
+import { ProposalSectionShell } from "@/components/proposal/proposal-section-shell";
 
 export interface ProposalDocumentViewProps {
   document: ProposalDocument;
@@ -38,16 +39,18 @@ function BlockView({
     /** Grouped layouts render children sequentially with generous vertical rhythm. */
     case "section": {
       return (
-        <div className="space-y-10">
-          {block.children.map((c) => (
-            <BlockView
-              key={c.id}
-              block={c}
-              shareToken={shareToken}
-              publicSelections={publicSelections}
-            />
-          ))}
-        </div>
+        <ProposalSectionShell background={block.background}>
+          <div className="space-y-10">
+            {block.children.map((c) => (
+              <BlockView
+                key={c.id}
+                block={c}
+                shareToken={shareToken}
+                publicSelections={publicSelections}
+              />
+            ))}
+          </div>
+        </ProposalSectionShell>
       );
     }
     case "header":

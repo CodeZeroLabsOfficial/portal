@@ -65,6 +65,7 @@ import type {
   ProposalColumnChildBlock,
   ProposalContentBlock,
   ProposalDocument,
+  SectionBackground,
   SectionBlock,
   SignatureBlock,
   TextBlock,
@@ -72,6 +73,8 @@ import type {
 } from "@/types/proposal";
 import { ProposalRichText } from "@/components/proposal/proposal-rich-text";
 import { ProposalDocumentView } from "@/components/proposal/proposal-document-view";
+import { ProposalSectionShell } from "@/components/proposal/proposal-section-shell";
+import { ProposalSectionBackgroundPicker } from "@/components/proposal/proposal-section-background-picker";
 import {
   PackagesInlineEditor,
   PricingInlineEditor,
@@ -101,6 +104,7 @@ import {
 import { cn } from "@/lib/utils";
 import { escapeHtml } from "@/lib/escape-html";
 import { DEFAULT_HIGHLIGHT_COLOR, DEFAULT_PRIMARY_COLOR } from "@/lib/block-style";
+import { resolveSectionBackground } from "@/lib/section-background";
 
 function newId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `b-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -803,9 +807,19 @@ function SectionBlockFields({
     setChildren(arrayMove(children, oldIndex, newIndex));
   }
 
+  const backdropOn = resolveSectionBackground(block.background).active;
+
   return (
-    <div className="space-y-3">
-      <div className="-mx-1 rounded-xl border border-dashed border-border/65 bg-muted/20 px-1 py-1 sm:bg-muted/[0.35]">
+    <ProposalSectionShell background={block.background} variant="editor">
+      <div className="space-y-3">
+        <div
+          className={cn(
+            "-mx-1 rounded-xl px-1 py-1",
+            backdropOn
+              ? "border border-white/28 bg-transparent/35 backdrop-blur-[1px] sm:bg-transparent/45"
+              : "border border-dashed border-border/65 bg-muted/20 sm:bg-muted/[0.35]",
+          )}
+        >
         {children.length === 0 ? (
           <div className="flex flex-col items-center gap-5 py-14 text-center">
             <div className="max-w-[20rem] space-y-1">
@@ -933,6 +947,7 @@ function SectionBlockFields({
         }
       />
     </div>
+    </ProposalSectionShell>
   );
 }
 
@@ -1525,6 +1540,20 @@ export function ProposalDocumentEditor({
     setBlocks((prev) => prev.map((b) => (b.id === id ? next : b)));
   }
 
+  function patchSectionBackdrop(id: string, nextBackdrop: SectionBackground | undefined) {
+    setBlocks((prev) =>
+      prev.map((b) => {
+        if (b.id !== id || b.type !== "section") return b;
+        if (!nextBackdrop) {
+          const { background: _drop, ...rest } = b;
+          void _drop;
+          return rest as ProposalBlock;
+        }
+        return { ...b, background: nextBackdrop } as ProposalBlock;
+      }),
+    );
+  }
+
   function removeBlock(id: string) {
     setBlocks((prev) => prev.filter((b) => b.id !== id));
     setSelectedBlockId((current) => (current === id ? null : current));
@@ -1784,6 +1813,14 @@ export function ProposalDocumentEditor({
                               style={supportsStyle ? getBlockStyle(block) : undefined}
                               onStyleChange={
                                 supportsStyle ? (next) => applyBlockStyle(block.id, next) : undefined
+                              }
+                              backdropPickerSlot={
+                                block.type === "section" ? (
+                                  <ProposalSectionBackgroundPicker
+                                    background={block.background}
+                                    onChange={(next) => patchSectionBackdrop(block.id, next)}
+                                  />
+                                ) : undefined
                               }
                               trailingSlot={
                                 <Tooltip delayDuration={320}>

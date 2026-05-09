@@ -1,5 +1,10 @@
 import { z } from "zod";
-import type { ProposalBlock, ProposalContentBlock, ProposalDocument } from "@/types/proposal";
+import type {
+  ProposalBlock,
+  ProposalContentBlock,
+  ProposalDocument,
+  SectionBackground,
+} from "@/types/proposal";
 
 const idSchema = z.string().min(4);
 
@@ -46,6 +51,19 @@ const blockStyleSchema = z.object({
   variant: z.enum(["visual", "simple"]).optional(),
   primaryColor: colorString.optional(),
   highlightColor: colorString.optional(),
+});
+
+const relaxedUrl = z.string().max(8192).optional();
+
+const sectionBackgroundSchema = z.object({
+  kind: z.enum(["color", "image", "video"]),
+  color: colorString.optional(),
+  mediaUrl: relaxedUrl,
+  tintColor: colorString.optional(),
+  tintStyle: z.enum(["normal", "blend"]).optional(),
+  tintOpacity: z.number().finite().min(0).max(100).optional(),
+  blurStrength: z.number().finite().min(0).max(24).optional(),
+  contentCard: z.boolean().optional(),
 });
 
 const pricingBlockSchema = z.object({
@@ -296,6 +314,7 @@ const sectionBlockSchema = z.object({
   type: z.literal("section"),
   children: z.array(nestedBlockSchema).default([]),
   style: blockStyleSchema.optional(),
+  background: sectionBackgroundSchema.optional(),
 });
 
 const blockUnionSchema = z.discriminatedUnion("type", [
@@ -381,6 +400,11 @@ export function parseProposalDocument(input: unknown): ProposalDocument {
         }
         const styleLoose = o.style;
         const styleSafe = blockStyleSchema.safeParse(styleLoose);
+        let backgroundSafe: SectionBackground | undefined;
+        if (o.background && typeof o.background === "object") {
+          const bgSafe = sectionBackgroundSchema.safeParse(o.background);
+          if (bgSafe.success) backgroundSafe = bgSafe.data as SectionBackground;
+        }
         blocks.push({
           id,
           type: "section",
@@ -391,6 +415,7 @@ export function parseProposalDocument(input: unknown): ProposalDocument {
             styleSafe.data.highlightColor !== undefined)
             ? { style: styleSafe.data }
             : {}),
+          ...(backgroundSafe ? { background: backgroundSafe } : {}),
         });
       } else {
         const candidate =
