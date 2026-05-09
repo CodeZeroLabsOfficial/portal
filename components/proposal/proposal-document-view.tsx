@@ -316,7 +316,7 @@ export function ProposalDocumentView({
   return (
     <article
       style={style}
-      className={cn("w-full space-y-8", className)}
+      className={cn("w-full space-y-0", className)}
     >
       <div className={PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES}>
         {branding?.logoUrl ? (
@@ -335,7 +335,7 @@ export function ProposalDocumentView({
         </header>
       </div>
       {viewportSectionBleed ? (
-        <div className="flex w-full flex-col gap-10">
+        <div className="flex w-full flex-col gap-0">
           {document.blocks.map((block) => {
             const child = (
               <BlockView
