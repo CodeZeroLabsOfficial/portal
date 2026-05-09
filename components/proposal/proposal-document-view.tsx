@@ -259,7 +259,7 @@ export function ProposalDocumentView({
       className={cn("space-y-8", className)}
     >
       {branding?.logoUrl ? (
-        <div className="flex justify-start">
+        <div className="flex justify-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={branding.logoUrl} alt="" className="h-10 max-w-[200px] object-contain" />
         </div>

@@ -6,8 +6,7 @@ import { ProposalPasswordGate } from "@/components/proposal/proposal-password-ga
 import { ProposalPublicFooter } from "@/components/proposal/proposal-public-footer";
 import { isProposalUnlockedForRequest } from "@/lib/proposal-public-session";
 import {
-  PROPOSAL_PUBLIC_COLUMN_CLASSES,
-  PROPOSAL_PUBLIC_GUTTER_CLASSES,
+  PROPOSAL_PUBLIC_CONTENT_CLASSES,
   PROPOSAL_PUBLIC_SHELL_CLASSES,
 } from "@/lib/proposal-public-layout";
 import { getProposalRecordByShareToken } from "@/server/firestore/parse-proposal";
@@ -55,27 +54,25 @@ export default async function PublicProposalPage(props: PublicProposalPageProps)
 
   return (
     <main className={`${PROPOSAL_PUBLIC_SHELL_CLASSES} min-h-dvh`}>
-      <div className={PROPOSAL_PUBLIC_GUTTER_CLASSES}>
-        <div className={PROPOSAL_PUBLIC_COLUMN_CLASSES}>
-          {!unlocked ? (
-            <ProposalPasswordGate shareToken={proposal.shareToken} />
-          ) : (
-            <>
-              <ProposalAnalyticsTracker shareToken={proposal.shareToken} />
-              <ProposalDocumentView
-                document={proposal.document}
-                branding={proposal.branding}
-                shareToken={proposal.shareToken}
-                publicSelections={proposal.publicSelections}
-              />
-              <ProposalPublicFooter
-                shareToken={proposal.shareToken}
-                status={proposal.status}
-                acceptedByName={proposal.acceptedByName}
-              />
-            </>
-          )}
-        </div>
+      <div className={PROPOSAL_PUBLIC_CONTENT_CLASSES}>
+        {!unlocked ? (
+          <ProposalPasswordGate shareToken={proposal.shareToken} />
+        ) : (
+          <>
+            <ProposalAnalyticsTracker shareToken={proposal.shareToken} />
+            <ProposalDocumentView
+              document={proposal.document}
+              branding={proposal.branding}
+              shareToken={proposal.shareToken}
+              publicSelections={proposal.publicSelections}
+            />
+            <ProposalPublicFooter
+              shareToken={proposal.shareToken}
+              status={proposal.status}
+              acceptedByName={proposal.acceptedByName}
+            />
+          </>
+        )}
       </div>
     </main>
   );

@@ -46,7 +46,7 @@ export function ProposalPublicFooter({ shareToken, status, acceptedByName }: Pro
 
   return (
     <div className="mt-16 space-y-8 print:hidden">
-      <div className="flex justify-start">
+      <div className="flex justify-center">
         <Button type="button" variant="outline" className="gap-2" onClick={() => window.print()}>
           <Printer className="h-4 w-4" aria-hidden />
           Print / Save as PDF

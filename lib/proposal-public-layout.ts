@@ -1,11 +1,8 @@
 /**
- * Public proposal pages — asymmetric gutters for interactive proposals: modest left inset, wide right
- * whitespace, narrow reading column aligned to the start.
+ * Public proposal pages — centered column with equal left/right inset (wider than legacy px-4 / sm:px-6).
  */
 export const PROPOSAL_PUBLIC_SHELL_CLASSES =
   "proposal-print-root w-full py-12 sm:py-14 print:py-8";
 
-export const PROPOSAL_PUBLIC_GUTTER_CLASSES =
-  "pl-[clamp(1rem,7vw,6rem)] pr-[clamp(1.25rem,22vw,16rem)]";
-
-export const PROPOSAL_PUBLIC_COLUMN_CLASSES = "max-w-xl xl:max-w-2xl print:max-w-none";
+export const PROPOSAL_PUBLIC_CONTENT_CLASSES =
+  "mx-auto w-full max-w-6xl px-6 sm:px-10 lg:px-16 print:max-w-none";
