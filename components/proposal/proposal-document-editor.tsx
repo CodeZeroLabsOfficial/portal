@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import {
   closestCenter,
   DndContext,
@@ -19,10 +20,12 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
+  ArrowLeft,
   ChevronLeft,
   ChevronRight,
   Coins,
   CreditCard,
+  ExternalLink,
   GripVertical,
   Heading,
   Image as ImageIcon,
@@ -37,6 +40,7 @@ import {
   Send,
   SeparatorHorizontal,
   SquarePen,
+  TableProperties,
   Trash2,
   type LucideIcon,
 } from "lucide-react";
@@ -61,6 +65,7 @@ import {
   PricingInlineEditor,
 } from "@/components/proposal/proposal-block-inline-editors";
 import { BlockToolbar } from "@/components/proposal/proposal-block-toolbar";
+import { DeleteProposalTemplateButton } from "@/components/proposal/delete-proposal-template-button";
 import { saveProposalDocumentAction, sendProposalAction } from "@/server/actions/proposal-builder";
 import { saveProposalTemplateAction } from "@/server/actions/proposal-templates";
 import { Button } from "@/components/ui/button";
@@ -76,6 +81,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { escapeHtml } from "@/lib/escape-html";
+import { DEFAULT_HIGHLIGHT_COLOR, DEFAULT_PRIMARY_COLOR } from "@/lib/block-style";
 
 function newId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `b-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -111,6 +117,8 @@ function cloneBlockWithFreshIds(block: ProposalBlock): ProposalBlock {
 }
 
 interface BlockOption {
+  /** Stable key for React lists (multiple tiles may share `type`). */
+  id: string;
   type: ProposalBlock["type"];
   label: string;
   icon: LucideIcon;
@@ -118,25 +126,58 @@ interface BlockOption {
   accent: string;
   /** Tailwind background tint paired with the accent (used on the icon chip). */
   accentBg: string;
+  /** Custom block payload (same `type` as the default blueprint). */
+  factory?: () => ProposalBlock;
 }
 
-/** Six most-used blocks shown as the primary tile grid in the insert popover. */
+/** Pricing block presets: standard quote totals vs optional add-ons line-items table (Qwilr-style). */
+function createAddonsTableBlock(): ProposalBlock {
+  const id = newId();
+  return {
+    id,
+    type: "pricing",
+    currency: "aud",
+    title: "Add-ons",
+    allowQuantityEdit: true,
+    quantityUnitLabel: "Unit",
+    style: {
+      variant: "simple",
+      primaryColor: DEFAULT_PRIMARY_COLOR,
+      highlightColor: DEFAULT_HIGHLIGHT_COLOR,
+    },
+    lineItems: [
+      { id: newId(), label: "3 User Pack", unitAmountMinor: 4_900, quantity: 0 },
+      { id: newId(), label: "5 User Pack", unitAmountMinor: 7_900, quantity: 0 },
+    ],
+  };
+}
+
+/** Primary tile grid in the insert popover (includes Quote line items + optional add-ons table). */
 const PRIMARY_BLOCK_OPTIONS: BlockOption[] = [
-  { type: "text", label: "Text", icon: ScrollText, accent: "text-violet-500", accentBg: "bg-violet-500/10" },
-  { type: "header", label: "Heading", icon: Heading, accent: "text-sky-500", accentBg: "bg-sky-500/10" },
-  { type: "pricing", label: "Quote", icon: Coins, accent: "text-emerald-500", accentBg: "bg-emerald-500/10" },
-  { type: "packages", label: "Plans", icon: Package, accent: "text-amber-500", accentBg: "bg-amber-500/10" },
-  { type: "video", label: "Video", icon: MonitorPlay, accent: "text-rose-500", accentBg: "bg-rose-500/10" },
-  { type: "signature", label: "Accept", icon: PenLine, accent: "text-cyan-500", accentBg: "bg-cyan-500/10" },
+  { id: "text", type: "text", label: "Text", icon: ScrollText, accent: "text-violet-500", accentBg: "bg-violet-500/10" },
+  { id: "header", type: "header", label: "Heading", icon: Heading, accent: "text-sky-500", accentBg: "bg-sky-500/10" },
+  { id: "pricing-quote", type: "pricing", label: "Quote", icon: Coins, accent: "text-emerald-500", accentBg: "bg-emerald-500/10" },
+  {
+    id: "pricing-table",
+    type: "pricing",
+    label: "Table",
+    icon: TableProperties,
+    accent: "text-emerald-600",
+    accentBg: "bg-emerald-500/10",
+    factory: createAddonsTableBlock,
+  },
+  { id: "packages", type: "packages", label: "Plans", icon: Package, accent: "text-amber-500", accentBg: "bg-amber-500/10" },
+  { id: "video", type: "video", label: "Video", icon: MonitorPlay, accent: "text-rose-500", accentBg: "bg-rose-500/10" },
+  { id: "signature", type: "signature", label: "Accept", icon: PenLine, accent: "text-cyan-500", accentBg: "bg-cyan-500/10" },
 ];
 
 /** Secondary options revealed via "Add block from library". */
 const LIBRARY_BLOCK_OPTIONS: BlockOption[] = [
-  { type: "image", label: "Image", icon: ImageIcon, accent: "text-fuchsia-500", accentBg: "bg-fuchsia-500/10" },
-  { type: "form", label: "Form", icon: SquarePen, accent: "text-indigo-500", accentBg: "bg-indigo-500/10" },
-  { type: "embed", label: "Embed", icon: LayoutTemplate, accent: "text-teal-500", accentBg: "bg-teal-500/10" },
-  { type: "payment", label: "Payment", icon: CreditCard, accent: "text-orange-500", accentBg: "bg-orange-500/10" },
-  { type: "divider", label: "Divider", icon: SeparatorHorizontal, accent: "text-slate-400", accentBg: "bg-slate-500/10" },
+  { id: "image", type: "image", label: "Image", icon: ImageIcon, accent: "text-fuchsia-500", accentBg: "bg-fuchsia-500/10" },
+  { id: "form", type: "form", label: "Form", icon: SquarePen, accent: "text-indigo-500", accentBg: "bg-indigo-500/10" },
+  { id: "embed", type: "embed", label: "Embed", icon: LayoutTemplate, accent: "text-teal-500", accentBg: "bg-teal-500/10" },
+  { id: "payment", type: "payment", label: "Payment", icon: CreditCard, accent: "text-orange-500", accentBg: "bg-orange-500/10" },
+  { id: "divider", type: "divider", label: "Divider", icon: SeparatorHorizontal, accent: "text-slate-400", accentBg: "bg-slate-500/10" },
 ];
 
 function createBlock(type: ProposalBlock["type"]): ProposalBlock {
@@ -571,7 +612,7 @@ function AddBlockMenu({
   trigger,
   align = "center",
 }: {
-  onAdd: (type: ProposalBlock["type"]) => void;
+  onAdd: (block: ProposalBlock) => void;
   trigger: React.ReactNode;
   align?: "start" | "center" | "end";
 }) {
@@ -585,8 +626,8 @@ function AddBlockMenu({
     }
   }
 
-  function handlePick(type: ProposalBlock["type"]) {
-    onAdd(type);
+  function handlePick(option: BlockOption) {
+    onAdd(option.factory?.() ?? createBlock(option.type));
     setOpen(false);
   }
 
@@ -606,7 +647,7 @@ function AddBlockMenu({
             </p>
             <div className="grid grid-cols-3 gap-2">
               {PRIMARY_BLOCK_OPTIONS.map((opt) => (
-                <BlockTile key={opt.type} option={opt} onSelect={() => handlePick(opt.type)} />
+                <BlockTile key={opt.id} option={opt} onSelect={() => handlePick(opt)} />
               ))}
             </div>
             <button
@@ -632,7 +673,7 @@ function AddBlockMenu({
             </p>
             <div className="space-y-0.5">
               {LIBRARY_BLOCK_OPTIONS.map((opt) => (
-                <LibraryRow key={opt.type} option={opt} onSelect={() => handlePick(opt.type)} />
+                <LibraryRow key={opt.id} option={opt} onSelect={() => handlePick(opt)} />
               ))}
             </div>
           </div>
@@ -688,7 +729,7 @@ function InsertBlockSlot({
   onAdd,
   variant = "between",
 }: {
-  onAdd: (type: ProposalBlock["type"]) => void;
+  onAdd: (block: ProposalBlock) => void;
   variant?: "between" | "empty";
 }) {
   if (variant === "empty") {
@@ -696,7 +737,7 @@ function InsertBlockSlot({
       <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border/70 bg-muted/15 px-4 py-12 text-center">
         <p className="text-sm font-medium text-foreground">Start building your proposal</p>
         <p className="max-w-xs text-xs text-muted-foreground">
-          Add a Text, Heading, Quote, Plans, Video or Accept block to get started.
+          Add Text, Heading, Quote, optional add-ons Table, Plans, Video, or Accept blocks to get started.
         </p>
         <AddBlockMenu
           onAdd={onAdd}
@@ -870,11 +911,11 @@ export function ProposalDocumentEditor({
     setSelectedBlockId((current) => (current === id ? null : current));
   }
 
-  function addBlockAt(type: ProposalBlock["type"], index: number) {
+  function addBlockAt(block: ProposalBlock, index: number) {
     setBlocks((prev) => {
       const next = [...prev];
       const safeIndex = Math.max(0, Math.min(index, next.length));
-      next.splice(safeIndex, 0, createBlock(type));
+      next.splice(safeIndex, 0, block);
       return next;
     });
   }
@@ -927,19 +968,58 @@ export function ProposalDocumentEditor({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-2">
-        <Button type="button" disabled={saving} onClick={() => void save()} className="gap-2">
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          Save
-        </Button>
-        {!isTemplate ? (
-          <Button type="button" variant="secondary" disabled={sending} onClick={() => void send()} className="gap-2">
-            {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            Save & publish
+      {isTemplate && templateId ? (
+        <>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="-ml-2 gap-1.5 text-muted-foreground hover:text-foreground"
+              asChild
+            >
+              <Link href="/admin/proposals">
+                <ArrowLeft className="h-4 w-4" aria-hidden />
+                All templates
+              </Link>
+            </Button>
+            <Button variant="outline" size="sm" className="gap-2" asChild>
+              <Link
+                href={`/admin/proposals/templates/${templateId}/preview`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <ExternalLink className="h-4 w-4" aria-hidden />
+                Open public viewer
+              </Link>
+            </Button>
+            <div className="ml-auto flex flex-wrap items-center gap-2">
+              <Button type="button" size="sm" disabled={saving} onClick={() => void save()} className="gap-2">
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                Save
+              </Button>
+              <DeleteProposalTemplateButton
+                templateId={templateId}
+                templateName={templateName.trim() || initialTemplateName || "Untitled template"}
+              />
+            </div>
+          </div>
+          {message ? <span className="block text-sm text-muted-foreground">{message}</span> : null}
+        </>
+      ) : (
+        <div className="flex flex-wrap items-center gap-2">
+          <Button type="button" disabled={saving} onClick={() => void save()} className="gap-2">
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Save
           </Button>
-        ) : null}
-        {message ? <span className="text-sm text-muted-foreground">{message}</span> : null}
-      </div>
+          {!isTemplate ? (
+            <Button type="button" variant="secondary" disabled={sending} onClick={() => void send()} className="gap-2">
+              {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              Save & publish
+            </Button>
+          ) : null}
+          {message ? <span className="text-sm text-muted-foreground">{message}</span> : null}
+        </div>
+      )}
 
       {isTemplate ? (
         <div className="grid gap-4 rounded-xl border border-border/70 bg-muted/15 p-4 md:grid-cols-2">
@@ -990,12 +1070,12 @@ export function ProposalDocumentEditor({
         </TabsList>
         <TabsContent value="edit" className="mt-4">
           {blocks.length === 0 ? (
-            <InsertBlockSlot variant="empty" onAdd={(type) => addBlockAt(type, 0)} />
+            <InsertBlockSlot variant="empty" onAdd={(b) => addBlockAt(b, 0)} />
           ) : (
             <div onClick={() => setSelectedBlockId(null)}>
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
                 <SortableContext items={blocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
-                  <InsertBlockSlot onAdd={(type) => addBlockAt(type, 0)} />
+                  <InsertBlockSlot onAdd={(b) => addBlockAt(b, 0)} />
                   {blocks.map((block, idx) => {
                     const isSelected = selectedBlockId === block.id;
                     const supportsStyle = block.type === "pricing" || block.type === "packages";
@@ -1034,7 +1114,7 @@ export function ProposalDocumentEditor({
                             onRemove={() => removeBlock(block.id)}
                           />
                         </SortableShell>
-                        <InsertBlockSlot onAdd={(type) => addBlockAt(type, idx + 1)} />
+                        <InsertBlockSlot onAdd={(b) => addBlockAt(b, idx + 1)} />
                       </React.Fragment>
                     );
                   })}

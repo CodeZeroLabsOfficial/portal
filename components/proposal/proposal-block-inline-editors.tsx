@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatCurrencyAmount } from "@/lib/format";
 import { readableForeground, resolveBlockStyle, withAlpha } from "@/lib/block-style";
+import { effectivePricingLineQuantity } from "@/lib/pricing-line-quantity";
+import { Input } from "@/components/ui/input";
 
 function newId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `b-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -302,12 +304,12 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
         "relative overflow-hidden text-foreground transition-colors",
         isVisual
           ? "rounded-xl border bg-card p-4 shadow-sm md:p-6"
-          : "rounded-xl border border-border/70 bg-card px-4 py-3 md:px-5 md:py-4",
+          : "rounded-lg border border-[#E8EAED] bg-card px-0 py-4 shadow-none md:py-5",
       )}
       style={containerStyle}
     >
-      {/* Header: title + term toggle. The remove icon now lives in the floating toolbar. */}
-      <div className={cn(isVisual ? "text-center" : "text-left")}>
+      {/* Header: title + term toggle — section title always centered (matches Qwilr). */}
+      <div className="px-4 text-center md:px-6">
         <InlineText
           tone="light"
           value={block.title ?? ""}
@@ -367,8 +369,10 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
 
       <div
         className={cn(
-          "grid gap-3 sm:grid-cols-2 md:gap-3 lg:grid-cols-3 xl:grid-cols-4",
-          isVisual ? "mt-5" : "mt-4",
+          "mt-5 max-w-none overflow-x-auto sm:mt-6",
+          isVisual
+            ? "grid gap-3 sm:grid-cols-2 md:gap-3 lg:grid-cols-3 xl:grid-cols-4"
+            : "flex divide-x divide-[#E8EAED] border-t border-[#E8EAED]",
         )}
       >
         {tiers.map((tier) => (
@@ -378,6 +382,8 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
             term={term}
             currency={currency}
             highlightColor={style.highlightColor}
+            accentColor={style.primaryColor}
+            compactSimple={!isVisual}
             onChange={(next) => patchTier(tier.id, next)}
             onRemove={() => removeTier(tier.id)}
             onToggleRecommended={() => toggleRecommended(tier.id)}
@@ -387,7 +393,10 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
         <button
           type="button"
           onClick={addTier}
-          className="flex min-h-[200px] flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border/70 bg-muted/20 px-4 py-5 text-muted-foreground transition-colors hover:border-primary/60 hover:bg-primary/5 hover:text-foreground sm:min-h-[220px]"
+          className={cn(
+            "flex flex-col items-center justify-center gap-2 border-2 border-dashed border-border/70 bg-muted/20 px-3 py-8 text-muted-foreground transition-colors hover:border-primary/60 hover:bg-primary/5 hover:text-foreground",
+            isVisual ? "min-h-[200px] rounded-xl border-2 border-dashed sm:min-h-[220px]" : "min-w-[5.5rem] flex-shrink-0 sm:min-w-[6.5rem]",
+          )}
           aria-label="Add tier"
         >
           <span className="flex h-9 w-9 items-center justify-center rounded-full bg-foreground/5">
@@ -480,6 +489,8 @@ function TierCard({
   term,
   currency,
   highlightColor,
+  accentColor: accentProp,
+  compactSimple = false,
   onChange,
   onRemove,
   onToggleRecommended,
@@ -488,10 +499,15 @@ function TierCard({
   term: "12_months" | "24_months";
   currency: string;
   highlightColor: string;
+  /** Primary accent (badge / checks). Defaults to highlight colour. */
+  accentColor?: string;
+  /** Qwilr-style column: vertical rules, centred price, left feature list — no tinted card chrome. */
+  compactSimple?: boolean;
   onChange: (next: Partial<PackageTier>) => void;
   onRemove: () => void;
   onToggleRecommended: () => void;
 }) {
+  const accentColor = accentProp ?? highlightColor;
   const isRecommended = Boolean(tier.recommended);
   const monthlyMinor = term === "12_months" ? tier.monthlyCost12Minor ?? 0 : tier.monthlyCost24Minor ?? 0;
   const otherMonthlyMinor = term === "12_months" ? tier.monthlyCost24Minor ?? 0 : tier.monthlyCost12Minor ?? 0;
@@ -509,6 +525,209 @@ function TierCard({
   const cardStyle: React.CSSProperties | undefined = isRecommended
     ? { backgroundColor: highlightColor, color: recommendedFg, borderColor: highlightColor }
     : undefined;
+
+  if (compactSimple) {
+    const onAccentFg = readableForeground(accentColor);
+
+    return (
+      <div className="group/tier relative flex min-w-[min(100%,10rem)] flex-1 flex-col px-3 py-5 sm:min-w-[9rem] sm:px-4 md:px-5 lg:py-7">
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label="Remove tier"
+          className="absolute right-1 top-2 z-[1] rounded-md p-1 text-muted-foreground opacity-0 transition-opacity hover:text-red-500 group-hover/tier:opacity-100"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+
+        <div className="flex min-h-8 shrink-0 items-start justify-center sm:min-h-9">
+          <button
+            type="button"
+            onClick={onToggleRecommended}
+            aria-pressed={isRecommended}
+            aria-label={isRecommended ? "Unmark as recommended" : "Mark as recommended"}
+            className={cn(
+              "inline-flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-semibold transition-all",
+              isRecommended
+                ? ""
+                : "border border-dashed border-border bg-background text-muted-foreground opacity-0 group-hover/tier:opacity-100",
+            )}
+            style={
+              isRecommended ? { backgroundColor: accentColor, color: onAccentFg } : undefined
+            }
+          >
+            <Sparkles className="h-3 w-3 shrink-0" />
+            {isRecommended ? "Recommended" : "Mark recommended"}
+          </button>
+        </div>
+
+        <InlineText
+          tone="light"
+          value={tier.name}
+          placeholder="Tier name"
+          onChange={(v) => onChange({ name: v })}
+          ariaLabel="Tier name"
+          className="mt-2 block text-center text-sm font-semibold text-neutral-800 md:text-[15px]"
+          inputClassName="w-full text-center text-sm font-semibold text-neutral-800 md:text-[15px]"
+        />
+
+        <div className="mt-6 text-center md:mt-7">
+          <InlinePrice
+            tone="light"
+            minor={monthlyMinor}
+            currency={currency}
+            onChange={(v) =>
+              onChange(
+                term === "12_months" ? { monthlyCost12Minor: v } : { monthlyCost24Minor: v },
+              )
+            }
+            ariaLabel="Monthly price"
+            className="text-2xl font-bold tabular-nums tracking-tight text-neutral-900 md:text-[1.75rem]"
+          />
+          <p className="mt-1 text-[13px] text-neutral-500">
+            / month — {term === "12_months" ? "12-month plan" : "24-month plan"}
+          </p>
+        </div>
+
+        <p className="mt-2 text-center text-[11px] text-muted-foreground">
+          {otherTermLabel}:{" "}
+          <InlinePrice
+            tone="light"
+            minor={otherMonthlyMinor}
+            currency={currency}
+            onChange={(v) =>
+              onChange(
+                term === "12_months" ? { monthlyCost24Minor: v } : { monthlyCost12Minor: v },
+              )
+            }
+            ariaLabel="Other-term monthly price"
+            className="inline text-[11px] tabular-nums text-foreground"
+          />
+        </p>
+
+        {term === "12_months" ? (
+          <div className="mt-2 rounded-md border border-dashed border-border/80 px-2.5 py-2 text-left">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Upfront (12-month)
+            </p>
+            <InlinePrice
+              tone="light"
+              minor={tier.upfrontCost12Minor ?? 0}
+              currency={currency}
+              onChange={(v) => onChange({ upfrontCost12Minor: v > 0 ? v : undefined })}
+              ariaLabel="Upfront cost (12-month)"
+              className="mt-0.5 text-xs tabular-nums text-foreground"
+            />
+          </div>
+        ) : (
+          <p className="mt-2 text-center text-[11px] text-muted-foreground">&nbsp;</p>
+        )}
+
+        <div className="mt-5 flex items-center justify-center gap-2">
+          <InlineNumber
+            tone="light"
+            value={tier.includedUsers ?? 0}
+            onChange={(v) => onChange({ includedUsers: v })}
+            min={0}
+            step={1}
+            width="w-14"
+            ariaLabel="Included users shown to buyer"
+            className="rounded-md border border-[#E5E7EB] bg-white px-1 text-center text-neutral-900"
+          />
+          <span className="text-xs text-neutral-500">Users</span>
+        </div>
+
+        <div className="mt-6">
+          <Button type="button" disabled variant="outline" size="sm" className="h-9 w-full rounded-md border-neutral-300 text-[13px] font-semibold text-neutral-600 shadow-none">
+            Select
+          </Button>
+        </div>
+
+        <div className="mt-10 border-t border-[#EBEDF0] pt-6 text-left md:mt-12">
+          <ul className="space-y-2.5 text-[13px] leading-snug text-neutral-600">
+            <li className="flex items-center gap-2">
+              <Check className="size-[15px] shrink-0 text-neutral-400" style={{ color: accentColor }} aria-hidden />
+              <span className="min-w-0 flex-1 font-medium text-neutral-800">Included users</span>
+              <InlineNumber
+                tone="light"
+                value={tier.includedUsers ?? 0}
+                onChange={(v) => onChange({ includedUsers: v })}
+                min={0}
+                width="w-16"
+                ariaLabel="Included users"
+                className="text-foreground"
+              />
+            </li>
+            <li className="flex items-center gap-2">
+              <Check className="size-[15px] shrink-0 text-neutral-400" style={{ color: accentColor }} aria-hidden />
+              <span className="min-w-0 flex-1 font-medium text-neutral-800">Locations</span>
+              <InlineNumber
+                tone="light"
+                value={tier.includedLocations ?? 0}
+                onChange={(v) => onChange({ includedLocations: v })}
+                min={0}
+                width="w-16"
+                ariaLabel="Included locations"
+                className="text-foreground"
+              />
+            </li>
+            <li className="flex items-center gap-2">
+              <Check className="size-[15px] shrink-0 text-neutral-400" style={{ color: accentColor }} aria-hidden />
+              <span className="min-w-0 flex-1 font-medium text-neutral-800">Admins</span>
+              <InlineNumber
+                tone="light"
+                value={tier.includedAdmins ?? 0}
+                onChange={(v) => onChange({ includedAdmins: v })}
+                min={0}
+                width="w-16"
+                ariaLabel="Included admins"
+                className="text-foreground"
+              />
+            </li>
+            {features.map((feat, idx) => (
+              <li key={`${idx}-${feat}`} className="group/feat flex items-start gap-2">
+                <Check className="mt-0.5 size-[15px] shrink-0 text-neutral-400" style={{ color: accentColor }} aria-hidden />
+                <InlineText
+                  tone="light"
+                  value={feat}
+                  placeholder="Feature"
+                  onChange={(v) => {
+                    const next = [...features];
+                    if (v.trim()) next[idx] = v.trim();
+                    else next.splice(idx, 1);
+                    onChange({ features: next });
+                  }}
+                  ariaLabel={`Feature ${idx + 1}`}
+                  className="flex-1 text-[13px] text-foreground"
+                  inputClassName="w-full text-[13px]"
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    onChange({ features: features.filter((_, i) => i !== idx) })
+                  }
+                  aria-label="Remove feature"
+                  className="rounded p-0.5 text-muted-foreground opacity-0 hover:text-red-500 group-hover/feat:opacity-100"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </li>
+            ))}
+            <li>
+              <button
+                type="button"
+                onClick={() => onChange({ features: [...features, "New feature"] })}
+                className="flex items-center gap-2 text-[12px] text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <Plus className="h-3 w-3" />
+                Add a feature
+              </button>
+            </li>
+          </ul>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="group/tier flex flex-col">
@@ -784,12 +1003,13 @@ export interface PricingInlineEditorProps {
 export function PricingInlineEditor({ block, onChange }: PricingInlineEditorProps) {
   const lineItems = block.lineItems ?? [];
   const currency = (block.currency ?? "aud").toUpperCase();
+  const qtyUnitDraft = ((block.quantityUnitLabel ?? "").trim() || "Unit").slice(0, 40);
   const editable = block.allowQuantityEdit !== false;
   const style = resolveBlockStyle(block.style);
   const isVisual = style.variant === "visual";
 
   const previewTotal = lineItems.reduce((sum, li) => {
-    const q = typeof li.quantity === "number" && li.quantity > 0 ? li.quantity : 1;
+    const q = effectivePricingLineQuantity(li);
     return sum + Math.round(li.unitAmountMinor * q);
   }, 0);
 
@@ -810,13 +1030,18 @@ export function PricingInlineEditor({ block, onChange }: PricingInlineEditorProp
       ...block,
       lineItems: [
         ...lineItems,
-        { id: newId(), label: "Line item", unitAmountMinor: 0, quantity: 1 },
+        {
+          id: newId(),
+          label: "Line item",
+          unitAmountMinor: 0,
+          quantity: isVisual ? 1 : 0,
+        },
       ],
     });
   }
 
-  /** Visual variant tints the title bar with the primary colour; simple stays neutral. */
-  const headerStyle: React.CSSProperties | undefined = isVisual
+  /** Visual variant tints the title bar; Simple uses a solid primary bar with subtotal. */
+  const headerVisualStyle: React.CSSProperties | undefined = isVisual
     ? {
         background: withAlpha(style.primaryColor, 0.08),
         borderBottomColor: withAlpha(style.primaryColor, 0.2),
@@ -826,11 +1051,18 @@ export function PricingInlineEditor({ block, onChange }: PricingInlineEditorProp
     background: withAlpha(style.highlightColor, isVisual ? 0.15 : 0.08),
   };
 
+  const headerBarFg = readableForeground(style.primaryColor);
+  const headerSimpleSolid: React.CSSProperties = {
+    backgroundColor: style.primaryColor,
+    color: headerBarFg,
+    borderColor: style.primaryColor,
+  };
+
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-xl border bg-card shadow-sm",
-        isVisual ? "border-border/70" : "border-border/60",
+        "overflow-hidden border bg-card shadow-sm",
+        isVisual ? "rounded-xl border-border/70" : "rounded-lg border-[#E8EAED]",
       )}
       style={
         isVisual
@@ -838,58 +1070,139 @@ export function PricingInlineEditor({ block, onChange }: PricingInlineEditorProp
           : undefined
       }
     >
-      <div
-        className="flex items-center justify-between gap-2 border-b border-border/60 px-4 py-3"
-        style={headerStyle}
-      >
-        <InlineText
-          tone="light"
-          value={block.title ?? ""}
-          placeholder="Quote title"
-          onChange={(v) => patch({ title: v })}
-          ariaLabel="Quote title"
-          className="text-base font-semibold text-foreground"
-          inputClassName="text-base font-semibold text-foreground w-full"
-        />
-        <div className="flex items-center gap-2">
-          <label className="flex items-center gap-1 text-[11px] text-muted-foreground">
-            <input
-              type="checkbox"
-              checked={editable}
-              onChange={(e) => patch({ allowQuantityEdit: e.target.checked })}
-              className="h-3 w-3 accent-primary"
-            />
-            Editable qty
-          </label>
-          <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-            <InlineText
-              tone="light"
-              value={(block.currency ?? "aud").toLowerCase()}
-              onChange={(v) => patch({ currency: v.toLowerCase().slice(0, 3) })}
-              ariaLabel="Currency code"
-              className="text-[10px] uppercase"
-            />
-          </span>
+      {isVisual ? (
+        <div
+          className="flex items-center justify-between gap-2 border-b border-border/60 px-4 py-3"
+          style={headerVisualStyle}
+        >
+          <InlineText
+            tone="light"
+            value={block.title ?? ""}
+            placeholder="Quote title"
+            onChange={(v) => patch({ title: v })}
+            ariaLabel="Quote title"
+            className="text-base font-semibold text-foreground"
+            inputClassName="text-base font-semibold text-foreground w-full"
+          />
+          <div className="flex items-center gap-2">
+            <label className="flex items-center gap-1 text-[11px] text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={editable}
+                onChange={(e) => patch({ allowQuantityEdit: e.target.checked })}
+                className="h-3 w-3 accent-primary"
+              />
+              Editable qty
+            </label>
+            <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+              <InlineText
+                tone="light"
+                value={(block.currency ?? "aud").toLowerCase()}
+                onChange={(v) => patch({ currency: v.toLowerCase().slice(0, 3) })}
+                ariaLabel="Currency code"
+                className="text-[10px] uppercase"
+              />
+            </span>
+          </div>
         </div>
-      </div>
+      ) : (
+        <>
+          <div
+            className="flex flex-wrap items-center gap-3 rounded-t-lg border-b px-4 py-3"
+            style={headerSimpleSolid}
+          >
+            <div className="min-w-0 flex-1">
+              <InlineText
+                tone="dark"
+                value={block.title ?? ""}
+                placeholder="Section title"
+                onChange={(v) => patch({ title: v })}
+                ariaLabel="Table title"
+                className="text-base font-semibold"
+                inputClassName="text-base font-semibold w-full"
+              />
+            </div>
+            <div className="flex shrink-0 flex-col items-end gap-0.5 text-right">
+              <span className="text-[10px] font-semibold uppercase tracking-wide opacity-90">Subtotal</span>
+              <span className="text-lg font-semibold tabular-nums leading-none">
+                {formatCurrencyAmount(previewTotal, currency)}
+              </span>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-[#EBEDF0] bg-muted/15 px-4 py-2 text-[11px]">
+            <label className="flex cursor-pointer items-center gap-1.5 text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={editable}
+                onChange={(e) => patch({ allowQuantityEdit: e.target.checked })}
+                className="h-3 w-3 accent-primary"
+              />
+              Editable qty
+            </label>
+            <div className="flex items-center gap-1.5">
+              <span className="text-muted-foreground">Currency</span>
+              <InlineText
+                tone="light"
+                value={(block.currency ?? "aud").toLowerCase()}
+                onChange={(v) => patch({ currency: v.toLowerCase().slice(0, 3) })}
+                ariaLabel="Currency code"
+                className="rounded-md border border-border/60 px-2 py-0.5 uppercase"
+              />
+            </div>
+            <div className="flex flex-1 flex-wrap items-center gap-2 sm:justify-end">
+              <span className="text-muted-foreground">Qty label</span>
+              <Input
+                value={qtyUnitDraft}
+                onChange={(e) =>
+                  patch({
+                    quantityUnitLabel: e.target.value.trim() ? e.target.value.trim().slice(0, 40) : undefined,
+                  })
+                }
+                placeholder="Unit"
+                className="h-8 w-28 bg-background text-xs"
+                aria-label="Quantity suffix (e.g. Unit)"
+              />
+            </div>
+          </div>
+        </>
+      )}
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto bg-white">
         <table className="w-full min-w-[480px] text-sm">
           <thead>
-            <tr className="border-b border-border/60 bg-muted/20 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-              <th className="px-4 py-2">Item</th>
-              <th className="px-4 py-2 text-right">Unit</th>
-              <th className="px-4 py-2 text-right">Qty</th>
-              <th className="px-4 py-2 text-right">Line total</th>
-              <th className="w-8 px-2 py-2" />
+            <tr
+              className={cn(
+                "border-b text-left text-[11px] font-medium uppercase tracking-wide",
+                isVisual
+                  ? "border-border/60 bg-muted/20 text-muted-foreground"
+                  : "border-[#EBEDF0] bg-white text-neutral-500",
+              )}
+            >
+              <th className="px-4 py-2.5">{isVisual ? "Item" : "Description"}</th>
+              <th className="px-4 py-2.5 text-right">{isVisual ? "Unit" : "Item"}</th>
+              {editable ? <th className="px-4 py-2.5 text-right">{isVisual ? "Qty" : "Quantity"}</th> : null}
+              <th className="px-4 py-2.5 text-right">{isVisual ? "Line total" : "Price"}</th>
+              <th className="w-8 px-2 py-2.5" />
             </tr>
           </thead>
-          <tbody>
+          <tbody className={isVisual ? "[&_tr]:border-border/40 [&_tr]:border-b" : "[&_tr]:border-[#F0F2F5] [&_tr]:border-b"}>
             {lineItems.map((li) => {
-              const q = typeof li.quantity === "number" && li.quantity > 0 ? li.quantity : 1;
+              const q = effectivePricingLineQuantity(li);
               const lineTotal = Math.round(li.unitAmountMinor * q);
+              const qtyProps = editable
+                ? {
+                    tone: "light" as const,
+                    value: q,
+                    min: isVisual ? 1 : 0,
+                    step: 1,
+                    width: "w-16" as const,
+                    onChange: (v: number) => patchLine(li.id, { quantity: v }),
+                    ariaLabel: "Quantity" as const,
+                    className: "text-foreground" as const,
+                  }
+                : null;
               return (
-                <tr key={li.id} className="group/row border-b border-border/40">
+                <tr key={li.id} className="group/row">
                   <td className="px-4 py-3 align-middle">
                     <div className="flex flex-col gap-1">
                       <InlineText
@@ -898,10 +1211,15 @@ export function PricingInlineEditor({ block, onChange }: PricingInlineEditorProp
                         placeholder="Item label"
                         onChange={(v) => patchLine(li.id, { label: v })}
                         ariaLabel="Line item label"
-                        className="font-medium text-foreground"
-                        inputClassName="w-full font-medium text-foreground"
+                        className={cn("font-medium", isVisual ? "text-foreground" : "text-neutral-900")}
+                        inputClassName={cn("w-full font-medium", isVisual ? "text-foreground" : "text-neutral-900")}
                       />
-                      <label className="flex cursor-pointer items-center gap-2 text-[11px] text-muted-foreground">
+                      <label
+                        className={cn(
+                          "flex cursor-pointer items-center gap-2 text-[11px]",
+                          isVisual ? "text-muted-foreground" : "text-neutral-500",
+                        )}
+                      >
                         <input
                           type="checkbox"
                           checked={Boolean(li.optional)}
@@ -912,29 +1230,39 @@ export function PricingInlineEditor({ block, onChange }: PricingInlineEditorProp
                       </label>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-right align-middle">
+                  <td
+                    className={cn(
+                      "px-4 py-3 text-right align-middle tabular-nums",
+                      isVisual ? "" : "text-neutral-600",
+                    )}
+                  >
                     <InlinePrice
                       tone="light"
                       minor={li.unitAmountMinor}
                       currency={currency}
                       onChange={(v) => patchLine(li.id, { unitAmountMinor: v })}
                       ariaLabel="Unit price"
-                      className="text-foreground"
+                      className={isVisual ? "text-foreground" : "text-neutral-700"}
                     />
                   </td>
-                  <td className="px-4 py-3 text-right align-middle">
-                    <InlineNumber
-                      tone="light"
-                      value={q}
-                      min={1}
-                      step={1}
-                      width="w-16"
-                      onChange={(v) => patchLine(li.id, { quantity: v })}
-                      ariaLabel="Quantity"
-                      className="text-foreground"
-                    />
-                  </td>
-                  <td className="px-4 py-3 text-right align-middle tabular-nums font-medium text-foreground">
+                  {qtyProps ? (
+                    <td className="px-4 py-3 text-right align-middle">
+                      {!isVisual ? (
+                        <span className="inline-flex items-center justify-end gap-1.5 tabular-nums">
+                          <InlineNumber {...qtyProps} />
+                          <span className="text-xs text-neutral-500">{qtyUnitDraft}</span>
+                        </span>
+                      ) : (
+                        <InlineNumber {...qtyProps} />
+                      )}
+                    </td>
+                  ) : null}
+                  <td
+                    className={cn(
+                      "px-4 py-3 text-right align-middle tabular-nums font-medium",
+                      isVisual ? "text-foreground" : "text-neutral-900",
+                    )}
+                  >
                     {formatCurrencyAmount(lineTotal, currency)}
                   </td>
                   <td className="px-2 py-3 text-right align-middle">
@@ -951,7 +1279,7 @@ export function PricingInlineEditor({ block, onChange }: PricingInlineEditorProp
               );
             })}
             <tr>
-              <td colSpan={5} className="px-4 py-2">
+              <td colSpan={editable ? 5 : 4} className="px-4 py-2">
                 <button
                   type="button"
                   onClick={addLine}
@@ -963,17 +1291,22 @@ export function PricingInlineEditor({ block, onChange }: PricingInlineEditorProp
               </td>
             </tr>
           </tbody>
-          <tfoot>
-            <tr style={totalRowStyle}>
-              <td colSpan={3} className="px-4 py-3 text-right text-[13px] font-semibold text-foreground">
-                Total (preview)
-              </td>
-              <td className="px-4 py-3 text-right text-base font-semibold tabular-nums text-foreground">
-                {formatCurrencyAmount(previewTotal, currency)}
-              </td>
-              <td />
-            </tr>
-          </tfoot>
+          {isVisual ? (
+            <tfoot>
+              <tr style={totalRowStyle}>
+                <td
+                  colSpan={editable ? 3 : 2}
+                  className="px-4 py-3 text-right text-[13px] font-semibold text-foreground"
+                >
+                  Total (preview)
+                </td>
+                <td className="px-4 py-3 text-right text-base font-semibold tabular-nums text-foreground">
+                  {formatCurrencyAmount(previewTotal, currency)}
+                </td>
+                <td />
+              </tr>
+            </tfoot>
+          ) : null}
         </table>
       </div>
     </div>

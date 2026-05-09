@@ -35,7 +35,7 @@ const pricingLineSchema = z.object({
   id: idSchema,
   label: z.string().default(""),
   unitAmountMinor: z.number().finite(),
-  quantity: z.number().finite().positive().optional(),
+  quantity: z.number().finite().min(0).optional(),
   optional: z.boolean().optional(),
 });
 
@@ -57,6 +57,7 @@ const pricingBlockSchema = z.object({
   title: z.string().optional(),
   totalMinorUnits: z.number().finite().optional(),
   style: blockStyleSchema.optional(),
+  quantityUnitLabel: z.string().min(1).max(40).optional(),
 });
 
 function nonNegInt(v: unknown): number {
