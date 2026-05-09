@@ -98,8 +98,8 @@ export function PackagesBlockPublic({
       className={cn(
         "overflow-hidden text-foreground transition-colors",
         isVisual
-          ? "rounded-2xl border bg-card p-6 shadow-sm md:p-10"
-          : "rounded-xl border border-border/70 bg-card p-4 md:p-6",
+          ? "rounded-xl border bg-card p-4 shadow-sm md:p-6"
+          : "rounded-xl border border-border/70 bg-card px-4 py-3 md:px-5 md:py-4",
         !interactive && "opacity-95 ring-1 ring-dashed ring-border",
       )}
       style={containerStyle}
@@ -108,7 +108,7 @@ export function PackagesBlockPublic({
         <h2
           className={cn(
             "font-semibold tracking-tight text-foreground",
-            isVisual ? "text-xl md:text-2xl" : "text-lg md:text-xl",
+            isVisual ? "text-lg md:text-xl" : "text-base md:text-lg",
           )}
         >
           {title}
@@ -116,19 +116,19 @@ export function PackagesBlockPublic({
 
         <div
           className={cn(
-            "flex max-w-md",
-            isVisual ? "mx-auto mt-6 justify-center" : "mt-3",
+            "flex max-w-sm",
+            isVisual ? "mx-auto mt-3 justify-center" : "mt-2",
           )}
         >
           <div
-            className="inline-flex rounded-full p-1"
+            className="inline-flex rounded-full p-0.5"
             style={{ background: "rgba(15,23,42,0.04)", boxShadow: "inset 0 0 0 1px rgba(15,23,42,0.08)" }}
           >
             <button
               type="button"
               onClick={() => setTerm("12_months")}
               className={cn(
-                "rounded-full px-5 py-2 text-sm font-medium transition-colors",
+                "rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors md:px-4 md:text-sm",
                 term === "12_months" ? "shadow-sm" : "text-muted-foreground hover:text-foreground",
               )}
               style={
@@ -143,7 +143,7 @@ export function PackagesBlockPublic({
               type="button"
               onClick={() => setTerm("24_months")}
               className={cn(
-                "rounded-full px-5 py-2 text-sm font-medium transition-colors",
+                "rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors md:px-4 md:text-sm",
                 term === "24_months" ? "shadow-sm" : "text-muted-foreground hover:text-foreground",
               )}
               style={
@@ -159,15 +159,15 @@ export function PackagesBlockPublic({
       </div>
 
       {!interactive ? (
-        <p className="mt-4 text-center text-xs text-muted-foreground">
+        <p className="mt-2 text-center text-[11px] text-muted-foreground">
           Preview — selections are saved on the shared link only.
         </p>
       ) : null}
 
-      {error ? <p className="mt-4 text-center text-sm text-destructive">{error}</p> : null}
+      {error ? <p className="mt-2 text-center text-sm text-destructive">{error}</p> : null}
 
       {selectedTierId && interactive ? (
-        <p className="mt-4 text-center text-xs text-muted-foreground">
+        <p className="mt-2 text-center text-[11px] text-muted-foreground">
           If you switch term, click <strong className="text-foreground">Select</strong> again on your tier to save the
           update.
         </p>
@@ -175,8 +175,8 @@ export function PackagesBlockPublic({
 
       <div
         className={cn(
-          "grid gap-6 md:grid-cols-3 md:gap-4",
-          isVisual ? "mt-10" : "mt-6",
+          "grid gap-3 sm:grid-cols-2 md:gap-3 lg:grid-cols-3 xl:grid-cols-4",
+          isVisual ? "mt-5" : "mt-4",
         )}
       >
         {tiers.length === 0 ? (
@@ -214,26 +214,26 @@ export function PackagesBlockPublic({
             <div key={tier.id} className="flex flex-col">
               <div
                 className={cn(
-                  "relative flex min-h-[320px] flex-col rounded-2xl border p-5 shadow-md transition-colors md:min-h-[380px]",
-                  isRecommended ? "pt-6" : "border-border/70 bg-card text-foreground",
+                  "relative flex min-h-0 flex-col rounded-xl border p-3.5 shadow-sm transition-colors sm:p-4",
+                  isRecommended ? "pt-5 sm:pt-5" : "border-border/70 bg-card text-foreground",
                 )}
                 style={cardStyle}
               >
                 {isRecommended ? (
                   <div
-                    className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide shadow"
+                    className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide shadow"
                     style={{ backgroundColor: style.highlightColor, color: recommendedFg }}
                   >
                     Recommended
                   </div>
                 ) : null}
 
-                <h3 className={cn("text-lg font-semibold", isRecommended ? "" : "text-foreground")}>
+                <h3 className={cn("text-base font-semibold", isRecommended ? "" : "text-foreground")}>
                   {tier.name}
                 </h3>
 
                 <ul
-                  className={cn("mt-4 space-y-1.5 text-sm", isRecommended ? "" : "text-muted-foreground")}
+                  className={cn("mt-2 space-y-1 text-[13px] leading-snug", isRecommended ? "" : "text-muted-foreground")}
                   style={isRecommended ? { color: recommendedFg } : undefined}
                 >
                   <li>
@@ -249,19 +249,19 @@ export function PackagesBlockPublic({
                 </ul>
 
                 <div
-                  className="mt-6 border-t border-dashed pt-4"
+                  className="mt-3 border-t border-dashed pt-3"
                   style={{ borderColor: isRecommended ? recommendedFaintBorder : undefined }}
                 >
                   <p
                     className={cn(
-                      "text-3xl font-semibold tabular-nums",
+                      "text-xl font-semibold tabular-nums sm:text-2xl",
                       isRecommended ? "" : "text-foreground",
                     )}
                   >
                     {formatCurrencyAmount(mm, currency)}
                   </p>
                   <p
-                    className={cn("text-sm", isRecommended ? "" : "text-muted-foreground")}
+                    className={cn("text-xs", isRecommended ? "" : "text-muted-foreground")}
                     style={isRecommended ? { color: dimRecommendedFg } : undefined}
                   >
                     / month
@@ -269,7 +269,7 @@ export function PackagesBlockPublic({
 
                   {term === "12_months" ? (
                     <div
-                      className="mt-4 rounded-lg border border-dashed px-3 py-2.5 text-left"
+                      className="mt-2.5 rounded-md border border-dashed px-2.5 py-2 text-left"
                       style={{ borderColor: isRecommended ? recommendedFaintBorder : undefined }}
                     >
                       <p
@@ -284,7 +284,7 @@ export function PackagesBlockPublic({
                       {upfront !== undefined ? (
                         <p
                           className={cn(
-                            "mt-1 text-sm tabular-nums",
+                            "mt-0.5 text-xs tabular-nums",
                             isRecommended ? "" : "text-foreground",
                           )}
                         >
@@ -292,7 +292,7 @@ export function PackagesBlockPublic({
                         </p>
                       ) : (
                         <p
-                          className={cn("mt-1 text-sm", isRecommended ? "" : "text-muted-foreground")}
+                          className={cn("mt-0.5 text-xs", isRecommended ? "" : "text-muted-foreground")}
                           style={isRecommended ? { color: dimRecommendedFg } : undefined}
                         >
                           No upfront charge
@@ -301,7 +301,7 @@ export function PackagesBlockPublic({
                     </div>
                   ) : (
                     <p
-                      className={cn("mt-3 text-xs", isRecommended ? "" : "text-muted-foreground")}
+                      className={cn("mt-2 text-[11px]", isRecommended ? "" : "text-muted-foreground")}
                       style={isRecommended ? { color: dimRecommendedFg } : undefined}
                     >
                       24-month term · billed monthly
@@ -309,13 +309,14 @@ export function PackagesBlockPublic({
                   )}
                 </div>
 
-                <div className="mt-auto pt-6">
+                <div className="mt-auto pt-3">
                   <Button
                     type="button"
                     disabled={!interactive || busy}
                     onClick={() => void selectTier(tier.id)}
                     variant="outline"
-                    className={cn("w-full font-semibold")}
+                    size="sm"
+                    className={cn("w-full rounded-full font-semibold")}
                     style={{
                       ...(isRecommended
                         ? { backgroundColor: "#ffffff", color: "#0f172a", borderColor: "#ffffff" }
@@ -330,11 +331,11 @@ export function PackagesBlockPublic({
               </div>
 
               {(tier.features ?? []).length > 0 ? (
-                <ul className="mt-5 space-y-2.5">
+                <ul className="mt-2 space-y-1.5 border-t border-border/40 pt-2 sm:mt-3 sm:pt-2.5">
                   {(tier.features ?? []).map((feat) => (
-                    <li key={feat} className="flex gap-2 text-sm text-foreground">
+                    <li key={feat} className="flex gap-1.5 text-xs text-muted-foreground sm:text-[13px]">
                       <Check
-                        className="mt-0.5 h-4 w-4 shrink-0"
+                        className="mt-0.5 h-3.5 w-3.5 shrink-0 text-foreground/60 sm:h-4 sm:w-4"
                         style={{ color: style.highlightColor }}
                         aria-hidden
                       />

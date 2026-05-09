@@ -301,8 +301,8 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
       className={cn(
         "relative overflow-hidden text-foreground transition-colors",
         isVisual
-          ? "rounded-2xl border bg-card p-6 shadow-sm md:p-10"
-          : "rounded-xl border border-border/70 bg-card p-4 md:p-6",
+          ? "rounded-xl border bg-card p-4 shadow-sm md:p-6"
+          : "rounded-xl border border-border/70 bg-card px-4 py-3 md:px-5 md:py-4",
       )}
       style={containerStyle}
     >
@@ -316,22 +316,22 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
           ariaLabel="Section title"
           className={cn(
             "inline-block font-semibold tracking-tight text-foreground",
-            isVisual ? "text-xl md:text-2xl" : "text-lg md:text-xl",
+            isVisual ? "text-lg md:text-xl" : "text-base md:text-lg",
           )}
           inputClassName={cn(
             "inline-block font-semibold tracking-tight text-foreground",
-            isVisual ? "text-xl md:text-2xl text-center" : "text-lg md:text-xl",
+            isVisual ? "text-lg md:text-xl text-center" : "text-base md:text-lg",
           )}
         />
 
         <div
           className={cn(
-            "flex max-w-md",
-            isVisual ? "mx-auto mt-6 justify-center" : "mt-3",
+            "flex max-w-sm",
+            isVisual ? "mx-auto mt-3 justify-center" : "mt-2",
           )}
         >
           <div
-            className="inline-flex items-center gap-1 rounded-full p-1 ring-1"
+            className="inline-flex items-center gap-1 rounded-full p-0.5 ring-1"
             style={{ borderColor: "transparent", background: "rgba(15,23,42,0.04)", boxShadow: "inset 0 0 0 1px rgba(15,23,42,0.08)" }}
           >
             <TermPill
@@ -353,7 +353,7 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
           </div>
         </div>
 
-        <p className={cn("text-[11px] text-muted-foreground", isVisual ? "mt-3" : "mt-2")}>
+        <p className={cn("text-[11px] text-muted-foreground", isVisual ? "mt-2" : "mt-1.5")}>
           Currency:{" "}
           <InlineText
             tone="light"
@@ -367,8 +367,8 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
 
       <div
         className={cn(
-          "grid gap-6 md:grid-cols-3 md:gap-4",
-          isVisual ? "mt-10" : "mt-6",
+          "grid gap-3 sm:grid-cols-2 md:gap-3 lg:grid-cols-3 xl:grid-cols-4",
+          isVisual ? "mt-5" : "mt-4",
         )}
       >
         {tiers.map((tier) => (
@@ -387,13 +387,13 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
         <button
           type="button"
           onClick={addTier}
-          className="flex min-h-[320px] flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border/70 bg-muted/20 p-6 text-muted-foreground transition-colors hover:border-primary/60 hover:bg-primary/5 hover:text-foreground md:min-h-[380px]"
+          className="flex min-h-[200px] flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border/70 bg-muted/20 px-4 py-5 text-muted-foreground transition-colors hover:border-primary/60 hover:bg-primary/5 hover:text-foreground sm:min-h-[220px]"
           aria-label="Add tier"
         >
-          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-foreground/5">
-            <Plus className="h-5 w-5" />
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-foreground/5">
+            <Plus className="h-4 w-4" />
           </span>
-          <span className="text-sm font-medium">Add tier</span>
+          <span className="text-xs font-medium sm:text-sm">Add tier</span>
         </button>
       </div>
     </div>
@@ -443,7 +443,7 @@ function TermPill({
           }
         }}
         aria-label={ariaLabel}
-        className="rounded-full px-5 py-2 text-sm font-medium outline-none ring-2"
+        className="rounded-full px-3.5 py-1.5 text-xs font-medium outline-none ring-2 md:px-4 md:text-sm"
         style={{
           backgroundColor: activeColor,
           color: activeForeground,
@@ -460,7 +460,7 @@ function TermPill({
       onDoubleClick={() => setEditing(true)}
       aria-label={ariaLabel}
       className={cn(
-        "rounded-full px-5 py-2 text-sm font-medium transition-colors",
+        "rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors md:px-4 md:text-sm",
         active ? "shadow-sm" : "text-muted-foreground hover:text-foreground",
       )}
       style={
@@ -514,8 +514,8 @@ function TierCard({
     <div className="group/tier flex flex-col">
       <div
         className={cn(
-          "relative flex min-h-[320px] flex-col rounded-2xl border p-5 shadow-md transition-colors md:min-h-[380px]",
-          isRecommended ? "pt-6" : "border-border/70 bg-card text-foreground",
+          "relative flex min-h-0 flex-col rounded-xl border p-3.5 shadow-sm transition-colors sm:p-4",
+          isRecommended ? "pt-5 sm:pt-5" : "border-border/70 bg-card text-foreground",
         )}
         style={cardStyle}
       >
@@ -525,7 +525,7 @@ function TierCard({
           aria-pressed={isRecommended}
           aria-label={isRecommended ? "Unmark as recommended" : "Mark as recommended"}
           className={cn(
-            "absolute left-1/2 top-0 inline-flex -translate-x-1/2 -translate-y-1/2 items-center gap-1 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide shadow transition-all",
+            "absolute left-1/2 top-0 inline-flex -translate-x-1/2 -translate-y-1/2 items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide shadow transition-all",
             isRecommended
               ? ""
               : "border border-dashed border-border bg-background text-muted-foreground opacity-0 group-hover/tier:opacity-100",
@@ -557,16 +557,16 @@ function TierCard({
           placeholder="Tier name"
           onChange={(v) => onChange({ name: v })}
           ariaLabel="Tier name"
-          className={cn("text-lg font-semibold", isRecommended ? "" : "text-foreground")}
+          className={cn("text-base font-semibold", isRecommended ? "" : "text-foreground")}
           inputClassName={cn(
-            "w-full text-lg font-semibold",
+            "w-full text-base font-semibold",
             isRecommended ? "" : "text-foreground",
           )}
         />
 
         <ul
           className={cn(
-            "mt-4 space-y-1.5 text-sm",
+            "mt-2 space-y-1 text-[13px] leading-snug",
             isRecommended ? "" : "text-muted-foreground",
           )}
           style={isRecommended ? { color: recommendedFg } : undefined}
@@ -592,7 +592,7 @@ function TierCard({
         </ul>
 
         <div
-          className="mt-6 border-t border-dashed pt-4"
+          className="mt-3 border-t border-dashed pt-3"
           style={{ borderColor: isRecommended ? recommendedFaintBorder : undefined }}
         >
           <div className="flex items-baseline gap-1">
@@ -607,13 +607,13 @@ function TierCard({
               }
               ariaLabel="Monthly price"
               className={cn(
-                "text-3xl font-semibold tabular-nums",
+                "text-xl font-semibold tabular-nums sm:text-2xl",
                 isRecommended ? "" : "text-foreground",
               )}
             />
           </div>
           <p
-            className={cn("text-sm", isRecommended ? "" : "text-muted-foreground")}
+            className={cn("text-xs", isRecommended ? "" : "text-muted-foreground")}
             style={isRecommended ? { color: recommendedDimText } : undefined}
           >
             / month — {term === "12_months" ? "12-month plan" : "24-month plan"}
@@ -640,7 +640,7 @@ function TierCard({
 
           {term === "12_months" ? (
             <div
-              className="mt-4 rounded-lg border border-dashed px-3 py-2.5 text-left"
+              className="mt-2.5 rounded-md border border-dashed px-2.5 py-2 text-left"
               style={{ borderColor: isRecommended ? recommendedFaintBorder : undefined }}
             >
               <p
@@ -659,7 +659,7 @@ function TierCard({
                 onChange={(v) => onChange({ upfrontCost12Minor: v > 0 ? v : undefined })}
                 ariaLabel="Upfront cost (12-month)"
                 className={cn(
-                  "mt-1 text-sm tabular-nums",
+                  "mt-0.5 text-xs tabular-nums",
                   isRecommended ? "" : "text-foreground",
                 )}
               />
@@ -667,12 +667,13 @@ function TierCard({
           ) : null}
         </div>
 
-        <div className="mt-auto pt-6">
+        <div className="mt-auto pt-3">
           <Button
             type="button"
             disabled
             variant="outline"
-            className={cn("w-full font-semibold")}
+            size="sm"
+            className={cn("w-full rounded-full font-semibold")}
             style={
               isRecommended
                 ? { backgroundColor: "#ffffff", color: "#0f172a", borderColor: "#ffffff" }
@@ -684,14 +685,14 @@ function TierCard({
         </div>
       </div>
 
-      <ul className="mt-5 space-y-2.5">
+      <ul className="mt-2 space-y-1.5 border-t border-border/40 pt-2 sm:mt-3 sm:pt-2.5">
         {features.map((feat, idx) => (
           <li
             key={`${idx}-${feat}`}
-            className="group/feat flex items-start gap-2 text-sm text-foreground"
+            className="group/feat flex items-start gap-1.5 text-xs text-foreground sm:text-[13px]"
           >
             <Check
-              className="mt-0.5 h-4 w-4 shrink-0"
+              className="mt-0.5 h-3.5 w-3.5 shrink-0 text-foreground/60 sm:h-4 sm:w-4"
               style={{ color: highlightColor }}
               aria-hidden
             />
@@ -709,8 +710,8 @@ function TierCard({
                 onChange({ features: next });
               }}
               ariaLabel={`Feature ${idx + 1}`}
-              className="flex-1 text-sm text-foreground"
-              inputClassName="w-full text-sm text-foreground"
+              className="flex-1 text-xs text-foreground sm:text-[13px]"
+              inputClassName="w-full text-xs text-foreground sm:text-[13px]"
             />
             <button
               type="button"
