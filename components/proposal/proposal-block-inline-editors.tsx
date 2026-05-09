@@ -241,8 +241,6 @@ function InlinePrice({ minor, onChange, currency, ariaLabel, className, tone = "
 export interface PackagesInlineEditorProps {
   block: PackagesBlock;
   onChange: (next: PackagesBlock) => void;
-  /** Kept for backwards-compat with callers that don't yet use the floating toolbar. */
-  onRemove?: () => void;
 }
 
 function defaultTier(): PackageTier {
@@ -779,8 +777,6 @@ function StatRow({
 export interface PricingInlineEditorProps {
   block: PricingBlock;
   onChange: (next: PricingBlock) => void;
-  /** Kept for backwards-compat with callers that don't yet use the floating toolbar. */
-  onRemove?: () => void;
 }
 
 export function PricingInlineEditor({ block, onChange }: PricingInlineEditorProps) {

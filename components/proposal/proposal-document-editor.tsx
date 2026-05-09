@@ -48,7 +48,6 @@ import {
   SquarePen,
   Star,
   TableProperties,
-  Trash2,
   type LucideIcon,
 } from "lucide-react";
 import type {
@@ -536,11 +535,9 @@ function patchColumnStacks(
 function NestedColumnBlockFields({
   block,
   onChange,
-  onRemove,
 }: {
   block: ProposalColumnChildBlock;
   onChange: (next: ProposalColumnChildBlock) => void;
-  onRemove: () => void;
 }) {
   const patchNested = (next: ProposalBlock) => onChange(next as ProposalColumnChildBlock);
   switch (block.type) {
@@ -560,7 +557,6 @@ function NestedColumnBlockFields({
         <BlockFields
           block={block as ProposalBlock}
           onChange={patchNested}
-          onRemove={onRemove}
         />
       );
   }
@@ -569,11 +565,9 @@ function NestedColumnBlockFields({
 function ColumnsBlockFields({
   block,
   onChange,
-  onRemove,
 }: {
   block: ColumnsBlock;
   onChange: (next: ColumnsBlock) => void;
-  onRemove: () => void;
 }) {
   function ColumnPane({
     label,
@@ -657,7 +651,7 @@ function ColumnsBlockFields({
                   Remove
                 </Button>
               </div>
-              <NestedColumnBlockFields block={child} onChange={(n) => updateChild(child.id, n)} onRemove={() => removeAt(child.id)} />
+              <NestedColumnBlockFields block={child} onChange={(n) => updateChild(child.id, n)} />
             </div>
           ))
         )}
@@ -671,9 +665,6 @@ function ColumnsBlockFields({
         <ColumnPane label="Left column" side="left" stack={block.left} />
         <ColumnPane label="Right column" side="right" stack={block.right} />
       </div>
-      <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={onRemove}>
-        <Trash2 className="mr-1 h-4 w-4" /> Remove columns block
-      </Button>
     </div>
   );
 }
@@ -681,11 +672,9 @@ function ColumnsBlockFields({
 function AccordionBlockEditor({
   block,
   onChange,
-  onRemove,
 }: {
   block: AccordionBlock;
   onChange: (next: AccordionBlock) => void;
-  onRemove: () => void;
 }) {
   return (
     <div className="space-y-4">
@@ -739,9 +728,6 @@ function AccordionBlockEditor({
       >
         Add panel
       </Button>
-      <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={onRemove}>
-        <Trash2 className="mr-1 h-4 w-4" /> Remove accordion block
-      </Button>
     </div>
   );
 }
@@ -749,7 +735,6 @@ function AccordionBlockEditor({
 function SectionBlockFields({
   block,
   onChange,
-  onRemove,
   selectedBlockId,
   onSelectBlock,
   getBlockStyle,
@@ -757,7 +742,6 @@ function SectionBlockFields({
 }: {
   block: SectionBlock;
   onChange: (next: ProposalBlock) => void;
-  onRemove: () => void;
   selectedBlockId: string | null;
   onSelectBlock: (id: string | null) => void;
   getBlockStyle: (b: ProposalBlock) => BlockStyle | undefined;
@@ -905,7 +889,6 @@ function SectionBlockFields({
                       <BlockFields
                         block={child}
                         onChange={(next) => updateChild(child.id, next as ProposalContentBlock)}
-                        onRemove={() => removeChild(child.id)}
                         getBlockStyle={getBlockStyle}
                         applyBlockStyle={applyBlockStyle}
                       />
@@ -940,20 +923,15 @@ function SectionBlockFields({
           </div>
         ) : null}
       </div>
-      <div className="flex flex-wrap gap-2">
-        <SectionInsertMenu
-          onAdd={(b) => addChildAt(b, children.length)}
-          trigger={
-            <Button type="button" variant="outline" size="sm" className="gap-2">
-              <Plus className="h-4 w-4" aria-hidden /> Insert from gallery
-              <ChevronDown className="h-4 w-4 opacity-75" aria-hidden />
-            </Button>
-          }
-        />
-        <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={onRemove}>
-          <Trash2 className="mr-1 h-4 w-4" /> Remove grouped layout
-        </Button>
-      </div>
+      <SectionInsertMenu
+        onAdd={(b) => addChildAt(b, children.length)}
+        trigger={
+          <Button type="button" variant="outline" size="sm" className="gap-2">
+            <Plus className="h-4 w-4" aria-hidden /> Insert from gallery
+            <ChevronDown className="h-4 w-4 opacity-75" aria-hidden />
+          </Button>
+        }
+      />
     </div>
   );
 }
@@ -961,14 +939,12 @@ function SectionBlockFields({
 function BlockFields({
   block,
   onChange,
-  onRemove,
   selection,
   getBlockStyle,
   applyBlockStyle,
 }: {
   block: ProposalBlock;
   onChange: (next: ProposalBlock) => void;
-  onRemove: () => void;
   selection?: { selectedId: string | null; onSelect: (id: string | null) => void };
   getBlockStyle?: (b: ProposalBlock) => BlockStyle | undefined;
   applyBlockStyle?: (id: string, style: BlockStyle | undefined) => void;
@@ -982,7 +958,6 @@ function BlockFields({
         <SectionBlockFields
           block={b}
           onChange={patch}
-          onRemove={onRemove}
           selectedBlockId={selection?.selectedId ?? null}
           onSelectBlock={selection?.onSelect ?? (() => {})}
           getBlockStyle={getBlockStyle ?? (() => undefined)}
@@ -1002,9 +977,6 @@ function BlockFields({
               onChange={(e) => patch({ ...b, text: e.target.value })}
             />
           </div>
-          <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={onRemove}>
-            <Trash2 className="mr-1 h-4 w-4" /> Remove block
-          </Button>
         </div>
       );
     }
@@ -1017,9 +989,6 @@ function BlockFields({
             html={b.html ?? (b.body ? `<p>${escapeHtml(b.body)}</p>` : "<p></p>")}
             onChange={(html) => patch({ ...b, html, body: undefined })}
           />
-          <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={onRemove}>
-            <Trash2 className="mr-1 h-4 w-4" /> Remove block
-          </Button>
         </div>
       );
     }
@@ -1039,9 +1008,6 @@ function BlockFields({
             <Label>Caption</Label>
             <Input value={b.caption ?? ""} onChange={(e) => patch({ ...b, caption: e.target.value })} />
           </div>
-          <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={onRemove}>
-            <Trash2 className="mr-1 h-4 w-4" /> Remove block
-          </Button>
         </div>
       );
     }
@@ -1053,19 +1019,16 @@ function BlockFields({
             <Label>Video URL (YouTube or Vimeo)</Label>
             <Input value={b.url} onChange={(e) => patch({ ...b, url: e.target.value })} placeholder="https://…" />
           </div>
-          <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={onRemove}>
-            <Trash2 className="mr-1 h-4 w-4" /> Remove block
-          </Button>
         </div>
       );
     }
     case "pricing": {
       const b = block as PricingBlock;
-      return <PricingInlineEditor block={b} onChange={patch} onRemove={onRemove} />;
+      return <PricingInlineEditor block={b} onChange={patch} />;
     }
     case "packages": {
       const b = block as PackagesBlock;
-      return <PackagesInlineEditor block={b} onChange={patch} onRemove={onRemove} />;
+      return <PackagesInlineEditor block={b} onChange={patch} />;
     }
     case "form": {
       const b = block as FormBlock;
@@ -1139,9 +1102,6 @@ function BlockFields({
               </Button>
             </div>
           ))}
-          <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={onRemove}>
-            <Trash2 className="mr-1 h-4 w-4" /> Remove block
-          </Button>
         </div>
       );
     }
@@ -1181,9 +1141,6 @@ function BlockFields({
             />
             Require terms acknowledgment
           </label>
-          <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={onRemove}>
-            <Trash2 className="mr-1 h-4 w-4" /> Remove block
-          </Button>
         </div>
       );
     }
@@ -1198,9 +1155,6 @@ function BlockFields({
             <Label>Title</Label>
             <Input value={block.title ?? ""} onChange={(e) => patch({ ...block, title: e.target.value })} />
           </div>
-          <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={onRemove}>
-            <Trash2 className="mr-1 h-4 w-4" /> Remove block
-          </Button>
         </div>
       );
     case "payment":
@@ -1218,17 +1172,14 @@ function BlockFields({
               placeholder="price_…"
             />
           </div>
-          <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={onRemove}>
-            <Trash2 className="mr-1 h-4 w-4" /> Remove block
-          </Button>
         </div>
       );
     case "columns": {
       const col = block as ColumnsBlock;
-      return <ColumnsBlockFields block={col} onChange={(next) => patch(next)} onRemove={onRemove} />;
+      return <ColumnsBlockFields block={col} onChange={(next) => patch(next)} />;
     }
     case "accordion":
-      return <AccordionBlockEditor block={block as AccordionBlock} onChange={(next) => patch(next)} onRemove={onRemove} />;
+      return <AccordionBlockEditor block={block as AccordionBlock} onChange={(next) => patch(next)} />;
     case "icon": {
       const ic = block as IconBlock;
       return (
@@ -1246,21 +1197,11 @@ function BlockFields({
             <Label>Caption</Label>
             <Input value={ic.label ?? ""} onChange={(e) => patch({ ...ic, label: e.target.value })} placeholder="Displayed beside icon" />
           </div>
-          <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={onRemove}>
-            <Trash2 className="mr-1 h-4 w-4" /> Remove block
-          </Button>
         </div>
       );
     }
     case "divider":
-      return (
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-sm text-muted-foreground">Horizontal rule — visible on the public page.</p>
-          <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={onRemove}>
-            <Trash2 className="mr-1 h-4 w-4" /> Remove
-          </Button>
-        </div>
-      );
+      return <p className="text-sm text-muted-foreground">Horizontal rule — visible on the public page.</p>;
     default:
       return null;
   }
@@ -1832,7 +1773,7 @@ export function ProposalDocumentEditor({
                                       : "other"
                               }
                               deleteLabel={
-                                block.type === "section" ? "Remove grouped layout" : "Delete block"
+                                block.type === "section" ? "Remove section" : "Delete block"
                               }
                               canMoveUp={idx > 0}
                               canMoveDown={idx < blocks.length - 1}
@@ -1868,7 +1809,6 @@ export function ProposalDocumentEditor({
                           <BlockFields
                             block={block}
                             onChange={(next) => updateBlock(block.id, next)}
-                            onRemove={() => removeBlock(block.id)}
                             selection={{
                               selectedId: selectedBlockId,
                               onSelect: setSelectedBlockId,
