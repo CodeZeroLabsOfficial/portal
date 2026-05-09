@@ -11,6 +11,7 @@ import type {
 import { sanitizeProposalHtml } from "@/lib/sanitize-proposal-html";
 import { WORKSPACE_DETAIL_PAGE_TITLE_CLASS } from "@/lib/workspace-page-typography";
 import { cn } from "@/lib/utils";
+import { ChevronDown } from "lucide-react";
 import { embedVideoSrc } from "@/components/proposal/embed-video";
 import { PricingBlockPublic } from "@/components/proposal/pricing-block-public";
 import { PackagesBlockPublic } from "@/components/proposal/packages-block-public";
@@ -34,7 +35,7 @@ function BlockView({
   publicSelections?: ProposalPublicSelections;
 }) {
   switch (block.type) {
-    /** Legacy `section` payloads (pre-flatten) — render children as a seamless vertical stack. */
+    /** Grouped layouts render children sequentially with generous vertical rhythm. */
     case "section": {
       return (
         <div className="space-y-10">
@@ -214,6 +215,62 @@ function BlockView({
           <p className="mt-1 text-muted-foreground">Your team can connect Stripe to collect payment in a follow-up step.</p>
         </div>
       );
+    case "columns": {
+      return (
+        <div className="grid gap-x-10 gap-y-10 md:grid-cols-2">
+          <div className="space-y-10">
+            {(block.left ?? []).map((c) => (
+              <BlockView key={c.id} block={c} shareToken={shareToken} publicSelections={publicSelections} />
+            ))}
+          </div>
+          <div className="space-y-10">
+            {(block.right ?? []).map((c) => (
+              <BlockView key={c.id} block={c} shareToken={shareToken} publicSelections={publicSelections} />
+            ))}
+          </div>
+        </div>
+      );
+    }
+    case "accordion": {
+      return (
+        <div className="overflow-hidden rounded-2xl border border-border/70">
+          {(block.panels ?? []).map((p) => (
+            <details key={p.id} className="group border-b border-border/60 px-5 py-3 last:border-b-0 [&_summary::-webkit-details-marker]:hidden">
+              <summary className="flex cursor-pointer select-none items-center justify-between gap-4 text-base font-semibold text-foreground">
+                <span>{p.title.trim() ? p.title : "Untitled panel"}</span>
+                <ChevronDown className="h-5 w-5 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden />
+              </summary>
+              <div className="mt-4 pb-1">
+                {p.html?.trim() ? (
+                  <div
+                    className={cn(
+                      "proposal-rich-text max-w-none text-sm leading-relaxed text-muted-foreground",
+                      "[&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-3",
+                    )}
+                    dangerouslySetInnerHTML={{ __html: sanitizeProposalHtml(p.html) }}
+                  />
+                ) : (
+                  <div className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">{p.body ?? ""}</div>
+                )}
+              </div>
+            </details>
+          ))}
+        </div>
+      );
+    }
+    case "icon": {
+      if (!block.emoji && !block.label) return null;
+      return (
+        <div className="flex flex-wrap items-center gap-3 py-2">
+          {block.emoji ? (
+            <span className="text-4xl leading-none" aria-hidden>
+              {block.emoji}
+            </span>
+          ) : null}
+          {block.label ? <span className="text-xl font-semibold tracking-tight text-foreground">{block.label}</span> : null}
+        </div>
+      );
+    }
     case "divider":
       return <hr className="border-border/80" />;
     default:

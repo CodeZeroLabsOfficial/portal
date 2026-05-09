@@ -8,6 +8,8 @@ import {
   KeyboardSensor,
   PointerSensor,
   type DragEndEvent,
+  type DraggableAttributes,
+  type DraggableSyntheticListeners,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
@@ -21,6 +23,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import {
   ArrowLeft,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Coins,
@@ -29,7 +32,10 @@ import {
   GripVertical,
   Heading,
   Image as ImageIcon,
+  Layers,
+  LayoutGrid,
   LayoutTemplate,
+  ListTree,
   Loader2,
   MonitorPlay,
   Package,
@@ -40,21 +46,27 @@ import {
   Send,
   SeparatorHorizontal,
   SquarePen,
+  Star,
   TableProperties,
   Trash2,
   type LucideIcon,
 } from "lucide-react";
 import type {
+  AccordionBlock,
   BlockStyle,
+  ColumnsBlock,
   FormBlock,
   FormField,
   HeaderBlock,
+  IconBlock,
   ImageBlock,
   PackagesBlock,
   PricingBlock,
   ProposalBlock,
+  ProposalColumnChildBlock,
   ProposalContentBlock,
   ProposalDocument,
+  SectionBlock,
   SignatureBlock,
   TextBlock,
   VideoBlock,
@@ -84,6 +96,7 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
@@ -118,6 +131,24 @@ function cloneBlockWithFreshIds(block: ProposalBlock): ProposalBlock {
         id: newId(),
         fields: (block.fields ?? []).map((f) => ({ ...f, id: newId(), options: f.options ? [...f.options] : undefined })),
       };
+    case "accordion":
+      return {
+        ...block,
+        id: newId(),
+        panels: block.panels.map((p) => ({
+          ...p,
+          id: newId(),
+        })),
+      };
+    case "columns":
+      return {
+        ...block,
+        id: newId(),
+        left: block.left.map((c) => cloneBlockWithFreshIds(c as ProposalBlock) as ProposalColumnChildBlock),
+        right: block.right.map((c) => cloneBlockWithFreshIds(c as ProposalBlock) as ProposalColumnChildBlock),
+      };
+    case "icon":
+      return { ...block, id: newId() };
     case "section":
       return {
         ...block,
@@ -182,6 +213,60 @@ const PRIMARY_BLOCK_OPTIONS: BlockOption[] = [
   { id: "packages", type: "packages", label: "Plans", icon: Package, accent: "text-amber-500", accentBg: "bg-amber-500/10" },
   { id: "video", type: "video", label: "Video", icon: MonitorPlay, accent: "text-rose-500", accentBg: "bg-rose-500/10" },
   { id: "signature", type: "signature", label: "Accept", icon: PenLine, accent: "text-cyan-500", accentBg: "bg-cyan-500/10" },
+];
+
+/** First tile when inserting at document root — groups nested blocks below. */
+const SECTION_PRIMARY_OPTION: BlockOption = {
+  id: "section",
+  type: "section",
+  label: "Section",
+  icon: Layers,
+  accent: "text-sky-500",
+  accentBg: "bg-sky-500/10",
+};
+
+const DOCUMENT_PRIMARY_BLOCK_OPTIONS: BlockOption[] = [SECTION_PRIMARY_OPTION, ...PRIMARY_BLOCK_OPTIONS];
+
+/** Insert menu surfaced inside grouped sections — focused layout pieces. */
+const SECTION_INSERT_OPTIONS: BlockOption[] = [
+  { id: "sx-text", type: "text", label: "Text", icon: ScrollText, accent: "text-violet-500", accentBg: "bg-violet-500/10" },
+  { id: "sx-heading", type: "header", label: "Heading", icon: Heading, accent: "text-sky-500", accentBg: "bg-sky-500/10" },
+  { id: "sx-image", type: "image", label: "Image", icon: ImageIcon, accent: "text-fuchsia-500", accentBg: "bg-fuchsia-500/10" },
+  {
+    id: "sx-columns",
+    type: "columns",
+    label: "Columns",
+    icon: LayoutGrid,
+    accent: "text-cyan-500",
+    accentBg: "bg-cyan-500/10",
+  },
+  {
+    id: "sx-table",
+    type: "pricing",
+    label: "Table",
+    icon: TableProperties,
+    accent: "text-emerald-600",
+    accentBg: "bg-emerald-500/10",
+    factory: createAddonsTableBlock,
+  },
+  {
+    id: "sx-accordion",
+    type: "accordion",
+    label: "Accordion",
+    icon: ListTree,
+    accent: "text-amber-600",
+    accentBg: "bg-amber-500/10",
+  },
+  { id: "sx-video", type: "video", label: "Video", icon: MonitorPlay, accent: "text-rose-500", accentBg: "bg-rose-500/10" },
+  { id: "sx-icon", type: "icon", label: "Icon", icon: Star, accent: "text-yellow-500", accentBg: "bg-yellow-500/10" },
+  {
+    id: "sx-divider",
+    type: "divider",
+    label: "Divider",
+    icon: SeparatorHorizontal,
+    accent: "text-slate-400",
+    accentBg: "bg-slate-500/10",
+  },
 ];
 
 /** Secondary options revealed via "Add block from library". */
@@ -284,31 +369,55 @@ function createBlock(type: ProposalBlock["type"]): ProposalBlock {
       return { id, type: "payment", label: "Secure payment" };
     case "divider":
       return { id, type: "divider" };
+    case "accordion":
+      return {
+        id,
+        type: "accordion",
+        panels: [{ id: newId(), title: "Question", html: "<p></p>" }],
+      };
+    case "columns":
+      return {
+        id,
+        type: "columns",
+        left: [],
+        right: [],
+      };
+    case "icon":
+      return { id, type: "icon", emoji: "✨", label: "" };
     case "section":
-      /** Legacy shape — flattening prefers plain content blocks at the root instead. */
-      return { id, type: "text", html: "<p></p>" };
+      return {
+        id,
+        type: "section",
+        children: [],
+        style: {
+          variant: "simple",
+          primaryColor: DEFAULT_PRIMARY_COLOR,
+          highlightColor: DEFAULT_HIGHLIGHT_COLOR,
+        },
+      };
     default:
       return { id, type: "text", html: "<p></p>" };
   }
 }
 
 /**
- * Seamless sortable row: hover or selection reveals a grip (drag handle) plus the floating toolbar (move / duplicate / delete).
+ * Seamless sortable row: hover or selection shows a unified pill toolbar; drag handle mounts inside the toolbar.
  */
 function SortableShell({
   id,
   children,
-  label,
   selected,
   onSelect,
   toolbar,
 }: {
   id: string;
   children: React.ReactNode;
-  label: string;
   selected: boolean;
   onSelect: () => void;
-  toolbar?: React.ReactNode;
+  toolbar?: (ctx: {
+    dragAttributes: DraggableAttributes;
+    dragListeners: DraggableSyntheticListeners;
+  }) => React.ReactNode;
 }) {
   const [hovered, setHovered] = React.useState(false);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
@@ -326,9 +435,11 @@ function SortableShell({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {showToolbar ? (
-        <div className="pointer-events-none absolute left-11 top-0 z-30 -translate-y-full pb-1">
-          <div className="pointer-events-auto">{toolbar}</div>
+      {showToolbar && toolbar ? (
+        <div className="pointer-events-none absolute left-0 top-0 z-30 -translate-y-full pb-1.5 pt-2 sm:left-2">
+          <div className="pointer-events-auto">
+            {toolbar({ dragAttributes: attributes, dragListeners: listeners })}
+          </div>
         </div>
       ) : null}
       <div
@@ -338,36 +449,510 @@ function SortableShell({
           onSelect();
         }}
         className={cn(
-          "relative flex gap-3 rounded-lg py-2.5 pl-1 pr-1 transition-colors [-webkit-tap-highlight-color:transparent] sm:gap-3",
-          selected ? "bg-sky-500/10 ring-1 ring-sky-400/35 dark:bg-sky-500/[0.07]" : "hover:bg-muted/40",
+          "relative rounded-lg px-2 py-2.5 transition-colors [-webkit-tap-highlight-color:transparent]",
+          selected ? "bg-primary/[0.07] ring-1 ring-primary/35 dark:bg-primary/10" : "hover:bg-muted/45",
         )}
       >
-        <div className="flex shrink-0 flex-col pt-0.5" onClick={(e) => e.stopPropagation()}>
-          <Tooltip delayDuration={350}>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                className={cn(
-                  "touch-none rounded-md border border-transparent p-1.5 text-muted-foreground transition-[opacity,box-shadow,color,background-color,border-color]",
-                  "hover:bg-background hover:text-foreground hover:shadow-sm",
-                  "opacity-0 group-hover/sortblock:opacity-100 focus-visible:opacity-100",
-                  (selected || showToolbar) && "opacity-100",
-                  selected && "border-border/60 bg-background/90 shadow-sm",
-                )}
-                aria-label={`Reorder ${label}`}
-                {...attributes}
-                {...listeners}
-              >
-                <GripVertical className="h-4 w-4" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="right" className="max-w-[13rem] text-xs leading-snug">
-              <p className="font-medium">Drag to move</p>
-              <p className="mt-1 text-muted-foreground">Hover the block for the toolbar above</p>
-            </TooltipContent>
-          </Tooltip>
+        <div className="min-w-0">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function DarkInsertRow({
+  icon: Icon,
+  label,
+  onPick,
+}: {
+  icon: LucideIcon;
+  label: string;
+  onPick: () => void;
+}) {
+  return (
+    <DropdownMenuItem
+      className="cursor-pointer gap-2 rounded-none px-3 py-2.5 text-sm text-zinc-100 focus:bg-white/10 focus:text-white"
+      onClick={(e: React.MouseEvent) => {
+        e.preventDefault();
+        onPick();
+      }}
+      onSelect={(e: Event) => e.preventDefault()}
+    >
+      <span className="flex h-7 w-7 items-center justify-center rounded-md bg-white/5 ring-1 ring-white/10">
+        <Icon className="h-3.5 w-3.5 text-zinc-100" aria-hidden />
+      </span>
+      {label}
+    </DropdownMenuItem>
+  );
+}
+
+function SectionInsertMenu({
+  onAdd,
+  trigger,
+  align = "start",
+}: {
+  onAdd: (block: ProposalBlock) => void;
+  trigger: React.ReactNode;
+  align?: "start" | "center" | "end";
+}) {
+  const [open, setOpen] = React.useState(false);
+
+  function pick(option: BlockOption) {
+    onAdd(option.factory?.() ?? createBlock(option.type));
+    setOpen(false);
+  }
+
+  return (
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
+      <DropdownMenuContent
+        align={align}
+        sideOffset={6}
+        className={cn(
+          "w-[min(260px,calc(100vw-2rem))] border-zinc-800 bg-zinc-950 p-0 text-zinc-100 shadow-xl",
+        )}
+        onCloseAutoFocus={(event: Event) => event.preventDefault()}
+      >
+        <p className="border-b border-zinc-900 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+          Content
+        </p>
+        <div className="py-1">
+          {SECTION_INSERT_OPTIONS.map((opt) => (
+            <DarkInsertRow key={opt.id} icon={opt.icon} label={opt.label} onPick={() => pick(opt)} />
+          ))}
         </div>
-        <div className="min-w-0 flex-1">{children}</div>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function patchColumnStacks(
+  cols: ColumnsBlock,
+  side: "left" | "right",
+  stack: ProposalColumnChildBlock[],
+): ColumnsBlock {
+  return side === "left" ? { ...cols, left: stack } : { ...cols, right: stack };
+}
+
+function NestedColumnBlockFields({
+  block,
+  onChange,
+  onRemove,
+}: {
+  block: ProposalColumnChildBlock;
+  onChange: (next: ProposalColumnChildBlock) => void;
+  onRemove: () => void;
+}) {
+  const patchNested = (next: ProposalBlock) => onChange(next as ProposalColumnChildBlock);
+  switch (block.type) {
+    case "header":
+      return <Input value={block.text} onChange={(e) => patchNested({ ...block, text: e.target.value })} />;
+    case "text":
+      return (
+        <ProposalRichText
+          html={block.html ?? (block.body ? `<p>${escapeHtml(block.body)}</p>` : "<p></p>")}
+          onChange={(html) => patchNested({ ...block, html, body: undefined })}
+        />
+      );
+    case "divider":
+      return <p className="text-[11px] text-muted-foreground">Divider — visible when published.</p>;
+    default:
+      return (
+        <BlockFields
+          block={block as ProposalBlock}
+          onChange={patchNested}
+          onRemove={onRemove}
+        />
+      );
+  }
+}
+
+function ColumnsBlockFields({
+  block,
+  onChange,
+  onRemove,
+}: {
+  block: ColumnsBlock;
+  onChange: (next: ColumnsBlock) => void;
+  onRemove: () => void;
+}) {
+  function ColumnPane({
+    label,
+    side,
+    stack,
+  }: {
+    label: string;
+    side: "left" | "right";
+    stack: ProposalColumnChildBlock[];
+  }) {
+    function setStack(next: ProposalColumnChildBlock[]) {
+      onChange(patchColumnStacks(block, side, next));
+    }
+    function addToEnd(insert: ProposalBlock) {
+      const n = [...stack];
+      n.push(insert as ProposalColumnChildBlock);
+      setStack(n);
+    }
+    function removeAt(id: string) {
+      setStack(stack.filter((x) => x.id !== id));
+    }
+    function move(id: string, dir: -1 | 1) {
+      const i = stack.findIndex((x) => x.id === id);
+      if (i < 0) return;
+      const t = i + dir;
+      if (t < 0 || t >= stack.length) return;
+      setStack(arrayMove(stack, i, t));
+    }
+    function dup(id: string) {
+      const i = stack.findIndex((x) => x.id === id);
+      if (i < 0) return;
+      const cloned = cloneBlockWithFreshIds(stack[i] as ProposalBlock) as ProposalColumnChildBlock;
+      const n = [...stack];
+      n.splice(i + 1, 0, cloned);
+      setStack(n);
+    }
+    function updateChild(childId: string, nextChild: ProposalColumnChildBlock) {
+      setStack(stack.map((c) => (c.id === childId ? nextChild : c)));
+    }
+    return (
+      <div className="space-y-2 rounded-xl border border-border/60 bg-background/40 p-3">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
+          <SectionInsertMenu
+            align="end"
+            onAdd={addToEnd}
+            trigger={
+              <Button type="button" variant="outline" size="sm" className="h-7 gap-1 text-[11px]">
+                <Plus className="h-3.5 w-3.5" /> Add
+              </Button>
+            }
+          />
+        </div>
+        {stack.length === 0 ? (
+          <p className="rounded-lg border border-dashed border-border/60 px-3 py-6 text-center text-xs text-muted-foreground">
+            Empty · use{" "}
+            <span className="font-semibold">
+              Content → Add · <kbd className="rounded bg-muted px-1 font-sans text-[11px]">+</kbd>
+            </span>
+          </p>
+        ) : (
+          stack.map((child, idx) => (
+            <div key={child.id} className="rounded-lg border border-border/50 bg-card/60 p-2">
+              <div className="mb-2 flex flex-wrap gap-1">
+                <Button type="button" variant="ghost" size="sm" disabled={idx === 0} onClick={() => move(child.id, -1)}>
+                  Up
+                </Button>
+                <Button type="button" variant="ghost" size="sm" disabled={idx === stack.length - 1} onClick={() => move(child.id, 1)}>
+                  Down
+                </Button>
+                <Button type="button" variant="ghost" size="sm" onClick={() => dup(child.id)}>
+                  Duplicate
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive"
+                  onClick={() => removeAt(child.id)}
+                >
+                  Remove
+                </Button>
+              </div>
+              <NestedColumnBlockFields block={child} onChange={(n) => updateChild(child.id, n)} onRemove={() => removeAt(child.id)} />
+            </div>
+          ))
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-3 md:grid-cols-2">
+        <ColumnPane label="Left column" side="left" stack={block.left} />
+        <ColumnPane label="Right column" side="right" stack={block.right} />
+      </div>
+      <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={onRemove}>
+        <Trash2 className="mr-1 h-4 w-4" /> Remove columns block
+      </Button>
+    </div>
+  );
+}
+
+function AccordionBlockEditor({
+  block,
+  onChange,
+  onRemove,
+}: {
+  block: AccordionBlock;
+  onChange: (next: AccordionBlock) => void;
+  onRemove: () => void;
+}) {
+  return (
+    <div className="space-y-4">
+      {(block.panels ?? []).map((p, idx) => (
+        <div key={p.id} className="space-y-2 rounded-xl border border-border/60 bg-muted/15 p-3">
+          <Label className="text-xs">Heading</Label>
+          <Input
+            value={p.title}
+            onChange={(e) =>
+              onChange({
+                ...block,
+                panels: block.panels.map((x, i) => (i === idx ? { ...x, title: e.target.value } : x)),
+              })
+            }
+          />
+          <ProposalRichText
+            html={p.html ?? (p.body ? `<p>${escapeHtml(p.body)}</p>` : "<p></p>")}
+            onChange={(html) =>
+              onChange({
+                ...block,
+                panels: block.panels.map((x, i) => (i === idx ? { ...x, html, body: undefined } : x)),
+              })
+            }
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-destructive"
+            onClick={() =>
+              onChange({
+                ...block,
+                panels: block.panels.filter((x) => x.id !== p.id),
+              })
+            }
+          >
+            Remove panel
+          </Button>
+        </div>
+      ))}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() =>
+          onChange({
+            ...block,
+            panels: [...(block.panels ?? []), { id: newId(), title: "New panel", html: "<p></p>" }],
+          })
+        }
+      >
+        Add panel
+      </Button>
+      <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={onRemove}>
+        <Trash2 className="mr-1 h-4 w-4" /> Remove accordion block
+      </Button>
+    </div>
+  );
+}
+
+function SectionBlockFields({
+  block,
+  onChange,
+  onRemove,
+  selectedBlockId,
+  onSelectBlock,
+  getBlockStyle,
+  applyBlockStyle,
+}: {
+  block: SectionBlock;
+  onChange: (next: ProposalBlock) => void;
+  onRemove: () => void;
+  selectedBlockId: string | null;
+  onSelectBlock: (id: string | null) => void;
+  getBlockStyle: (b: ProposalBlock) => BlockStyle | undefined;
+  applyBlockStyle: (id: string, style: BlockStyle | undefined) => void;
+}) {
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  const children = block.children;
+
+  function setChildren(nextChildren: ProposalContentBlock[]) {
+    onChange({ ...block, children: nextChildren });
+  }
+
+  function updateChild(childId: string, next: ProposalContentBlock) {
+    setChildren(children.map((c) => (c.id === childId ? next : c)));
+  }
+
+  function removeChild(childId: string) {
+    setChildren(children.filter((c) => c.id !== childId));
+    if (selectedBlockId === childId) onSelectBlock(null);
+  }
+
+  function addChildAt(b: ProposalBlock, index: number) {
+    const c = b as ProposalContentBlock;
+    const next = [...children];
+    next.splice(Math.max(0, Math.min(index, next.length)), 0, c);
+    setChildren(next);
+  }
+
+  function moveChild(childId: string, direction: -1 | 1) {
+    const idx = children.findIndex((c) => c.id === childId);
+    if (idx < 0) return;
+    const target = idx + direction;
+    if (target < 0 || target >= children.length) return;
+    setChildren(arrayMove(children, idx, target));
+  }
+
+  function duplicateChild(childId: string) {
+    const idx = children.findIndex((c) => c.id === childId);
+    if (idx < 0) return;
+    const cloned = cloneBlockWithFreshIds(children[idx] as ProposalBlock) as ProposalContentBlock;
+    const next = [...children];
+    next.splice(idx + 1, 0, cloned);
+    setChildren(next);
+    onSelectBlock(null);
+  }
+
+  function onChildDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = children.findIndex((c) => c.id === active.id);
+    const newIndex = children.findIndex((c) => c.id === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+    setChildren(arrayMove(children, oldIndex, newIndex));
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="-mx-1 rounded-xl border border-dashed border-border/65 bg-muted/20 px-1 py-1 sm:bg-muted/[0.35]">
+        {children.length === 0 ? (
+          <div className="flex flex-col items-center gap-5 py-14 text-center">
+            <div className="max-w-[20rem] space-y-1">
+              <p className="text-sm font-medium text-foreground">Group related content</p>
+              <p className="text-xs text-muted-foreground">
+                Stack headings, prose, visuals, layouts, accordion panels, and more — then reorder with the contextual
+                controls.
+              </p>
+            </div>
+            <SectionInsertMenu
+              align="center"
+              onAdd={(b) => addChildAt(b, 0)}
+              trigger={
+                <button
+                  type="button"
+                  className={cn(
+                    "inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold text-white shadow-lg",
+                    "bg-gradient-to-b from-zinc-800 to-black ring-2 ring-black/85 transition-colors hover:to-zinc-900",
+                  )}
+                >
+                  <Plus className="h-4 w-4" /> Content
+                </button>
+              }
+            />
+          </div>
+        ) : (
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onChildDragEnd}>
+            <SortableContext items={children.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+              <InsertBlockSlot context="section" variant="between" onAdd={(b) => addChildAt(b, 0)} />
+              {children.map((child, idx) => {
+                const isSelected = selectedBlockId === child.id;
+                const supportsStyle = child.type === "pricing" || child.type === "packages";
+                return (
+                  <React.Fragment key={child.id}>
+                    <SortableShell
+                      id={child.id}
+                      selected={isSelected}
+                      onSelect={() => onSelectBlock(child.id)}
+                      toolbar={({ dragAttributes, dragListeners }) => (
+                        <BlockToolbar
+                          appearance="surface"
+                          blockType={
+                            child.type === "pricing"
+                              ? "pricing"
+                              : child.type === "packages"
+                                ? "packages"
+                                : "other"
+                          }
+                          canMoveUp={idx > 0}
+                          canMoveDown={idx < children.length - 1}
+                          onMoveUp={() => moveChild(child.id, -1)}
+                          onMoveDown={() => moveChild(child.id, 1)}
+                          onDuplicate={() => duplicateChild(child.id)}
+                          deleteLabel="Remove block"
+                          onDelete={() => removeChild(child.id)}
+                          style={supportsStyle ? getBlockStyle(child) : undefined}
+                          onStyleChange={
+                            supportsStyle ? (next) => applyBlockStyle(child.id, next) : undefined
+                          }
+                          trailingSlot={
+                            <Tooltip delayDuration={320}>
+                              <TooltipTrigger asChild>
+                                <button
+                                  type="button"
+                                  className="touch-none inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+                                  aria-label={`Reorder ${blockLabel(child.type)}`}
+                                  {...dragAttributes}
+                                  {...dragListeners}
+                                >
+                                  <GripVertical className="h-4 w-4" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent side="bottom" className="text-xs">
+                                Drag to move · arrows nudge precisely
+                              </TooltipContent>
+                            </Tooltip>
+                          }
+                        />
+                      )}
+                    >
+                      <BlockFields
+                        block={child}
+                        onChange={(next) => updateChild(child.id, next as ProposalContentBlock)}
+                        onRemove={() => removeChild(child.id)}
+                        getBlockStyle={getBlockStyle}
+                        applyBlockStyle={applyBlockStyle}
+                      />
+                    </SortableShell>
+                    <InsertBlockSlot context="section" variant="between" onAdd={(b) => addChildAt(b, idx + 1)} />
+                  </React.Fragment>
+                );
+              })}
+            </SortableContext>
+          </DndContext>
+        )}
+        {children.length > 0 ? (
+          <div className="flex flex-wrap items-center justify-center gap-2 pb-8 pt-4 text-center text-xs text-muted-foreground">
+            <span className="inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-muted px-1.5 font-semibold text-foreground ring-1 ring-border">
+              +
+            </span>
+            <span>
+              Add content · use the luminous (+) row markers or browse the&nbsp;
+              <SectionInsertMenu
+                align="center"
+                onAdd={(b) => addChildAt(b, children.length)}
+                trigger={
+                  <button
+                    type="button"
+                    className="font-semibold underline decoration-muted-foreground/80 underline-offset-2 hover:text-foreground"
+                  >
+                    Browse Content gallery
+                  </button>
+                }
+              />
+            </span>
+          </div>
+        ) : null}
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <SectionInsertMenu
+          onAdd={(b) => addChildAt(b, children.length)}
+          trigger={
+            <Button type="button" variant="outline" size="sm" className="gap-2">
+              <Plus className="h-4 w-4" aria-hidden /> Insert from gallery
+              <ChevronDown className="h-4 w-4 opacity-75" aria-hidden />
+            </Button>
+          }
+        />
+        <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={onRemove}>
+          <Trash2 className="mr-1 h-4 w-4" /> Remove grouped layout
+        </Button>
       </div>
     </div>
   );
@@ -377,14 +962,34 @@ function BlockFields({
   block,
   onChange,
   onRemove,
+  selection,
+  getBlockStyle,
+  applyBlockStyle,
 }: {
   block: ProposalBlock;
   onChange: (next: ProposalBlock) => void;
   onRemove: () => void;
+  selection?: { selectedId: string | null; onSelect: (id: string | null) => void };
+  getBlockStyle?: (b: ProposalBlock) => BlockStyle | undefined;
+  applyBlockStyle?: (id: string, style: BlockStyle | undefined) => void;
 }) {
   const patch = (next: ProposalBlock) => onChange(next);
 
   switch (block.type) {
+    case "section": {
+      const b = block as SectionBlock;
+      return (
+        <SectionBlockFields
+          block={b}
+          onChange={patch}
+          onRemove={onRemove}
+          selectedBlockId={selection?.selectedId ?? null}
+          onSelectBlock={selection?.onSelect ?? (() => {})}
+          getBlockStyle={getBlockStyle ?? (() => undefined)}
+          applyBlockStyle={applyBlockStyle ?? ((_sid: string, _style: BlockStyle | undefined) => {})}
+        />
+      );
+    }
     case "header": {
       const b = block as HeaderBlock;
       return (
@@ -618,6 +1223,35 @@ function BlockFields({
           </Button>
         </div>
       );
+    case "columns": {
+      const col = block as ColumnsBlock;
+      return <ColumnsBlockFields block={col} onChange={(next) => patch(next)} onRemove={onRemove} />;
+    }
+    case "accordion":
+      return <AccordionBlockEditor block={block as AccordionBlock} onChange={(next) => patch(next)} onRemove={onRemove} />;
+    case "icon": {
+      const ic = block as IconBlock;
+      return (
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label>Emoji or symbol</Label>
+            <Input
+              value={ic.emoji ?? ""}
+              maxLength={8}
+              onChange={(e) => patch({ ...ic, emoji: e.target.value || undefined })}
+              placeholder="e.g. ✨"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Caption</Label>
+            <Input value={ic.label ?? ""} onChange={(e) => patch({ ...ic, label: e.target.value })} placeholder="Displayed beside icon" />
+          </div>
+          <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={onRemove}>
+            <Trash2 className="mr-1 h-4 w-4" /> Remove block
+          </Button>
+        </div>
+      );
+    }
     case "divider":
       return (
         <div className="flex items-center justify-between gap-2">
@@ -626,12 +1260,6 @@ function BlockFields({
             <Trash2 className="mr-1 h-4 w-4" /> Remove
           </Button>
         </div>
-      );
-    case "section":
-      return (
-        <p className="text-xs text-muted-foreground">
-          This block is an old Section wrapper — save once to flatten it into individual blocks automatically.
-        </p>
       );
     default:
       return null;
@@ -674,7 +1302,7 @@ function AddBlockMenu({
         align={align}
         sideOffset={8}
         className="w-[320px] p-0"
-        onCloseAutoFocus={(e) => e.preventDefault()}
+        onCloseAutoFocus={(event: Event) => event.preventDefault()}
       >
         {view === "main" ? (
           <div className="p-3">
@@ -682,7 +1310,7 @@ function AddBlockMenu({
               Add a block
             </p>
             <div className="grid grid-cols-3 gap-2">
-              {PRIMARY_BLOCK_OPTIONS.map((opt) => (
+              {DOCUMENT_PRIMARY_BLOCK_OPTIONS.map((opt) => (
                 <BlockTile key={opt.id} option={opt} onSelect={() => handlePick(opt)} />
               ))}
             </div>
@@ -764,16 +1392,20 @@ function LibraryRow({ option, onSelect }: { option: BlockOption; onSelect: () =>
 function InsertBlockSlot({
   onAdd,
   variant = "between",
+  context = "document",
 }: {
   onAdd: (block: ProposalBlock) => void;
   variant?: "between" | "empty";
+  /** `section` swaps the picker to the condensed gallery optimised for grouped layouts. */
+  context?: "document" | "section";
 }) {
   if (variant === "empty") {
     return (
       <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border/70 bg-muted/15 px-4 py-12 text-center">
         <p className="text-sm font-medium text-foreground">Start building your proposal</p>
         <p className="max-w-xs text-xs text-muted-foreground">
-          Add Text, Heading, Quote, Table, Plans, Video, Accept, or blocks from the library to get started.
+          Add a grouped layout, text blocks, headings, visuals, quoting tables, accepting signatures, plus everything in your
+          block library — then refine with the contextual toolbar.
         </p>
         <AddBlockMenu
           onAdd={onAdd}
@@ -790,21 +1422,23 @@ function InsertBlockSlot({
       </div>
     );
   }
+  const sharedTriggerClasses =
+    "relative z-10 flex h-7 w-7 items-center justify-center rounded-full border border-border text-muted-foreground opacity-0 shadow-sm transition-opacity hover:border-primary hover:bg-primary hover:text-primary-foreground hover:opacity-100 focus:outline-none focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:border-primary data-[state=open]:bg-primary data-[state=open]:text-primary-foreground data-[state=open]:opacity-100 group-hover/insert:opacity-100 bg-background";
+
+  const trigger = (
+    <button type="button" aria-label={context === "section" ? "Insert content row" : "Add block here"} className={sharedTriggerClasses}>
+      <Plus className="h-3.5 w-3.5" />
+    </button>
+  );
+
   return (
     <div className="group/insert relative flex items-center justify-center py-1.5">
-      <div className="pointer-events-none absolute inset-x-6 top-1/2 h-px -translate-y-1/2 bg-border opacity-0 transition-opacity group-hover/insert:opacity-100 group-focus-within/insert:opacity-100" />
-      <AddBlockMenu
-        onAdd={onAdd}
-        trigger={
-          <button
-            type="button"
-            aria-label="Add block here"
-            className="relative z-10 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-background text-muted-foreground opacity-0 shadow-sm transition-all hover:border-primary hover:bg-primary hover:text-primary-foreground hover:opacity-100 focus:outline-none focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:border-primary data-[state=open]:bg-primary data-[state=open]:text-primary-foreground data-[state=open]:opacity-100 group-hover/insert:opacity-100"
-          >
-            <Plus className="h-3.5 w-3.5" />
-          </button>
-        }
-      />
+      <div className="pointer-events-none absolute inset-x-6 top-1/2 h-px -translate-y-1/2 bg-primary/40 opacity-0 transition-opacity group-hover/insert:opacity-70 group-focus-within/insert:opacity-70" />
+      {context === "section" ? (
+        <SectionInsertMenu align="center" onAdd={onAdd} trigger={trigger} />
+      ) : (
+        <AddBlockMenu onAdd={onAdd} trigger={trigger} />
+      )}
     </div>
   );
 }
@@ -833,6 +1467,12 @@ function blockLabel(type: ProposalBlock["type"]): string {
       return "Payment";
     case "divider":
       return "Divider";
+    case "accordion":
+      return "Accordion";
+    case "columns":
+      return "Columns";
+    case "icon":
+      return "Icon";
     case "section":
       return "Section";
     default:
@@ -983,16 +1623,68 @@ export function ProposalDocumentEditor({
   }
 
   function applyBlockStyle(id: string, style: BlockStyle | undefined) {
+    function applyStyleToStacks(stacks: ProposalColumnChildBlock[]): ProposalColumnChildBlock[] {
+      return stacks.map((c) => {
+        if (c.id !== id) return c;
+        if (c.type !== "pricing" && c.type !== "packages") return c;
+        if (style === undefined) {
+          const { style: _drop, ...rest } = c;
+          void _drop;
+          return rest as ProposalColumnChildBlock;
+        }
+        return { ...c, style } as ProposalColumnChildBlock;
+      });
+    }
+
+    function patchNestedContent(children: ProposalContentBlock[]): ProposalContentBlock[] | null {
+      let changed = false;
+      const next = children.map((c): ProposalContentBlock => {
+        if (c.id === id && (c.type === "pricing" || c.type === "packages")) {
+          changed = true;
+          if (style === undefined) {
+            const { style: _drop, ...rest } = c;
+            void _drop;
+            return rest as ProposalContentBlock;
+          }
+          return { ...c, style } as ProposalContentBlock;
+        }
+        if (c.type === "columns") {
+          const nl = applyStyleToStacks(c.left);
+          const nr = applyStyleToStacks(c.right);
+          if (nl !== c.left || nr !== c.right) {
+            changed = true;
+            return { ...c, left: nl, right: nr };
+          }
+        }
+        return c;
+      });
+      return changed ? next : null;
+    }
+
     setBlocks((prev) =>
       prev.map((b) => {
-        if (b.id !== id) return b;
-        if (b.type === "pricing" || b.type === "packages") {
-          if (style === undefined) {
-            const { style: _drop, ...rest } = b;
-            void _drop;
-            return rest as ProposalBlock;
+        if (b.id === id) {
+          if (b.type === "pricing" || b.type === "packages" || b.type === "section") {
+            if (style === undefined) {
+              const { style: _drop, ...rest } = b;
+              void _drop;
+              return rest as ProposalBlock;
+            }
+            return { ...b, style } as ProposalBlock;
           }
-          return { ...b, style } as ProposalBlock;
+          return b;
+        }
+        if (b.type === "section") {
+          const patched = patchNestedContent(b.children);
+          if (patched) return { ...b, children: patched };
+          return b;
+        }
+        if (b.type === "columns") {
+          return {
+            ...b,
+            left: applyStyleToStacks(b.left),
+            right: applyStyleToStacks(b.right),
+          };
         }
         return b;
       }),
@@ -1000,7 +1692,7 @@ export function ProposalDocumentEditor({
   }
 
   function getBlockStyle(block: ProposalBlock): BlockStyle | undefined {
-    if (block.type === "pricing" || block.type === "packages") {
+    if (block.type === "pricing" || block.type === "packages" || block.type === "section") {
       return block.style;
     }
     return undefined;
@@ -1119,22 +1811,28 @@ export function ProposalDocumentEditor({
                   <InsertBlockSlot onAdd={(b) => addBlockAt(b, 0)} />
                   {blocks.map((block, idx) => {
                     const isSelected = selectedBlockId === block.id;
-                    const supportsStyle = block.type === "pricing" || block.type === "packages";
+                    const supportsStyle =
+                      block.type === "pricing" || block.type === "packages" || block.type === "section";
                     return (
                       <React.Fragment key={block.id}>
                         <SortableShell
                           id={block.id}
-                          label={blockLabel(block.type)}
                           selected={isSelected}
                           onSelect={() => setSelectedBlockId(block.id)}
-                          toolbar={
+                          toolbar={({ dragAttributes, dragListeners }) => (
                             <BlockToolbar
+                              appearance="surface"
                               blockType={
                                 block.type === "pricing"
                                   ? "pricing"
                                   : block.type === "packages"
                                     ? "packages"
-                                    : "other"
+                                    : block.type === "section"
+                                      ? "section"
+                                      : "other"
+                              }
+                              deleteLabel={
+                                block.type === "section" ? "Remove grouped layout" : "Delete block"
                               }
                               canMoveUp={idx > 0}
                               canMoveDown={idx < blocks.length - 1}
@@ -1146,13 +1844,37 @@ export function ProposalDocumentEditor({
                               onStyleChange={
                                 supportsStyle ? (next) => applyBlockStyle(block.id, next) : undefined
                               }
+                              trailingSlot={
+                                <Tooltip delayDuration={320}>
+                                  <TooltipTrigger asChild>
+                                    <button
+                                      type="button"
+                                      className="touch-none inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+                                      aria-label={`Reorder ${blockLabel(block.type)}`}
+                                      {...dragAttributes}
+                                      {...dragListeners}
+                                    >
+                                      <GripVertical className="h-4 w-4" />
+                                    </button>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="bottom" className="text-xs">
+                                    Drag to reposition · arrows nudge precisely
+                                  </TooltipContent>
+                                </Tooltip>
+                              }
                             />
-                          }
+                          )}
                         >
                           <BlockFields
                             block={block}
                             onChange={(next) => updateBlock(block.id, next)}
                             onRemove={() => removeBlock(block.id)}
+                            selection={{
+                              selectedId: selectedBlockId,
+                              onSelect: setSelectedBlockId,
+                            }}
+                            getBlockStyle={getBlockStyle}
+                            applyBlockStyle={applyBlockStyle}
                           />
                         </SortableShell>
                         <InsertBlockSlot onAdd={(b) => addBlockAt(b, idx + 1)} />

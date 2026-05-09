@@ -6,6 +6,7 @@ import {
   ArrowUp,
   Check,
   Copy,
+  EllipsisVertical,
   Palette,
   Settings2,
   Trash2,
@@ -13,6 +14,8 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { STYLE_PRESET_COLORS, resolveBlockStyle } from "@/lib/block-style";
@@ -20,9 +23,9 @@ import { cn } from "@/lib/utils";
 import type { BlockStyle } from "@/types/proposal";
 
 export interface BlockToolbarProps {
-  /** What kind of block this toolbar is editing — controls which slots show. */
+  /** Controls palette + icon treatments. `elevated` is a dark floating bar; `surface` is a soft light pill aligned with editorial chrome. */
+  appearance?: "elevated" | "surface";
   blockType: "pricing" | "packages" | "section" | "other";
-  /** Label for the delete control (toolbar is reused for legacy section styling). */
   deleteLabel?: string;
   canMoveUp: boolean;
   canMoveDown: boolean;
@@ -30,14 +33,19 @@ export interface BlockToolbarProps {
   onMoveDown: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
-  /** Optional callback to open a block-specific options panel. When omitted the icon is hidden. */
+  /** More menu (ellipsis) — hides when false. Duplicate/delete stay on the pill for speed. */
+  showOverflowMenu?: boolean;
+  /** Optional trailing control inside the pill (e.g. drag handle with sortable listeners). */
+  trailingSlot?: React.ReactNode;
+  /** Optional toggle shown after the overflow menu — used for reversible layout previews. */
+  auxiliarySlot?: React.ReactNode;
   onOpenSettings?: () => void;
-  /** When the block supports `style` (pricing / packages), pass the current value + setter. */
   style?: BlockStyle;
   onStyleChange?: (next: BlockStyle | undefined) => void;
 }
 
 export function BlockToolbar({
+  appearance = "surface",
   blockType,
   deleteLabel = "Delete block",
   canMoveUp,
@@ -46,6 +54,9 @@ export function BlockToolbar({
   onMoveDown,
   onDuplicate,
   onDelete,
+  showOverflowMenu = true,
+  trailingSlot,
+  auxiliarySlot,
   onOpenSettings,
   style,
   onStyleChange,
@@ -54,15 +65,69 @@ export function BlockToolbar({
     (blockType === "pricing" || blockType === "packages" || blockType === "section") &&
     typeof onStyleChange === "function";
 
+  const elevated = appearance === "elevated";
+  const shell = elevated
+    ? "border-zinc-700/40 bg-zinc-900/95 text-zinc-100 shadow-xl"
+    : "border-border/70 bg-muted/95 text-foreground shadow-sm ring-1 ring-black/[0.04] backdrop-blur-sm dark:bg-zinc-800/95 dark:ring-white/10";
+  const iconBtnBase = elevated
+    ? "text-zinc-300 hover:bg-white/10 hover:text-white focus-visible:ring-white/40"
+    : "text-muted-foreground hover:bg-background hover:text-foreground focus-visible:ring-ring";
+
   return (
     <div
-      className={cn(
-        "pointer-events-auto inline-flex items-center gap-0.5 rounded-xl border border-zinc-700/40 bg-zinc-900/95 p-1 text-zinc-100 shadow-xl backdrop-blur-sm",
-      )}
+      className={cn("pointer-events-auto inline-flex items-center gap-0.5 rounded-full p-1", shell)}
       onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
+      {showOverflowMenu ? (
+        <>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                title="More"
+                aria-label="More actions"
+                className={cn(
+                  "inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2",
+                  iconBtnBase,
+                )}
+              >
+                <EllipsisVertical className="h-4 w-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" sideOffset={6} className="min-w-[10rem]" onCloseAutoFocus={(e) => e.preventDefault()}>
+              <DropdownMenuItem
+                className="cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDuplicate();
+                }}
+              >
+                Duplicate
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="cursor-pointer text-destructive focus:text-destructive"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete();
+                }}
+              >
+                {deleteLabel}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <ToolbarDivider elevated={elevated} />
+        </>
+      ) : null}
+      {auxiliarySlot ? (
+        <>
+          <span className="inline-flex items-center">{auxiliarySlot}</span>
+          <ToolbarDivider elevated={elevated} />
+        </>
+      ) : null}
       <ToolbarIconButton
+        elevated={elevated}
         label="Move up"
         disabled={!canMoveUp}
         onClick={(e) => {
@@ -73,6 +138,7 @@ export function BlockToolbar({
         <ArrowUp className="h-4 w-4" />
       </ToolbarIconButton>
       <ToolbarIconButton
+        elevated={elevated}
         label="Move down"
         disabled={!canMoveDown}
         onClick={(e) => {
@@ -82,8 +148,9 @@ export function BlockToolbar({
       >
         <ArrowDown className="h-4 w-4" />
       </ToolbarIconButton>
-      <ToolbarDivider />
+      <ToolbarDivider elevated={elevated} />
       <ToolbarIconButton
+        elevated={elevated}
         label="Duplicate"
         onClick={(e) => {
           e.stopPropagation();
@@ -93,11 +160,12 @@ export function BlockToolbar({
         <Copy className="h-4 w-4" />
       </ToolbarIconButton>
       {supportsStyle ? (
-        <StylePickerTrigger style={style} onStyleChange={onStyleChange!} />
+        <StylePickerTrigger style={style} onStyleChange={onStyleChange!} elevated={elevated} />
       ) : null}
       {onOpenSettings ? (
         <ToolbarIconButton
-          label="Section options"
+          elevated={elevated}
+          label="Block options"
           onClick={(e) => {
             e.stopPropagation();
             onOpenSettings();
@@ -106,34 +174,51 @@ export function BlockToolbar({
           <Settings2 className="h-4 w-4" />
         </ToolbarIconButton>
       ) : null}
-      <ToolbarDivider />
+      <ToolbarDivider elevated={elevated} />
       <ToolbarIconButton
+        elevated={elevated}
         label={deleteLabel}
         onClick={(e) => {
           e.stopPropagation();
           onDelete();
         }}
-        className="hover:bg-red-500/20 hover:text-red-300"
+        className={
+          elevated
+            ? "hover:bg-red-500/20 hover:text-red-300"
+            : "text-destructive hover:bg-red-500/15 hover:text-destructive"
+        }
       >
         <Trash2 className="h-4 w-4" />
       </ToolbarIconButton>
+      {trailingSlot ? (
+        <>
+          <ToolbarDivider elevated={elevated} />
+          <span className="inline-flex items-center">{trailingSlot}</span>
+        </>
+      ) : null}
     </div>
   );
 }
 
 function ToolbarIconButton({
+  elevated,
   label,
   onClick,
   disabled,
   children,
   className,
 }: {
+  elevated: boolean;
   label: string;
   onClick?: (e: React.MouseEvent) => void;
   disabled?: boolean;
   children: React.ReactNode;
   className?: string;
 }) {
+  const base =
+    elevated
+      ? "text-zinc-300 hover:bg-white/10 hover:text-white focus-visible:ring-white/40"
+      : "text-muted-foreground hover:bg-background hover:text-foreground focus-visible:ring-ring";
   return (
     <button
       type="button"
@@ -142,7 +227,8 @@ function ToolbarIconButton({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "inline-flex h-8 w-8 items-center justify-center rounded-md text-zinc-300 transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40 disabled:opacity-30",
+        "inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 disabled:opacity-30",
+        base,
         className,
       )}
     >
@@ -151,30 +237,46 @@ function ToolbarIconButton({
   );
 }
 
-function ToolbarDivider() {
-  return <span className="mx-0.5 h-5 w-px bg-white/15" aria-hidden />;
+function ToolbarDivider({ elevated }: { elevated: boolean }) {
+  return (
+    <span
+      className={cn("mx-0.5 h-5 w-px", elevated ? "bg-white/15" : "bg-border")}
+      aria-hidden
+    />
+  );
 }
 
 function StylePickerTrigger({
   style,
   onStyleChange,
+  elevated,
 }: {
   style?: BlockStyle;
   onStyleChange: (next: BlockStyle | undefined) => void;
+  elevated: boolean;
 }) {
   const resolved = resolveBlockStyle(style);
+  const triggerCn = elevated
+    ? "text-zinc-300 hover:bg-white/10 hover:text-white focus-visible:ring-white/40 data-[state=open]:bg-white/15"
+    : "text-muted-foreground hover:bg-background hover:text-foreground focus-visible:ring-ring data-[state=open]:bg-background";
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          title="Section style"
-          aria-label="Section style"
-          className="relative inline-flex h-8 w-8 items-center justify-center rounded-md text-zinc-300 transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40 data-[state=open]:bg-white/15 data-[state=open]:text-white"
+          title="Style"
+          aria-label="Style"
+          className={cn(
+            "relative inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2",
+            triggerCn,
+          )}
         >
           <Palette className="h-4 w-4" />
           <span
-            className="absolute bottom-1 right-1 h-1.5 w-1.5 rounded-full ring-1 ring-zinc-900"
+            className={cn(
+              "absolute bottom-1 right-1 h-1.5 w-1.5 rounded-full ring-1",
+              elevated ? "ring-zinc-900" : "ring-background",
+            )}
             style={{ backgroundColor: resolved.primaryColor }}
             aria-hidden
           />
@@ -183,27 +285,30 @@ function StylePickerTrigger({
       <DropdownMenuContent
         align="center"
         sideOffset={8}
-        className="w-72 border-zinc-700/60 bg-zinc-900/95 p-0 text-zinc-100"
+        className={cn(
+          "w-72 p-0",
+          elevated ? "border-zinc-700/60 bg-zinc-900/95 text-zinc-100" : "border border-border bg-popover text-popover-foreground shadow-md",
+        )}
         onCloseAutoFocus={(e) => e.preventDefault()}
       >
-        <StylePickerPanel style={style} onStyleChange={onStyleChange} />
+        <StylePickerPanel style={style} onStyleChange={onStyleChange} elevated={elevated} />
       </DropdownMenuContent>
     </DropdownMenu>
   );
 }
 
-/* -----------------------------------------------------------------------------
- * Style popover panel — variant tabs + primary/highlight colour pickers.
- * -------------------------------------------------------------------------- */
-
 function StylePickerPanel({
   style,
   onStyleChange,
+  elevated,
 }: {
   style?: BlockStyle;
   onStyleChange: (next: BlockStyle | undefined) => void;
+  elevated: boolean;
 }) {
   const resolved = resolveBlockStyle(style);
+  const labelMuted = elevated ? "text-zinc-400" : "text-muted-foreground";
+  const frame = elevated ? "bg-zinc-800/80 ring-zinc-700/60" : "bg-muted/60 ring-border";
 
   function patch(next: Partial<BlockStyle>) {
     const merged: BlockStyle = {
@@ -219,30 +324,32 @@ function StylePickerPanel({
   return (
     <div className="space-y-4 p-3">
       <div>
-        <p className="px-1 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
-          Section style
-        </p>
-        <div className="mt-2 inline-flex w-full rounded-lg bg-zinc-800/80 p-0.5 ring-1 ring-zinc-700/60">
+        <p className={cn("px-1 text-[11px] font-semibold uppercase tracking-wider", labelMuted)}>Presentation</p>
+        <div className={cn("mt-2 inline-flex w-full rounded-lg p-0.5 ring-1", frame)}>
           <VariantPill
             label="Visual"
             active={resolved.variant === "visual"}
             onClick={() => patch({ variant: "visual" })}
+            elevated={elevated}
           />
           <VariantPill
             label="Simple"
             active={resolved.variant === "simple"}
             onClick={() => patch({ variant: "simple" })}
+            elevated={elevated}
           />
         </div>
       </div>
 
       <ColorRow
+        elevated={elevated}
         label="Primary color"
         value={resolved.primaryColor}
         onChange={(v) => patch({ primaryColor: v })}
       />
 
       <ColorRow
+        elevated={elevated}
         label="Highlight color"
         value={resolved.highlightColor}
         onChange={(v) => patch({ highlightColor: v })}
@@ -251,7 +358,10 @@ function StylePickerPanel({
       <button
         type="button"
         onClick={() => onStyleChange(undefined)}
-        className="w-full rounded-md border border-zinc-700/60 bg-transparent px-2 py-1.5 text-[11px] font-medium text-zinc-400 transition-colors hover:border-zinc-500 hover:text-zinc-200"
+        className={cn(
+          "w-full rounded-md border px-2 py-1.5 text-[11px] font-medium transition-colors",
+          elevated ? "border-zinc-700/60 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200" : "border-border text-muted-foreground hover:text-foreground",
+        )}
       >
         Reset to default
       </button>
@@ -263,10 +373,12 @@ function VariantPill({
   label,
   active,
   onClick,
+  elevated,
 }: {
   label: string;
   active: boolean;
   onClick: () => void;
+  elevated: boolean;
 }) {
   return (
     <button
@@ -274,7 +386,13 @@ function VariantPill({
       onClick={onClick}
       className={cn(
         "flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-        active ? "bg-zinc-700 text-white shadow-sm" : "text-zinc-400 hover:text-white",
+        elevated
+          ? active
+            ? "bg-zinc-700 text-white shadow-sm"
+            : "text-zinc-400 hover:text-white"
+          : active
+            ? "bg-background text-foreground shadow-sm ring-1 ring-border"
+            : "text-muted-foreground hover:text-foreground",
       )}
       aria-pressed={active}
     >
@@ -284,14 +402,19 @@ function VariantPill({
 }
 
 function ColorRow({
+  elevated,
   label,
   value,
   onChange,
 }: {
+  elevated: boolean;
   label: string;
   value: string;
   onChange: (next: string) => void;
 }) {
+  const labelMuted = elevated ? "text-zinc-400" : "text-muted-foreground";
+  const ringActive = elevated ? "ring-offset-zinc-900" : "ring-offset-background";
+  const swatchIdle = elevated ? "border-zinc-700 hover:scale-105" : "border-border hover:scale-105";
   const [draft, setDraft] = React.useState(value);
   React.useEffect(() => setDraft(value), [value]);
 
@@ -303,9 +426,7 @@ function ColorRow({
 
   return (
     <div>
-      <p className="px-1 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
-        {label}
-      </p>
+      <p className={cn("px-1 text-[11px] font-semibold uppercase tracking-wider", labelMuted)}>{label}</p>
       <div className="mt-2 grid grid-cols-6 gap-2">
         {STYLE_PRESET_COLORS.map((c) => {
           const isActive = sameColor(c.value, value);
@@ -317,8 +438,8 @@ function ColorRow({
               title={c.label}
               onClick={() => onChange(c.value)}
               className={cn(
-                "relative h-8 w-8 rounded-full border transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50",
-                isActive ? "ring-2 ring-white ring-offset-2 ring-offset-zinc-900" : "border-zinc-700 hover:scale-105",
+                "relative h-8 w-8 rounded-full border transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                isActive ? cn("ring-2 ring-ring ring-offset-2", ringActive) : swatchIdle,
               )}
               style={{ backgroundColor: c.value }}
             >
@@ -335,12 +456,8 @@ function ColorRow({
           );
         })}
       </div>
-      <div className="mt-2 flex items-center gap-2 rounded-lg border border-zinc-700/60 bg-zinc-800/60 p-1.5">
-        <span
-          className="h-6 w-6 shrink-0 rounded-full ring-1 ring-zinc-700"
-          style={{ backgroundColor: value }}
-          aria-hidden
-        />
+      <div className={cn("mt-2 flex items-center gap-2 rounded-lg border p-1.5", elevated ? "border-zinc-700/60 bg-zinc-800/60" : "border-border bg-muted/40")}>
+        <span className={cn("h-6 w-6 shrink-0 rounded-full ring-1", elevated ? "ring-zinc-700" : "ring-border")} style={{ backgroundColor: value }} aria-hidden />
         <input
           type="text"
           value={draft}
@@ -353,7 +470,7 @@ function ColorRow({
             }
           }}
           spellCheck={false}
-          className="w-full bg-transparent text-sm text-zinc-100 outline-none placeholder:text-zinc-500"
+          className={cn("w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground", elevated ? "text-zinc-100" : "text-foreground")}
           aria-label={`${label} hex value`}
           placeholder="#4543F7"
         />
@@ -362,7 +479,6 @@ function ColorRow({
   );
 }
 
-/** True when the swatch is light enough that a dark check icon would disappear. */
 function needsLightCheck(hex: string): boolean {
   if (hex.toUpperCase() === "#FFFFFF" || hex.toUpperCase() === "#FFF") return false;
   if (hex.toUpperCase() === "#E2E8F0") return false;
@@ -377,7 +493,6 @@ function normalizeHex(input: string): string {
   return input.trim().toLowerCase();
 }
 
-/** Permits 3- or 6-digit hex (with or without `#`) and CSS named colours up to 32 chars. */
 function normalizeColorInput(input: string): string | null {
   const v = input.trim();
   if (!v) return null;

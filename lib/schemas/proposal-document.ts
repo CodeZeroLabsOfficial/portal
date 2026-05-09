@@ -216,6 +216,56 @@ const dividerBlockSchema = z.object({
   type: z.literal("divider"),
 });
 
+const accordionPanelSchema = z.object({
+  id: idSchema,
+  title: z.string().default(""),
+  html: z.string().optional(),
+  body: z.string().optional(),
+});
+
+const accordionBlockSchema = z.object({
+  id: idSchema,
+  type: z.literal("accordion"),
+  panels: z.array(accordionPanelSchema).default([]),
+});
+
+const iconBlockSchema = z.object({
+  id: idSchema,
+  type: z.literal("icon"),
+  emoji: z.string().max(8).optional(),
+  label: z.string().optional(),
+});
+
+/** Blocks allowed inside each column pane (cannot nest columns or accordion). */
+const columnInnerUnionSchema = z.discriminatedUnion("type", [
+  headerBlockSchema,
+  textBlockSchema,
+  imageBlockSchema,
+  videoBlockSchema,
+  pricingBlockSchema,
+  packagesBlockSchema,
+  formBlockSchema,
+  signatureBlockSchema,
+  embedBlockSchema,
+  paymentBlockSchema,
+  dividerBlockSchema,
+  iconBlockSchema,
+]);
+
+const columnInnerSchema = z.preprocess((raw) => {
+  if (raw && typeof raw === "object" && (raw as Record<string, unknown>).type === "packages") {
+    return normalizePackagesBlockInput(raw);
+  }
+  return raw;
+}, columnInnerUnionSchema);
+
+const columnsBlockSchema = z.object({
+  id: idSchema,
+  type: z.literal("columns"),
+  left: z.array(columnInnerSchema).default([]),
+  right: z.array(columnInnerSchema).default([]),
+});
+
 /** Blocks inside a section — same as top-level except no nested `section`. */
 const nestedBlockUnionSchema = z.discriminatedUnion("type", [
   headerBlockSchema,
@@ -229,6 +279,9 @@ const nestedBlockUnionSchema = z.discriminatedUnion("type", [
   embedBlockSchema,
   paymentBlockSchema,
   dividerBlockSchema,
+  accordionBlockSchema,
+  columnsBlockSchema,
+  iconBlockSchema,
 ]);
 
 const nestedBlockSchema = z.preprocess((raw) => {
@@ -257,6 +310,9 @@ const blockUnionSchema = z.discriminatedUnion("type", [
   embedBlockSchema,
   paymentBlockSchema,
   dividerBlockSchema,
+  accordionBlockSchema,
+  columnsBlockSchema,
+  iconBlockSchema,
   sectionBlockSchema,
 ]);
 
@@ -276,21 +332,6 @@ const documentSchema = z.object({
   blocks: z.array(blockSchema),
 });
 
-/** Hoists legacy `section` blocks into a single seamless list (children become top-level blocks). */
-export function flattenProposalDocumentSections(blocks: ProposalBlock[]): ProposalBlock[] {
-  const next: ProposalBlock[] = [];
-  for (const b of blocks) {
-    if (b.type === "section") {
-      for (const child of b.children) {
-        next.push(child as ProposalBlock);
-      }
-    } else {
-      next.push(b);
-    }
-  }
-  return next;
-}
-
 export function parseProposalDocument(input: unknown): ProposalDocument {
   const fallbackTitle =
     input && typeof input === "object" && typeof (input as { title?: unknown }).title === "string"
@@ -299,8 +340,7 @@ export function parseProposalDocument(input: unknown): ProposalDocument {
 
   const parsed = documentSchema.safeParse(input);
   if (parsed.success) {
-    const doc = parsed.data as ProposalDocument;
-    return { ...doc, blocks: flattenProposalDocumentSections(doc.blocks) };
+    return parsed.data as ProposalDocument;
   }
 
   /** Lenient path for legacy rows — normalize single blocks where possible. */
@@ -363,7 +403,7 @@ export function parseProposalDocument(input: unknown): ProposalDocument {
 
   return {
     title: fallbackTitle || "Untitled proposal",
-    blocks: flattenProposalDocumentSections(blocks),
+    blocks,
   };
 }
 

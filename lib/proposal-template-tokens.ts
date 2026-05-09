@@ -1,6 +1,6 @@
 import type { CustomerRecord } from "@/types/customer";
 import type { OpportunityRecord } from "@/types/opportunity";
-import type { ProposalBlock, ProposalContentBlock, ProposalDocument } from "@/types/proposal";
+import type { ProposalBlock, ProposalColumnChildBlock, ProposalContentBlock, ProposalDocument } from "@/types/proposal";
 
 export interface ProposalTokenContext {
   customer: CustomerRecord;
@@ -116,6 +116,28 @@ function mapContentBlock(block: ProposalContentBlock, ctx: ProposalTokenContext)
       };
     case "divider":
       return block;
+    case "accordion":
+      return {
+        ...block,
+        panels: block.panels.map((p) => ({
+          ...p,
+          title: replaceProposalTokens(p.title, ctx),
+          html: p.html !== undefined ? replaceProposalTokens(p.html, ctx) : p.html,
+          body: p.body !== undefined ? replaceProposalTokens(p.body, ctx) : p.body,
+        })),
+      };
+    case "columns":
+      return {
+        ...block,
+        left: block.left.map((c) => mapContentBlock(c as ProposalContentBlock, ctx) as ProposalColumnChildBlock),
+        right: block.right.map((c) => mapContentBlock(c as ProposalContentBlock, ctx) as ProposalColumnChildBlock),
+      };
+    case "icon":
+      return {
+        ...block,
+        emoji: block.emoji !== undefined ? replaceProposalTokens(block.emoji, ctx) : block.emoji,
+        label: block.label !== undefined ? replaceProposalTokens(block.label, ctx) : block.label,
+      };
     default:
       return block;
   }

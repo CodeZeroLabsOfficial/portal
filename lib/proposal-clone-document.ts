@@ -5,6 +5,7 @@ import type {
   PricingBlock,
   ProposalBlock,
   ProposalBranding,
+  ProposalColumnChildBlock,
   ProposalContentBlock,
   ProposalDocument,
 } from "@/types/proposal";
@@ -60,6 +61,24 @@ function cloneBlock(block: ProposalBlock): ProposalBlock {
     case "payment":
       return { ...block, id };
     case "divider":
+      return { ...block, id };
+    case "accordion":
+      return {
+        ...block,
+        id,
+        panels: block.panels.map((p) => ({
+          ...p,
+          id: randomUUID(),
+        })),
+      };
+    case "columns":
+      return {
+        ...block,
+        id,
+        left: block.left.map((c) => cloneBlock(c as ProposalBlock) as ProposalColumnChildBlock),
+        right: block.right.map((c) => cloneBlock(c as ProposalBlock) as ProposalColumnChildBlock),
+      };
+    case "icon":
       return { ...block, id };
     case "section":
       return {

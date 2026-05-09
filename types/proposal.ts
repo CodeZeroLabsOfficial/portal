@@ -12,7 +12,10 @@ export type ProposalBlockType =
   | "form"
   | "signature"
   | "payment"
-  | "divider";
+  | "divider"
+  | "columns"
+  | "accordion"
+  | "icon";
 
 export interface ProposalBlockBase {
   id: string;
@@ -172,6 +175,47 @@ export interface DividerBlock extends ProposalBlockBase {
   type: "divider";
 }
 
+export interface AccordionPanel {
+  id: string;
+  title: string;
+  html?: string;
+  body?: string;
+}
+
+export interface AccordionBlock extends ProposalBlockBase {
+  type: "accordion";
+  panels: AccordionPanel[];
+}
+
+export interface IconBlock extends ProposalBlockBase {
+  type: "icon";
+  /** Emoji / single-character marker shown in proposals. */
+  emoji?: string;
+  label?: string;
+}
+
+/** Column cells: same as nested section content excluding nested columns and accordion. */
+export type ProposalColumnChildBlock =
+  | HeaderBlock
+  | TextBlock
+  | ImageBlock
+  | VideoBlock
+  | PricingBlock
+  | PackagesBlock
+  | FormBlock
+  | SignatureBlock
+  | EmbedBlock
+  | PaymentBlock
+  | DividerBlock
+  | IconBlock;
+
+/** Two-pane layout — each side holds column-safe blocks only. */
+export interface ColumnsBlock extends ProposalBlockBase {
+  type: "columns";
+  left: ProposalColumnChildBlock[];
+  right: ProposalColumnChildBlock[];
+}
+
 /** Blocks allowed inside a section (sections do not nest). */
 export type ProposalContentBlock =
   | HeaderBlock
@@ -184,7 +228,10 @@ export type ProposalContentBlock =
   | SignatureBlock
   | EmbedBlock
   | PaymentBlock
-  | DividerBlock;
+  | DividerBlock
+  | ColumnsBlock
+  | AccordionBlock
+  | IconBlock;
 
 export interface SectionBlock extends ProposalBlockBase {
   type: "section";
@@ -205,7 +252,10 @@ export type ProposalBlock =
   | SignatureBlock
   | EmbedBlock
   | PaymentBlock
-  | DividerBlock;
+  | DividerBlock
+  | ColumnsBlock
+  | AccordionBlock
+  | IconBlock;
 
 export interface ProposalDocument {
   title: string;
