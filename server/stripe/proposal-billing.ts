@@ -12,8 +12,10 @@ export function computeProposalTotalMinor(proposal: ProposalRecord): number {
     if (block.type === "pricing") {
       const pb = block as PricingBlock;
       for (const line of pb.lineItems) {
-        const qty = line.quantity ?? 1;
-        total += line.unitAmountMinor * qty;
+        const q = line.quantity;
+        const qty =
+          typeof q === "number" && Number.isFinite(q) && q >= 0 ? Math.floor(q) : 1;
+        total += Math.round(line.unitAmountMinor * qty);
       }
     }
   }
