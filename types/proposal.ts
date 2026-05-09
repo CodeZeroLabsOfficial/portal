@@ -23,10 +23,8 @@ export interface ProposalBlockBase {
 }
 
 /**
- * Per-block visual style overrides. When omitted the block renders with the
- * built-in defaults (visual variant, theme colours). Currently consumed by the
- * Quote (pricing) and Plans (packages) blocks — opens via the inline section
- * toolbar's "Style" picker.
+ * Per-block visual style overrides. Consumed by Quote (pricing) and Plans (packages) on the
+ * public page; only Plans exposes the editor “Style” picker on the block toolbar.
  */
 export interface BlockStyle {
   /** Layout density / chrome. `visual` adds a hero container, `simple` is flat. */

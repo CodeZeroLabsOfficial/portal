@@ -851,7 +851,7 @@ function SectionBlockFields({
               <InsertBlockSlot context="section" variant="between" onAdd={(b) => addChildAt(b, 0)} />
               {children.map((child, idx) => {
                 const isSelected = selectedBlockId === child.id;
-                const supportsStyle = child.type === "pricing" || child.type === "packages";
+                const supportsStyle = child.type === "packages";
                 return (
                   <React.Fragment key={child.id}>
                     <SortableShell
@@ -1596,7 +1596,7 @@ export function ProposalDocumentEditor({
     function applyStyleToStacks(stacks: ProposalColumnChildBlock[]): ProposalColumnChildBlock[] {
       return stacks.map((c) => {
         if (c.id !== id) return c;
-        if (c.type !== "pricing" && c.type !== "packages") return c;
+        if (c.type !== "packages") return c;
         if (style === undefined) {
           const { style: _drop, ...rest } = c;
           void _drop;
@@ -1609,7 +1609,7 @@ export function ProposalDocumentEditor({
     function patchNestedContent(children: ProposalContentBlock[]): ProposalContentBlock[] | null {
       let changed = false;
       const next = children.map((c): ProposalContentBlock => {
-        if (c.id === id && (c.type === "pricing" || c.type === "packages")) {
+        if (c.id === id && c.type === "packages") {
           changed = true;
           if (style === undefined) {
             const { style: _drop, ...rest } = c;
@@ -1634,7 +1634,7 @@ export function ProposalDocumentEditor({
     setBlocks((prev) =>
       prev.map((b) => {
         if (b.id === id) {
-          if (b.type === "pricing" || b.type === "packages" || b.type === "section") {
+          if (b.type === "packages") {
             if (style === undefined) {
               const { style: _drop, ...rest } = b;
               void _drop;
@@ -1662,7 +1662,7 @@ export function ProposalDocumentEditor({
   }
 
   function getBlockStyle(block: ProposalBlock): BlockStyle | undefined {
-    if (block.type === "pricing" || block.type === "packages" || block.type === "section") {
+    if (block.type === "packages") {
       return block.style;
     }
     return undefined;
@@ -1781,8 +1781,7 @@ export function ProposalDocumentEditor({
                   <InsertBlockSlot onAdd={(b) => addBlockAt(b, 0)} />
                   {blocks.map((block, idx) => {
                     const isSelected = selectedBlockId === block.id;
-                    const supportsStyle =
-                      block.type === "pricing" || block.type === "packages" || block.type === "section";
+                    const supportsStyle = block.type === "packages";
                     return (
                       <React.Fragment key={block.id}>
                         <SortableShell

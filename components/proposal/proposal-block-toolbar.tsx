@@ -63,9 +63,7 @@ export function BlockToolbar({
   onStyleChange,
   backdropPickerSlot,
 }: BlockToolbarProps) {
-  const supportsStyle =
-    (blockType === "pricing" || blockType === "packages" || blockType === "section") &&
-    typeof onStyleChange === "function";
+  const supportsStyle = blockType === "packages" && typeof onStyleChange === "function";
 
   const elevated = appearance === "elevated";
   const shell = elevated
