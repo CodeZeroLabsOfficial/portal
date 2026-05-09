@@ -7,7 +7,12 @@ import type {
   ProposalContentBlock,
   ProposalDocument,
   ProposalPublicSelections,
+  SectionBlock,
 } from "@/types/proposal";
+import {
+  PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES,
+  PROPOSAL_SECTION_VIEWPORT_BLEED_CLASSES,
+} from "@/lib/proposal-public-layout";
 import { sanitizeProposalHtml } from "@/lib/sanitize-proposal-html";
 import { WORKSPACE_DETAIL_PAGE_TITLE_CLASS } from "@/lib/workspace-page-typography";
 import { cn } from "@/lib/utils";
@@ -24,32 +29,44 @@ export interface ProposalDocumentViewProps {
   /** Public share link only — enables saving package selection. */
   shareToken?: string;
   publicSelections?: ProposalPublicSelections;
+  /** When true, grouped `section` blocks span viewport width outside the prose column */
+  viewportSectionBleed?: boolean;
 }
 
 function BlockView({
   block,
   shareToken,
   publicSelections,
+  viewportSectionBleed,
 }: {
   block: ProposalBlock | ProposalContentBlock;
   shareToken?: string;
   publicSelections?: ProposalPublicSelections;
+  viewportSectionBleed?: boolean;
 }) {
   switch (block.type) {
     /** Grouped layouts render children sequentially with generous vertical rhythm. */
     case "section": {
+      const sb = block as SectionBlock;
+      const stack = sb.children.map((c) => (
+        <BlockView
+          key={c.id}
+          block={c}
+          shareToken={shareToken}
+          publicSelections={publicSelections}
+          viewportSectionBleed={viewportSectionBleed}
+        />
+      ));
+      const body = viewportSectionBleed ? (
+        <div className={cn(PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES)}>
+          <div className="space-y-10">{stack}</div>
+        </div>
+      ) : (
+        <div className="space-y-10">{stack}</div>
+      );
       return (
-        <ProposalSectionShell background={block.background}>
-          <div className="space-y-10">
-            {block.children.map((c) => (
-              <BlockView
-                key={c.id}
-                block={c}
-                shareToken={shareToken}
-                publicSelections={publicSelections}
-              />
-            ))}
-          </div>
+        <ProposalSectionShell background={sb.background} variant="viewer" viewportBleed={Boolean(viewportSectionBleed)}>
+          {body}
         </ProposalSectionShell>
       );
     }
@@ -287,6 +304,7 @@ export function ProposalDocumentView({
   className,
   shareToken,
   publicSelections,
+  viewportSectionBleed = true,
 }: ProposalDocumentViewProps) {
   const style = React.useMemo(() => {
     if (!branding?.primaryColor && !branding?.fontFamily) return undefined;
@@ -318,11 +336,28 @@ export function ProposalDocumentView({
         </h1>
       </header>
       <div className="space-y-10">
-        {document.blocks.map((block) => (
-          <section key={block.id} className="space-y-0">
-            <BlockView block={block} shareToken={shareToken} publicSelections={publicSelections} />
-          </section>
-        ))}
+        {document.blocks.map((block) => {
+          const child = (
+            <BlockView
+              block={block}
+              shareToken={shareToken}
+              publicSelections={publicSelections}
+              viewportSectionBleed={viewportSectionBleed}
+            />
+          );
+          if (viewportSectionBleed && block.type === "section") {
+            return (
+              <section key={block.id} className={PROPOSAL_SECTION_VIEWPORT_BLEED_CLASSES}>
+                {child}
+              </section>
+            );
+          }
+          return (
+            <section key={block.id} className="space-y-0">
+              {child}
+            </section>
+          );
+        })}
       </div>
     </article>
   );

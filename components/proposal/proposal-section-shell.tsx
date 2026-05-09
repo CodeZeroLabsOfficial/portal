@@ -13,10 +13,13 @@ import type { SectionBackground } from "@/types/proposal";
 export function ProposalSectionShell({
   background,
   variant = "viewer",
+  viewportBleed = false,
   children,
 }: {
   background?: SectionBackground;
   variant?: "viewer" | "editor";
+  /** Public viewer edge-to-edge band; horizontal padding stays on constrained inner children */
+  viewportBleed?: boolean;
   children: React.ReactNode;
 }) {
   const resolved = resolveSectionBackground(background);
@@ -26,14 +29,24 @@ export function ProposalSectionShell({
   }
 
   const prefersLight = sectionPrefersLightForeground(resolved);
+  const viewerEdge = viewportBleed && variant === "viewer";
   const shellRadius =
-    variant === "editor" ? cn("rounded-xl") : cn("rounded-3xl md:rounded-[1.85rem]");
-  const gutter = variant === "editor" ? cn("px-4 py-6 sm:px-5 sm:py-8") : cn("px-6 py-10 sm:px-10 sm:py-14 md:px-14 md:py-16");
+    variant === "editor" ? cn("rounded-xl") : viewerEdge ? "rounded-none" : cn("rounded-3xl md:rounded-[1.85rem]");
+  const gutter =
+    variant === "editor"
+      ? cn("px-4 py-6 sm:px-5 sm:py-8")
+      : viewerEdge
+        ? cn("px-0 py-10 sm:py-14 md:py-16")
+        : cn("px-6 py-10 sm:px-10 sm:py-14 md:px-14 md:py-16");
+  const surfaceChrome = viewerEdge
+    ? "shadow-none ring-0 border-y border-black/[0.07] dark:border-white/[0.08]"
+    : "shadow-lg ring-1 ring-black/[0.08] dark:ring-white/10";
 
   return (
     <div
       className={cn(
-        "proposal-section-shell relative isolate min-h-[220px] w-full overflow-hidden shadow-lg ring-1 ring-black/[0.08] dark:ring-white/10",
+        "proposal-section-shell relative isolate min-h-[220px] w-full overflow-hidden",
+        surfaceChrome,
         shellRadius,
         prefersLight &&
           cn(
