@@ -81,8 +81,6 @@ export interface PricingBlock extends ProposalBlockBase {
   totalMinorUnits?: number;
   /** Visual style overrides (variant + colours). */
   style?: BlockStyle;
-  /** Suffix shown after quantity on public table (default in UI: “Unit”). */
-  quantityUnitLabel?: string;
 }
 
 /** One selectable tier: term-based monthly pricing + included entitlements. */
