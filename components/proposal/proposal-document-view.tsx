@@ -8,8 +8,10 @@ import type {
   ProposalDocument,
   ProposalPublicSelections,
   SectionBlock,
+  SplashBlock,
 } from "@/types/proposal";
 import { PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES } from "@/lib/proposal-public-layout";
+import { escapeHtml } from "@/lib/escape-html";
 import { sanitizeProposalHtml } from "@/lib/sanitize-proposal-html";
 import { WORKSPACE_DETAIL_PAGE_TITLE_CLASS } from "@/lib/workspace-page-typography";
 import { cn } from "@/lib/utils";
@@ -18,6 +20,7 @@ import { embedVideoSrc } from "@/components/proposal/embed-video";
 import { PricingBlockPublic } from "@/components/proposal/pricing-block-public";
 import { PackagesBlockPublic } from "@/components/proposal/packages-block-public";
 import { ProposalSectionShell } from "@/components/proposal/proposal-section-shell";
+import { ProposalSplashBlockCanvas } from "@/components/proposal/proposal-splash-block";
 
 export interface ProposalDocumentViewProps {
   document: ProposalDocument;
@@ -66,6 +69,11 @@ function BlockView({
           {body}
         </ProposalSectionShell>
       );
+    }
+    case "splash": {
+      const s = block as SplashBlock;
+      const pub = s.html?.trim() ? s.html : s.body ? `<p>${escapeHtml(s.body)}</p>` : "<p></p>";
+      return <ProposalSplashBlockCanvas block={s} mode="public" publicHtml={pub} />;
     }
     case "header":
       return (

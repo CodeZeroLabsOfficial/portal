@@ -5,6 +5,7 @@ import { type Editor, EditorContent, useEditor } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react";
 import { Extension } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
+import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
 import Underline from "@tiptap/extension-underline";
@@ -21,6 +22,7 @@ import {
   Italic,
   Link as LinkIcon,
   List,
+  ImageIcon,
   ListOrdered,
   Quote,
   Strikethrough,
@@ -389,6 +391,10 @@ export function ProposalRichText({ html, onChange, placeholder, className }: Pro
       FontSize,
       TextAlign.configure({ types: ["heading", "paragraph"], alignments: ["left", "center", "right"] }),
       Link.configure({ openOnClick: false, autolink: true, linkOnPaste: true }),
+      Image.configure({
+        inline: true,
+        allowBase64: false,
+      }),
       Placeholder.configure({ placeholder: placeholder ?? "Write your section…" }),
     ],
     content: html?.trim() ? html : "<p></p>",
@@ -453,6 +459,18 @@ export function ProposalRichText({ html, onChange, placeholder, className }: Pro
           <ToolbarDivider />
           <AlignmentPicker editor={editor} />
           <LinkButton editor={editor} />
+          <ToolbarButton
+            ariaLabel="Image from URL"
+            onClick={() => {
+              const next = window.prompt("Image URL (https)", "https://");
+              if (next === null) return;
+              const url = next.trim();
+              if (!url || !/^https:\/\//i.test(url)) return;
+              editor.chain().focus().setImage({ src: url, alt: "" }).run();
+            }}
+          >
+            <ImageIcon className="h-4 w-4" />
+          </ToolbarButton>
           <ToolbarDivider />
           <ToolbarButton
             active={editor.isActive("bulletList")}

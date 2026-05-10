@@ -25,6 +25,8 @@ function cloneBlock(block: ProposalBlock): ProposalBlock {
       return { ...block, id };
     case "text":
       return { ...block, id };
+    case "splash":
+      return { ...block, id };
     case "image":
       return { ...block, id };
     case "video":

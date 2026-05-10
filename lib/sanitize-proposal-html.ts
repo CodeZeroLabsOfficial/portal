@@ -7,6 +7,21 @@ import DOMPurify from "isomorphic-dompurify";
  * the round-trip — but only the small CSS allowlist below is preserved. DOMPurify also
  * strips dangerous values (`url()`, `expression()`, etc.) at parse time.
  */
+let proposalSanitizeImgHookInstalled = false;
+
+function ensureImgSrcHttpsHook() {
+  if (proposalSanitizeImgHookInstalled) return;
+  proposalSanitizeImgHookInstalled = true;
+  DOMPurify.addHook("uponSanitizeAttribute", (node, data) => {
+    if (node.nodeName === "IMG" && data.attrName === "src") {
+      const v = String(data.attrValue ?? "").trim();
+      if (!/^https:\/\//i.test(v)) {
+        data.keepAttr = false;
+      }
+    }
+  });
+}
+
 const ALLOWED_CSS_PROPERTIES = new Set([
   "color",
   "background-color",
@@ -17,6 +32,12 @@ const ALLOWED_CSS_PROPERTIES = new Set([
   "text-decoration",
   "line-height",
   "letter-spacing",
+  "object-fit",
+  "max-width",
+  "max-height",
+  "border-radius",
+  "width",
+  "height",
 ]);
 
 function filterStyleAttribute(value: string): string {
@@ -38,6 +59,7 @@ function filterStyleAttribute(value: string): string {
 }
 
 export function sanitizeProposalHtml(html: string): string {
+  ensureImgSrcHttpsHook();
   const cleaned = DOMPurify.sanitize(html, {
     ALLOWED_TAGS: [
       "p",
@@ -58,8 +80,9 @@ export function sanitizeProposalHtml(html: string): string {
       "h4",
       "code",
       "pre",
+      "img",
     ],
-    ALLOWED_ATTR: ["href", "title", "target", "rel", "class", "style"],
+    ALLOWED_ATTR: ["href", "title", "target", "rel", "class", "style", "src", "alt", "width", "height", "loading", "decoding"],
     ALLOW_DATA_ATTR: false,
     RETURN_DOM_FRAGMENT: false,
     RETURN_DOM: false,

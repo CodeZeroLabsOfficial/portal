@@ -2,6 +2,7 @@
 
 export type ProposalBlockType =
   | "section"
+  | "splash"
   | "header"
   | "text"
   | "image"
@@ -66,6 +67,46 @@ export interface TextBlock extends ProposalBlockBase {
   html?: string;
   /** Plain fallback (legacy / import). */
   body?: string;
+}
+
+/** Hero / full-bleed backdrop configuration for splash blocks. */
+export interface SplashBlockBackground {
+  type: "image" | "video" | "color";
+  /** Image URL when `type` is `image`, or optional poster when `type` is `video`. */
+  url?: string;
+  /** Video URL: YouTube, Vimeo, direct `.mp4` / WebM, etc. when `type` is `video`. */
+  videoUrl?: string;
+  /** Solid fill when `type` is `color`. */
+  color?: string;
+  /** Object-position percentages (0–100) for image / poster / video cover framing. */
+  focalPoint?: { x: number; y: number };
+  tintColor?: string;
+  /** 0–100 */
+  tintOpacity?: number;
+  tintMode?: "normal" | "blend";
+  /** 0–24 — blur on raster / self-hosted video layers only (embeds ignore blur). */
+  blur?: number;
+  /** Shown under text on small screens instead of motion, and as `<video poster>` when supported. */
+  posterUrl?: string;
+}
+
+export type SplashBlockHeight =
+  | "full"
+  | "half"
+  | "third"
+  | { custom: number; unit: "px" | "vh" };
+
+export interface SplashBlock extends ProposalBlockBase {
+  type: "splash";
+  background: SplashBlockBackground;
+  height: SplashBlockHeight;
+  alignment: { vertical: "top" | "center" | "bottom"; horizontal: "left" | "center" | "right" };
+  /** Rich HTML (same pipeline as `TextBlock`). */
+  html?: string;
+  body?: string;
+  showCard?: boolean;
+  /** 0–100 — panel behind rich text when `showCard` is true. */
+  cardOpacity?: number;
 }
 
 export interface ImageBlock extends ProposalBlockBase {
@@ -236,6 +277,7 @@ export interface ColumnsBlock extends ProposalBlockBase {
 
 /** Blocks allowed inside a section (sections do not nest). */
 export type ProposalContentBlock =
+  | SplashBlock
   | HeaderBlock
   | TextBlock
   | ImageBlock
@@ -262,6 +304,7 @@ export interface SectionBlock extends ProposalBlockBase {
 
 export type ProposalBlock =
   | SectionBlock
+  | SplashBlock
   | HeaderBlock
   | TextBlock
   | ImageBlock

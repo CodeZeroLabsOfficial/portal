@@ -38,6 +38,7 @@ import {
   ListTree,
   Loader2,
   MonitorPlay,
+  Mountain,
   Package,
   PenLine,
   Plus,
@@ -68,6 +69,7 @@ import type {
   SectionBackground,
   SectionBlock,
   SignatureBlock,
+  SplashBlock,
   TextBlock,
   VideoBlock,
 } from "@/types/proposal";
@@ -105,6 +107,11 @@ import { cn } from "@/lib/utils";
 import { escapeHtml } from "@/lib/escape-html";
 import { DEFAULT_HIGHLIGHT_COLOR, DEFAULT_PRIMARY_COLOR } from "@/lib/block-style";
 import { resolveSectionBackground } from "@/lib/section-background";
+import { defaultSplashBlock } from "@/lib/splash-block";
+import {
+  ProposalSplashBackgroundPicker,
+  SplashBlockInspector,
+} from "@/components/proposal/proposal-splash-editor";
 
 function newId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `b-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -151,6 +158,8 @@ function cloneBlockWithFreshIds(block: ProposalBlock): ProposalBlock {
         right: block.right.map((c) => cloneBlockWithFreshIds(c as ProposalBlock) as ProposalColumnChildBlock),
       };
     case "icon":
+      return { ...block, id: newId() };
+    case "splash":
       return { ...block, id: newId() };
     case "section":
       return {
@@ -203,6 +212,7 @@ function createAddonsTableBlock(): ProposalBlock {
 const PRIMARY_BLOCK_OPTIONS: BlockOption[] = [
   { id: "text", type: "text", label: "Text", icon: ScrollText, accent: "text-violet-500", accentBg: "bg-violet-500/10" },
   { id: "header", type: "header", label: "Heading", icon: Heading, accent: "text-sky-500", accentBg: "bg-sky-500/10" },
+  { id: "splash", type: "splash", label: "Splash", icon: Mountain, accent: "text-teal-400", accentBg: "bg-teal-500/10" },
   { id: "pricing-quote", type: "pricing", label: "Quote", icon: Coins, accent: "text-emerald-500", accentBg: "bg-emerald-500/10" },
   {
     id: "pricing-table",
@@ -234,6 +244,7 @@ const DOCUMENT_PRIMARY_BLOCK_OPTIONS: BlockOption[] = [SECTION_PRIMARY_OPTION, .
 const SECTION_INSERT_OPTIONS: BlockOption[] = [
   { id: "sx-text", type: "text", label: "Text", icon: ScrollText, accent: "text-violet-500", accentBg: "bg-violet-500/10" },
   { id: "sx-heading", type: "header", label: "Heading", icon: Heading, accent: "text-sky-500", accentBg: "bg-sky-500/10" },
+  { id: "sx-splash", type: "splash", label: "Splash", icon: Mountain, accent: "text-teal-400", accentBg: "bg-teal-500/10" },
   { id: "sx-image", type: "image", label: "Image", icon: ImageIcon, accent: "text-fuchsia-500", accentBg: "bg-fuchsia-500/10" },
   {
     id: "sx-columns",
@@ -284,6 +295,8 @@ const LIBRARY_BLOCK_OPTIONS: BlockOption[] = [
 function createBlock(type: ProposalBlock["type"]): ProposalBlock {
   const id = newId();
   switch (type) {
+    case "splash":
+      return defaultSplashBlock(id);
     case "header":
       return { id, type: "header", text: "Section heading" };
     case "text":
@@ -879,6 +892,14 @@ function SectionBlockFields({
                           onStyleChange={
                             supportsStyle ? (next) => applyBlockStyle(child.id, next) : undefined
                           }
+                          backdropPickerSlot={
+                            child.type === "splash" ? (
+                              <ProposalSplashBackgroundPicker
+                                block={child as SplashBlock}
+                                onChange={(next) => updateChild(child.id, next as ProposalContentBlock)}
+                              />
+                            ) : undefined
+                          }
                           trailingSlot={
                             <Tooltip delayDuration={320}>
                               <TooltipTrigger asChild>
@@ -967,6 +988,10 @@ function BlockFields({
   const patch = (next: ProposalBlock) => onChange(next);
 
   switch (block.type) {
+    case "splash": {
+      const b = block as SplashBlock;
+      return <SplashBlockInspector block={b} onChange={(next) => patch(next)} />;
+    }
     case "section": {
       const b = block as SectionBlock;
       return (
@@ -1403,6 +1428,8 @@ function blockLabel(type: ProposalBlock["type"]): string {
   switch (type) {
     case "header":
       return "Heading";
+    case "splash":
+      return "Splash";
     case "text":
       return "Rich text";
     case "image":
@@ -1818,6 +1845,11 @@ export function ProposalDocumentEditor({
                                   <ProposalSectionBackgroundPicker
                                     background={block.background}
                                     onChange={(next) => patchSectionBackdrop(block.id, next)}
+                                  />
+                                ) : block.type === "splash" ? (
+                                  <ProposalSplashBackgroundPicker
+                                    block={block as SplashBlock}
+                                    onChange={(next) => updateBlock(block.id, next)}
                                   />
                                 ) : undefined
                               }

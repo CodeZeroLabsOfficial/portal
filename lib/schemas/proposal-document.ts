@@ -1,10 +1,5 @@
 import { z } from "zod";
-import type {
-  ProposalBlock,
-  ProposalContentBlock,
-  ProposalDocument,
-  SectionBackground,
-} from "@/types/proposal";
+import type { ProposalBlock, ProposalContentBlock, ProposalDocument, SectionBackground } from "@/types/proposal";
 
 const idSchema = z.string().min(4);
 
@@ -64,6 +59,49 @@ const sectionBackgroundSchema = z.object({
   tintOpacity: z.number().finite().min(0).max(100).optional(),
   blurStrength: z.number().finite().min(0).max(24).optional(),
   contentCard: z.boolean().optional(),
+});
+
+const splashFocalSchema = z.object({
+  x: z.number().finite().min(0).max(100),
+  y: z.number().finite().min(0).max(100),
+});
+
+const splashBackgroundSchema = z.object({
+  type: z.enum(["image", "video", "color"]),
+  url: relaxedUrl,
+  videoUrl: relaxedUrl,
+  color: colorString.optional(),
+  focalPoint: splashFocalSchema.optional(),
+  tintColor: colorString.optional(),
+  tintOpacity: z.number().finite().min(0).max(100).optional(),
+  tintMode: z.enum(["normal", "blend"]).optional(),
+  blur: z.number().finite().min(0).max(24).optional(),
+  posterUrl: relaxedUrl,
+});
+
+const splashHeightSchema = z.union([
+  z.literal("full"),
+  z.literal("half"),
+  z.literal("third"),
+  z.object({
+    custom: z.number().finite().positive().max(2400),
+    unit: z.enum(["px", "vh"]),
+  }),
+]);
+
+const splashBlockSchema = z.object({
+  id: idSchema,
+  type: z.literal("splash"),
+  background: splashBackgroundSchema,
+  height: splashHeightSchema,
+  alignment: z.object({
+    vertical: z.enum(["top", "center", "bottom"]),
+    horizontal: z.enum(["left", "center", "right"]),
+  }),
+  html: z.string().optional(),
+  body: z.string().optional(),
+  showCard: z.boolean().optional(),
+  cardOpacity: z.number().finite().min(0).max(100).optional(),
 });
 
 const pricingBlockSchema = z.object({
@@ -286,6 +324,7 @@ const columnsBlockSchema = z.object({
 
 /** Blocks inside a section — same as top-level except no nested `section`. */
 const nestedBlockUnionSchema = z.discriminatedUnion("type", [
+  splashBlockSchema,
   headerBlockSchema,
   textBlockSchema,
   imageBlockSchema,
@@ -318,6 +357,7 @@ const sectionBlockSchema = z.object({
 });
 
 const blockUnionSchema = z.discriminatedUnion("type", [
+  splashBlockSchema,
   headerBlockSchema,
   textBlockSchema,
   imageBlockSchema,
