@@ -15,13 +15,15 @@ import { PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES } from "@/lib/proposal-public-layo
 const RICH_PUBLIC =
   "proposal-rich-text max-w-none text-sm leading-relaxed [&_a]:text-sky-200 [&_a]:underline [&_blockquote]:my-4 [&_blockquote]:border-l-4 [&_blockquote]:border-white/35 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-white/75 [&_h1]:mt-0 [&_h1]:text-3xl [&_h1]:font-semibold [&_h2]:mt-2 [&_h2]:text-2xl [&_h2]:font-semibold [&_h3]:mt-2 [&_h3]:text-xl [&_h3]:font-semibold [&_h4]:mt-2 [&_h4]:text-base [&_h4]:font-semibold [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-3 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5 [&_img]:max-h-32 [&_img]:rounded-lg [&_img]:object-contain";
 
-function backdropJustify(v: SplashBlock["alignment"]["vertical"]): string {
+/** `flex-col`: main axis is vertical → `justify-*` controls vertical placement. */
+function columnJustifyFromVertical(v: SplashBlock["alignment"]["vertical"]): string {
   if (v === "top") return "justify-start";
   if (v === "bottom") return "justify-end";
   return "justify-center";
 }
 
-function backdropItems(h: SplashBlock["alignment"]["horizontal"]): string {
+/** `flex-col`: cross axis is horizontal → `items-*` controls horizontal placement. */
+function columnItemsFromHorizontal(h: SplashBlock["alignment"]["horizontal"]): string {
   if (h === "left") return "items-start";
   if (h === "right") return "items-end";
   return "items-center";
@@ -196,7 +198,7 @@ export function ProposalSplashBlockCanvas({
   const resolved = resolveSplashBackdrop(mergedBg);
   const prefersLight = resolved.prefersLightForeground;
   const heightStyle = splashHeightMinStyle(block.height);
-  const align = block.alignment ?? { vertical: "center", horizontal: "left" };
+  const align = block.alignment ?? { vertical: "center", horizontal: "center" };
   const showCard = Boolean(block.showCard);
   const cardOpacity = Math.max(0, Math.min(100, block.cardOpacity ?? 70));
 
@@ -210,6 +212,7 @@ export function ProposalSplashBlockCanvas({
         "w-full",
         !publicEdge && "max-w-[40rem]",
         align.horizontal === "center" && "mx-auto text-center",
+        align.horizontal === "right" && "ml-auto text-right",
       )}
     >
       {children}
@@ -222,6 +225,7 @@ export function ProposalSplashBlockCanvas({
         !publicEdge && "max-w-[40rem]",
         prefersLight && "text-white/[0.92]",
         align.horizontal === "center" && "mx-auto text-center",
+        align.horizontal === "right" && "ml-auto text-right",
       )}
       dangerouslySetInnerHTML={{ __html: sanitizeProposalHtml(publicHtml) }}
     />
@@ -255,11 +259,11 @@ export function ProposalSplashBlockCanvas({
 
       <div
         className={cn(
-          "relative z-10 flex h-full min-h-[inherit] w-full",
+          "relative z-10 flex h-full min-h-[inherit] w-full flex-col",
           editorChrome && "px-5 py-10 sm:px-8 sm:py-12 md:px-12 md:py-14",
           publicEdge && "px-0 py-10 sm:py-14 md:py-16",
-          backdropJustify(align.vertical),
-          backdropItems(align.horizontal),
+          columnJustifyFromVertical(align.vertical),
+          columnItemsFromHorizontal(align.horizontal),
           prefersLight &&
             cn(
               "[&_.proposal-rich-text]:!text-white/[0.92] [&_.proposal-rich-text_a]:text-sky-200",
@@ -269,7 +273,7 @@ export function ProposalSplashBlockCanvas({
       >
         <div
           className={cn(
-            "flex min-h-0 min-w-0 flex-1 flex-col",
+            "w-full min-w-0 shrink-0",
             publicEdge && PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES,
             editorChrome && "w-full",
           )}

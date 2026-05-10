@@ -155,7 +155,7 @@ export function defaultSplashBlock(id: string): SplashBlock {
     type: "splash",
     background: defaultSplashBackground(),
     height: "half",
-    alignment: { vertical: "center", horizontal: "left" },
+    alignment: { vertical: "center", horizontal: "center" },
     html: '<h1 style="color:#ffffff">Your proposal headline</h1><p style="color:rgba(255,255,255,0.88)">For [Client Name] on [Date]</p>',
     showCard: false,
     cardOpacity: 70,

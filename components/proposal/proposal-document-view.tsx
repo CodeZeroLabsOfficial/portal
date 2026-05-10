@@ -363,7 +363,7 @@ export function ProposalDocumentView({
         </div>
       ) : null}
       {viewportSectionBleed ? (
-        <div className="flex w-full flex-col gap-0">
+        <div className="flex w-full flex-col gap-[50px] py-[50px]">
           {document.blocks.map((block) => {
             const splashRootBand = Boolean(viewportSectionBleed && block.type === "splash");
             const child = (
