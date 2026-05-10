@@ -486,15 +486,15 @@ function DarkInsertRow({
 }) {
   return (
     <DropdownMenuItem
-      className="cursor-pointer gap-2 rounded-none px-3 py-2.5 text-sm text-zinc-100 focus:bg-white/10 focus:text-white"
+      className="cursor-pointer gap-2 rounded-none px-2.5 py-1.5 text-[13px] text-zinc-100 focus:bg-white/10 focus:text-white"
       onClick={(e: React.MouseEvent) => {
         e.preventDefault();
         onPick();
       }}
       onSelect={(e: Event) => e.preventDefault()}
     >
-      <span className="flex h-7 w-7 items-center justify-center rounded-md bg-white/5 ring-1 ring-white/10">
-        <Icon className="h-3.5 w-3.5 text-zinc-100" aria-hidden />
+      <span className="flex h-5 w-5 items-center justify-center rounded-[5px] bg-white/[0.06] ring-1 ring-white/10">
+        <Icon className="h-3 w-3 text-zinc-100" aria-hidden />
       </span>
       {label}
     </DropdownMenuItem>
@@ -522,16 +522,16 @@ function SectionInsertMenu({
       <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
       <DropdownMenuContent
         align={align}
-        sideOffset={6}
+        sideOffset={4}
         className={cn(
-          "w-[min(260px,calc(100vw-2rem))] border-zinc-800 bg-zinc-950 p-0 text-zinc-100 shadow-xl",
+          "w-[min(200px,calc(100vw-2rem))] overflow-hidden rounded-lg border-zinc-800 bg-zinc-950 p-0 text-zinc-100 shadow-xl",
         )}
         onCloseAutoFocus={(event: Event) => event.preventDefault()}
       >
-        <p className="border-b border-zinc-900 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+        <p className="px-2.5 pb-1 pt-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
           Content
         </p>
-        <div className="py-1">
+        <div className="pb-1">
           {SECTION_INSERT_OPTIONS.map((opt) => (
             <DarkInsertRow key={opt.id} icon={opt.icon} label={opt.label} onPick={() => pick(opt)} />
           ))}
@@ -1776,7 +1776,7 @@ export function ProposalDocumentEditor({
       ) : null}
 
       <div className="space-y-2">
-        <Label htmlFor="proposal-title">{isTemplate ? "Default proposal title" : "Proposal title"}</Label>
+        <Label htmlFor="proposal-title">Proposal title</Label>
         <Input id="proposal-title" value={title} onChange={(e) => setTitle(e.target.value)} className="max-w-xl" />
         {!isTemplate && initialStatus === "draft" ? (
           <p className="text-xs text-muted-foreground">

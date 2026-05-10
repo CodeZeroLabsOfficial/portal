@@ -10,7 +10,10 @@ import type {
   SectionBlock,
   SplashBlock,
 } from "@/types/proposal";
-import { PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES } from "@/lib/proposal-public-layout";
+import {
+  PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES,
+  PROPOSAL_PUBLIC_VIEWPORT_BREAKOUT_CLASSES,
+} from "@/lib/proposal-public-layout";
 import { escapeHtml } from "@/lib/escape-html";
 import { sanitizeProposalHtml } from "@/lib/sanitize-proposal-html";
 import { WORKSPACE_DETAIL_PAGE_TITLE_CLASS } from "@/lib/workspace-page-typography";
@@ -38,11 +41,14 @@ function BlockView({
   shareToken,
   publicSelections,
   viewportSectionBleed,
+  splashPublicPresentation,
 }: {
   block: ProposalBlock | ProposalContentBlock;
   shareToken?: string;
   publicSelections?: ProposalPublicSelections;
   viewportSectionBleed?: boolean;
+  /** Controls full-bleed splash chrome (matches section viewport bands). */
+  splashPublicPresentation?: "editor" | "nestedColumn" | "rootFullWidth";
 }) {
   switch (block.type) {
     /** Grouped layouts render children sequentially with generous vertical rhythm. */
@@ -55,6 +61,9 @@ function BlockView({
           shareToken={shareToken}
           publicSelections={publicSelections}
           viewportSectionBleed={viewportSectionBleed}
+          splashPublicPresentation={
+            viewportSectionBleed && c.type === "splash" ? "nestedColumn" : splashPublicPresentation
+          }
         />
       ));
       const body = viewportSectionBleed ? (
@@ -73,7 +82,12 @@ function BlockView({
     case "splash": {
       const s = block as SplashBlock;
       const pub = s.html?.trim() ? s.html : s.body ? `<p>${escapeHtml(s.body)}</p>` : "<p></p>";
-      return <ProposalSplashBlockCanvas block={s} mode="public" publicHtml={pub} />;
+      const pres = splashPublicPresentation ?? "nestedColumn";
+      const canvas = <ProposalSplashBlockCanvas block={s} mode="public" publicHtml={pub} presentation="publicEdge" />;
+      if (pres === "nestedColumn") {
+        return <div className={PROPOSAL_PUBLIC_VIEWPORT_BREAKOUT_CLASSES}>{canvas}</div>;
+      }
+      return canvas;
     }
     case "header":
       return (
@@ -245,12 +259,26 @@ function BlockView({
         <div className="grid gap-x-10 gap-y-10 md:grid-cols-2">
           <div className="space-y-10">
             {(block.left ?? []).map((c) => (
-              <BlockView key={c.id} block={c} shareToken={shareToken} publicSelections={publicSelections} />
+              <BlockView
+                key={c.id}
+                block={c}
+                shareToken={shareToken}
+                publicSelections={publicSelections}
+                viewportSectionBleed={viewportSectionBleed}
+                splashPublicPresentation={splashPublicPresentation}
+              />
             ))}
           </div>
           <div className="space-y-10">
             {(block.right ?? []).map((c) => (
-              <BlockView key={c.id} block={c} shareToken={shareToken} publicSelections={publicSelections} />
+              <BlockView
+                key={c.id}
+                block={c}
+                shareToken={shareToken}
+                publicSelections={publicSelections}
+                viewportSectionBleed={viewportSectionBleed}
+                splashPublicPresentation={splashPublicPresentation}
+              />
             ))}
           </div>
         </div>
@@ -345,15 +373,23 @@ export function ProposalDocumentView({
       {viewportSectionBleed ? (
         <div className="flex w-full flex-col gap-0">
           {document.blocks.map((block) => {
+            const splashRootBand = Boolean(viewportSectionBleed && block.type === "splash");
             const child = (
               <BlockView
                 block={block}
                 shareToken={shareToken}
                 publicSelections={publicSelections}
                 viewportSectionBleed={viewportSectionBleed}
+                splashPublicPresentation={
+                  block.type === "splash"
+                    ? viewportSectionBleed
+                      ? "rootFullWidth"
+                      : "nestedColumn"
+                    : undefined
+                }
               />
             );
-            if (block.type === "section") {
+            if (block.type === "section" || splashRootBand) {
               return (
                 <section key={block.id} className="w-full">
                   {child}
@@ -376,6 +412,7 @@ export function ProposalDocumentView({
                 shareToken={shareToken}
                 publicSelections={publicSelections}
                 viewportSectionBleed={false}
+                splashPublicPresentation={block.type === "splash" ? "nestedColumn" : undefined}
               />
             </section>
           ))}

@@ -10,6 +10,7 @@ import {
   resolveSplashBackdrop,
   splashHeightMinStyle,
 } from "@/lib/splash-block";
+import { PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES } from "@/lib/proposal-public-layout";
 
 const RICH_PUBLIC =
   "proposal-rich-text max-w-none text-sm leading-relaxed [&_a]:text-sky-200 [&_a]:underline [&_blockquote]:my-4 [&_blockquote]:border-l-4 [&_blockquote]:border-white/35 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-white/75 [&_h1]:mt-0 [&_h1]:text-3xl [&_h1]:font-semibold [&_h2]:mt-2 [&_h2]:text-2xl [&_h2]:font-semibold [&_h3]:mt-2 [&_h3]:text-xl [&_h3]:font-semibold [&_h4]:mt-2 [&_h4]:text-base [&_h4]:font-semibold [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-3 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5 [&_img]:max-h-32 [&_img]:rounded-lg [&_img]:object-contain";
@@ -179,6 +180,8 @@ export interface ProposalSplashBlockCanvasProps {
   /** Published / preview HTML when `children` is not used. */
   publicHtml?: string;
   className?: string;
+  /** `publicEdge` matches full-width section bands; `editor` keeps inset card chrome. */
+  presentation?: "editor" | "publicEdge";
 }
 
 export function ProposalSplashBlockCanvas({
@@ -187,6 +190,7 @@ export function ProposalSplashBlockCanvas({
   children,
   publicHtml,
   className,
+  presentation: presentationProp,
 }: ProposalSplashBlockCanvasProps) {
   const mergedBg = mergeSplashBackground(block.background);
   const resolved = resolveSplashBackdrop(mergedBg);
@@ -196,13 +200,26 @@ export function ProposalSplashBlockCanvas({
   const showCard = Boolean(block.showCard);
   const cardOpacity = Math.max(0, Math.min(100, block.cardOpacity ?? 70));
 
+  const editorChrome = mode === "editor";
+  const presentation = editorChrome ? "editor" : (presentationProp ?? "publicEdge");
+  const publicEdge = presentation === "publicEdge";
+
   const inner = children ? (
-    <div className={cn("w-full max-w-[40rem]", align.horizontal === "center" && "mx-auto text-center")}>{children}</div>
+    <div
+      className={cn(
+        "w-full",
+        !publicEdge && "max-w-[40rem]",
+        align.horizontal === "center" && "mx-auto text-center",
+      )}
+    >
+      {children}
+    </div>
   ) : publicHtml?.trim() ? (
     <div
       className={cn(
         RICH_PUBLIC,
-        "w-full max-w-[40rem]",
+        "w-full",
+        !publicEdge && "max-w-[40rem]",
         prefersLight && "text-white/[0.92]",
         align.horizontal === "center" && "mx-auto text-center",
       )}
@@ -224,8 +241,12 @@ export function ProposalSplashBlockCanvas({
   return (
     <div
       className={cn(
-        "proposal-splash-block relative isolate w-full min-w-0 overflow-hidden rounded-xl ring-1 ring-black/[0.08] dark:ring-white/10",
-        mode === "editor" && "shadow-md",
+        "proposal-splash-block relative isolate w-full min-w-0 overflow-hidden",
+        editorChrome
+          ? "rounded-xl shadow-md ring-1 ring-black/[0.08] dark:ring-white/10"
+          : publicEdge
+            ? "rounded-none border-y border-black/[0.07] shadow-none ring-0 dark:border-white/[0.08]"
+            : "rounded-xl ring-1 ring-black/[0.08] dark:ring-white/10",
         className,
       )}
       style={heightStyle}
@@ -234,7 +255,9 @@ export function ProposalSplashBlockCanvas({
 
       <div
         className={cn(
-          "relative z-10 flex h-full min-h-[inherit] px-5 py-10 sm:px-8 sm:py-12 md:px-12 md:py-14",
+          "relative z-10 flex h-full min-h-[inherit] w-full",
+          editorChrome && "px-5 py-10 sm:px-8 sm:py-12 md:px-12 md:py-14",
+          publicEdge && "px-0 py-10 sm:py-14 md:py-16",
           backdropJustify(align.vertical),
           backdropItems(align.horizontal),
           prefersLight &&
@@ -244,19 +267,27 @@ export function ProposalSplashBlockCanvas({
             ),
         )}
       >
-        {showCard && inner ? (
-          <div
-            className={cn(
-              "max-w-full rounded-2xl border px-5 py-6 shadow-inner backdrop-blur-md sm:px-8 sm:py-8",
-              prefersLight ? "text-white" : "text-foreground",
-            )}
-            style={cardStyle}
-          >
-            {inner}
-          </div>
-        ) : (
-          inner
-        )}
+        <div
+          className={cn(
+            "flex min-h-0 min-w-0 flex-1 flex-col",
+            publicEdge && PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES,
+            editorChrome && "w-full",
+          )}
+        >
+          {showCard && inner ? (
+            <div
+              className={cn(
+                "max-w-full rounded-2xl border px-5 py-6 shadow-inner backdrop-blur-md sm:px-8 sm:py-8",
+                prefersLight ? "text-white" : "text-foreground",
+              )}
+              style={cardStyle}
+            >
+              {inner}
+            </div>
+          ) : (
+            inner
+          )}
+        </div>
       </div>
     </div>
   );

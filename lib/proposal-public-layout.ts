@@ -17,3 +17,10 @@ export const PROPOSAL_PUBLIC_CONTENT_CLASSES =
 
 /** Proposal body fills the horizontal track of `<main>`; do not nest inside `PROPOSAL_PUBLIC_CONTENT_CLASSES`. */
 export const PROPOSAL_PUBLIC_DOCUMENT_OUTER_CLASSES = "w-full print:max-w-none";
+
+/**
+ * Break a block out of `PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES` to the viewport width — same horizontal band as
+ * `ProposalSectionShell` with `viewportBleed` (section backgrounds).
+ */
+export const PROPOSAL_PUBLIC_VIEWPORT_BREAKOUT_CLASSES =
+  "relative left-1/2 w-screen max-w-[100vw] -translate-x-1/2 print:w-full print:max-w-none print:translate-x-0 print:left-0";
