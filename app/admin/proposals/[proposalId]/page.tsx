@@ -177,7 +177,6 @@ export default async function AdminProposalDetailPage({ params, searchParams }: 
 
         <ProposalDocumentEditorLazy
           proposalId={proposal.id}
-          initialTitle={proposal.document.title || proposal.title}
           initialDocument={proposal.document}
           initialStatus={proposal.status}
         />

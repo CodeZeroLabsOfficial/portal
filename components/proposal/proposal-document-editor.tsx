@@ -1469,7 +1469,6 @@ export interface ProposalDocumentEditorProps {
   templateId?: string;
   initialTemplateName?: string;
   initialTemplateDescription?: string;
-  initialTitle: string;
   initialDocument: ProposalDocument;
   initialStatus?: string;
 }
@@ -1480,14 +1479,12 @@ export function ProposalDocumentEditor({
   templateId,
   initialTemplateName = "",
   initialTemplateDescription = "",
-  initialTitle,
   initialDocument,
   initialStatus = "draft",
 }: ProposalDocumentEditorProps) {
   const isTemplate = variant === "template";
   const [templateName, setTemplateName] = React.useState(initialTemplateName);
   const [templateDescription, setTemplateDescription] = React.useState(initialTemplateDescription);
-  const [proposalTitle, setProposalTitle] = React.useState(initialTitle);
   const [blocks, setBlocks] = React.useState<ProposalBlock[]>(initialDocument.blocks);
   const [selectedBlockId, setSelectedBlockId] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
@@ -1501,7 +1498,17 @@ export function ProposalDocumentEditor({
     }),
   );
 
-  const documentTitle = isTemplate ? templateName.trim() || "Untitled template" : proposalTitle;
+  const proposalTitleFrozenRef = React.useRef<string | null>(null);
+  const documentTitle = React.useMemo(() => {
+    if (isTemplate) {
+      return templateName.trim() || "Untitled template";
+    }
+    if (proposalTitleFrozenRef.current === null) {
+      proposalTitleFrozenRef.current =
+        (initialDocument.title ?? "").trim() || "Untitled proposal";
+    }
+    return proposalTitleFrozenRef.current;
+  }, [isTemplate, templateName, initialDocument.title]);
   const doc: ProposalDocument = React.useMemo(
     () => ({ title: documentTitle, blocks }),
     [documentTitle, blocks],
@@ -1545,7 +1552,7 @@ export function ProposalDocumentEditor({
     }
     const res = await saveProposalDocumentAction({
       proposalId,
-      title: proposalTitle,
+      title: documentTitle,
       document: doc,
     });
     setSaving(false);
@@ -1556,7 +1563,7 @@ export function ProposalDocumentEditor({
     if (isTemplate || !proposalId) return;
     setSending(true);
     setMessage(null);
-    const saved = await saveProposalDocumentAction({ proposalId, title: proposalTitle, document: doc });
+    const saved = await saveProposalDocumentAction({ proposalId, title: documentTitle, document: doc });
     if (!saved.ok) {
       setSending(false);
       setMessage(saved.message);
@@ -1751,6 +1758,12 @@ export function ProposalDocumentEditor({
             </Button>
           ) : null}
           {message ? <span className="text-sm text-muted-foreground">{message}</span> : null}
+          {!isTemplate && initialStatus === "draft" ? (
+            <p className="w-full text-xs text-muted-foreground">
+              Save &amp; publish sends the public link, records engagement, and moves a linked opportunity to the Proposal
+              stage.
+            </p>
+          ) : null}
         </div>
       )}
 
@@ -1781,24 +1794,6 @@ export function ProposalDocumentEditor({
             {"{{email}}"}, {"{{company}}"}, {"{{opportunity}}"}, {"{{deal_amount}}"} when generating from a customer or
             deal.
           </p>
-        </div>
-      ) : null}
-
-      {!isTemplate ? (
-        <div className="space-y-2">
-          <Label htmlFor="proposal-title">Proposal title</Label>
-          <Input
-            id="proposal-title"
-            value={proposalTitle}
-            onChange={(e) => setProposalTitle(e.target.value)}
-            className="max-w-xl"
-          />
-          {initialStatus === "draft" ? (
-            <p className="text-xs text-muted-foreground">
-              Save &amp; publish sends the public link, records engagement, and moves a linked opportunity to the Proposal
-              stage.
-            </p>
-          ) : null}
         </div>
       ) : null}
 
