@@ -120,6 +120,12 @@ export function BlockToolbar({
           <ToolbarDivider elevated={elevated} />
         </>
       ) : null}
+      {backdropPickerSlot ? (
+        <>
+          <span className="inline-flex items-center">{backdropPickerSlot}</span>
+          <ToolbarDivider elevated={elevated} />
+        </>
+      ) : null}
       {auxiliarySlot ? (
         <>
           <span className="inline-flex items-center">{auxiliarySlot}</span>
@@ -162,7 +168,6 @@ export function BlockToolbar({
       {supportsStyle ? (
         <StylePickerTrigger style={style} onStyleChange={onStyleChange!} elevated={elevated} />
       ) : null}
-      {backdropPickerSlot ? backdropPickerSlot : null}
       {onOpenSettings ? (
         <ToolbarIconButton
           elevated={elevated}
