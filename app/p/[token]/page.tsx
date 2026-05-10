@@ -52,8 +52,13 @@ export default async function PublicProposalPage(props: PublicProposalPageProps)
   const requiresPassword = Boolean(proposal.sharePasswordHash);
   const unlocked = !requiresPassword || (await isProposalUnlockedForRequest(proposal.id));
 
+  const mainUnlockedClasses =
+    "proposal-print-root w-full pb-12 pt-0 print:pb-8 sm:pb-14 min-h-dvh";
+
   return (
-    <main className={`${PROPOSAL_PUBLIC_SHELL_CLASSES} min-h-dvh`}>
+    <main
+      className={unlocked ? mainUnlockedClasses : `${PROPOSAL_PUBLIC_SHELL_CLASSES} min-h-dvh`}
+    >
       {!unlocked ? (
         <div className={PROPOSAL_PUBLIC_CONTENT_CLASSES}>
           <ProposalPasswordGate shareToken={proposal.shareToken} />
