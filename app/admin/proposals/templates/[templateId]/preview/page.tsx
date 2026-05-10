@@ -4,10 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { getCurrentSessionUser, isStaff } from "@/lib/auth/server-session";
 import { getProposalTemplateForStaff } from "@/server/firestore/proposal-templates";
 import { ProposalDocumentView } from "@/components/proposal/proposal-document-view";
-import {
-  PROPOSAL_PUBLIC_DOCUMENT_OUTER_CLASSES,
-  PROPOSAL_PUBLIC_SHELL_CLASSES,
-} from "@/lib/proposal-public-layout";
+import { PROPOSAL_PUBLIC_DOCUMENT_OUTER_CLASSES } from "@/lib/proposal-public-layout";
 import { Button } from "@/components/ui/button";
 
 interface PageProps {
@@ -33,8 +30,8 @@ export default async function ProposalTemplatePublicPreviewPage({ params }: Page
   }
 
   return (
-    <div className="min-h-dvh bg-background">
-      <div className="sticky top-0 z-10 border-b border-border bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+    <div className="relative min-h-dvh bg-background">
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-border/80 bg-background/85 px-4 py-3 shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-background/70">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-muted-foreground">
             <span className="font-medium text-foreground">Public-style preview</span>
@@ -49,8 +46,8 @@ export default async function ProposalTemplatePublicPreviewPage({ params }: Page
             </Link>
           </Button>
         </div>
-      </div>
-      <main className={`${PROPOSAL_PUBLIC_SHELL_CLASSES} min-h-[60vh]`}>
+      </header>
+      <main className="proposal-print-root w-full pb-12 pt-0 print:pb-8 sm:pb-14 min-h-dvh">
         <div className={PROPOSAL_PUBLIC_DOCUMENT_OUTER_CLASSES}>
           <ProposalDocumentView document={template.document} branding={template.branding} />
         </div>

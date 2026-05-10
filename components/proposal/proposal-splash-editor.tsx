@@ -299,7 +299,17 @@ export function ProposalSplashBackgroundPicker({
         className="w-[min(360px,calc(100vw-2rem))] overflow-hidden rounded-xl border border-border bg-popover p-0 text-popover-foreground shadow-lg"
         onCloseAutoFocus={(e) => e.preventDefault()}
       >
-        <div className="max-h-[min(78vh,640px)] overflow-y-auto overflow-x-hidden">
+        <Tabs defaultValue="background" className="w-full">
+          <TabsList className="mx-3 mt-2 grid h-9 w-[calc(100%-1.5rem)] grid-cols-2 gap-0 rounded-lg bg-muted p-0.5">
+            <TabsTrigger value="background" className="text-xs font-semibold">
+              Background
+            </TabsTrigger>
+            <TabsTrigger value="layout" className="text-xs font-semibold">
+              Layout
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="background" className="mt-0 outline-none">
+            <div className="max-h-[min(58vh,460px)] overflow-y-auto overflow-x-hidden">
           <div className="border-b border-border/80 px-4 py-3">
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Background type</p>
             <Tabs
@@ -421,78 +431,6 @@ export function ProposalSplashBackgroundPicker({
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Position</Label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
-                value={positionSelectValue}
-                aria-label="Background and content position"
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (v === "custom") {
-                    setCustomLayoutOpen(true);
-                    return;
-                  }
-                  setCustomLayoutOpen(false);
-                  onChange(applyLayoutPreset(block, v));
-                }}
-              >
-                {LAYOUT_PRESETS.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.label}
-                  </option>
-                ))}
-                <option value="custom">Custom…</option>
-              </select>
-              {showCustomLayout ? (
-                <div className="flex flex-wrap items-end gap-4 pt-2">
-                  <FocalPointGrid value={fp} onChange={(next) => patchBg({ focalPoint: next })} />
-                  <div className="grid flex-1 grid-cols-2 gap-2">
-                    <div className="space-y-1">
-                      <Label className="text-[10px] text-muted-foreground">Vertical</Label>
-                      <select
-                        className="h-9 w-full rounded-md border border-input bg-background px-2 text-xs"
-                        value={block.alignment.vertical}
-                        onChange={(e) =>
-                          onChange({
-                            ...block,
-                            alignment: {
-                              ...block.alignment,
-                              vertical: e.target.value as SplashBlock["alignment"]["vertical"],
-                            },
-                          })
-                        }
-                      >
-                        <option value="top">Top</option>
-                        <option value="center">Center</option>
-                        <option value="bottom">Bottom</option>
-                      </select>
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-[10px] text-muted-foreground">Horizontal</Label>
-                      <select
-                        className="h-9 w-full rounded-md border border-input bg-background px-2 text-xs"
-                        value={block.alignment.horizontal}
-                        onChange={(e) =>
-                          onChange({
-                            ...block,
-                            alignment: {
-                              ...block.alignment,
-                              horizontal: e.target.value as SplashBlock["alignment"]["horizontal"],
-                            },
-                          })
-                        }
-                      >
-                        <option value="left">Left</option>
-                        <option value="center">Center</option>
-                        <option value="right">Right</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              ) : null}
-            </div>
-
             <div>
               <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Tint style</p>
               <div className="inline-flex h-9 w-full rounded-lg bg-muted p-0.5 ring-1 ring-inset ring-border">
@@ -559,66 +497,141 @@ export function ProposalSplashBackgroundPicker({
               />
             ) : null}
           </div>
+            </div>
+          </TabsContent>
 
-          <Separator />
-
-          <div className="space-y-4 px-4 py-4">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Layout</p>
-            <div className="space-y-2">
-              <Label className="text-[11px] font-semibold text-muted-foreground">Height</Label>
-              <div className="flex flex-wrap gap-1.5">
-                {(["full", "half", "third"] as const).map((h) => (
-                  <Button
-                    key={h}
-                    type="button"
-                    size="sm"
-                    variant={block.height === h ? "default" : "outline"}
-                    className="h-8 flex-1 min-w-[4.5rem] px-2 text-xs"
-                    onClick={() => onChange({ ...block, height: h })}
-                  >
-                    {h === "full" ? "Full" : h === "half" ? "50%" : "33%"}
-                  </Button>
-                ))}
-              </div>
-              <div className="flex flex-wrap items-end gap-2 pt-1">
-                <div className="space-y-1">
-                  <Label className="text-[10px] text-muted-foreground">Custom</Label>
-                  <Input
-                    type="number"
-                    min={120}
-                    max={2400}
-                    className="h-9 w-[5.5rem]"
-                    value={typeof block.height === "object" ? block.height.custom : ""}
-                    placeholder="—"
-                    onChange={(e) => {
-                      const n = Number(e.target.value);
-                      if (!Number.isFinite(n) || n <= 0) return;
-                      onChange({
-                        ...block,
-                        height: {
-                          custom: Math.round(n),
-                          unit: typeof block.height === "object" ? block.height.unit : "px",
-                        },
-                      });
-                    }}
-                  />
-                </div>
+          <TabsContent value="layout" className="mt-0 outline-none">
+            <div className="max-h-[min(58vh,460px)] overflow-y-auto overflow-x-hidden px-4 py-4">
+              <div className="space-y-1.5">
+                <Label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Position</Label>
                 <select
-                  className="h-9 rounded-md border border-input bg-background px-2 text-sm"
-                  value={typeof block.height === "object" ? block.height.unit : "px"}
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+                  value={positionSelectValue}
+                  aria-label="Background and content position"
                   onChange={(e) => {
-                    const unit = e.target.value as "px" | "vh";
-                    const custom = typeof block.height === "object" ? block.height.custom : 480;
-                    onChange({ ...block, height: { custom, unit } });
+                    const v = e.target.value;
+                    if (v === "custom") {
+                      setCustomLayoutOpen(true);
+                      return;
+                    }
+                    setCustomLayoutOpen(false);
+                    onChange(applyLayoutPreset(block, v));
                   }}
                 >
-                  <option value="px">px</option>
-                  <option value="vh">vh</option>
+                  {LAYOUT_PRESETS.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.label}
+                    </option>
+                  ))}
+                  <option value="custom">Custom…</option>
                 </select>
+                {showCustomLayout ? (
+                  <div className="flex flex-wrap items-end gap-4 pt-2">
+                    <FocalPointGrid value={fp} onChange={(next) => patchBg({ focalPoint: next })} />
+                    <div className="grid flex-1 grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-[10px] text-muted-foreground">Vertical</Label>
+                        <select
+                          className="h-9 w-full rounded-md border border-input bg-background px-2 text-xs"
+                          value={block.alignment.vertical}
+                          onChange={(e) =>
+                            onChange({
+                              ...block,
+                              alignment: {
+                                ...block.alignment,
+                                vertical: e.target.value as SplashBlock["alignment"]["vertical"],
+                              },
+                            })
+                          }
+                        >
+                          <option value="top">Top</option>
+                          <option value="center">Center</option>
+                          <option value="bottom">Bottom</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] text-muted-foreground">Horizontal</Label>
+                        <select
+                          className="h-9 w-full rounded-md border border-input bg-background px-2 text-xs"
+                          value={block.alignment.horizontal}
+                          onChange={(e) =>
+                            onChange({
+                              ...block,
+                              alignment: {
+                                ...block.alignment,
+                                horizontal: e.target.value as SplashBlock["alignment"]["horizontal"],
+                              },
+                            })
+                          }
+                        >
+                          <option value="left">Left</option>
+                          <option value="center">Center</option>
+                          <option value="right">Right</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+
+              <Separator className="my-4" />
+
+              <div className="space-y-2">
+                <Label className="text-[11px] font-semibold text-muted-foreground">Height</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {(["full", "half", "third"] as const).map((h) => (
+                    <Button
+                      key={h}
+                      type="button"
+                      size="sm"
+                      variant={block.height === h ? "default" : "outline"}
+                      className="h-8 min-w-[4.5rem] flex-1 px-2 text-xs"
+                      onClick={() => onChange({ ...block, height: h })}
+                    >
+                      {h === "full" ? "Full" : h === "half" ? "50%" : "33%"}
+                    </Button>
+                  ))}
+                </div>
+                <div className="flex flex-wrap items-end gap-2 pt-1">
+                  <div className="space-y-1">
+                    <Label className="text-[10px] text-muted-foreground">Custom</Label>
+                    <Input
+                      type="number"
+                      min={120}
+                      max={2400}
+                      className="h-9 w-[5.5rem]"
+                      value={typeof block.height === "object" ? block.height.custom : ""}
+                      placeholder="—"
+                      onChange={(e) => {
+                        const n = Number(e.target.value);
+                        if (!Number.isFinite(n) || n <= 0) return;
+                        onChange({
+                          ...block,
+                          height: {
+                            custom: Math.round(n),
+                            unit: typeof block.height === "object" ? block.height.unit : "px",
+                          },
+                        });
+                      }}
+                    />
+                  </div>
+                  <select
+                    className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+                    value={typeof block.height === "object" ? block.height.unit : "px"}
+                    onChange={(e) => {
+                      const unit = e.target.value as "px" | "vh";
+                      const custom = typeof block.height === "object" ? block.height.custom : 480;
+                      onChange({ ...block, height: { custom, unit } });
+                    }}
+                  >
+                    <option value="px">px</option>
+                    <option value="vh">vh</option>
+                  </select>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+          </TabsContent>
+        </Tabs>
       </DropdownMenuContent>
     </DropdownMenu>
   );
