@@ -26,9 +26,8 @@ export async function generateMetadata(props: PublicProposalPageProps): Promise<
   if (!proposal || proposal.status === "draft") {
     return { title: "Proposal" };
   }
-  const t = proposal.document.title?.trim() || proposal.title || "Proposal";
   return {
-    title: t,
+    title: "Proposal",
     robots: "noindex, nofollow",
   };
 }

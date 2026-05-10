@@ -354,22 +354,14 @@ export function ProposalDocumentView({
       style={style}
       className={cn("w-full space-y-0", className)}
     >
-      <div className={PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES}>
-        {branding?.logoUrl ? (
+      {branding?.logoUrl ? (
+        <div className={PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES}>
           <div className="flex justify-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={branding.logoUrl} alt="" className="h-10 max-w-[200px] object-contain" />
           </div>
-        ) : null}
-        <header className={branding?.logoUrl ? "mt-8" : ""}>
-          <h1
-            className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl"
-            style={branding?.primaryColor ? { color: branding.primaryColor } : undefined}
-          >
-            {document.title}
-          </h1>
-        </header>
-      </div>
+        </div>
+      ) : null}
       {viewportSectionBleed ? (
         <div className="flex w-full flex-col gap-0">
           {document.blocks.map((block) => {

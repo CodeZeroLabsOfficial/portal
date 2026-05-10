@@ -1,10 +1,10 @@
 /**
  * Public proposal pages — vertical shell spacing + a centered reading column utility.
- * Proposal document chrome applies `PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES` only to title,
+ * Proposal document chrome applies `PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES` to the optional logo,
  * non-section roots, gates, and footers; grouped `section` blocks span `w-full` edge-to-edge.
  */
 
-/** Typography / imagery column (logo, heading, stray root blocks, footers). */
+/** Typography / imagery column (logo, stray root blocks, footers). */
 export const PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES =
   "mx-auto w-full max-w-5xl px-6 sm:px-12 lg:px-20 xl:px-28";
 
