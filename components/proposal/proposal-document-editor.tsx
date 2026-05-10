@@ -1487,7 +1487,7 @@ export function ProposalDocumentEditor({
   const isTemplate = variant === "template";
   const [templateName, setTemplateName] = React.useState(initialTemplateName);
   const [templateDescription, setTemplateDescription] = React.useState(initialTemplateDescription);
-  const [title, setTitle] = React.useState(initialTitle);
+  const [proposalTitle, setProposalTitle] = React.useState(initialTitle);
   const [blocks, setBlocks] = React.useState<ProposalBlock[]>(initialDocument.blocks);
   const [selectedBlockId, setSelectedBlockId] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
@@ -1501,7 +1501,11 @@ export function ProposalDocumentEditor({
     }),
   );
 
-  const doc: ProposalDocument = React.useMemo(() => ({ title, blocks }), [title, blocks]);
+  const documentTitle = isTemplate ? templateName.trim() || "Untitled template" : proposalTitle;
+  const doc: ProposalDocument = React.useMemo(
+    () => ({ title: documentTitle, blocks }),
+    [documentTitle, blocks],
+  );
 
   function onDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -1527,7 +1531,7 @@ export function ProposalDocumentEditor({
         templateId,
         name: templateName.trim() || "Untitled template",
         description: templateDescription.trim() || undefined,
-        title,
+        title: documentTitle,
         document: doc,
       });
       setSaving(false);
@@ -1541,7 +1545,7 @@ export function ProposalDocumentEditor({
     }
     const res = await saveProposalDocumentAction({
       proposalId,
-      title,
+      title: proposalTitle,
       document: doc,
     });
     setSaving(false);
@@ -1552,7 +1556,7 @@ export function ProposalDocumentEditor({
     if (isTemplate || !proposalId) return;
     setSending(true);
     setMessage(null);
-    const saved = await saveProposalDocumentAction({ proposalId, title, document: doc });
+    const saved = await saveProposalDocumentAction({ proposalId, title: proposalTitle, document: doc });
     if (!saved.ok) {
       setSending(false);
       setMessage(saved.message);
@@ -1772,25 +1776,31 @@ export function ProposalDocumentEditor({
               className="resize-y"
             />
           </div>
+          <p className="text-xs text-muted-foreground md:col-span-2">
+            The public proposal title matches the template name. Use merge tokens in text blocks: {"{{name}}"},{" "}
+            {"{{email}}"}, {"{{company}}"}, {"{{opportunity}}"}, {"{{deal_amount}}"} when generating from a customer or
+            deal.
+          </p>
         </div>
       ) : null}
 
-      <div className="space-y-2">
-        <Label htmlFor="proposal-title">Proposal title</Label>
-        <Input id="proposal-title" value={title} onChange={(e) => setTitle(e.target.value)} className="max-w-xl" />
-        {!isTemplate && initialStatus === "draft" ? (
-          <p className="text-xs text-muted-foreground">
-            Save &amp; publish sends the public link, records engagement, and moves a linked opportunity to the Proposal
-            stage.
-          </p>
-        ) : null}
-        {isTemplate ? (
-          <p className="text-xs text-muted-foreground">
-            Use merge tokens in titles or text: {"{{name}}"}, {"{{email}}"}, {"{{company}}"}, {"{{opportunity}}"},{" "}
-            {"{{deal_amount}}"} when generating from a customer or deal.
-          </p>
-        ) : null}
-      </div>
+      {!isTemplate ? (
+        <div className="space-y-2">
+          <Label htmlFor="proposal-title">Proposal title</Label>
+          <Input
+            id="proposal-title"
+            value={proposalTitle}
+            onChange={(e) => setProposalTitle(e.target.value)}
+            className="max-w-xl"
+          />
+          {initialStatus === "draft" ? (
+            <p className="text-xs text-muted-foreground">
+              Save &amp; publish sends the public link, records engagement, and moves a linked opportunity to the Proposal
+              stage.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
 
       <Tabs defaultValue="edit">
         <TabsList>

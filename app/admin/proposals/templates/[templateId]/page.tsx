@@ -39,7 +39,7 @@ export default async function EditProposalTemplatePage({ params }: PageProps) {
           templateId={template.id}
           initialTemplateName={template.name}
           initialTemplateDescription={template.description ?? ""}
-          initialTitle={template.document.title || template.name}
+          initialTitle={template.name}
           initialDocument={template.document}
         />
       </div>
