@@ -88,6 +88,9 @@ function youtubeBackgroundSrc(pageUrl: string): string | null {
       u.searchParams.set("rel", "0");
       u.searchParams.set("modestbranding", "1");
       u.searchParams.set("showinfo", "0");
+      u.searchParams.set("fs", "0");
+      u.searchParams.set("disablekb", "1");
+      u.searchParams.set("iv_load_policy", "3");
       u.searchParams.set("loop", "1");
       u.searchParams.set("playlist", id);
       return u.toString();

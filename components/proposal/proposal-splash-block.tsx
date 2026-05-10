@@ -120,20 +120,25 @@ function SplashMediaLayers({
               title="Background video"
               src={resolved.embedSrc}
               className="pointer-events-none absolute left-1/2 top-1/2 h-[115%] min-h-full w-[115%] min-w-full -translate-x-1/2 -translate-y-1/2 border-0 opacity-95"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope"
             />
           ) : (
             <video
               key={resolved.videoUrl}
-              className="h-full w-full object-cover"
+              className="proposal-splash-bg-video h-full w-full object-cover"
               style={{ objectPosition: resolved.objectPosition }}
               autoPlay={mode === "public"}
+              controls={false}
+              controlsList="nodownload nofullscreen noremoteplayback"
+              disablePictureInPicture
+              disableRemotePlayback
               muted
               loop
               playsInline
               preload="metadata"
               poster={poster}
               src={resolved.videoUrl || undefined}
+              tabIndex={-1}
             />
           )}
         </div>

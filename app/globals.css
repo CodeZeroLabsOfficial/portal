@@ -56,6 +56,15 @@
     @apply bg-background text-foreground antialiased;
   }
 
+  /* Splash background `<video>`: keep ambient loops chrome-free (Safari/WebKit overlays). */
+  video.proposal-splash-bg-video::-webkit-media-controls,
+  video.proposal-splash-bg-video::-webkit-media-controls-enclosure,
+  video.proposal-splash-bg-video::-webkit-media-controls-panel,
+  video.proposal-splash-bg-video::-webkit-media-controls-play-button,
+  video.proposal-splash-bg-video::-webkit-media-controls-start-playback-button {
+    display: none !important;
+  }
+
   /* Portal workspace: #0D0D16 base, #673AB7 accent */
   .portal-ui {
     --background: 240 26% 7%;

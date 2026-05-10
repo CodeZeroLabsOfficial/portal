@@ -363,8 +363,11 @@ export function ProposalDocumentView({
         </div>
       ) : null}
       {viewportSectionBleed ? (
-        <div className="flex w-full flex-col gap-[50px] py-[50px]">
-          {document.blocks.map((block) => {
+        <div className="flex w-full flex-col gap-0">
+          {document.blocks.map((block, index) => {
+            const prev = index > 0 ? document.blocks[index - 1] : undefined;
+            const marginBetweenRootSections =
+              block.type === "section" && prev?.type === "section" ? "mt-[50px]" : undefined;
             const splashRootBand = Boolean(viewportSectionBleed && block.type === "splash");
             const child = (
               <BlockView
@@ -383,13 +386,13 @@ export function ProposalDocumentView({
             );
             if (block.type === "section" || splashRootBand) {
               return (
-                <section key={block.id} className="w-full">
+                <section key={block.id} className={cn("w-full", marginBetweenRootSections)}>
                   {child}
                 </section>
               );
             }
             return (
-              <section key={block.id} className={PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES}>
+              <section key={block.id} className={cn(PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES, marginBetweenRootSections)}>
                 {child}
               </section>
             );
