@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import {
   closestCenter,
@@ -1776,6 +1777,8 @@ export interface ProposalDocumentEditorProps {
   initialDocument: ProposalDocument;
   initialStatus?: string;
   proposalEditShellToolbar?: ProposalEditShellToolbarProps;
+  /** Rendered between the proposal toolbar and block tabs (e.g. summary + share grid from the server page). */
+  proposalEditMiddleSlot?: ReactNode;
 }
 
 export function ProposalDocumentEditor({
@@ -1787,6 +1790,7 @@ export function ProposalDocumentEditor({
   initialDocument,
   initialStatus = "draft",
   proposalEditShellToolbar,
+  proposalEditMiddleSlot,
 }: ProposalDocumentEditorProps) {
   const isTemplate = variant === "template";
   const [templateName, setTemplateName] = React.useState(initialTemplateName);
@@ -2182,6 +2186,8 @@ export function ProposalDocumentEditor({
           ) : null}
         </div>
       )}
+
+      {proposalEditMiddleSlot}
 
       <Tabs defaultValue="edit">
         <TabsList>

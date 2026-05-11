@@ -1,19 +1,21 @@
 "use client";
 
 import * as React from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Lock } from "lucide-react";
 import { setProposalSharePasswordAction } from "@/server/actions/proposal-builder";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 export interface ProposalShareSettingsProps {
   proposalId: string;
   hasPassword: boolean;
+  className?: string;
 }
 
-export function ProposalShareSettings({ proposalId, hasPassword }: ProposalShareSettingsProps) {
+export function ProposalShareSettings({ proposalId, hasPassword, className }: ProposalShareSettingsProps) {
   const [password, setPassword] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [msg, setMsg] = React.useState<string | null>(null);
@@ -28,15 +30,18 @@ export function ProposalShareSettings({ proposalId, hasPassword }: ProposalShare
   }
 
   return (
-    <Card className="border-border/80 bg-card/60">
-      <CardHeader>
-        <CardTitle className="text-base">Public link protection</CardTitle>
+    <Card className={cn("border-border/80 bg-card/80 shadow-sm", className)}>
+      <CardHeader className="border-b border-border/60 bg-muted/20">
+        <CardTitle className="flex items-center gap-2 text-lg">
+          <Lock className="h-5 w-5 text-muted-foreground" aria-hidden />
+          Public link protection
+        </CardTitle>
         <CardDescription>
           Optional password before the customer can view this proposal on the web. Share the password out-of-band (call,
           SMS).
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 p-6">
         <div className="space-y-2">
           <Label htmlFor="share-pw">Viewer password</Label>
           <Input
