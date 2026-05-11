@@ -70,22 +70,33 @@ function rollupFromSubscriptions(subs: SubscriptionRecord[]): string {
   return `Subscriptions · ${statuses.join(", ")}`;
 }
 
-/** Saved / sent / viewed flags for CRM proposal rows (list is always persisted → saved is always true). */
-function proposalLifecycleFlags(p: ProposalRecord) {
-  const saved = true;
-  const sent = p.status !== "draft";
+type ProposalLifecyclePhase = "saved" | "sent" | "viewed";
+
+/** Single phase for CRM proposal rows: viewed wins over sent over draft (saved). */
+function proposalLifecyclePhase(p: ProposalRecord): ProposalLifecyclePhase {
   const viewed =
     p.status === "viewed" ||
     p.status === "accepted" ||
     p.status === "declined" ||
     (typeof p.viewCount === "number" && p.viewCount > 0) ||
     (typeof p.lastViewedAtMs === "number" && p.lastViewedAtMs > 0);
-  return { saved, sent, viewed };
+  if (viewed) return "viewed";
+  if (p.status !== "draft") return "sent";
+  return "saved";
 }
 
-const proposalLifecycleBadgeActive =
-  "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400";
-const proposalLifecycleBadgeInactive = "border-border/60 text-muted-foreground opacity-80";
+const PROPOSAL_PHASE_BADGE_CLASS: Record<ProposalLifecyclePhase, string> = {
+  saved: "border-slate-500/45 bg-slate-500/10 text-slate-800 dark:border-slate-500/35 dark:bg-slate-500/15 dark:text-slate-200",
+  sent: "border-sky-500/45 bg-sky-500/10 text-sky-900 dark:border-sky-500/35 dark:bg-sky-500/15 dark:text-sky-200",
+  viewed:
+    "border-emerald-500/45 bg-emerald-500/10 text-emerald-900 dark:border-emerald-500/35 dark:bg-emerald-500/15 dark:text-emerald-200",
+};
+
+const PROPOSAL_PHASE_TITLE: Record<ProposalLifecyclePhase, string> = {
+  saved: "Draft — saved to CRM, not published yet.",
+  sent: "Published — public link is live; no recorded opens yet.",
+  viewed: "Opened — recipient has viewed or acted on the public proposal.",
+};
 
 function ProposalCreateControls({
   proposalTemplates,
@@ -595,114 +606,90 @@ export function CustomerDetailView({
           ) : (
             <ul className="space-y-2">
               {proposalsMatched.map((p) => {
-                const { saved, sent, viewed } = proposalLifecycleFlags(p);
+                const phase = proposalLifecyclePhase(p);
                 return (
                 <li
                   key={p.id}
-                  className="flex flex-col gap-3 rounded-xl border border-border/60 bg-card/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-3 rounded-xl border border-border/60 bg-card/50 px-4 py-3"
                 >
-                  <div className="min-w-0 flex-1 space-y-2">
-                    <div>
-                      <p className="font-medium text-foreground">{p.title}</p>
-                      <div className="mt-1.5 flex flex-wrap gap-1.5">
-                        <Badge
-                          variant="outline"
-                          title="Proposal document stored for this customer."
-                          className={cn("text-xs font-medium", saved ? proposalLifecycleBadgeActive : proposalLifecycleBadgeInactive)}
-                        >
-                          Saved
-                        </Badge>
-                        <Badge
-                          variant="outline"
-                          title={
-                            sent
-                              ? "Public link has been published (sent stage or later)."
-                              : "Still a draft — publish from the proposal editor when ready."
-                          }
-                          className={cn("text-xs font-medium", sent ? proposalLifecycleBadgeActive : proposalLifecycleBadgeInactive)}
-                        >
-                          Sent
-                        </Badge>
-                        <Badge
-                          variant="outline"
-                          title={
-                            viewed
-                              ? "Recipient opened the public proposal (or completed an action there)."
-                              : "No recorded opens on the public link yet."
-                          }
-                          className={cn("text-xs font-medium", viewed ? proposalLifecycleBadgeActive : proposalLifecycleBadgeInactive)}
-                        >
-                          Viewed
-                        </Badge>
+                  <p className="min-w-0 font-medium text-foreground">{p.title}</p>
+                  <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
+                    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-2">
+                      <Badge
+                        variant="outline"
+                        title={PROPOSAL_PHASE_TITLE[phase]}
+                        className={cn("text-xs font-medium capitalize", PROPOSAL_PHASE_BADGE_CLASS[phase])}
+                      >
+                        {phase === "saved" ? "Saved" : phase === "sent" ? "Sent" : "Viewed"}
+                      </Badge>
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground sm:ml-auto">
+                        <span className="inline-flex items-center gap-1.5">
+                          <Eye className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                          <span className="text-foreground/90">
+                            {typeof p.viewCount === "number" ? (
+                              <>
+                                <span className="font-medium tabular-nums text-foreground">{p.viewCount}</span>
+                                {p.viewCount === 1 ? " open" : " opens"}
+                              </>
+                            ) : (
+                              "Opens not recorded"
+                            )}
+                          </span>
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                          <Clock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                          <span className="text-foreground/90">
+                            {typeof p.totalEngagementSeconds === "number" ? (
+                              <>
+                                <span className="font-medium tabular-nums text-foreground">
+                                  {Math.max(0, Math.round(p.totalEngagementSeconds / 60))}
+                                </span>
+                                {" min on page"}
+                              </>
+                            ) : (
+                              "Engagement not recorded"
+                            )}
+                          </span>
+                        </span>
                       </div>
                     </div>
-                    <div className="flex flex-wrap gap-x-4 gap-y-2 rounded-lg border border-border/50 bg-muted/15 px-3 py-2 text-xs text-muted-foreground">
-                      <span className="inline-flex items-center gap-1.5">
-                        <Eye className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
-                        <span className="text-foreground/90">
-                          {typeof p.viewCount === "number" ? (
-                            <>
-                              <span className="font-medium tabular-nums text-foreground">{p.viewCount}</span>
-                              {p.viewCount === 1 ? " open" : " opens"}
-                            </>
-                          ) : (
-                            "Opens not recorded"
-                          )}
-                        </span>
-                      </span>
-                      <span className="inline-flex items-center gap-1.5">
-                        <Clock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
-                        <span className="text-foreground/90">
-                          {typeof p.totalEngagementSeconds === "number" ? (
-                            <>
-                              <span className="font-medium tabular-nums text-foreground">
-                                {Math.max(0, Math.round(p.totalEngagementSeconds / 60))}
-                              </span>
-                              {" min on page"}
-                            </>
-                          ) : (
-                            "Engagement not recorded"
-                          )}
-                        </span>
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex shrink-0 flex-wrap items-center gap-1.5 sm:self-start">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                      disabled={deletingProposalId === p.id}
-                      aria-label={`Delete proposal “${p.title}”`}
-                      onClick={() => void deleteProposal(p.id, p.title)}
-                    >
-                      {deletingProposalId === p.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                      ) : (
-                        <Trash2 className="h-4 w-4" aria-hidden />
-                      )}
-                    </Button>
-                    <Button variant="outline" size="icon" asChild>
-                      <Link
-                        href={`/admin/proposals/${p.id}?customer=${encodeURIComponent(customer.id)}`}
-                        aria-label={`Edit proposal “${p.title}”`}
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        disabled={deletingProposalId === p.id}
+                        aria-label={`Delete proposal “${p.title}”`}
+                        onClick={() => void deleteProposal(p.id, p.title)}
                       >
-                        <Pencil className="h-4 w-4" aria-hidden />
-                      </Link>
-                    </Button>
-                    {p.shareToken ? (
+                        {deletingProposalId === p.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                        ) : (
+                          <Trash2 className="h-4 w-4" aria-hidden />
+                        )}
+                      </Button>
                       <Button variant="outline" size="icon" asChild>
                         <Link
-                          href={`/p/${p.shareToken}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          aria-label="Open public proposal preview"
+                          href={`/admin/proposals/${p.id}?customer=${encodeURIComponent(customer.id)}`}
+                          aria-label={`Edit proposal “${p.title}”`}
                         >
-                          <ExternalLink className="h-4 w-4" aria-hidden />
+                          <Pencil className="h-4 w-4" aria-hidden />
                         </Link>
                       </Button>
-                    ) : null}
+                      {p.shareToken ? (
+                        <Button variant="outline" size="icon" asChild>
+                          <Link
+                            href={`/p/${p.shareToken}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label="Open public proposal preview"
+                          >
+                            <ExternalLink className="h-4 w-4" aria-hidden />
+                          </Link>
+                        </Button>
+                      ) : null}
+                    </div>
                   </div>
                 </li>
                 );
