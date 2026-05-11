@@ -75,6 +75,7 @@ import type {
   TextBlock,
   VideoBlock,
 } from "@/types/proposal";
+import { Badge } from "@/components/ui/badge";
 import { ProposalRichText } from "@/components/proposal/proposal-rich-text";
 import { ProposalDocumentView } from "@/components/proposal/proposal-document-view";
 import { ProposalSectionShell } from "@/components/proposal/proposal-section-shell";
@@ -1759,6 +1760,13 @@ function blockLabel(type: ProposalBlock["type"]): string {
   }
 }
 
+/** CRM proposal edit page: back link, status, recipient, public link + save actions in one top row. */
+export type ProposalEditShellToolbarProps = {
+  customerBackHref: string | null;
+  recipientEmail: string | null;
+  shareToken: string | null;
+};
+
 export interface ProposalDocumentEditorProps {
   variant?: "proposal" | "template";
   proposalId?: string;
@@ -1767,6 +1775,7 @@ export interface ProposalDocumentEditorProps {
   initialTemplateDescription?: string;
   initialDocument: ProposalDocument;
   initialStatus?: string;
+  proposalEditShellToolbar?: ProposalEditShellToolbarProps;
 }
 
 export function ProposalDocumentEditor({
@@ -1777,6 +1786,7 @@ export function ProposalDocumentEditor({
   initialTemplateDescription = "",
   initialDocument,
   initialStatus = "draft",
+  proposalEditShellToolbar,
 }: ProposalDocumentEditorProps) {
   const isTemplate = variant === "template";
   const [templateName, setTemplateName] = React.useState(initialTemplateName);
@@ -2093,6 +2103,63 @@ export function ProposalDocumentEditor({
             </div>
           </div>
           {message ? <span className="block text-sm text-muted-foreground">{message}</span> : null}
+        </>
+      ) : proposalEditShellToolbar ? (
+        <>
+          <div className="flex flex-wrap items-center gap-2 justify-between">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              {proposalEditShellToolbar.customerBackHref ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="-ml-2 gap-1.5 text-muted-foreground hover:text-foreground"
+                  asChild
+                >
+                  <Link href={proposalEditShellToolbar.customerBackHref}>
+                    <ArrowLeft className="h-4 w-4" aria-hidden />
+                    Back to customer
+                  </Link>
+                </Button>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <Badge variant="outline" className="capitalize">
+                {initialStatus}
+              </Badge>
+              {proposalEditShellToolbar.recipientEmail ? (
+                <span className="text-sm text-muted-foreground">
+                  To · {proposalEditShellToolbar.recipientEmail}
+                </span>
+              ) : null}
+              {proposalEditShellToolbar.shareToken ? (
+                <Button variant="outline" size="sm" className="gap-2" asChild>
+                  <Link
+                    href={`/p/${encodeURIComponent(proposalEditShellToolbar.shareToken)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <ExternalLink className="h-4 w-4" aria-hidden />
+                    Open public viewer
+                  </Link>
+                </Button>
+              ) : null}
+              <Button type="button" variant="secondary" size="sm" disabled={sending} onClick={() => void send()} className="gap-2">
+                {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                Save & publish
+              </Button>
+              <Button type="button" size="sm" disabled={saving} onClick={() => void save()} className="gap-2">
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                Save
+              </Button>
+            </div>
+          </div>
+          {message ? <span className="block text-sm text-muted-foreground">{message}</span> : null}
+          {initialStatus === "draft" ? (
+            <p className="text-xs text-muted-foreground">
+              Save &amp; publish sends the public link, records engagement, and moves a linked opportunity to the Proposal
+              stage.
+            </p>
+          ) : null}
         </>
       ) : (
         <div className="flex flex-wrap items-center gap-2">

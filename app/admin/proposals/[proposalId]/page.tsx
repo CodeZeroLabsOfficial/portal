@@ -1,10 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft, ExternalLink } from "lucide-react";
 import { getCurrentSessionUser } from "@/lib/auth/server-session";
 import { getAdminProposalRecord } from "@/server/firestore/portal-data";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { WorkspaceShell } from "@/components/portal/workspace-shell";
 import { ProposalDocumentEditorLazy } from "@/components/proposal/proposal-document-editor-lazy";
@@ -52,22 +49,18 @@ export default async function AdminProposalDetailPage({ params, searchParams }: 
       showRightAside={false}
     >
       <div className="space-y-8">
-        <div className="flex flex-wrap items-center gap-2">
-          {customerBackId ? (
-            <Button variant="ghost" size="sm" className="-ml-2 gap-1.5 text-muted-foreground hover:text-foreground" asChild>
-              <Link href={`/admin/customers/${encodeURIComponent(customerBackId)}`}>
-                <ArrowLeft className="h-4 w-4" aria-hidden />
-                Back to customer
-              </Link>
-            </Button>
-          ) : null}
-          <Badge variant="outline" className="capitalize">
-            {proposal.status}
-          </Badge>
-          {proposal.recipientEmail ? (
-            <span className="text-sm text-muted-foreground">To · {proposal.recipientEmail}</span>
-          ) : null}
-        </div>
+        <ProposalDocumentEditorLazy
+          proposalId={proposal.id}
+          initialDocument={proposal.document}
+          initialStatus={proposal.status}
+          proposalEditShellToolbar={{
+            customerBackHref: customerBackId
+              ? `/admin/customers/${encodeURIComponent(customerBackId)}`
+              : null,
+            recipientEmail: proposal.recipientEmail?.trim() || null,
+            shareToken: proposal.shareToken?.trim() || null,
+          }}
+        />
 
         <Card className="border-border/80 bg-card/60">
           <CardHeader>
@@ -144,24 +137,10 @@ export default async function AdminProposalDetailPage({ params, searchParams }: 
                 </Link>
               </p>
             ) : null}
-            {proposal.shareToken ? (
-              <Button variant="outline" size="sm" className="gap-2" asChild>
-                <Link href={`/p/${proposal.shareToken}`} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="h-4 w-4" aria-hidden />
-                  Open public viewer
-                </Link>
-              </Button>
-            ) : null}
           </CardContent>
         </Card>
 
         <ProposalShareSettings proposalId={proposal.id} hasPassword={Boolean(proposal.sharePasswordHash)} />
-
-        <ProposalDocumentEditorLazy
-          proposalId={proposal.id}
-          initialDocument={proposal.document}
-          initialStatus={proposal.status}
-        />
       </div>
     </WorkspaceShell>
   );

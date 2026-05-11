@@ -33,6 +33,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ProposalAccordionExpandSurface } from "@/components/proposal/proposal-accordion-expand-surface";
 
 function newId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `b-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -563,7 +564,12 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
                 </div>
               </div>
             </div>
-            <div id="packages-inline-addons-table" hidden={!addonsSectionOpen}>
+            <ProposalAccordionExpandSurface
+              open={addonsSectionOpen}
+              motionKey="packages-inline-addons-table"
+              id="packages-inline-addons-table"
+              className="w-full"
+            >
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-dashed border-border/50 bg-muted/10 px-4 py-2 text-[11px]">
                 <label className="flex cursor-pointer items-center gap-1.5 text-muted-foreground">
                   <input
@@ -607,105 +613,105 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
               </div>
               <div className="overflow-x-auto bg-card text-left">
                 <table className="w-full min-w-[480px] text-left text-sm">
-                    <thead>
-                      <tr className="border-b border-dashed border-border/50 bg-card text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                        <th className="px-4 py-2.5 text-left">Description</th>
-                        <th className="px-4 py-2.5 text-right">Item</th>
-                        {editableAddonQty ? <th className="px-4 py-2.5 text-right">Quantity</th> : null}
-                        <th className="px-4 py-2.5 text-right">Price</th>
-                        <th className="w-8 px-2 py-2.5" />
-                      </tr>
-                    </thead>
-                    <tbody className="[&_tr]:border-b [&_tr]:border-dashed [&_tr]:border-border/40">
-                      {addonLineItems.map((li) => {
-                        const q = effectivePricingLineQuantity(li);
-                        const lineTotal = Math.round(li.unitAmountMinor * q);
-                        const qtyProps = editableAddonQty
-                          ? {
-                              tone: "light" as const,
-                              value: q,
-                              min: 0,
-                              step: 1,
-                              width: "w-16" as const,
-                              onChange: (v: number) => patchAddonLine(li.id, { quantity: v }),
-                              ariaLabel: "Default quantity" as const,
-                              className: "text-foreground" as const,
-                            }
-                          : null;
-                        return (
-                          <tr key={li.id} className="group/row">
-                            <td className="px-4 py-3 text-left align-middle">
-                              <div className="flex flex-col items-start gap-1">
-                                <InlineText
-                                  tone="light"
-                                  value={li.label}
-                                  placeholder="Add-on label"
-                                  onChange={(v) => patchAddonLine(li.id, { label: v })}
-                                  ariaLabel="Add-on label"
-                                  className="font-medium text-foreground"
-                                  inputClassName="w-full font-medium text-foreground"
-                                />
-                                <label className="flex cursor-pointer items-center gap-2 text-[11px] text-muted-foreground">
-                                  <input
-                                    type="checkbox"
-                                    checked={Boolean(li.optional)}
-                                    onChange={(e) => patchAddonLine(li.id, { optional: e.target.checked })}
-                                    className="h-3 w-3 accent-primary"
-                                  />
-                                  Optional (buyer can turn off)
-                                </label>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3 text-right align-middle tabular-nums text-muted-foreground">
-                              <InlinePrice
+                  <thead>
+                    <tr className="border-b border-dashed border-border/50 bg-card text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                      <th className="px-4 py-2.5 text-left">Description</th>
+                      <th className="px-4 py-2.5 text-right">Item</th>
+                      {editableAddonQty ? <th className="px-4 py-2.5 text-right">Quantity</th> : null}
+                      <th className="px-4 py-2.5 text-right">Price</th>
+                      <th className="w-8 px-2 py-2.5" />
+                    </tr>
+                  </thead>
+                  <tbody className="[&_tr]:border-b [&_tr]:border-dashed [&_tr]:border-border/40">
+                    {addonLineItems.map((li) => {
+                      const q = effectivePricingLineQuantity(li);
+                      const lineTotal = Math.round(li.unitAmountMinor * q);
+                      const qtyProps = editableAddonQty
+                        ? {
+                            tone: "light" as const,
+                            value: q,
+                            min: 0,
+                            step: 1,
+                            width: "w-16" as const,
+                            onChange: (v: number) => patchAddonLine(li.id, { quantity: v }),
+                            ariaLabel: "Default quantity" as const,
+                            className: "text-foreground" as const,
+                          }
+                        : null;
+                      return (
+                        <tr key={li.id} className="group/row">
+                          <td className="px-4 py-3 text-left align-middle">
+                            <div className="flex flex-col items-start gap-1">
+                              <InlineText
                                 tone="light"
-                                minor={li.unitAmountMinor}
-                                currency={currency}
-                                onChange={(v) => patchAddonLine(li.id, { unitAmountMinor: v })}
-                                ariaLabel="Unit price"
-                                className="text-muted-foreground"
+                                value={li.label}
+                                placeholder="Add-on label"
+                                onChange={(v) => patchAddonLine(li.id, { label: v })}
+                                ariaLabel="Add-on label"
+                                className="font-medium text-foreground"
+                                inputClassName="w-full font-medium text-foreground"
                               />
+                              <label className="flex cursor-pointer items-center gap-2 text-[11px] text-muted-foreground">
+                                <input
+                                  type="checkbox"
+                                  checked={Boolean(li.optional)}
+                                  onChange={(e) => patchAddonLine(li.id, { optional: e.target.checked })}
+                                  className="h-3 w-3 accent-primary"
+                                />
+                                Optional (buyer can turn off)
+                              </label>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-right align-middle tabular-nums text-muted-foreground">
+                            <InlinePrice
+                              tone="light"
+                              minor={li.unitAmountMinor}
+                              currency={currency}
+                              onChange={(v) => patchAddonLine(li.id, { unitAmountMinor: v })}
+                              ariaLabel="Unit price"
+                              className="text-muted-foreground"
+                            />
+                          </td>
+                          {qtyProps ? (
+                            <td className="px-4 py-3 text-right align-middle">
+                              <span className="inline-flex items-center justify-end gap-1.5 tabular-nums">
+                                <InlineNumber {...qtyProps} />
+                                <span className="text-xs text-muted-foreground">{addonQtyUnitDraft}</span>
+                              </span>
                             </td>
-                            {qtyProps ? (
-                              <td className="px-4 py-3 text-right align-middle">
-                                <span className="inline-flex items-center justify-end gap-1.5 tabular-nums">
-                                  <InlineNumber {...qtyProps} />
-                                  <span className="text-xs text-muted-foreground">{addonQtyUnitDraft}</span>
-                                </span>
-                              </td>
-                            ) : null}
-                            <td className="px-4 py-3 text-right align-middle tabular-nums font-medium text-foreground">
-                              {formatCurrencyAmount(lineTotal, currency)}
-                            </td>
-                            <td className="px-2 py-3 text-right align-middle">
-                              <button
-                                type="button"
-                                onClick={() => removeAddonLine(li.id)}
-                                aria-label="Remove add-on"
-                                className="rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover/row:opacity-100"
-                              >
-                                <X className="h-3.5 w-3.5" />
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                      <tr>
-                        <td colSpan={editableAddonQty ? 5 : 4} className="px-4 py-2">
-                          <button
-                            type="button"
-                            onClick={addAddonLine}
-                            className="flex w-full items-center gap-2 rounded-md border border-dashed border-border bg-transparent px-2 py-1.5 text-left text-sm text-muted-foreground transition-colors hover:border-primary/60 hover:bg-muted/30 hover:text-foreground"
-                          >
-                            <Plus className="h-3.5 w-3.5" />
-                            Add add-on line
-                          </button>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
+                          ) : null}
+                          <td className="px-4 py-3 text-right align-middle tabular-nums font-medium text-foreground">
+                            {formatCurrencyAmount(lineTotal, currency)}
+                          </td>
+                          <td className="px-2 py-3 text-right align-middle">
+                            <button
+                              type="button"
+                              onClick={() => removeAddonLine(li.id)}
+                              aria-label="Remove add-on"
+                              className="rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover/row:opacity-100"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    <tr>
+                      <td colSpan={editableAddonQty ? 5 : 4} className="px-4 py-2">
+                        <button
+                          type="button"
+                          onClick={addAddonLine}
+                          className="flex w-full items-center gap-2 rounded-md border border-dashed border-border bg-transparent px-2 py-1.5 text-left text-sm text-muted-foreground transition-colors hover:border-primary/60 hover:bg-muted/30 hover:text-foreground"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          Add add-on line
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
-            </div>
+            </ProposalAccordionExpandSurface>
           </div>
         </TooltipProvider>
       )}

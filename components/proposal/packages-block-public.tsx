@@ -19,6 +19,7 @@ import { readableForeground, resolveBlockStyle, withAlpha } from "@/lib/block-st
 import { saveProposalPackageSelectionAction } from "@/server/actions/proposal-builder";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ProposalAccordionExpandSurface } from "@/components/proposal/proposal-accordion-expand-surface";
 
 export interface PackagesBlockPublicProps {
   block: PackagesBlock;
@@ -481,9 +482,10 @@ export function PackagesBlockPublic({
                   </div>
                 </div>
               </div>
-              <div
+              <ProposalAccordionExpandSurface
+                open={addonsTableOpen}
+                motionKey="packages-addons-table"
                 id="packages-addons-table"
-                hidden={!addonsTableOpen}
                 className="overflow-x-auto bg-card text-left"
               >
                 <table className="w-full min-w-[320px] text-left text-sm [&_thead_th:first-child]:!text-left [&_tbody_td:first-child]:!text-left">
@@ -562,7 +564,7 @@ export function PackagesBlockPublic({
                     })}
                   </tbody>
                 </table>
-              </div>
+              </ProposalAccordionExpandSurface>
             </div>
           </TooltipProvider>
           {!selectedTierId && interactive ? (
