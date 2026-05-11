@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { CircleDot, Clock, Eye, FileText, Mail } from "lucide-react";
+import { CircleDot, Clock, Eye, FileText, Mail, Wallet } from "lucide-react";
 import { getCurrentSessionUser } from "@/lib/auth/server-session";
 import { getAdminProposalRecord } from "@/server/firestore/portal-data";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WorkspaceShell } from "@/components/portal/workspace-shell";
 import { ProposalDocumentEditorLazy } from "@/components/proposal/proposal-document-editor-lazy";
 import { ProposalShareSettings } from "@/components/proposal/proposal-share-settings";
+import { formatCurrencyAmount } from "@/lib/format";
+import { computeProposalDealValue } from "@/lib/proposal-packages-totals";
 import { cn } from "@/lib/utils";
 import type { ProposalStatus } from "@/types/proposal";
 
@@ -47,6 +49,7 @@ export default async function AdminProposalDetailPage({ params, searchParams }: 
   const customerBackId = proposal.customerId?.trim() || firstQueryString(sp.customer);
 
   const recipient = proposal.recipientEmail?.trim() || null;
+  const dealValue = computeProposalDealValue(proposal.document.blocks, proposal.publicSelections);
 
   const proposalDetailsSlot = (
     <div className="grid gap-6 lg:grid-cols-3">
@@ -71,6 +74,29 @@ export default async function AdminProposalDetailPage({ params, searchParams }: 
                 >
                   {proposal.status}
                 </Badge>
+              </dd>
+            </div>
+            <div className="space-y-1">
+              <dt className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <Wallet className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
+                Value
+              </dt>
+              <dd className="text-foreground">
+                {dealValue ? (
+                  <>
+                    <div className="font-medium tabular-nums">
+                      {formatCurrencyAmount(dealValue.totalMinor, dealValue.currency)}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {dealValue.tierName} · {dealValue.termMonths} months
+                      {dealValue.addonsActive > 0
+                        ? ` · ${dealValue.addonsActive} add-on${dealValue.addonsActive === 1 ? "" : "s"}`
+                        : ""}
+                    </div>
+                  </>
+                ) : (
+                  "—"
+                )}
               </dd>
             </div>
             <div className="space-y-1">

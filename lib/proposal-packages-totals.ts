@@ -1,5 +1,12 @@
-import type { PackagesBlock, PackagesPublicSelection, PricingLineItem } from "@/types/proposal";
+import type {
+  PackagesBlock,
+  PackagesPublicSelection,
+  PricingLineItem,
+  ProposalBlock,
+  ProposalPublicSelections,
+} from "@/types/proposal";
 import { effectivePricingLineQuantity } from "@/lib/pricing-line-quantity";
+import { iterateProposalContentBlocks } from "@/lib/proposal-blocks";
 
 /** Whether add-ons contribute to UI and billing for this block. */
 export function packagesAddonsSectionActive(block: PackagesBlock): boolean {
@@ -48,6 +55,62 @@ function addonLineTotal(
       ? Math.floor(raw)
       : effectivePricingLineQuantity(li);
   return Math.round(li.unitAmountMinor * q);
+}
+
+export interface ProposalDealValueSummary {
+  totalMinor: number;
+  currency: string;
+  termMonths: 12 | 24;
+  tierName: string;
+  addonsActive: number;
+  /** True when no buyer selection exists yet — value is derived from the recommended/first tier at 12 months. */
+  isFallback: boolean;
+}
+
+/**
+ * Summarise the headline deal value for a proposal: the first packages block's
+ * commitment total (tier × term + monthly add-ons × term), using the buyer's
+ * public selection when available, else falling back to the recommended (or
+ * first) tier at 12 months.
+ */
+export function computeProposalDealValue(
+  blocks: ProposalBlock[],
+  selections: ProposalPublicSelections | undefined,
+): ProposalDealValueSummary | null {
+  for (const block of iterateProposalContentBlocks(blocks)) {
+    if (block.type !== "packages") continue;
+    if (!block.tiers || block.tiers.length === 0) continue;
+
+    const persisted = selections?.[block.id];
+    const fallbackTier = block.tiers.find((t) => t.recommended) ?? block.tiers[0];
+    const sel: PackagesPublicSelection = persisted ?? {
+      kind: "packages",
+      tierId: fallbackTier.id,
+      term: "12_months",
+      updatedAtMs: 0,
+    };
+    const tier = block.tiers.find((t) => t.id === sel.tierId) ?? fallbackTier;
+    const effective: PackagesPublicSelection = { ...sel, tierId: tier.id };
+
+    let addonsActive = 0;
+    if (packagesAddonsSectionActive(block)) {
+      const optOff = sel.addonOptionalOff ?? {};
+      for (const li of block.addonLineItems ?? []) {
+        if (li.optional && optOff[li.id]) continue;
+        addonsActive += 1;
+      }
+    }
+
+    return {
+      totalMinor: packageCommitmentTotalMinor(block, effective),
+      currency: block.currency || "aud",
+      termMonths: packageTermMonths(effective) === 24 ? 24 : 12,
+      tierName: tier.name?.trim() || "Plan",
+      addonsActive,
+      isFallback: !persisted,
+    };
+  }
+  return null;
 }
 
 /** Sum of add-on line totals (per month) using persisted selection and/or live viewer maps. */
