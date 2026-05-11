@@ -954,34 +954,14 @@ function SectionBlockFields({
       </DndContext>
     );
 
-  const addContentHint =
-    children.length > 0 ? (
-      <div className="flex flex-wrap items-center justify-center gap-2 pb-5 pt-2 text-center text-[11px] text-muted-foreground">
-        <span className="text-muted-foreground/80">+ between rows ·</span>
-        <SectionInsertMenu
-          align="center"
-          onAdd={(b) => addChildAt(b, children.length)}
-          trigger={
-            <button type="button" className="font-medium text-foreground/90 underline decoration-border underline-offset-2 hover:text-foreground">
-              Content gallery
-            </button>
-          }
-        />
-      </div>
-    ) : null;
-
   return (
     <ProposalSectionShell background={block.background} variant="editor">
       <div className="space-y-1">
         {backdropOn ? (
-          <>
-            {sectionStack}
-            {addContentHint}
-          </>
+          sectionStack
         ) : (
           <div className="rounded-xl border border-dashed border-border/65 bg-muted/15 px-1 py-1 sm:bg-muted/[0.35]">
             {sectionStack}
-            {addContentHint}
           </div>
         )}
         <div className="flex justify-center pb-1 pt-0.5">
@@ -1851,7 +1831,27 @@ export function ProposalDocumentEditor({
                           id={block.id}
                           selected={isSelected}
                           onSelect={() => setSelectedBlockId(block.id)}
-                          toolbar={({ dragAttributes, dragListeners }) => (
+                          toolbar={({ dragAttributes, dragListeners }) => {
+                            const isSection = block.type === "section";
+                            const dragHandle = (
+                              <Tooltip delayDuration={320}>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    type="button"
+                                    className="touch-none inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+                                    aria-label={`Reorder ${blockLabel(block.type)}`}
+                                    {...dragAttributes}
+                                    {...dragListeners}
+                                  >
+                                    <GripVertical className="h-4 w-4" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent side="bottom" className="text-xs">
+                                  Drag to reposition · arrows nudge precisely
+                                </TooltipContent>
+                              </Tooltip>
+                            );
+                            return (
                             <BlockToolbar
                               appearance="surface"
                               blockType={
@@ -1872,6 +1872,7 @@ export function ProposalDocumentEditor({
                               onMoveDown={() => moveBlock(block.id, 1)}
                               onDuplicate={() => duplicateBlock(block.id)}
                               onDelete={() => removeBlock(block.id)}
+                              showOverflowMenu={!isSection}
                               style={supportsStyle ? getBlockStyle(block) : undefined}
                               onStyleChange={
                                 supportsStyle ? (next) => applyBlockStyle(block.id, next) : undefined
@@ -1889,26 +1890,11 @@ export function ProposalDocumentEditor({
                                   />
                                 ) : undefined
                               }
-                              trailingSlot={
-                                <Tooltip delayDuration={320}>
-                                  <TooltipTrigger asChild>
-                                    <button
-                                      type="button"
-                                      className="touch-none inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
-                                      aria-label={`Reorder ${blockLabel(block.type)}`}
-                                      {...dragAttributes}
-                                      {...dragListeners}
-                                    >
-                                      <GripVertical className="h-4 w-4" />
-                                    </button>
-                                  </TooltipTrigger>
-                                  <TooltipContent side="bottom" className="text-xs">
-                                    Drag to reposition · arrows nudge precisely
-                                  </TooltipContent>
-                                </Tooltip>
-                              }
+                              leadingSlot={isSection ? dragHandle : undefined}
+                              trailingSlot={isSection ? undefined : dragHandle}
                             />
-                          )}
+                            );
+                          }}
                         >
                           <BlockFields
                             block={block}

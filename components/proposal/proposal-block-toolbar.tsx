@@ -33,6 +33,8 @@ export interface BlockToolbarProps {
   onMoveDown: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
+  /** Optional control rendered at the start of the pill (e.g. drag handle on the left). */
+  leadingSlot?: React.ReactNode;
   /** More menu (ellipsis) — hides when false. Duplicate/delete stay on the pill for speed. */
   showOverflowMenu?: boolean;
   /** Optional trailing control inside the pill (e.g. drag handle with sortable listeners). */
@@ -56,6 +58,7 @@ export function BlockToolbar({
   onDuplicate,
   onDelete,
   showOverflowMenu = true,
+  leadingSlot,
   trailingSlot,
   auxiliarySlot,
   onOpenSettings,
@@ -79,6 +82,12 @@ export function BlockToolbar({
       onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
+      {leadingSlot ? (
+        <>
+          <span className="inline-flex items-center">{leadingSlot}</span>
+          <ToolbarDivider elevated={elevated} />
+        </>
+      ) : null}
       {showOverflowMenu ? (
         <>
           <DropdownMenu>
