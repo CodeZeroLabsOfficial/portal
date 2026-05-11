@@ -140,6 +140,8 @@ function mapContentBlock(block: ProposalContentBlock, ctx: ProposalTokenContext)
       };
     case "divider":
       return block;
+    case "spacer":
+      return block;
     case "accordion":
       return {
         ...block,

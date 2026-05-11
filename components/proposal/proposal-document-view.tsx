@@ -350,6 +350,13 @@ function BlockView({
     }
     case "divider":
       return <hr className="border-border/80" />;
+    case "spacer": {
+      const px =
+        typeof block.heightPx === "number" && Number.isFinite(block.heightPx)
+          ? Math.min(2400, Math.max(1, Math.round(block.heightPx)))
+          : 40;
+      return <div className="w-full shrink-0" style={{ height: px }} aria-hidden />;
+    }
     default:
       return null;
   }

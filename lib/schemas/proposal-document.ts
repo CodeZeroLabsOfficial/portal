@@ -317,6 +317,12 @@ const dividerBlockSchema = z.object({
   type: z.literal("divider"),
 });
 
+const spacerBlockSchema = z.object({
+  id: idSchema,
+  type: z.literal("spacer"),
+  heightPx: z.number().finite().min(1).max(2400).default(40),
+});
+
 const accordionPanelSchema = z.object({
   id: idSchema,
   title: z.string().default(""),
@@ -350,6 +356,7 @@ const columnInnerUnionSchema = z.discriminatedUnion("type", [
   embedBlockSchema,
   paymentBlockSchema,
   dividerBlockSchema,
+  spacerBlockSchema,
   iconBlockSchema,
 ]);
 
@@ -381,6 +388,7 @@ const nestedBlockUnionSchema = z.discriminatedUnion("type", [
   embedBlockSchema,
   paymentBlockSchema,
   dividerBlockSchema,
+  spacerBlockSchema,
   accordionBlockSchema,
   columnsBlockSchema,
   iconBlockSchema,
@@ -414,6 +422,7 @@ const blockUnionSchema = z.discriminatedUnion("type", [
   embedBlockSchema,
   paymentBlockSchema,
   dividerBlockSchema,
+  spacerBlockSchema,
   accordionBlockSchema,
   columnsBlockSchema,
   iconBlockSchema,

@@ -14,6 +14,7 @@ export type ProposalBlockType =
   | "signature"
   | "payment"
   | "divider"
+  | "spacer"
   | "columns"
   | "accordion"
   | "icon";
@@ -256,6 +257,13 @@ export interface DividerBlock extends ProposalBlockBase {
   type: "divider";
 }
 
+/** Vertical whitespace between blocks (public + preview). */
+export interface SpacerBlock extends ProposalBlockBase {
+  type: "spacer";
+  /** Pixel height (1–2400). */
+  heightPx: number;
+}
+
 export interface AccordionPanel {
   id: string;
   title: string;
@@ -288,6 +296,7 @@ export type ProposalColumnChildBlock =
   | EmbedBlock
   | PaymentBlock
   | DividerBlock
+  | SpacerBlock
   | IconBlock;
 
 /** Two-pane layout — each side holds column-safe blocks only. */
@@ -311,6 +320,7 @@ export type ProposalContentBlock =
   | EmbedBlock
   | PaymentBlock
   | DividerBlock
+  | SpacerBlock
   | ColumnsBlock
   | AccordionBlock
   | IconBlock;
@@ -338,6 +348,7 @@ export type ProposalBlock =
   | EmbedBlock
   | PaymentBlock
   | DividerBlock
+  | SpacerBlock
   | ColumnsBlock
   | AccordionBlock
   | IconBlock;

@@ -64,6 +64,8 @@ function cloneBlock(block: ProposalBlock): ProposalBlock {
       return { ...block, id };
     case "divider":
       return { ...block, id };
+    case "spacer":
+      return { ...block, id };
     case "accordion":
       return {
         ...block,

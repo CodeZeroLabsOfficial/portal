@@ -37,6 +37,7 @@ import {
   ListTree,
   Loader2,
   MonitorPlay,
+  MoveVertical,
   Mountain,
   Package,
   Pencil,
@@ -68,6 +69,7 @@ import type {
   SectionBackground,
   SectionBlock,
   SignatureBlock,
+  SpacerBlock,
   SplashBlock,
   TextBlock,
   VideoBlock,
@@ -265,6 +267,14 @@ const SECTION_INSERT_OPTIONS: BlockOption[] = [
     accent: "text-slate-400",
     accentBg: "bg-slate-500/10",
   },
+  {
+    id: "sx-spacer",
+    type: "spacer",
+    label: "Spacing",
+    icon: MoveVertical,
+    accent: "text-zinc-400",
+    accentBg: "bg-zinc-500/10",
+  },
 ];
 
 /** Secondary options revealed via "Add block from library". */
@@ -274,6 +284,7 @@ const LIBRARY_BLOCK_OPTIONS: BlockOption[] = [
   { id: "embed", type: "embed", label: "Embed", icon: LayoutTemplate, accent: "text-teal-500", accentBg: "bg-teal-500/10" },
   { id: "payment", type: "payment", label: "Payment", icon: CreditCard, accent: "text-orange-500", accentBg: "bg-orange-500/10" },
   { id: "divider", type: "divider", label: "Divider", icon: SeparatorHorizontal, accent: "text-slate-400", accentBg: "bg-slate-500/10" },
+  { id: "spacer", type: "spacer", label: "Spacing", icon: MoveVertical, accent: "text-zinc-400", accentBg: "bg-zinc-500/10" },
 ];
 
 function createBlock(type: ProposalBlock["type"]): ProposalBlock {
@@ -393,6 +404,8 @@ function createBlock(type: ProposalBlock["type"]): ProposalBlock {
       return { id, type: "payment", label: "Secure payment" };
     case "divider":
       return { id, type: "divider" };
+    case "spacer":
+      return { id, type: "spacer", heightPx: 40 };
     case "accordion":
       return {
         id,
@@ -1271,6 +1284,35 @@ function BlockFields({
     }
     case "divider":
       return <p className="text-sm text-muted-foreground">Horizontal rule — visible on the public page.</p>;
+    case "spacer": {
+      const sb = block as SpacerBlock;
+      const h =
+        typeof sb.heightPx === "number" && Number.isFinite(sb.heightPx)
+          ? Math.min(2400, Math.max(1, Math.round(sb.heightPx)))
+          : 40;
+      return (
+        <div className="space-y-2">
+          <div className="space-y-1.5">
+            <Label htmlFor={`spacer-h-${sb.id}`}>Height (px)</Label>
+            <Input
+              id={`spacer-h-${sb.id}`}
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={2400}
+              value={h}
+              onChange={(e) => {
+                const raw = e.target.value;
+                const n = raw === "" ? NaN : Number(raw);
+                const next = Number.isFinite(n) ? Math.min(2400, Math.max(1, Math.round(n))) : 40;
+                patch({ ...sb, heightPx: next });
+              }}
+            />
+          </div>
+          <p className="text-[11px] text-muted-foreground">Vertical gap only — nothing is shown to readers except extra space.</p>
+        </div>
+      );
+    }
     default:
       return null;
   }
@@ -1479,6 +1521,8 @@ function blockLabel(type: ProposalBlock["type"]): string {
       return "Payment";
     case "divider":
       return "Divider";
+    case "spacer":
+      return "Spacing";
     case "accordion":
       return "Accordion";
     case "columns":
