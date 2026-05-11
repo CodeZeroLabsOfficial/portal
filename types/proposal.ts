@@ -70,6 +70,11 @@ export interface TextBlock extends ProposalBlockBase {
   html?: string;
   /** Plain fallback (legacy / import). */
   body?: string;
+  /**
+   * Minimum height (px) for the rich-text surface in editor + public view.
+   * Set when the author drags the resize handle; omitted uses a compact default.
+   */
+  editorMinHeightPx?: number;
 }
 
 /** Hero / full-bleed backdrop configuration for splash blocks. */

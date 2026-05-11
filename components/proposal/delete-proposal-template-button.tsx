@@ -31,9 +31,9 @@ export function DeleteProposalTemplateButton({ templateId, templateName }: Delet
   return (
     <Button
       type="button"
-      variant="outline"
+      variant="ghost"
       size="sm"
-      className="gap-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
+      className="gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
       disabled={busy}
       onClick={() => void onDelete()}
     >

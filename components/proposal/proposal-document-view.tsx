@@ -10,6 +10,7 @@ import type {
   ProposalPublicSelections,
   SectionBlock,
   SplashBlock,
+  TextBlock,
 } from "@/types/proposal";
 import {
   PROPOSAL_COLUMNS_GRID_CLASS,
@@ -184,9 +185,17 @@ function BlockView({
         </h2>
       );
     case "text": {
+      const tb = block as TextBlock;
+      const editorMinStyle =
+        tb.editorMinHeightPx != null && Number.isFinite(tb.editorMinHeightPx)
+          ? {
+              minHeight: `${Math.min(2000, Math.max(48, Math.round(tb.editorMinHeightPx)))}px`,
+            }
+          : undefined;
       if (block.html?.trim()) {
         return (
           <div
+            style={editorMinStyle}
             className={cn(
               "proposal-rich-text max-w-none text-sm leading-relaxed text-foreground",
               "[&_a]:text-primary [&_a]:underline",
@@ -202,7 +211,10 @@ function BlockView({
         );
       }
       return (
-        <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
+        <div
+          style={editorMinStyle}
+          className="whitespace-pre-wrap text-sm leading-relaxed text-foreground"
+        >
           {block.body ?? ""}
         </div>
       );

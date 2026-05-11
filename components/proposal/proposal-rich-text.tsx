@@ -488,10 +488,77 @@ export interface ProposalRichTextProps {
    * text selected (heading blocks use a single line where selection is often empty).
    */
   variant?: "default" | "header";
+  /** When set, overrides the compact default minimum height of the editable surface (px). */
+  editorMinHeightPx?: number;
+  onEditorMinHeightPxChange?: (next: number | undefined) => void;
+  /** Show a bottom-right drag handle to change `editorMinHeightPx` (text blocks in the builder). */
+  resizableHeight?: boolean;
 }
 
+const TEXT_EDITOR_RESIZE_MIN_PX = 52;
+const TEXT_EDITOR_RESIZE_MAX_PX = 1600;
+
 const TIPTAP_PROSE_TYPOGRAPHY =
-  "[&_.ProseMirror]:min-h-[120px] [&_.ProseMirror]:outline-none [&_p]:mb-2 [&_h1]:my-3 [&_h1]:text-3xl [&_h1]:font-semibold [&_h2]:my-2 [&_h2]:text-2xl [&_h2]:font-semibold [&_h3]:my-2 [&_h3]:text-xl [&_h3]:font-semibold [&_h4]:my-2 [&_h4]:text-base [&_h4]:font-semibold [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5";
+  "outline-none [&_p]:mb-1.5 [&_p:last-child]:mb-0 [&_h1]:mt-2 [&_h1]:mb-2 [&_h1]:text-3xl [&_h1]:font-semibold [&_h2]:mt-1.5 [&_h2]:mb-1.5 [&_h2]:text-2xl [&_h2]:font-semibold [&_h3]:mt-1.5 [&_h3]:mb-1.5 [&_h3]:text-xl [&_h3]:font-semibold [&_h4]:mt-1 [&_h4]:mb-1 [&_h4]:text-base [&_h4]:font-semibold [&_ul]:my-1.5 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-1.5 [&_ol]:list-decimal [&_ol]:pl-5";
+
+function TextEditorResizeHandle({
+  shellRef,
+  onHeightChange,
+}: {
+  shellRef: React.RefObject<HTMLDivElement | null>;
+  onHeightChange: (px: number | undefined) => void;
+}) {
+  const dragRef = React.useRef<{ startY: number; startH: number } | null>(null);
+
+  return (
+    <button
+      type="button"
+      aria-label="Resize text block height"
+      title="Drag to change height · double-click to reset"
+      className="absolute bottom-0.5 right-0.5 z-[5] flex h-6 w-6 cursor-nwse-resize touch-none items-end justify-end rounded-sm p-0.5 text-muted-foreground opacity-70 transition-opacity hover:bg-accent/70 hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      onPointerDown={(e) => {
+        if (e.button !== 0) return;
+        const shell = shellRef.current;
+        if (!shell) return;
+        e.preventDefault();
+        dragRef.current = { startY: e.clientY, startH: shell.getBoundingClientRect().height };
+        (e.currentTarget as HTMLButtonElement).setPointerCapture(e.pointerId);
+      }}
+      onPointerMove={(e) => {
+        const d = dragRef.current;
+        if (!d) return;
+        const next = Math.round(d.startH + (e.clientY - d.startY));
+        const clamped = Math.min(TEXT_EDITOR_RESIZE_MAX_PX, Math.max(TEXT_EDITOR_RESIZE_MIN_PX, next));
+        onHeightChange(clamped);
+      }}
+      onPointerUp={(e) => {
+        dragRef.current = null;
+        try {
+          (e.currentTarget as HTMLButtonElement).releasePointerCapture(e.pointerId);
+        } catch {
+          /* released */
+        }
+      }}
+      onPointerCancel={(e) => {
+        dragRef.current = null;
+        try {
+          (e.currentTarget as HTMLButtonElement).releasePointerCapture(e.pointerId);
+        } catch {
+          /* released */
+        }
+      }}
+      onDoubleClick={(e) => {
+        e.preventDefault();
+        onHeightChange(undefined);
+      }}
+    >
+      <span
+        className="pointer-events-none mb-px mr-px block h-2.5 w-2.5 rounded-br border-b-[2.5px] border-r-[2.5px] border-current opacity-90"
+        aria-hidden
+      />
+    </button>
+  );
+}
 
 export function ProposalRichText({
   html,
@@ -499,18 +566,25 @@ export function ProposalRichText({
   placeholder,
   className,
   variant = "default",
+  editorMinHeightPx,
+  onEditorMinHeightPxChange,
+  resizableHeight = false,
 }: ProposalRichTextProps) {
   const sectionChrome = useProposalSectionEditorChrome();
   const seamless = sectionChrome?.seamless ?? false;
   const prefersLight = sectionChrome?.prefersLight ?? false;
   const headerVariant = variant === "header";
 
-  // Header blocks render a single-line title and don't need the body-text 140px
-  // tall-frame; consumers tried to override via `[&_.ProseMirror]:min-h-[3.5rem]`
-  // but that selector requires `.ProseMirror` to be a descendant — and TipTap
-  // applies `editorProps.attributes.class` to the `.ProseMirror` element itself,
-  // so the override silently never matched. Pick the right base here instead.
-  const minHeightClass = headerVariant ? "min-h-[3.5rem]" : "min-h-[140px]";
+  const shellRef = React.useRef<HTMLDivElement | null>(null);
+
+  const resolvedMinHeightPx =
+    editorMinHeightPx != null && Number.isFinite(editorMinHeightPx)
+      ? Math.min(TEXT_EDITOR_RESIZE_MAX_PX, Math.max(TEXT_EDITOR_RESIZE_MIN_PX, Math.round(editorMinHeightPx)))
+      : null;
+
+  const autoMinHeightClass = headerVariant ? "min-h-[3.5rem]" : "min-h-[3.25rem]";
+  const editorMinHeightStyle =
+    resolvedMinHeightPx != null ? (`min-height: ${resolvedMinHeightPx}px` as const) : undefined;
 
   // No focus ring/border on the editable surface itself — block-level chrome
   // (toolbar + outline) already conveys selection. Browser-default outline is
@@ -520,18 +594,18 @@ export function ProposalRichText({
     TIPTAP_PROSE_TYPOGRAPHY,
     seamless
       ? cn(
-          "proposal-rich-text max-w-none rounded-none border-0 bg-transparent px-3 py-2 text-sm leading-relaxed shadow-none outline-none focus-within:outline-none",
+          "proposal-rich-text max-w-none rounded-none border-0 bg-transparent px-2.5 py-1.5 text-sm leading-relaxed shadow-none focus-within:outline-none",
           // Stay visually merged with the section band (no hover/focus panel tint).
           "!bg-transparent hover:!bg-transparent focus:!bg-transparent focus-within:!bg-transparent active:!bg-transparent",
           "dark:!bg-transparent dark:hover:!bg-transparent dark:focus:!bg-transparent dark:focus-within:!bg-transparent",
-          minHeightClass,
+          resolvedMinHeightPx == null ? autoMinHeightClass : null,
           prefersLight
             ? "text-white/[0.92] [&_a]:text-sky-200 [&_a]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-white/25 [&_blockquote]:pl-4 [&_blockquote]:italic"
             : "text-foreground [&_a]:text-primary [&_a]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-border [&_blockquote]:pl-4 [&_blockquote]:italic",
         )
       : cn(
-          "proposal-rich-text max-w-none rounded-lg border-0 bg-background px-3 py-2 text-sm leading-relaxed text-foreground outline-none focus-within:outline-none",
-          minHeightClass,
+          "proposal-rich-text max-w-none rounded-lg border-0 bg-background px-2.5 py-1.5 text-sm leading-relaxed text-foreground focus-within:outline-none",
+          resolvedMinHeightPx == null ? autoMinHeightClass : null,
           "[&_blockquote]:border-l-4 [&_blockquote]:border-border [&_blockquote]:pl-4 [&_blockquote]:italic [&_a]:text-primary [&_a]:underline",
         ),
     className,
@@ -561,6 +635,7 @@ export function ProposalRichText({
     editorProps: {
       attributes: {
         class: editorRootClass,
+        style: editorMinHeightStyle ?? "",
       },
     },
     onUpdate: ({ editor: ed }) => {
@@ -574,28 +649,33 @@ export function ProposalRichText({
       editorProps: {
         attributes: {
           class: editorRootClass,
+          style: editorMinHeightStyle ?? "",
         },
       },
     });
-  }, [editor, editorRootClass]);
+  }, [editor, editorRootClass, editorMinHeightStyle]);
 
   if (!editor) {
     return (
       <div
         className={cn(
           "proposal-rich-text-skel animate-pulse rounded-lg",
-          minHeightClass,
+          resolvedMinHeightPx == null ? autoMinHeightClass : null,
           // Inside a section the surface stays the section's chosen colour — any
           // skeleton tint reads as a coloured rectangle layered on top, which
           // looked like the editor itself had a different fill.
           seamless ? "bg-transparent" : "bg-muted/40",
         )}
+        style={resolvedMinHeightPx != null ? { minHeight: resolvedMinHeightPx } : undefined}
       />
     );
   }
 
+  const showResize =
+    resizableHeight && !headerVariant && typeof onEditorMinHeightPxChange === "function";
+
   return (
-    <div className="relative">
+    <div className="relative" ref={shellRef}>
       <BubbleMenu
         editor={editor}
         tippyOptions={{ duration: 80, placement: "top", maxWidth: 720 }}
@@ -682,6 +762,9 @@ export function ProposalRichText({
         </div>
       </BubbleMenu>
       <EditorContent editor={editor} />
+      {showResize ? (
+        <TextEditorResizeHandle shellRef={shellRef} onHeightChange={onEditorMinHeightPxChange} />
+      ) : null}
     </div>
   );
 }

@@ -672,6 +672,9 @@ function NestedColumnBlockFields({
       return (
         <ProposalRichText
           html={block.html ?? (block.body ? `<p>${escapeHtml(block.body)}</p>` : "<p></p>")}
+          editorMinHeightPx={block.editorMinHeightPx}
+          onEditorMinHeightPxChange={(next) => patchNested({ ...block, editorMinHeightPx: next })}
+          resizableHeight
           onChange={(html) => patchNested({ ...block, html, body: undefined })}
         />
       );
@@ -1282,6 +1285,9 @@ function BlockFields({
           <ProposalRichText
             key={b.id}
             html={b.html ?? (b.body ? `<p>${escapeHtml(b.body)}</p>` : "<p></p>")}
+            editorMinHeightPx={b.editorMinHeightPx}
+            onEditorMinHeightPxChange={(next) => patch({ ...b, editorMinHeightPx: next })}
+            resizableHeight
             onChange={(html) => patch({ ...b, html, body: undefined })}
           />
         </div>
@@ -2089,7 +2095,12 @@ export function ProposalDocumentEditor({
                 templateId={templateId}
                 templateName={templateName.trim() || initialTemplateName || "Untitled template"}
               />
-              <Button variant="outline" size="sm" className="gap-2" asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 text-muted-foreground hover:text-foreground"
+                asChild
+              >
                 <Link
                   href={`/admin/proposals/templates/${templateId}/preview`}
                   target="_blank"

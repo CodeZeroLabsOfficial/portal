@@ -143,7 +143,7 @@ export function AccordionBlockEditor({
                   <ProposalRichText
                     key={p.id}
                     html={panelEditorHtml(p)}
-                    className="!px-0 [&_.ProseMirror]:min-h-[100px]"
+                    className="!px-0"
                     onChange={(html) => updatePanel(idx, { html, body: undefined })}
                   />
                 </ProposalSectionEditorChromeContext.Provider>

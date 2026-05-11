@@ -20,6 +20,7 @@ const textBlockSchema = z.object({
   type: z.literal("text"),
   html: z.string().optional(),
   body: z.string().optional(),
+  editorMinHeightPx: z.number().finite().int().min(48).max(2000).optional(),
 });
 
 const imageBlockSchema = z.object({
@@ -577,10 +578,16 @@ export function parseProposalDocument(input: unknown): ProposalDocument {
       const id = typeof o.id === "string" && o.id.length >= 4 ? o.id : `legacy-${i}`;
       const type = typeof o.type === "string" ? o.type : "text";
       if (type === "text") {
+        const rawMin = o.editorMinHeightPx;
+        const editorMinHeightPx =
+          typeof rawMin === "number" && Number.isFinite(rawMin)
+            ? Math.min(2000, Math.max(48, Math.round(rawMin)))
+            : undefined;
         blocks.push({
           id,
           type: "text",
           body: typeof o.body === "string" ? o.body : typeof o.html === "string" ? o.html : "",
+          ...(editorMinHeightPx !== undefined ? { editorMinHeightPx } : {}),
         });
       } else if (type === "header") {
         blocks.push({
