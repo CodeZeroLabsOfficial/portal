@@ -59,6 +59,8 @@ export interface SectionBackground {
 export interface HeaderBlock extends ProposalBlockBase {
   type: "header";
   text: string;
+  /** Rich heading (TipTap); when set, public view prefers this over `text`. */
+  html?: string;
 }
 
 export interface TextBlock extends ProposalBlockBase {

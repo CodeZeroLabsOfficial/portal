@@ -11,6 +11,7 @@ import { getOpportunityForStaff } from "@/server/firestore/crm-opportunities";
 import { getProposalTemplateForStaff } from "@/server/firestore/proposal-templates";
 import { cloneBrandingFromTemplate, cloneProposalDocument } from "@/lib/proposal-clone-document";
 import { applyProposalTokensToDocument } from "@/lib/proposal-template-tokens";
+import { escapeHtml } from "@/lib/escape-html";
 import { logError } from "@/lib/logging";
 import type { CustomerRecord } from "@/types/customer";
 import type { OpportunityRecord } from "@/types/opportunity";
@@ -71,7 +72,12 @@ function buildPrefilledProposalDocument(
   });
 
   const blocks: ProposalBlock[] = [
-    { id: randomUUID(), type: "header", text: opportunity.name },
+    {
+      id: randomUUID(),
+      type: "header",
+      text: opportunity.name,
+      html: `<h2>${escapeHtml(opportunity.name)}</h2>`,
+    },
     { id: randomUUID(), type: "text", body: `Prepared for ${customer.name}\n\n${contactLines}` },
   ];
 
@@ -106,7 +112,7 @@ function buildCustomerOnlyProposalDocument(customer: CustomerRecord): ProposalDo
   const cfText = formatCustomFields(customer.customFields);
 
   const blocks: ProposalBlock[] = [
-    { id: randomUUID(), type: "header", text: "Proposal" },
+    { id: randomUUID(), type: "header", text: "Proposal", html: "<h2>Proposal</h2>" },
     { id: randomUUID(), type: "text", body: `Prepared for ${customer.name}\n\n${contactLines}` },
   ];
 

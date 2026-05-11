@@ -375,15 +375,27 @@ export interface ProposalRichTextProps {
   onChange: (nextHtml: string) => void;
   placeholder?: string;
   className?: string;
+  /**
+   * `header`: show the font bubble when the caret is inside a heading even with no
+   * text selected (heading blocks use a single line where selection is often empty).
+   */
+  variant?: "default" | "header";
 }
 
 const TIPTAP_PROSE_TYPOGRAPHY =
   "[&_.ProseMirror]:min-h-[120px] [&_.ProseMirror]:outline-none [&_p]:mb-2 [&_h1]:my-3 [&_h1]:text-3xl [&_h1]:font-semibold [&_h2]:my-2 [&_h2]:text-2xl [&_h2]:font-semibold [&_h3]:my-2 [&_h3]:text-xl [&_h3]:font-semibold [&_h4]:my-2 [&_h4]:text-base [&_h4]:font-semibold [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5";
 
-export function ProposalRichText({ html, onChange, placeholder, className }: ProposalRichTextProps) {
+export function ProposalRichText({
+  html,
+  onChange,
+  placeholder,
+  className,
+  variant = "default",
+}: ProposalRichTextProps) {
   const sectionChrome = useProposalSectionEditorChrome();
   const seamless = sectionChrome?.seamless ?? false;
   const prefersLight = sectionChrome?.prefersLight ?? false;
+  const headerVariant = variant === "header";
 
   const editorRootClass = cn(
     TIPTAP_PROSE_TYPOGRAPHY,
@@ -459,7 +471,12 @@ export function ProposalRichText({ html, onChange, placeholder, className }: Pro
       <BubbleMenu
         editor={editor}
         tippyOptions={{ duration: 80, placement: "top", maxWidth: 720 }}
-        shouldShow={({ editor: ed, from, to }) => from !== to && ed.isEditable}
+        shouldShow={({ editor: ed, from, to }) => {
+          if (!ed.isEditable) return false;
+          if (from !== to) return true;
+          if (!headerVariant) return false;
+          return ed.isActive("heading");
+        }}
       >
         <div className="flex items-center gap-0.5 rounded-lg border border-zinc-800 bg-zinc-950/95 p-1 text-zinc-100 shadow-2xl backdrop-blur">
           <HeadingPicker editor={editor} />

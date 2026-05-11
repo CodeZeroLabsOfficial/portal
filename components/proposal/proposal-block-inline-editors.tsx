@@ -503,14 +503,6 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
                 inputClassName="w-full text-base font-semibold"
               />
             </div>
-            <button
-              type="button"
-              onClick={() => patch({ addonsSectionEnabled: false })}
-              className="shrink-0 rounded-md px-2 py-1 text-[11px] font-semibold opacity-90 transition-colors hover:bg-white/15"
-              style={{ color: headerBarFg }}
-            >
-              Remove table
-            </button>
             <div className="flex shrink-0 flex-col items-end gap-0.5 text-right">
               <span className="text-[10px] font-semibold uppercase tracking-wide opacity-90">Subtotal</span>
               <span className="text-lg font-semibold tabular-nums leading-none">

@@ -41,6 +41,11 @@ export interface BlockToolbarProps {
   trailingSlot?: React.ReactNode;
   /** Optional toggle shown after the overflow menu — used for reversible layout previews. */
   auxiliarySlot?: React.ReactNode;
+  /**
+   * Shown as the first item in the overflow menu (before Duplicate). Used e.g. for
+   * removing the Plans add-ons sub-table without deleting the whole block.
+   */
+  overflowLeadingAction?: { label: string; onClick: () => void };
   onOpenSettings?: () => void;
   style?: BlockStyle;
   onStyleChange?: (next: BlockStyle | undefined) => void;
@@ -61,6 +66,7 @@ export function BlockToolbar({
   leadingSlot,
   trailingSlot,
   auxiliarySlot,
+  overflowLeadingAction,
   onOpenSettings,
   style,
   onStyleChange,
@@ -105,6 +111,20 @@ export function BlockToolbar({
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" sideOffset={6} className="min-w-[10rem]" onCloseAutoFocus={(e) => e.preventDefault()}>
+              {overflowLeadingAction ? (
+                <>
+                  <DropdownMenuItem
+                    className="cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      overflowLeadingAction.onClick();
+                    }}
+                  >
+                    {overflowLeadingAction.label}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              ) : null}
               <DropdownMenuItem
                 className="cursor-pointer"
                 onClick={(e) => {

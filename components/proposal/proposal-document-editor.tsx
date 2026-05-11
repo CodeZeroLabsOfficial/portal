@@ -85,6 +85,7 @@ import {
 import { BlockToolbar } from "@/components/proposal/proposal-block-toolbar";
 import { DeleteProposalTemplateButton } from "@/components/proposal/delete-proposal-template-button";
 import {
+  PROPOSAL_DOCUMENT_BLOCK_GROUP_TOP_CLASSES,
   PROPOSAL_PUBLIC_DOCUMENT_OUTER_CLASSES,
   PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES,
 } from "@/lib/proposal-public-layout";
@@ -113,6 +114,7 @@ import {
   DEFAULT_PACKAGES_UPFRONT_COST_12_MINOR,
   PACKAGE_TIER_UNLIMITED_VALUE,
 } from "@/lib/package-tier-limits";
+import { packagesAddonsSectionActive } from "@/lib/proposal-packages-totals";
 import { resolveSectionBackground } from "@/lib/section-background";
 import { defaultSplashBlock } from "@/lib/splash-block";
 import {
@@ -122,6 +124,22 @@ import {
 
 function newId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `b-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function headerRichHtmlToPlainText(html: string): string {
+  return html
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ")
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 500);
+}
+
+function headerBlockEditorHtml(block: HeaderBlock): string {
+  if (block.html?.trim()) return block.html;
+  const t = (block.text ?? "").trim() || "Section heading";
+  return `<h2>${escapeHtml(t)}</h2>`;
 }
 
 /**
@@ -266,7 +284,12 @@ function createBlock(type: ProposalBlock["type"]): ProposalBlock {
     case "splash":
       return defaultSplashBlock(id);
     case "header":
-      return { id, type: "header", text: "Section heading" };
+      return {
+        id,
+        type: "header",
+        text: "Section heading",
+        html: "<h2>Section heading</h2>",
+      };
     case "text":
       return { id, type: "text", html: "<p></p>" };
     case "image":
@@ -564,20 +587,29 @@ function NestedColumnBlockFields({
   const sectionChrome = useProposalSectionEditorChrome();
   const seamlessSection = sectionChrome?.seamless ?? false;
   switch (block.type) {
-    case "header":
+    case "header": {
+      const hb = block as HeaderBlock;
       return (
-        <Input
-          aria-label="Heading"
-          placeholder="Title"
+        <ProposalRichText
+          key={hb.id}
+          variant="header"
+          html={headerBlockEditorHtml(hb)}
+          placeholder="Heading"
           className={cn(
-            "border-0 bg-transparent px-0 text-base font-semibold tracking-tight shadow-none focus-visible:ring-0",
+            "[&_.ProseMirror]:min-h-[3.25rem] [&_.ProseMirror]:text-base [&_.ProseMirror]:font-semibold [&_.ProseMirror]:tracking-tight md:[&_.ProseMirror]:text-lg",
             seamlessSection &&
-              "transition-none hover:!bg-transparent dark:hover:!bg-transparent active:!bg-transparent",
+              "[&_.ProseMirror]:transition-none [&_.ProseMirror]:hover:!bg-transparent dark:[&_.ProseMirror]:hover:!bg-transparent",
           )}
-          value={block.text}
-          onChange={(e) => patchNested({ ...block, text: e.target.value })}
+          onChange={(html) =>
+            patchNested({
+              ...hb,
+              html,
+              text: headerRichHtmlToPlainText(html) || hb.text,
+            })
+          }
         />
       );
+    }
     case "text":
       return (
         <ProposalRichText
@@ -866,7 +898,7 @@ function SectionBlockFields({
             const isSelected = selectedBlockId === child.id;
             const supportsStyle = child.type === "packages";
             return (
-              <React.Fragment key={child.id}>
+              <div key={child.id} className={cn(idx > 0 && PROPOSAL_DOCUMENT_BLOCK_GROUP_TOP_CLASSES)}>
                 <SortableShell
                   id={child.id}
                   selected={isSelected}
@@ -888,6 +920,20 @@ function SectionBlockFields({
                       onDuplicate={() => duplicateChild(child.id)}
                       deleteLabel="Remove block"
                       onDelete={() => removeChild(child.id)}
+                      overflowLeadingAction={
+                        child.type === "packages" && packagesAddonsSectionActive(child as PackagesBlock)
+                          ? {
+                              label: "Remove add-ons table",
+                              onClick: () => {
+                                const p = child as PackagesBlock;
+                                updateChild(child.id, {
+                                  ...p,
+                                  addonsSectionEnabled: false,
+                                } as ProposalContentBlock);
+                              },
+                            }
+                          : undefined
+                      }
                       style={supportsStyle ? getBlockStyle(child) : undefined}
                       onStyleChange={
                         supportsStyle ? (next) => applyBlockStyle(child.id, next) : undefined
@@ -933,7 +979,7 @@ function SectionBlockFields({
                   />
                 </SortableShell>
                 <InsertBlockSlot context="section" variant="between" onAdd={(b) => addChildAt(b, idx + 1)} />
-              </React.Fragment>
+              </div>
             );
           })}
         </SortableContext>
@@ -1005,17 +1051,23 @@ function BlockFields({
       const b = block as HeaderBlock;
       return (
         <div className="space-y-3">
-          <Input
-            id={`h-${b.id}`}
-            aria-label="Heading"
+          <ProposalRichText
+            key={b.id}
+            variant="header"
+            html={headerBlockEditorHtml(b)}
             placeholder="Heading"
             className={cn(
-              "border-0 bg-transparent px-0 text-2xl font-semibold tracking-tight shadow-none focus-visible:ring-0 md:text-3xl",
+              "[&_.ProseMirror]:min-h-[3.5rem] [&_.ProseMirror]:text-2xl [&_.ProseMirror]:font-semibold [&_.ProseMirror]:tracking-tight [&_.ProseMirror]:leading-tight md:[&_.ProseMirror]:text-3xl",
               seamlessSection &&
-                "transition-none hover:!bg-transparent dark:hover:!bg-transparent active:!bg-transparent",
+                "[&_.ProseMirror]:transition-none [&_.ProseMirror]:hover:!bg-transparent dark:[&_.ProseMirror]:hover:!bg-transparent",
             )}
-            value={b.text}
-            onChange={(e) => patch({ ...b, text: e.target.value })}
+            onChange={(html) =>
+              patch({
+                ...b,
+                html,
+                text: headerRichHtmlToPlainText(html) || b.text,
+              })
+            }
           />
         </div>
       );
@@ -1841,7 +1893,7 @@ export function ProposalDocumentEditor({
                     const isSelected = selectedBlockId === block.id;
                     const supportsStyle = block.type === "packages";
                     return (
-                      <React.Fragment key={block.id}>
+                      <div key={block.id} className={cn(idx > 0 && PROPOSAL_DOCUMENT_BLOCK_GROUP_TOP_CLASSES)}>
                         <SortableShell
                           id={block.id}
                           selected={isSelected}
@@ -1887,6 +1939,17 @@ export function ProposalDocumentEditor({
                               onMoveDown={() => moveBlock(block.id, 1)}
                               onDuplicate={() => duplicateBlock(block.id)}
                               onDelete={() => removeBlock(block.id)}
+                              overflowLeadingAction={
+                                block.type === "packages" && packagesAddonsSectionActive(block as PackagesBlock)
+                                  ? {
+                                      label: "Remove add-ons table",
+                                      onClick: () => {
+                                        const p = block as PackagesBlock;
+                                        updateBlock(block.id, { ...p, addonsSectionEnabled: false });
+                                      },
+                                    }
+                                  : undefined
+                              }
                               showOverflowMenu={!isSection}
                               style={supportsStyle ? getBlockStyle(block) : undefined}
                               onStyleChange={
@@ -1923,7 +1986,7 @@ export function ProposalDocumentEditor({
                           />
                         </SortableShell>
                         <InsertBlockSlot onAdd={(b) => addBlockAt(b, idx + 1)} />
-                      </React.Fragment>
+                      </div>
                     );
                   })}
                 </SortableContext>

@@ -7,6 +7,7 @@ const headerBlockSchema = z.object({
   id: idSchema,
   type: z.literal("header"),
   text: z.string().default(""),
+  html: z.string().optional(),
 });
 
 const textBlockSchema = z.object({
@@ -472,6 +473,7 @@ export function parseProposalDocument(input: unknown): ProposalDocument {
           id,
           type: "header",
           text: typeof o.text === "string" ? o.text : "",
+          ...(typeof o.html === "string" ? { html: o.html } : {}),
         });
       } else if (type === "section") {
         const childrenRaw = Array.isArray(o.children) ? o.children : [];
