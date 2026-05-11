@@ -9,6 +9,7 @@ import {
 } from "@/lib/section-background";
 import type { SectionBackground } from "@/types/proposal";
 import { PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES } from "@/lib/proposal-public-layout";
+import { ProposalSectionEditorChromeContext } from "@/components/proposal/proposal-section-editor-chrome";
 
 /**
  * Re-map shadcn semantic tokens for a bright section surface. Parent routes (e.g. `portal-ui`)
@@ -17,18 +18,6 @@ import { PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES } from "@/lib/proposal-public-layo
  */
 const LIGHT_SECTION_SURFACE =
   "[color-scheme:light] [--background:0_0%_100%] [--foreground:220_18%_13%] [--card:0_0%_100%] [--card-foreground:220_18%_13%] [--popover:0_0%_100%] [--popover-foreground:220_18%_13%] [--muted:220_20%_95%] [--muted-foreground:220_10%_44%] [--border:220_16%_88%] [--input:220_16%_88%] [--secondary:220_20%_95%] [--secondary-foreground:220_15%_18%] [--accent:220_20%_94%] [--accent-foreground:220_15%_18%] [--primary:262_52%_47%] [--primary-foreground:0_0%_100%] [--ring:262_52%_47%] [--destructive:0_72%_50%] [--destructive-foreground:210_40%_98%]";
-
-/**
- * Editor-only: nested TipTap should not paint a second “card” on the section backdrop.
- */
-const EDITOR_SECTION_SURFACE =
-  "[&_.proposal-rich-text]:!border-transparent [&_.proposal-rich-text]:!bg-transparent [&_.proposal-rich-text]:!shadow-none [&_.proposal-rich-text]:!rounded-none";
-
-const EDITOR_SECTION_FOCUS_LIGHT_ON_DARK =
-  "[&_.proposal-rich-text]:focus-within:!ring-2 [&_.proposal-rich-text]:focus-within:!ring-white/25 [&_.proposal-rich-text-skel]:!bg-white/10";
-
-const EDITOR_SECTION_FOCUS_DARK_ON_LIGHT =
-  "[&_.proposal-rich-text]:focus-within:!ring-2 [&_.proposal-rich-text]:focus-within:!ring-primary/30 [&_.proposal-rich-text-skel]:!bg-muted/35";
 
 /** Backdrop visuals shared by proposal preview and proposal editor canvases. */
 export function ProposalSectionShell({
@@ -87,14 +76,12 @@ export function ProposalSectionShell({
       children
     );
 
-  return (
+  const shellInner = (
     <div
       className={cn(
         "proposal-section-shell relative isolate min-h-[220px] w-full min-w-0 overflow-hidden",
         surfaceChrome,
         shellRadius,
-        editorCanvas && EDITOR_SECTION_SURFACE,
-        editorCanvas && (prefersLight ? EDITOR_SECTION_FOCUS_LIGHT_ON_DARK : EDITOR_SECTION_FOCUS_DARK_ON_LIGHT),
         !prefersLight && LIGHT_SECTION_SURFACE,
         prefersLight &&
           cn(
@@ -115,6 +102,16 @@ export function ProposalSectionShell({
       </div>
     </div>
   );
+
+  if (editorCanvas) {
+    return (
+      <ProposalSectionEditorChromeContext.Provider value={{ seamless: true, prefersLight }}>
+        {shellInner}
+      </ProposalSectionEditorChromeContext.Provider>
+    );
+  }
+
+  return shellInner;
 }
 
 function SectionBackdropLayers({ resolved }: { resolved: ResolvedSectionBackground }) {

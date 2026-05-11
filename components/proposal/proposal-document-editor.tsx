@@ -77,6 +77,7 @@ import { ProposalRichText } from "@/components/proposal/proposal-rich-text";
 import { ProposalDocumentView } from "@/components/proposal/proposal-document-view";
 import { ProposalSectionShell } from "@/components/proposal/proposal-section-shell";
 import { ProposalSectionBackgroundPicker } from "@/components/proposal/proposal-section-background-picker";
+import { useProposalSectionEditorChrome } from "@/components/proposal/proposal-section-editor-chrome";
 import {
   PackagesInlineEditor,
   PricingInlineEditor,
@@ -459,6 +460,9 @@ function SortableShell({
 }) {
   const [hovered, setHovered] = React.useState(false);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const sectionChrome = useProposalSectionEditorChrome();
+  const seamless = sectionChrome?.seamless ?? false;
+  const prefersLightSection = sectionChrome?.prefersLight ?? false;
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -487,10 +491,22 @@ function SortableShell({
           onSelect();
         }}
         className={cn(
-          "relative px-0 py-1.5 transition-colors [-webkit-tap-highlight-color:transparent]",
-          selected
-            ? "rounded-[2px] ring-1 ring-primary/45 ring-offset-2 ring-offset-transparent"
-            : "rounded-[2px] hover:bg-black/[0.03] dark:hover:bg-white/[0.04]",
+          "relative px-0 py-1.5 [-webkit-tap-highlight-color:transparent]",
+          seamless
+            ? cn(
+                "transition-none",
+                selected
+                  ? prefersLightSection
+                    ? "rounded-[2px] ring-1 ring-white/30 ring-offset-0 hover:ring-white/30"
+                    : "rounded-[2px] ring-1 ring-primary/40 ring-offset-0 hover:ring-primary/40"
+                  : "rounded-[2px] bg-transparent hover:!bg-transparent dark:hover:!bg-transparent active:!bg-transparent",
+              )
+            : cn(
+                "transition-colors",
+                selected
+                  ? "rounded-[2px] ring-1 ring-primary/45 ring-offset-2 ring-offset-transparent"
+                  : "rounded-[2px] hover:bg-black/[0.03] dark:hover:bg-white/[0.04]",
+              ),
         )}
       >
         <div className="min-w-0">{children}</div>
@@ -581,13 +597,19 @@ function NestedColumnBlockFields({
   onChange: (next: ProposalColumnChildBlock) => void;
 }) {
   const patchNested = (next: ProposalBlock) => onChange(next as ProposalColumnChildBlock);
+  const sectionChrome = useProposalSectionEditorChrome();
+  const seamlessSection = sectionChrome?.seamless ?? false;
   switch (block.type) {
     case "header":
       return (
         <Input
           aria-label="Heading"
           placeholder="Title"
-          className="border-0 bg-transparent px-0 text-base font-semibold tracking-tight shadow-none focus-visible:ring-0"
+          className={cn(
+            "border-0 bg-transparent px-0 text-base font-semibold tracking-tight shadow-none focus-visible:ring-0",
+            seamlessSection &&
+              "transition-none hover:!bg-transparent dark:hover:!bg-transparent active:!bg-transparent",
+          )}
           value={block.text}
           onChange={(e) => patchNested({ ...block, text: e.target.value })}
         />
@@ -994,6 +1016,8 @@ function BlockFields({
   applyBlockStyle?: (id: string, style: BlockStyle | undefined) => void;
 }) {
   const patch = (next: ProposalBlock) => onChange(next);
+  const sectionChrome = useProposalSectionEditorChrome();
+  const seamlessSection = sectionChrome?.seamless ?? false;
 
   switch (block.type) {
     case "splash": {
@@ -1023,6 +1047,8 @@ function BlockFields({
             placeholder="Heading"
             className={cn(
               "border-0 bg-transparent px-0 text-2xl font-semibold tracking-tight shadow-none focus-visible:ring-0 md:text-3xl",
+              seamlessSection &&
+                "transition-none hover:!bg-transparent dark:hover:!bg-transparent active:!bg-transparent",
             )}
             value={b.text}
             onChange={(e) => patch({ ...b, text: e.target.value })}

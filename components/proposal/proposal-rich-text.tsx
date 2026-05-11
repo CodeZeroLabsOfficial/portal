@@ -35,6 +35,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { useProposalSectionEditorChrome } from "@/components/proposal/proposal-section-editor-chrome";
 
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {
@@ -376,7 +377,30 @@ export interface ProposalRichTextProps {
   className?: string;
 }
 
+const TIPTAP_PROSE_TYPOGRAPHY =
+  "[&_.ProseMirror]:min-h-[120px] [&_.ProseMirror]:outline-none [&_p]:mb-2 [&_h1]:my-3 [&_h1]:text-3xl [&_h1]:font-semibold [&_h2]:my-2 [&_h2]:text-2xl [&_h2]:font-semibold [&_h3]:my-2 [&_h3]:text-xl [&_h3]:font-semibold [&_h4]:my-2 [&_h4]:text-base [&_h4]:font-semibold [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5";
+
 export function ProposalRichText({ html, onChange, placeholder, className }: ProposalRichTextProps) {
+  const sectionChrome = useProposalSectionEditorChrome();
+  const seamless = sectionChrome?.seamless ?? false;
+  const prefersLight = sectionChrome?.prefersLight ?? false;
+
+  const editorRootClass = cn(
+    TIPTAP_PROSE_TYPOGRAPHY,
+    seamless
+      ? cn(
+          "proposal-rich-text max-w-none min-h-[140px] rounded-none border-0 bg-transparent px-3 py-2 text-sm leading-relaxed shadow-none focus-within:outline-none focus-within:ring-2 hover:!bg-transparent dark:hover:!bg-transparent",
+          prefersLight
+            ? "text-white/[0.92] focus-within:ring-white/25 [&_a]:text-sky-200 [&_a]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-white/25 [&_blockquote]:pl-4 [&_blockquote]:italic"
+            : "text-foreground focus-within:ring-primary/30 [&_a]:text-primary [&_a]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-border [&_blockquote]:pl-4 [&_blockquote]:italic",
+        )
+      : cn(
+          "proposal-rich-text max-w-none min-h-[140px] rounded-lg border border-border/60 bg-background px-3 py-2 text-sm leading-relaxed text-foreground focus-within:ring-2 focus-within:ring-ring/40",
+          "[&_blockquote]:border-l-4 [&_blockquote]:border-border [&_blockquote]:pl-4 [&_blockquote]:italic [&_a]:text-primary [&_a]:underline",
+        ),
+    className,
+  );
+
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -400,10 +424,7 @@ export function ProposalRichText({ html, onChange, placeholder, className }: Pro
     content: html?.trim() ? html : "<p></p>",
     editorProps: {
       attributes: {
-        class: cn(
-          "proposal-rich-text max-w-none min-h-[140px] rounded-lg border border-border/60 bg-background px-3 py-2 text-sm leading-relaxed text-foreground focus-within:ring-2 focus-within:ring-ring/40 [&_.ProseMirror]:min-h-[120px] [&_.ProseMirror]:outline-none [&_p]:mb-2 [&_h1]:my-3 [&_h1]:text-3xl [&_h1]:font-semibold [&_h2]:my-2 [&_h2]:text-2xl [&_h2]:font-semibold [&_h3]:my-2 [&_h3]:text-xl [&_h3]:font-semibold [&_h4]:my-2 [&_h4]:text-base [&_h4]:font-semibold [&_blockquote]:border-l-4 [&_blockquote]:border-border [&_blockquote]:pl-4 [&_blockquote]:italic [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-primary [&_a]:underline",
-          className,
-        ),
+        class: editorRootClass,
       },
     },
     onUpdate: ({ editor: ed }) => {
@@ -411,8 +432,26 @@ export function ProposalRichText({ html, onChange, placeholder, className }: Pro
     },
   });
 
+  React.useEffect(() => {
+    if (!editor) return;
+    editor.setOptions({
+      editorProps: {
+        attributes: {
+          class: editorRootClass,
+        },
+      },
+    });
+  }, [editor, editorRootClass]);
+
   if (!editor) {
-    return <div className="proposal-rich-text-skel min-h-[140px] animate-pulse rounded-lg bg-muted/40" />;
+    return (
+      <div
+        className={cn(
+          "proposal-rich-text-skel min-h-[140px] animate-pulse rounded-lg",
+          seamless ? (prefersLight ? "bg-white/10" : "bg-muted/35") : "bg-muted/40",
+        )}
+      />
+    );
   }
 
   return (

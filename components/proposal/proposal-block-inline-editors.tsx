@@ -840,13 +840,12 @@ export function PricingInlineEditor({ block, onChange }: PricingInlineEditorProp
     color: headerBarFg,
     borderColor: style.primaryColor,
   };
+  const headerSimpleDividerColor =
+    headerBarFg === "#ffffff" ? "rgba(255,255,255,0.28)" : "rgba(15,23,42,0.18)";
 
   return (
     <div
-      className={cn(
-        "overflow-hidden border bg-card shadow-sm",
-        isVisual ? "rounded-xl border-border/70" : "rounded-lg border-[#E8EAED]",
-      )}
+      className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm"
       style={
         isVisual
           ? { borderColor: withAlpha(style.primaryColor, 0.25) }
@@ -891,8 +890,8 @@ export function PricingInlineEditor({ block, onChange }: PricingInlineEditorProp
       ) : (
         <>
           <div
-            className="flex flex-wrap items-center gap-3 rounded-t-lg border-b px-4 py-3"
-            style={headerSimpleSolid}
+            className="flex flex-wrap items-center gap-3 rounded-t-xl border-b border-dashed px-4 py-3"
+            style={{ ...headerSimpleSolid, borderBottomColor: headerSimpleDividerColor }}
           >
             <div className="min-w-0 flex-1">
               <InlineText
@@ -912,7 +911,7 @@ export function PricingInlineEditor({ block, onChange }: PricingInlineEditorProp
               </span>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-[#EBEDF0] bg-muted/15 px-4 py-2 text-[11px]">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-dashed border-border/50 bg-muted/10 px-4 py-2 text-[11px]">
             <label className="flex cursor-pointer items-center gap-1.5 text-muted-foreground">
               <input
                 type="checkbox"
@@ -950,15 +949,15 @@ export function PricingInlineEditor({ block, onChange }: PricingInlineEditorProp
         </>
       )}
 
-      <div className="overflow-x-auto bg-white">
+      <div className="overflow-x-auto bg-card">
         <table className="w-full min-w-[480px] text-sm">
           <thead>
             <tr
               className={cn(
-                "border-b text-left text-[11px] font-medium uppercase tracking-wide",
+                "border-b border-dashed text-left text-[11px] font-medium uppercase tracking-wide",
                 isVisual
                   ? "border-border/60 bg-muted/20 text-muted-foreground"
-                  : "border-[#EBEDF0] bg-white text-neutral-500",
+                  : "border-border/50 bg-card text-muted-foreground",
               )}
             >
               <th className="px-4 py-2.5">{isVisual ? "Item" : "Description"}</th>
@@ -968,7 +967,12 @@ export function PricingInlineEditor({ block, onChange }: PricingInlineEditorProp
               <th className="w-8 px-2 py-2.5" />
             </tr>
           </thead>
-          <tbody className={isVisual ? "[&_tr]:border-border/40 [&_tr]:border-b" : "[&_tr]:border-[#F0F2F5] [&_tr]:border-b"}>
+          <tbody
+            className={cn(
+              "[&_tr]:border-b [&_tr]:border-border/40",
+              !isVisual && "[&_tr]:border-dashed",
+            )}
+          >
             {lineItems.map((li) => {
               const q = effectivePricingLineQuantity(li);
               const lineTotal = Math.round(li.unitAmountMinor * q);
@@ -994,15 +998,10 @@ export function PricingInlineEditor({ block, onChange }: PricingInlineEditorProp
                         placeholder="Item label"
                         onChange={(v) => patchLine(li.id, { label: v })}
                         ariaLabel="Line item label"
-                        className={cn("font-medium", isVisual ? "text-foreground" : "text-neutral-900")}
-                        inputClassName={cn("w-full font-medium", isVisual ? "text-foreground" : "text-neutral-900")}
+                        className="font-medium text-foreground"
+                        inputClassName="w-full font-medium text-foreground"
                       />
-                      <label
-                        className={cn(
-                          "flex cursor-pointer items-center gap-2 text-[11px]",
-                          isVisual ? "text-muted-foreground" : "text-neutral-500",
-                        )}
-                      >
+                      <label className="flex cursor-pointer items-center gap-2 text-[11px] text-muted-foreground">
                         <input
                           type="checkbox"
                           checked={Boolean(li.optional)}
@@ -1016,7 +1015,7 @@ export function PricingInlineEditor({ block, onChange }: PricingInlineEditorProp
                   <td
                     className={cn(
                       "px-4 py-3 text-right align-middle tabular-nums",
-                      isVisual ? "" : "text-neutral-600",
+                      isVisual ? "text-foreground" : "text-muted-foreground",
                     )}
                   >
                     <InlinePrice
@@ -1025,7 +1024,7 @@ export function PricingInlineEditor({ block, onChange }: PricingInlineEditorProp
                       currency={currency}
                       onChange={(v) => patchLine(li.id, { unitAmountMinor: v })}
                       ariaLabel="Unit price"
-                      className={isVisual ? "text-foreground" : "text-neutral-700"}
+                      className={isVisual ? "text-foreground" : "text-muted-foreground"}
                     />
                   </td>
                   {qtyProps ? (
@@ -1033,19 +1032,14 @@ export function PricingInlineEditor({ block, onChange }: PricingInlineEditorProp
                       {!isVisual ? (
                         <span className="inline-flex items-center justify-end gap-1.5 tabular-nums">
                           <InlineNumber {...qtyProps} />
-                          <span className="text-xs text-neutral-500">{qtyUnitDraft}</span>
+                          <span className="text-xs text-muted-foreground">{qtyUnitDraft}</span>
                         </span>
                       ) : (
                         <InlineNumber {...qtyProps} />
                       )}
                     </td>
                   ) : null}
-                  <td
-                    className={cn(
-                      "px-4 py-3 text-right align-middle tabular-nums font-medium",
-                      isVisual ? "text-foreground" : "text-neutral-900",
-                    )}
-                  >
+                  <td className="px-4 py-3 text-right align-middle tabular-nums font-medium text-foreground">
                     {formatCurrencyAmount(lineTotal, currency)}
                   </td>
                   <td className="px-2 py-3 text-right align-middle">
