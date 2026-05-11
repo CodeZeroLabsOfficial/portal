@@ -519,13 +519,6 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
                 inputClassName="w-full text-base font-semibold"
               />
             </div>
-            <div className="flex shrink-0 flex-col items-end gap-0.5 text-right">
-              <span className="text-[10px] font-semibold uppercase tracking-wide opacity-90">Monthly subtotal</span>
-              <span className="text-lg font-semibold tabular-nums leading-none">
-                {formatCurrencyAmount(addonsPreviewMinor, currency)}
-                <span className="ml-1 text-xs font-medium opacity-90">/ mo</span>
-              </span>
-            </div>
           </div>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-dashed border-border/50 bg-muted/10 px-4 py-2 text-[11px]">
           <label className="flex cursor-pointer items-center gap-1.5 text-muted-foreground">
@@ -666,6 +659,28 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
                 </td>
               </tr>
             </tbody>
+            <tfoot>
+              <tr
+                className="border-t border-dashed"
+                style={{ ...headerSimpleSolid, borderTopColor: headerSimpleDividerColor }}
+              >
+                <td
+                  colSpan={editableAddonQty ? 3 : 2}
+                  className="px-4 py-3 text-left align-middle text-[11px] font-semibold uppercase tracking-wide opacity-90"
+                  style={{ color: headerBarFg }}
+                >
+                  Monthly subtotal
+                </td>
+                <td
+                  className="px-4 py-3 text-right align-middle tabular-nums font-semibold"
+                  style={{ color: headerBarFg }}
+                >
+                  <span className="text-lg leading-none">{formatCurrencyAmount(addonsPreviewMinor, currency)}</span>
+                  <span className="ml-1 text-xs font-medium opacity-90">/ mo</span>
+                </td>
+                <td className="w-8 px-2 py-3" style={{ ...headerSimpleSolid }} />
+              </tr>
+            </tfoot>
           </table>
         </div>
       </div>

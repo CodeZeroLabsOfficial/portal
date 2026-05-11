@@ -423,7 +423,7 @@ export function PackagesBlockPublic({
         <div className="mt-[50px] text-left">
           <div className="overflow-hidden rounded-xl border border-border/70 bg-card text-left shadow-sm">
             <div
-              className="flex flex-wrap items-center justify-between gap-3 border-b border-dashed px-4 py-3"
+              className="flex flex-wrap items-center gap-3 border-b border-dashed px-4 py-3"
               style={{
                 backgroundColor: style.primaryColor,
                 color: totalBarFg,
@@ -431,11 +431,6 @@ export function PackagesBlockPublic({
               }}
             >
               <p className="text-sm font-semibold">{addonsTitle}</p>
-              <p className="text-[11px] font-semibold uppercase tracking-wide opacity-90">
-                Monthly subtotal{" "}
-                <span className="text-base tabular-nums">{formatCurrencyAmount(addonsSubtotalMinor, currency)}</span>
-                <span className="ml-1 text-[10px] font-medium opacity-90">/ mo</span>
-              </p>
             </div>
             <div className="overflow-x-auto bg-card text-left">
               <table className="w-full min-w-[320px] text-left text-sm [&_thead_th:first-child]:!text-left [&_tbody_td:first-child]:!text-left">
@@ -513,6 +508,27 @@ export function PackagesBlockPublic({
                     );
                   })}
                 </tbody>
+                <tfoot>
+                  <tr
+                    className="border-t border-dashed"
+                    style={{
+                      backgroundColor: style.primaryColor,
+                      color: totalBarFg,
+                      borderTopColor: totalBarFg === "#ffffff" ? "rgba(255,255,255,0.28)" : "rgba(15,23,42,0.18)",
+                    }}
+                  >
+                    <td
+                      colSpan={allowAddonEdit ? 3 : 2}
+                      className="px-4 py-3 !text-left align-middle text-[11px] font-semibold uppercase tracking-wide opacity-90"
+                    >
+                      Monthly subtotal
+                    </td>
+                    <td className="px-4 py-3 text-right align-middle tabular-nums font-semibold">
+                      <span className="text-base">{formatCurrencyAmount(addonsSubtotalMinor, currency)}</span>
+                      <span className="ml-1 text-[10px] font-medium opacity-90">/ mo</span>
+                    </td>
+                  </tr>
+                </tfoot>
               </table>
             </div>
           </div>
