@@ -397,17 +397,26 @@ export function ProposalRichText({
   const prefersLight = sectionChrome?.prefersLight ?? false;
   const headerVariant = variant === "header";
 
+  // Header blocks render a single-line title and don't need the body-text 140px
+  // tall-frame; consumers tried to override via `[&_.ProseMirror]:min-h-[3.5rem]`
+  // but that selector requires `.ProseMirror` to be a descendant — and TipTap
+  // applies `editorProps.attributes.class` to the `.ProseMirror` element itself,
+  // so the override silently never matched. Pick the right base here instead.
+  const minHeightClass = headerVariant ? "min-h-[3.5rem]" : "min-h-[140px]";
+
   const editorRootClass = cn(
     TIPTAP_PROSE_TYPOGRAPHY,
     seamless
       ? cn(
-          "proposal-rich-text max-w-none min-h-[140px] rounded-none border-0 bg-transparent px-3 py-2 text-sm leading-relaxed shadow-none focus-within:outline-none focus-within:ring-2 hover:!bg-transparent dark:hover:!bg-transparent",
+          "proposal-rich-text max-w-none rounded-none border-0 bg-transparent px-3 py-2 text-sm leading-relaxed shadow-none focus-within:outline-none focus-within:ring-2 hover:!bg-transparent dark:hover:!bg-transparent",
+          minHeightClass,
           prefersLight
             ? "text-white/[0.92] focus-within:ring-white/25 [&_a]:text-sky-200 [&_a]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-white/25 [&_blockquote]:pl-4 [&_blockquote]:italic"
             : "text-foreground focus-within:ring-primary/30 [&_a]:text-primary [&_a]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-border [&_blockquote]:pl-4 [&_blockquote]:italic",
         )
       : cn(
-          "proposal-rich-text max-w-none min-h-[140px] rounded-lg border border-border/60 bg-background px-3 py-2 text-sm leading-relaxed text-foreground focus-within:ring-2 focus-within:ring-ring/40",
+          "proposal-rich-text max-w-none rounded-lg border border-border/60 bg-background px-3 py-2 text-sm leading-relaxed text-foreground focus-within:ring-2 focus-within:ring-ring/40",
+          minHeightClass,
           "[&_blockquote]:border-l-4 [&_blockquote]:border-border [&_blockquote]:pl-4 [&_blockquote]:italic [&_a]:text-primary [&_a]:underline",
         ),
     className,
@@ -459,7 +468,8 @@ export function ProposalRichText({
     return (
       <div
         className={cn(
-          "proposal-rich-text-skel min-h-[140px] animate-pulse rounded-lg",
+          "proposal-rich-text-skel animate-pulse rounded-lg",
+          minHeightClass,
           seamless ? (prefersLight ? "bg-white/10" : "bg-muted/35") : "bg-muted/40",
         )}
       />

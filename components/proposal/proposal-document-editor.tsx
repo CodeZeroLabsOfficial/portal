@@ -582,8 +582,6 @@ function NestedColumnBlockFields({
   onChange: (next: ProposalColumnChildBlock) => void;
 }) {
   const patchNested = (next: ProposalBlock) => onChange(next as ProposalColumnChildBlock);
-  const sectionChrome = useProposalSectionEditorChrome();
-  const seamlessSection = sectionChrome?.seamless ?? false;
   switch (block.type) {
     case "header": {
       const hb = block as HeaderBlock;
@@ -593,11 +591,6 @@ function NestedColumnBlockFields({
           variant="header"
           html={headerBlockEditorHtml(hb)}
           placeholder="Heading"
-          className={cn(
-            "[&_.ProseMirror]:min-h-[3.25rem] [&_.ProseMirror]:text-base [&_.ProseMirror]:font-semibold [&_.ProseMirror]:tracking-tight md:[&_.ProseMirror]:text-lg",
-            seamlessSection &&
-              "[&_.ProseMirror]:transition-none [&_.ProseMirror]:hover:!bg-transparent dark:[&_.ProseMirror]:hover:!bg-transparent",
-          )}
           onChange={(html) =>
             patchNested({
               ...hb,
@@ -1041,11 +1034,6 @@ function BlockFields({
             variant="header"
             html={headerBlockEditorHtml(b)}
             placeholder="Heading"
-            className={cn(
-              "[&_.ProseMirror]:min-h-[3.5rem] [&_.ProseMirror]:text-2xl [&_.ProseMirror]:font-semibold [&_.ProseMirror]:tracking-tight [&_.ProseMirror]:leading-tight md:[&_.ProseMirror]:text-3xl",
-              seamlessSection &&
-                "[&_.ProseMirror]:transition-none [&_.ProseMirror]:hover:!bg-transparent dark:[&_.ProseMirror]:hover:!bg-transparent",
-            )}
             onChange={(html) =>
               patch({
                 ...b,
@@ -1770,16 +1758,6 @@ export function ProposalDocumentEditor({
                 All templates
               </Link>
             </Button>
-            <Button variant="outline" size="sm" className="gap-2" asChild>
-              <Link
-                href={`/admin/proposals/templates/${templateId}/preview`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <ExternalLink className="h-4 w-4" aria-hidden />
-                Open public viewer
-              </Link>
-            </Button>
             <div className="flex h-8 min-w-[10rem] flex-1 basis-[14rem] items-center border-b border-border">
               {templateNameEditing ? (
                 <Input
@@ -1824,6 +1802,16 @@ export function ProposalDocumentEditor({
                 templateId={templateId}
                 templateName={templateName.trim() || initialTemplateName || "Untitled template"}
               />
+              <Button variant="outline" size="sm" className="gap-2" asChild>
+                <Link
+                  href={`/admin/proposals/templates/${templateId}/preview`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <ExternalLink className="h-4 w-4" aria-hidden />
+                  Open public viewer
+                </Link>
+              </Button>
               <Button type="button" size="sm" disabled={saving} onClick={() => void save()} className="gap-2">
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                 Save
