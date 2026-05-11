@@ -107,15 +107,17 @@ function SectionBackdropLayers({ resolved }: { resolved: ResolvedSectionBackgrou
   const blurPx = resolved.blurStrength;
   const filter = blurPx > 0 ? `blur(${blurPx}px)` : undefined;
   const scale = blurPx > 0 ? 1.1 : undefined;
-  const tintAlpha = resolved.tintOpacityPct / 100;
 
-  const tintFill =
-    resolved.tintStyle === "blend"
+  const showTint = resolved.kind !== "color";
+  const tintAlpha = resolved.tintOpacityPct / 100;
+  const tintFill = showTint
+    ? resolved.tintStyle === "blend"
       ? ({
           mixBlendMode: "soft-light" as const,
           backgroundColor: withAlpha(resolved.tintColorHex, Math.min(1, tintAlpha * 1.2)),
         })
-      : { backgroundColor: withAlpha(resolved.tintColorHex, tintAlpha) };
+      : { backgroundColor: withAlpha(resolved.tintColorHex, tintAlpha) }
+    : undefined;
 
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden bg-neutral-950">
@@ -148,10 +150,11 @@ function SectionBackdropLayers({ resolved }: { resolved: ResolvedSectionBackgrou
         )}
       </div>
 
-      {/* Tint */}
-      <div className={cn("absolute inset-0", resolved.tintStyle === "blend" && "isolate")}>
-        <div className={cn("absolute inset-0", resolved.tintStyle === "blend" && "isolate")} style={tintFill} />
-      </div>
+      {showTint && tintFill ? (
+        <div className={cn("absolute inset-0", resolved.tintStyle === "blend" && "isolate")}>
+          <div className={cn("absolute inset-0", resolved.tintStyle === "blend" && "isolate")} style={tintFill} />
+        </div>
+      ) : null}
     </div>
   );
 }
