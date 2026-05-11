@@ -401,7 +401,7 @@ export function ProposalRichText({ html, onChange, placeholder, className }: Pro
     editorProps: {
       attributes: {
         class: cn(
-          "max-w-none min-h-[140px] rounded-lg border border-border/60 bg-background px-3 py-2 text-sm leading-relaxed text-foreground focus-within:ring-2 focus-within:ring-ring/40 [&_.ProseMirror]:min-h-[120px] [&_.ProseMirror]:outline-none [&_p]:mb-2 [&_h1]:my-3 [&_h1]:text-3xl [&_h1]:font-semibold [&_h2]:my-2 [&_h2]:text-2xl [&_h2]:font-semibold [&_h3]:my-2 [&_h3]:text-xl [&_h3]:font-semibold [&_h4]:my-2 [&_h4]:text-base [&_h4]:font-semibold [&_blockquote]:border-l-4 [&_blockquote]:border-border [&_blockquote]:pl-4 [&_blockquote]:italic [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-primary [&_a]:underline",
+          "proposal-rich-text max-w-none min-h-[140px] rounded-lg border border-border/60 bg-background px-3 py-2 text-sm leading-relaxed text-foreground focus-within:ring-2 focus-within:ring-ring/40 [&_.ProseMirror]:min-h-[120px] [&_.ProseMirror]:outline-none [&_p]:mb-2 [&_h1]:my-3 [&_h1]:text-3xl [&_h1]:font-semibold [&_h2]:my-2 [&_h2]:text-2xl [&_h2]:font-semibold [&_h3]:my-2 [&_h3]:text-xl [&_h3]:font-semibold [&_h4]:my-2 [&_h4]:text-base [&_h4]:font-semibold [&_blockquote]:border-l-4 [&_blockquote]:border-border [&_blockquote]:pl-4 [&_blockquote]:italic [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-primary [&_a]:underline",
           className,
         ),
       },
@@ -412,7 +412,7 @@ export function ProposalRichText({ html, onChange, placeholder, className }: Pro
   });
 
   if (!editor) {
-    return <div className="min-h-[140px] animate-pulse rounded-lg bg-muted/40" />;
+    return <div className="proposal-rich-text-skel min-h-[140px] animate-pulse rounded-lg bg-muted/40" />;
   }
 
   return (
