@@ -30,8 +30,13 @@ export const PROPOSAL_PUBLIC_VIEWPORT_BREAKOUT_CLASSES =
  * Keep editor block wrappers in sync when changing this value.
  */
 export const PROPOSAL_DOCUMENT_BLOCK_STACK_CLASSES = "space-y-[100px]";
-/** Root document list when sections use viewport bleed — flex column gap between every top-level block. */
-export const PROPOSAL_DOCUMENT_ROOT_STACK_GAP_CLASSES = "gap-[100px]";
+/**
+ * Top/bottom padding on each root or section block stack. With `PROPOSAL_DOCUMENT_ROOT_STACK_GAP_CLASSES`
+ * (`gap-0`), adjacent stacks meet as 50px + 50px = 100px between content — same as `space-y-[100px]` inside a stack.
+ */
+export const PROPOSAL_DOCUMENT_BLOCK_EDGE_PAD_CLASSES = "py-[50px]";
+/** Root document list: no extra flex gap — spacing comes from each child's edge pad + block stack space-y. */
+export const PROPOSAL_DOCUMENT_ROOT_STACK_GAP_CLASSES = "gap-0";
 /** Editor: margin before each block group after the first (matches public stack gap without restructuring inserts). */
 export const PROPOSAL_DOCUMENT_BLOCK_GROUP_TOP_CLASSES = "mt-[100px]";
 /** Row gap for `columns` layout in the public viewer (horizontal gap unchanged). */

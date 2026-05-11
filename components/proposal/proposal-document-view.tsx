@@ -11,6 +11,7 @@ import type {
   SplashBlock,
 } from "@/types/proposal";
 import {
+  PROPOSAL_DOCUMENT_BLOCK_EDGE_PAD_CLASSES,
   PROPOSAL_DOCUMENT_BLOCK_STACK_CLASSES,
   PROPOSAL_DOCUMENT_COLUMNS_ROW_GAP_CLASSES,
   PROPOSAL_DOCUMENT_ROOT_STACK_GAP_CLASSES,
@@ -70,11 +71,13 @@ function BlockView({
         />
       ));
       const body = viewportSectionBleed ? (
-        <div className={cn(PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES)}>
+        <div className={cn(PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES, PROPOSAL_DOCUMENT_BLOCK_EDGE_PAD_CLASSES)}>
           <div className={PROPOSAL_DOCUMENT_BLOCK_STACK_CLASSES}>{stack}</div>
         </div>
       ) : (
-        <div className={PROPOSAL_DOCUMENT_BLOCK_STACK_CLASSES}>{stack}</div>
+        <div className={cn(PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES, PROPOSAL_DOCUMENT_BLOCK_EDGE_PAD_CLASSES)}>
+          <div className={PROPOSAL_DOCUMENT_BLOCK_STACK_CLASSES}>{stack}</div>
+        </div>
       );
       return (
         <ProposalSectionShell background={sb.background} variant="viewer" viewportBleed={Boolean(viewportSectionBleed)}>
@@ -127,7 +130,7 @@ function BlockView({
               "[&_h2]:mt-6 [&_h2]:text-2xl [&_h2]:font-semibold",
               "[&_h3]:mt-4 [&_h3]:text-xl [&_h3]:font-semibold",
               "[&_h4]:mt-4 [&_h4]:text-base [&_h4]:font-semibold",
-              "[&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-3 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5",
+              "[&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-3 [&_p:last-child]:mb-0 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5",
             )}
             dangerouslySetInnerHTML={{ __html: sanitizeProposalHtml(block.html) }}
           />
@@ -403,22 +406,25 @@ export function ProposalDocumentView({
             );
             if (block.type === "section" || splashRootBand) {
               return (
-                <section key={block.id} className="w-full">
+                <section key={block.id} className={cn("w-full", splashRootBand && PROPOSAL_DOCUMENT_BLOCK_EDGE_PAD_CLASSES)}>
                   {child}
                 </section>
               );
             }
             return (
-              <section key={block.id} className={PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES}>
+              <section key={block.id} className={cn(PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES, PROPOSAL_DOCUMENT_BLOCK_EDGE_PAD_CLASSES)}>
                 {child}
               </section>
             );
           })}
         </div>
       ) : (
-        <div className={cn(PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES, PROPOSAL_DOCUMENT_BLOCK_STACK_CLASSES)}>
+        <div className={cn(PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES, PROPOSAL_DOCUMENT_ROOT_STACK_GAP_CLASSES, "flex flex-col")}>
           {document.blocks.map((block) => (
-            <section key={block.id} className="space-y-0">
+            <section
+              key={block.id}
+              className={cn("space-y-0", block.type !== "section" && PROPOSAL_DOCUMENT_BLOCK_EDGE_PAD_CLASSES)}
+            >
               <BlockView
                 block={block}
                 shareToken={shareToken}

@@ -50,7 +50,8 @@ export function ProposalSectionShell({
     editorCanvas
       ? cn("py-8 sm:py-10 md:py-12")
       : viewerEdge
-        ? cn("px-0 py-10 sm:py-14 md:py-16")
+        ? /* Vertical rhythm lives on `ProposalDocumentView` block stacks (`PROPOSAL_DOCUMENT_BLOCK_EDGE_PAD_CLASSES`). */
+          "px-0 py-0"
         : cn("px-6 py-10 sm:px-10 sm:py-14 md:px-14 md:py-16");
   const surfaceChrome = editorCanvas
     ? "rounded-none shadow-none ring-0"
