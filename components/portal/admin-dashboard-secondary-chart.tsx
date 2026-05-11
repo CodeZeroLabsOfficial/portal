@@ -54,7 +54,6 @@ export function AdminDashboardSecondaryChart({
   const h = 120;
   const { line, area, dots } = buildSvgPaths(points, w, h);
 
-  const maxV = Math.max(...points, 1);
   const hoverValue = hoverIdx !== null && points[hoverIdx] !== undefined ? points[hoverIdx] : null;
   const hoverLabel = hoverIdx !== null && xLabels[hoverIdx] !== undefined ? xLabels[hoverIdx] : null;
 

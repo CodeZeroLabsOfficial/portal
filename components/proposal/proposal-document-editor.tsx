@@ -1250,7 +1250,7 @@ function BlockFields({
           selectedBlockId={selection?.selectedId ?? null}
           onSelectBlock={selection?.onSelect ?? (() => {})}
           getBlockStyle={getBlockStyle ?? (() => undefined)}
-          applyBlockStyle={applyBlockStyle ?? ((_sid: string, _style: BlockStyle | undefined) => {})}
+          applyBlockStyle={applyBlockStyle ?? (() => {})}
         />
       );
     }

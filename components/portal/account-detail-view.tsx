@@ -4,7 +4,7 @@ import type { AccountDetailAggregate } from "@/server/firestore/crm-customers";
 import { formatAddressLines, websiteHref } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   WORKSPACE_DETAIL_PAGE_TITLE_CLASS,
   WORKSPACE_PAGE_DESCRIPTION_STACK_CLASS,

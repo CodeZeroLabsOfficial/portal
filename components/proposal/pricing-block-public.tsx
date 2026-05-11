@@ -16,7 +16,7 @@ export interface PricingBlockPublicProps {
 
 /** Persist qty keyed by line item across reorder/filter unchanged IDs only sync additions/removals */
 export function PricingBlockPublic({ block, className }: PricingBlockPublicProps) {
-  const lineItems = block.lineItems ?? [];
+  const lineItems = React.useMemo(() => block.lineItems ?? [], [block.lineItems]);
   const qtyUnit = (block.quantityUnitLabel ?? "Unit").trim() || "Unit";
 
   const [qty, setQty] = React.useState<LineState>(() =>

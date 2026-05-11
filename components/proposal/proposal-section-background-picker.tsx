@@ -59,7 +59,6 @@ export function ProposalSectionBackgroundPicker({
     ? "border-zinc-700/60 bg-zinc-900/95 text-zinc-100 shadow-xl"
     : "border border-border bg-popover text-popover-foreground shadow-lg";
   const labelMuted = elevated ? "text-zinc-400" : "text-muted-foreground";
-  const subtleFrame = elevated ? "rounded-lg border border-zinc-700/60 bg-zinc-800/50" : "rounded-lg border border-border bg-muted/40";
 
   return (
     <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>

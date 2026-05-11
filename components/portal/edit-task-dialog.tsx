@@ -56,7 +56,7 @@ export function EditTaskDialog({ open, onOpenChange, task }: EditTaskDialogProps
     setDescription(task.description ?? "");
     setColumn(statusToBoardColumn(task.status));
     setServerError(null);
-  }, [open, task?.id]);
+  }, [open, task]);
 
   React.useEffect(() => {
     if (!open) {

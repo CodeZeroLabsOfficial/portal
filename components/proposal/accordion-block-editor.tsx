@@ -100,7 +100,8 @@ export function AccordionBlockEditor({
                       const next = panels.filter((x) => x.id !== p.id);
                       patchPanels(next);
                       setOpenIds((prev) => {
-                        const { [p.id]: _, ...rest } = prev;
+                        const rest = { ...prev };
+                        delete rest[p.id];
                         return rest;
                       });
                     }}

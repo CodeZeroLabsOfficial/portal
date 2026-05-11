@@ -40,14 +40,10 @@ import { ConvertLeadPanel } from "@/components/portal/convert-lead-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { formatAddressLines, initialsFromName } from "@/lib/format";
-import {
-  WORKSPACE_DETAIL_PAGE_TITLE_CLASS,
-  WORKSPACE_PAGE_DESCRIPTION_STACK_CLASS,
-} from "@/lib/workspace-page-typography";
+import { WORKSPACE_DETAIL_PAGE_TITLE_CLASS } from "@/lib/workspace-page-typography";
 import { cn } from "@/lib/utils";
 
 function formatMinor(amount: number, currency: string): string {
@@ -179,14 +175,6 @@ export function CustomerDetailView({
     }
     return merged.sort((x, y) => y.at - x.at).slice(0, 24);
   }, [activities, notes]);
-
-  async function run(key: string, fn: () => Promise<{ ok: boolean; message?: string }>) {
-    setBusy(key);
-    const r = await fn();
-    setBusy(null);
-    if (!r.ok && r.message) window.alert(r.message);
-    else router.refresh();
-  }
 
   async function createProposalFromCustomer() {
     setBusy("proposal");

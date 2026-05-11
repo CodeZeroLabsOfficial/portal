@@ -65,7 +65,7 @@ export function columnFlexPercents(weights: number[]): number[] {
   }
   const exact = weights.map((w) => (w / sum) * 100);
   const floors = exact.map((x) => Math.floor(x));
-  let rem = 100 - floors.reduce((a, b) => a + b, 0);
+  const rem = 100 - floors.reduce((a, b) => a + b, 0);
   const order = exact.map((x, i) => ({ i, r: x - floors[i] })).sort((a, b) => b.r - a.r);
   const out = [...floors];
   for (let k = 0; k < rem; k++) {
