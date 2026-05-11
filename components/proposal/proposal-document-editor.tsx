@@ -2127,7 +2127,12 @@ export function ProposalDocumentEditor({
             </div>
             <div className="flex flex-wrap items-center justify-end gap-2">
               {proposalEditShellToolbar.shareToken ? (
-                <Button variant="outline" size="sm" className="gap-2" asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1.5 text-muted-foreground hover:text-foreground"
+                  asChild
+                >
                   <Link
                     href={`/p/${encodeURIComponent(proposalEditShellToolbar.shareToken)}`}
                     target="_blank"
@@ -2138,8 +2143,15 @@ export function ProposalDocumentEditor({
                   </Link>
                 </Button>
               ) : null}
-              <Button type="button" variant="secondary" size="sm" disabled={sending} onClick={() => void send()} className="gap-2">
-                {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={sending}
+                onClick={() => void send()}
+                className="gap-1.5 text-muted-foreground hover:text-foreground"
+              >
+                {sending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Send className="h-4 w-4" aria-hidden />}
                 Save & publish
               </Button>
               <Button type="button" size="sm" disabled={saving} onClick={() => void save()} className="gap-2">

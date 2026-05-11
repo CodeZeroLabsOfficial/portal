@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { Clock, Eye, FileText } from "lucide-react";
+import { CircleDot, Clock, Eye, FileText, Mail } from "lucide-react";
 import { getCurrentSessionUser } from "@/lib/auth/server-session";
 import { getAdminProposalRecord } from "@/server/firestore/portal-data";
 import { Badge } from "@/components/ui/badge";
@@ -52,7 +52,10 @@ export default async function AdminProposalDetailPage({ params, searchParams }: 
         <CardContent className="space-y-5 p-6 text-sm">
           <dl className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1">
-              <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Status</dt>
+              <dt className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <CircleDot className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
+                Status
+              </dt>
               <dd>
                 <Badge variant="outline" className="capitalize">
                   {proposal.status}
@@ -84,7 +87,10 @@ export default async function AdminProposalDetailPage({ params, searchParams }: 
               </dd>
             </div>
             <div className="space-y-1 sm:col-span-2">
-              <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Recipient</dt>
+              <dt className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <Mail className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
+                Recipient
+              </dt>
               <dd className="text-foreground">{recipient ?? "—"}</dd>
             </div>
           </dl>
