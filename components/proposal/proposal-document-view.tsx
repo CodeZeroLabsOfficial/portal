@@ -14,6 +14,8 @@ import {
   PROPOSAL_COLUMNS_GRID_CLASS,
   columnFlexToGridTemplate,
   coerceColumnFlex,
+  columnsBlockMdGapX,
+  columnsBlockMdItemsClass,
 } from "@/lib/proposal-columns";
 import {
   PROPOSAL_DOCUMENT_BLOCK_INNER_PAD_CLASSES,
@@ -285,11 +287,15 @@ function BlockView({
       const stacks = block.stacks?.length ? block.stacks : [[], []];
       const colCount = stacks.length;
       const flexRow = coerceColumnFlex(colCount, block.columnFlex);
-      const gapX =
-        colCount >= 4 ? "md:gap-x-6" : colCount === 3 ? "md:gap-x-8" : "md:gap-x-10";
-      return (
+      const gapX = columnsBlockMdGapX(block.columnGap, colCount);
+      const itemsClass = columnsBlockMdItemsClass(block.rowAlign);
+      const pad =
+        typeof block.insetPaddingPx === "number" && Number.isFinite(block.insetPaddingPx)
+          ? Math.min(64, Math.max(0, Math.round(block.insetPaddingPx)))
+          : 0;
+      const grid = (
         <div
-          className={cn(PROPOSAL_COLUMNS_GRID_CLASS, PROPOSAL_DOCUMENT_COLUMNS_ROW_GAP_CLASSES, gapX)}
+          className={cn(PROPOSAL_COLUMNS_GRID_CLASS, PROPOSAL_DOCUMENT_COLUMNS_ROW_GAP_CLASSES, gapX, itemsClass)}
           style={
             {
               ["--proposal-cols" as string]: columnFlexToGridTemplate(flexRow),
@@ -312,6 +318,12 @@ function BlockView({
           ))}
         </div>
       );
+      if (pad <= 0) return grid;
+      return (
+        <div className="rounded-lg" style={{ padding: pad }}>
+          {grid}
+        </div>
+      );
     }
     case "accordion": {
       return (
@@ -328,7 +340,10 @@ function BlockView({
                   aria-hidden
                 />
               </summary>
-              <div className="mx-4 mb-4 mt-0 rounded-xl bg-white px-3 py-3 text-zinc-900 shadow-sm ring-1 ring-black/[0.06] sm:mx-5 sm:px-4 dark:ring-white/10">
+              <div
+                data-proposal-accordion-light-surface
+                className="mx-4 mb-4 mt-0 rounded-xl bg-white px-3 py-3 text-zinc-900 shadow-sm ring-1 ring-black/[0.06] sm:mx-5 sm:px-4 dark:ring-white/10"
+              >
                 {p.html?.trim() ? (
                   <div
                     className={cn(

@@ -405,11 +405,29 @@ function normalizeColumnsBlockInput(raw: unknown): unknown {
     }
   }
 
+  const gapRaw = o.columnGap;
+  const columnGapParsed =
+    gapRaw === "compact" || gapRaw === "normal" || gapRaw === "relaxed" ? gapRaw : undefined;
+
+  const alignRaw = o.rowAlign;
+  const rowAlignParsed =
+    alignRaw === "start" || alignRaw === "center" || alignRaw === "end" || alignRaw === "stretch"
+      ? alignRaw
+      : undefined;
+
+  let insetPaddingParsed: number | undefined;
+  if (typeof o.insetPaddingPx === "number" && Number.isFinite(o.insetPaddingPx)) {
+    insetPaddingParsed = Math.round(Math.min(64, Math.max(0, o.insetPaddingPx)));
+  }
+
   return {
     id: o.id,
     type: "columns",
     stacks: stacksUnknown,
     ...(columnFlexParsed ? { columnFlex: columnFlexParsed } : {}),
+    ...(columnGapParsed ? { columnGap: columnGapParsed } : {}),
+    ...(rowAlignParsed ? { rowAlign: rowAlignParsed } : {}),
+    ...(insetPaddingParsed !== undefined && insetPaddingParsed > 0 ? { insetPaddingPx: insetPaddingParsed } : {}),
   };
 }
 
@@ -420,6 +438,9 @@ const columnsBlockSchema = z.object({
   columnFlex: z
     .array(z.number().finite().min(PROPOSAL_COLUMN_FR_MIN).max(PROPOSAL_COLUMN_FR_MAX))
     .optional(),
+  columnGap: z.enum(["compact", "normal", "relaxed"]).optional(),
+  rowAlign: z.enum(["start", "center", "end", "stretch"]).optional(),
+  insetPaddingPx: z.number().int().min(0).max(64).optional(),
 });
 
 /** Blocks inside a section — same as top-level except no nested `section`. */

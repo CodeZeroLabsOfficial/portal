@@ -1,6 +1,12 @@
 import type { CustomerRecord } from "@/types/customer";
 import type { OpportunityRecord } from "@/types/opportunity";
-import type { ProposalBlock, ProposalColumnChildBlock, ProposalContentBlock, ProposalDocument } from "@/types/proposal";
+import type {
+  ColumnsBlock,
+  ProposalBlock,
+  ProposalColumnChildBlock,
+  ProposalContentBlock,
+  ProposalDocument,
+} from "@/types/proposal";
 
 export interface ProposalTokenContext {
   customer: CustomerRecord;
@@ -180,14 +186,16 @@ function mapContentBlock(block: ProposalContentBlock, ctx: ProposalTokenContext)
           body: p.body !== undefined ? replaceProposalTokens(p.body, ctx) : p.body,
         })),
       };
-    case "columns":
+    case "columns": {
+      const col = block as ColumnsBlock;
       return {
-        ...block,
-        stacks: block.stacks.map((stack) =>
+        ...col,
+        stacks: col.stacks.map((stack) =>
           stack.map((c) => mapContentBlock(c as ProposalContentBlock, ctx) as ProposalColumnChildBlock),
         ),
-        ...(block.columnFlex ? { columnFlex: [...block.columnFlex] } : {}),
+        ...(col.columnFlex ? { columnFlex: [...col.columnFlex] } : {}),
       };
+    }
     case "icon":
       return {
         ...block,

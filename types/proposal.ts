@@ -299,6 +299,12 @@ export type ProposalColumnChildBlock =
   | SpacerBlock
   | IconBlock;
 
+/** Horizontal gap between columns on medium+ viewports (editor + public). */
+export type ColumnsBlockGapPreset = "compact" | "normal" | "relaxed";
+
+/** Vertical alignment of each column stack within the row. */
+export type ColumnsBlockRowAlign = "start" | "center" | "end" | "stretch";
+
 /** Multi-column layout (2–4) — each stack holds column-safe blocks only. */
 export interface ColumnsBlock extends ProposalBlockBase {
   type: "columns";
@@ -309,6 +315,12 @@ export interface ColumnsBlock extends ProposalBlockBase {
    * Omitted → equal widths. Larger values consume more space relative to siblings.
    */
   columnFlex?: number[];
+  /** Gap between columns; omitted → `normal` (matches legacy spacing). */
+  columnGap?: ColumnsBlockGapPreset;
+  /** Align column stacks vertically in the row; omitted → stretch. */
+  rowAlign?: ColumnsBlockRowAlign;
+  /** Uniform inset padding around the column row (px, 0–64). */
+  insetPaddingPx?: number;
 }
 
 /** Blocks allowed inside a section (sections do not nest). */

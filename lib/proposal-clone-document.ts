@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type {
+  ColumnsBlock,
   FormBlock,
   FormField,
   PricingBlock,
@@ -75,15 +76,16 @@ function cloneBlock(block: ProposalBlock): ProposalBlock {
           id: randomUUID(),
         })),
       };
-    case "columns":
+    case "columns": {
+      const c = block as ColumnsBlock;
       return {
-        ...block,
+        ...c,
         id,
-        stacks: block.stacks.map((stack) =>
-          stack.map((c) => cloneBlock(c as ProposalBlock) as ProposalColumnChildBlock),
+        stacks: c.stacks.map((stack) =>
+          stack.map((child) => cloneBlock(child as ProposalBlock) as ProposalColumnChildBlock),
         ),
-        ...(block.columnFlex ? { columnFlex: [...block.columnFlex] } : {}),
       };
+    }
     case "icon":
       return { ...block, id };
     case "section":

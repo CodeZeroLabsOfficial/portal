@@ -86,9 +86,12 @@ import {
 } from "@/components/proposal/proposal-block-inline-editors";
 import { BlockToolbar } from "@/components/proposal/proposal-block-toolbar";
 import { DeleteProposalTemplateButton } from "@/components/proposal/delete-proposal-template-button";
+import { ColumnsBlockLayoutControls } from "@/components/proposal/columns-block-layout-controls";
 import {
   clampFr,
   coerceColumnFlex,
+  columnsBlockMdGapX,
+  columnsBlockMdItemsClass,
   normalizeColumnFlexForStorage,
   PROPOSAL_COLUMN_FR_MIN,
   resizeColumnFlexWithStacks,
@@ -186,15 +189,16 @@ function cloneBlockWithFreshIds(block: ProposalBlock): ProposalBlock {
           id: newId(),
         })),
       };
-    case "columns":
+    case "columns": {
+      const c = block as ColumnsBlock;
       return {
-        ...block,
+        ...c,
         id: newId(),
-        stacks: block.stacks.map((stack) =>
-          stack.map((c) => cloneBlockWithFreshIds(c as ProposalBlock) as ProposalColumnChildBlock),
+        stacks: c.stacks.map((stack) =>
+          stack.map((child) => cloneBlockWithFreshIds(child as ProposalBlock) as ProposalColumnChildBlock),
         ),
-        ...(block.columnFlex ? { columnFlex: [...block.columnFlex] } : {}),
       };
+    }
     case "icon":
       return { ...block, id: newId() };
     case "splash":
@@ -914,43 +918,60 @@ function ColumnsBlockFields({
         </p>
       ) : null}
 
-      <div
-        className={cn(
-          "flex flex-col gap-6 md:flex-row md:items-stretch",
-          PROPOSAL_DOCUMENT_COLUMNS_ROW_GAP_CLASSES,
-          columnCount >= 4 ? "md:gap-x-5" : columnCount === 3 ? "md:gap-x-7" : "md:gap-x-8",
-          resizeMode &&
-            "rounded-xl border-2 border-dashed border-sky-500/55 bg-sky-500/[0.03] px-1 py-2 md:px-2 dark:border-sky-400/50 dark:bg-sky-950/15",
-        )}
-      >
-        {block.stacks.map((stack, i) => (
-          <React.Fragment key={`${block.id}-col-${i}`}>
-            <div
-              ref={(el) => {
-                columnWidthRefs.current[i] = el;
-              }}
-              className={cn(
-                "min-w-0 md:min-w-[3.5rem]",
-                resizeMode &&
-                  "rounded-lg border border-sky-400/40 bg-background/60 px-2 py-2 ring-1 ring-sky-500/20 dark:bg-background/40",
-              )}
-              style={{ flex: `${flexRow[i]} 1 0%` } as React.CSSProperties}
-            >
-              <ColumnPane label={`Column ${i + 1}`} columnIndex={i} stack={stack} />
-            </div>
-            {resizeMode && i < block.stacks.length - 1 ? (
-              <ColumnResizeGrip
-                gripped={dragDividerIndex === i}
-                onPointerDown={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setDragDividerIndex(i);
-                }}
-              />
-            ) : null}
-          </React.Fragment>
-        ))}
-      </div>
+      {(() => {
+        const pad =
+          typeof block.insetPaddingPx === "number" && Number.isFinite(block.insetPaddingPx)
+            ? Math.min(64, Math.max(0, Math.round(block.insetPaddingPx)))
+            : 0;
+        const gapClasses = columnsBlockMdGapX(block.columnGap, columnCount);
+        const itemsClasses = columnsBlockMdItemsClass(block.rowAlign);
+        const columnRow = (
+          <div
+            className={cn(
+              "flex flex-col gap-6 md:flex-row",
+              PROPOSAL_DOCUMENT_COLUMNS_ROW_GAP_CLASSES,
+              gapClasses,
+              itemsClasses,
+              resizeMode &&
+                "rounded-xl border-2 border-dashed border-sky-500/55 bg-sky-500/[0.03] px-1 py-2 md:px-2 dark:border-sky-400/50 dark:bg-sky-950/15",
+            )}
+          >
+            {block.stacks.map((stack, i) => (
+              <React.Fragment key={`${block.id}-col-${i}`}>
+                <div
+                  ref={(el) => {
+                    columnWidthRefs.current[i] = el;
+                  }}
+                  className={cn(
+                    "min-w-0 md:min-w-[3.5rem]",
+                    resizeMode &&
+                      "rounded-lg border border-sky-400/40 bg-background/60 px-2 py-2 ring-1 ring-sky-500/20 dark:bg-background/40",
+                  )}
+                  style={{ flex: `${flexRow[i]} 1 0%` } as React.CSSProperties}
+                >
+                  <ColumnPane label={`Column ${i + 1}`} columnIndex={i} stack={stack} />
+                </div>
+                {resizeMode && i < block.stacks.length - 1 ? (
+                  <ColumnResizeGrip
+                    gripped={dragDividerIndex === i}
+                    onPointerDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setDragDividerIndex(i);
+                    }}
+                  />
+                ) : null}
+              </React.Fragment>
+            ))}
+          </div>
+        );
+        if (pad <= 0) return columnRow;
+        return (
+          <div className="rounded-lg" style={{ padding: pad }}>
+            {columnRow}
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -1122,17 +1143,27 @@ function SectionBlockFields({
                         compactPrimarySlot={
                           compactColumnsChrome ? (
                             columnsLayoutEditingId === child.id ? (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setColumnsLayoutEditingId(null);
-                                }}
-                                className="inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium text-teal-700 transition-colors hover:bg-teal-500/15 dark:text-teal-400 dark:hover:bg-teal-500/10"
-                              >
-                                <Check className="h-4 w-4 shrink-0" aria-hidden />
-                                Done
-                              </button>
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setColumnsLayoutEditingId(null);
+                                  }}
+                                  className="inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium text-teal-700 transition-colors hover:bg-teal-500/15 dark:text-teal-400 dark:hover:bg-teal-500/10"
+                                >
+                                  <Check className="h-4 w-4 shrink-0" aria-hidden />
+                                  Done
+                                </button>
+                                <ColumnsBlockLayoutControls
+                                  block={children.find((c) => c.id === child.id) as ColumnsBlock}
+                                  onPatch={(patch) => {
+                                    const cur = children.find((c) => c.id === child.id);
+                                    if (!cur || cur.type !== "columns") return;
+                                    updateChild(child.id, { ...cur, ...patch } as ProposalContentBlock);
+                                  }}
+                                />
+                              </>
                             ) : (
                               <button
                                 type="button"
@@ -2222,17 +2253,27 @@ export function ProposalDocumentEditor({
                               compactPrimarySlot={
                                 compactColumnsChrome ? (
                                   rootColumnsLayoutEditingId === block.id ? (
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setRootColumnsLayoutEditingId(null);
-                                      }}
-                                      className="inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium text-teal-700 transition-colors hover:bg-teal-500/15 dark:text-teal-400 dark:hover:bg-teal-500/10"
-                                    >
-                                      <Check className="h-4 w-4 shrink-0" aria-hidden />
-                                      Done
-                                    </button>
+                                    <>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setRootColumnsLayoutEditingId(null);
+                                        }}
+                                        className="inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium text-teal-700 transition-colors hover:bg-teal-500/15 dark:text-teal-400 dark:hover:bg-teal-500/10"
+                                      >
+                                        <Check className="h-4 w-4 shrink-0" aria-hidden />
+                                        Done
+                                      </button>
+                                      <ColumnsBlockLayoutControls
+                                        block={blocks.find((b) => b.id === block.id) as ColumnsBlock}
+                                        onPatch={(patch) => {
+                                          const cur = blocks.find((b) => b.id === block.id);
+                                          if (!cur || cur.type !== "columns") return;
+                                          updateBlock(block.id, { ...cur, ...patch });
+                                        }}
+                                      />
+                                    </>
                                   ) : (
                                     <button
                                       type="button"

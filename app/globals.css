@@ -81,6 +81,17 @@
     background-color: transparent !important;
   }
 
+  /*
+   * Accordion bodies use a fixed white card. On dark sections, `ProposalSectionShell`
+   * applies `[&_.proposal-rich-text]:!text-white/…` to all nested editors; combined
+   * with transparent ProseMirror backgrounds (above) that yields white-on-white.
+   * Reset only inside marked accordion surfaces so inline colour marks still work.
+   */
+  .proposal-section-shell [data-proposal-accordion-light-surface] .proposal-rich-text,
+  .proposal-section-shell [data-proposal-accordion-light-surface] .ProseMirror {
+    color: unset !important;
+  }
+
   /* Portal workspace: #0D0D16 base, #673AB7 accent */
   .portal-ui {
     --background: 240 26% 7%;

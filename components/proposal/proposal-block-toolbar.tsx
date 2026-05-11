@@ -106,7 +106,9 @@ export function BlockToolbar({
       {compactChrome ? (
         <>
           {compactPrimarySlot ? (
-            <span className="inline-flex items-center gap-1">{compactPrimarySlot}</span>
+            <span className="inline-flex max-w-[min(100vw-6rem,28rem)] flex-wrap items-center gap-1 sm:max-w-none">
+              {compactPrimarySlot}
+            </span>
           ) : null}
           <ToolbarDivider elevated={elevated} />
         </>

@@ -129,6 +129,7 @@ export function AccordionBlockEditor({
               {open ? (
                 <div
                   id={contentId}
+                  data-proposal-accordion-light-surface
                   className="mx-4 mb-4 mt-1 rounded-xl bg-white px-3 py-3 text-zinc-900 shadow-sm ring-1 ring-black/[0.06] sm:mx-5 sm:px-4 dark:ring-white/10"
                   onPointerDown={(e) => e.stopPropagation()}
                 >
