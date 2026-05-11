@@ -429,7 +429,7 @@ export function CustomerDetailView({
           </TabsTrigger>
           <TabsTrigger value="billing" className="gap-1.5">
             <CreditCard className="h-3.5 w-3.5" />
-            Subscriptions & billing
+            Billing
           </TabsTrigger>
           <TabsTrigger value="proposals" className="gap-1.5">
             <FileText className="h-3.5 w-3.5" />
@@ -437,7 +437,7 @@ export function CustomerDetailView({
           </TabsTrigger>
           <TabsTrigger value="notes" className="gap-1.5">
             <MessageSquare className="h-3.5 w-3.5" />
-            Notes & activity
+            Notes
           </TabsTrigger>
           <TabsTrigger value="documents" className="gap-1.5">
             <FolderOpen className="h-3.5 w-3.5" />
