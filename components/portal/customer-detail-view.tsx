@@ -14,6 +14,7 @@ import {
   Eye,
   FileText,
   FolderOpen,
+  KeyRound,
   ListChecks,
   Loader2,
   Mail,
@@ -446,6 +447,10 @@ export function CustomerDetailView({
             <ListChecks className="h-3.5 w-3.5" />
             Tasks
           </TabsTrigger>
+          <TabsTrigger value="vault" className="gap-1.5">
+            <KeyRound className="h-3.5 w-3.5" />
+            Vault
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -798,6 +803,18 @@ export function CustomerDetailView({
               ))}
             </ul>
           )}
+        </TabsContent>
+
+        <TabsContent value="vault">
+          <Card className="border-dashed border-border/80 bg-muted/15">
+            <CardContent className="flex flex-col items-center gap-2 py-16 text-center">
+              <KeyRound className="h-10 w-10 text-muted-foreground/50" aria-hidden />
+              <p className="max-w-sm text-sm text-muted-foreground">
+                Customer credentials for app development, integrations, hosting, and related access details will be
+                stored here.
+              </p>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
