@@ -95,7 +95,7 @@ const PROPOSAL_PHASE_BADGE_CLASS: Record<ProposalLifecyclePhase, string> = {
 
 const PROPOSAL_PHASE_TITLE: Record<ProposalLifecyclePhase, string> = {
   saved: "Draft — saved to CRM, not published yet.",
-  sent: "Published — public link is live; no recorded opens yet.",
+  sent: "Live — public proposal is ready to view; no recorded opens yet.",
   viewed: "Opened — recipient has viewed or acted on the public proposal.",
 };
 
@@ -657,7 +657,7 @@ export function CustomerDetailView({
                         title={PROPOSAL_PHASE_TITLE[phase]}
                         className={cn("text-xs font-medium capitalize", PROPOSAL_PHASE_BADGE_CLASS[phase])}
                       >
-                        {phase === "saved" ? "Saved" : phase === "sent" ? "Sent" : "Viewed"}
+                        {phase === "saved" ? "Saved" : phase === "sent" ? "Live" : "Viewed"}
                       </Badge>
                     </div>
                     <div className="flex shrink-0 items-center gap-1.5 sm:ml-auto">
