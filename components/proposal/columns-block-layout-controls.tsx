@@ -1,6 +1,12 @@
 "use client";
 
-import { AlignVerticalJustifyCenter, Check, SlidersHorizontal } from "lucide-react";
+import {
+  AlignHorizontalDistributeCenter,
+  AlignVerticalJustifyCenter,
+  Check,
+  LayoutGrid,
+  SlidersHorizontal,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,10 +14,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   ColumnLayoutCount,
+  coerceColumnFlex,
+  normalizeColumnFlexForStorage,
   resizeColumnFlexWithStacks,
   resizeColumnStacks,
 } from "@/lib/proposal-columns";
@@ -72,37 +79,58 @@ export function ColumnsBlockLayoutControls({
   const align = block.rowAlign ?? "stretch";
   const inset = block.insetPaddingPx;
   const columnCount = block.stacks.length as ColumnLayoutCount;
-
-  const countPicker = (
-    <div className="flex flex-wrap items-center gap-1">
-      {([2, 3, 4] as const).map((n) => (
-        <Button
-          key={n}
-          type="button"
-          variant={columnCount === n ? "default" : "outline"}
-          size="sm"
-          className="h-8 gap-1.5 border-border bg-background px-2.5 text-xs shadow-sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            const nextStacks = resizeColumnStacks(block.stacks, n);
-            const nextFlex = resizeColumnFlexWithStacks(block.columnFlex, columnCount, n);
-            onPatch({ stacks: nextStacks, columnFlex: nextFlex });
-          }}
-        >
-          <ColumnBarsMini count={n} className="text-foreground" />
-          {n}
-        </Button>
-      ))}
-    </div>
-  );
+  const coercedFlex = coerceColumnFlex(block.stacks.length, block.columnFlex);
+  const widthsAlreadyEqual =
+    normalizeColumnFlexForStorage(block.stacks.length, coercedFlex) === undefined;
 
   return (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
-      <div className="flex min-w-0 flex-col gap-1.5 border-border/60 sm:border-r sm:pr-2">
-        <p className="max-w-[14rem] text-[10px] font-medium leading-snug text-muted-foreground sm:max-w-[18rem]">
-          Choose how many columns to start with
-        </p>
-        {countPicker}
+      <div className="flex shrink-0 items-center gap-0.5 border-border/60 sm:border-r sm:pr-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button type="button" className={triggerBtnClass} aria-label="Number of columns">
+              <LayoutGrid className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
+              {columnCount} columns
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" sideOffset={6} className="min-w-[11rem]" onCloseAutoFocus={(e) => e.preventDefault()}>
+            <p className="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Column count</p>
+            {([2, 3, 4] as const).map((n) => (
+              <DropdownMenuItem
+                key={n}
+                className="cursor-pointer gap-2"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const nextStacks = resizeColumnStacks(block.stacks, n);
+                  const nextFlex = resizeColumnFlexWithStacks(block.columnFlex, columnCount, n);
+                  onPatch({ stacks: nextStacks, columnFlex: nextFlex });
+                }}
+              >
+                {columnCount === n ? <Check className="h-4 w-4 shrink-0 opacity-70" aria-hidden /> : <span className="w-4" />}
+                <ColumnBarsMini count={n} className="text-foreground" />
+                <span>{n} columns</span>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <button
+          type="button"
+          disabled={widthsAlreadyEqual}
+          title={widthsAlreadyEqual ? "Columns are already equal width" : "Reset to equal column widths"}
+          className={cn(
+            triggerBtnClass,
+            widthsAlreadyEqual && "cursor-not-allowed opacity-40 hover:border-transparent hover:bg-transparent",
+          )}
+          aria-label="Equal column widths"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (widthsAlreadyEqual) return;
+            onPatch({ columnFlex: undefined });
+          }}
+        >
+          <AlignHorizontalDistributeCenter className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
+          Equal
+        </button>
       </div>
 
       <div className="flex items-center gap-0.5">
