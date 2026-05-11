@@ -50,6 +50,13 @@ export interface BlockToolbarProps {
   style?: BlockStyle;
   onStyleChange?: (next: BlockStyle | undefined) => void;
   backdropPickerSlot?: React.ReactNode;
+  /**
+   * When true, only leading slot → primary slot → delete → trailing slot (omit move /
+   * duplicate / overflow chrome). Used for Columns blocks.
+   */
+  compactChrome?: boolean;
+  /** Inserted between leading area and Delete when compactChrome — e.g. “Edit columns”. */
+  compactPrimarySlot?: React.ReactNode;
 }
 
 export function BlockToolbar({
@@ -71,6 +78,8 @@ export function BlockToolbar({
   style,
   onStyleChange,
   backdropPickerSlot,
+  compactChrome = false,
+  compactPrimarySlot,
 }: BlockToolbarProps) {
   const supportsStyle = blockType === "packages" && typeof onStyleChange === "function";
 
@@ -94,122 +103,133 @@ export function BlockToolbar({
           <ToolbarDivider elevated={elevated} />
         </>
       ) : null}
-      {showOverflowMenu ? (
+      {compactChrome ? (
         <>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                title="More"
-                aria-label="More actions"
-                className={cn(
-                  "inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2",
-                  iconBtnBase,
-                )}
-              >
-                <EllipsisVertical className="h-4 w-4" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" sideOffset={6} className="min-w-[10rem]" onCloseAutoFocus={(e) => e.preventDefault()}>
-              {overflowLeadingAction ? (
-                <>
+          {compactPrimarySlot ? (
+            <span className="inline-flex items-center gap-1">{compactPrimarySlot}</span>
+          ) : null}
+          <ToolbarDivider elevated={elevated} />
+        </>
+      ) : (
+        <>
+          {showOverflowMenu ? (
+            <>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    title="More"
+                    aria-label="More actions"
+                    className={cn(
+                      "inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2",
+                      iconBtnBase,
+                    )}
+                  >
+                    <EllipsisVertical className="h-4 w-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" sideOffset={6} className="min-w-[10rem]" onCloseAutoFocus={(e) => e.preventDefault()}>
+                  {overflowLeadingAction ? (
+                    <>
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          overflowLeadingAction.onClick();
+                        }}
+                      >
+                        {overflowLeadingAction.label}
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  ) : null}
                   <DropdownMenuItem
                     className="cursor-pointer"
                     onClick={(e) => {
                       e.stopPropagation();
-                      overflowLeadingAction.onClick();
+                      onDuplicate();
                     }}
                   >
-                    {overflowLeadingAction.label}
+                    Duplicate
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                </>
-              ) : null}
-              <DropdownMenuItem
-                className="cursor-pointer"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDuplicate();
-                }}
-              >
-                Duplicate
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="cursor-pointer text-destructive focus:text-destructive"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete();
-                }}
-              >
-                {deleteLabel}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                  <DropdownMenuItem
+                    className="cursor-pointer text-destructive focus:text-destructive"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete();
+                    }}
+                  >
+                    {deleteLabel}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <ToolbarDivider elevated={elevated} />
+            </>
+          ) : null}
+          {backdropPickerSlot ? (
+            <>
+              <span className="inline-flex items-center">{backdropPickerSlot}</span>
+              <ToolbarDivider elevated={elevated} />
+            </>
+          ) : null}
+          {auxiliarySlot ? (
+            <>
+              <span className="inline-flex items-center">{auxiliarySlot}</span>
+              <ToolbarDivider elevated={elevated} />
+            </>
+          ) : null}
+          <ToolbarIconButton
+            elevated={elevated}
+            label="Move up"
+            disabled={!canMoveUp}
+            onClick={(e) => {
+              e.stopPropagation();
+              onMoveUp();
+            }}
+          >
+            <ArrowUp className="h-4 w-4" />
+          </ToolbarIconButton>
+          <ToolbarIconButton
+            elevated={elevated}
+            label="Move down"
+            disabled={!canMoveDown}
+            onClick={(e) => {
+              e.stopPropagation();
+              onMoveDown();
+            }}
+          >
+            <ArrowDown className="h-4 w-4" />
+          </ToolbarIconButton>
+          <ToolbarDivider elevated={elevated} />
+          <ToolbarIconButton
+            elevated={elevated}
+            label="Duplicate"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDuplicate();
+            }}
+          >
+            <Copy className="h-4 w-4" />
+          </ToolbarIconButton>
+          {supportsStyle ? (
+            <StylePickerTrigger style={style} onStyleChange={onStyleChange!} elevated={elevated} />
+          ) : null}
+          {onOpenSettings ? (
+            <ToolbarIconButton
+              elevated={elevated}
+              label="Block options"
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenSettings();
+              }}
+            >
+              <Settings2 className="h-4 w-4" />
+            </ToolbarIconButton>
+          ) : null}
           <ToolbarDivider elevated={elevated} />
         </>
-      ) : null}
-      {backdropPickerSlot ? (
-        <>
-          <span className="inline-flex items-center">{backdropPickerSlot}</span>
-          <ToolbarDivider elevated={elevated} />
-        </>
-      ) : null}
-      {auxiliarySlot ? (
-        <>
-          <span className="inline-flex items-center">{auxiliarySlot}</span>
-          <ToolbarDivider elevated={elevated} />
-        </>
-      ) : null}
-      <ToolbarIconButton
-        elevated={elevated}
-        label="Move up"
-        disabled={!canMoveUp}
-        onClick={(e) => {
-          e.stopPropagation();
-          onMoveUp();
-        }}
-      >
-        <ArrowUp className="h-4 w-4" />
-      </ToolbarIconButton>
-      <ToolbarIconButton
-        elevated={elevated}
-        label="Move down"
-        disabled={!canMoveDown}
-        onClick={(e) => {
-          e.stopPropagation();
-          onMoveDown();
-        }}
-      >
-        <ArrowDown className="h-4 w-4" />
-      </ToolbarIconButton>
-      <ToolbarDivider elevated={elevated} />
-      <ToolbarIconButton
-        elevated={elevated}
-        label="Duplicate"
-        onClick={(e) => {
-          e.stopPropagation();
-          onDuplicate();
-        }}
-      >
-        <Copy className="h-4 w-4" />
-      </ToolbarIconButton>
-      {supportsStyle ? (
-        <StylePickerTrigger style={style} onStyleChange={onStyleChange!} elevated={elevated} />
-      ) : null}
-      {onOpenSettings ? (
-        <ToolbarIconButton
-          elevated={elevated}
-          label="Block options"
-          onClick={(e) => {
-            e.stopPropagation();
-            onOpenSettings();
-          }}
-        >
-          <Settings2 className="h-4 w-4" />
-        </ToolbarIconButton>
-      ) : null}
-      <ToolbarDivider elevated={elevated} />
+      )}
       <ToolbarIconButton
         elevated={elevated}
         label={deleteLabel}

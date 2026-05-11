@@ -23,6 +23,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import {
   ArrowLeft,
+  Check,
   ChevronLeft,
   ChevronRight,
   Coins,
@@ -86,12 +87,10 @@ import {
 import { BlockToolbar } from "@/components/proposal/proposal-block-toolbar";
 import { DeleteProposalTemplateButton } from "@/components/proposal/delete-proposal-template-button";
 import {
-  PROPOSAL_COLUMNS_GRID_CLASS,
-  PROPOSAL_COLUMN_FR_MAX,
-  PROPOSAL_COLUMN_FR_MIN,
-  columnFlexToGridTemplate,
+  clampFr,
   coerceColumnFlex,
   normalizeColumnFlexForStorage,
+  PROPOSAL_COLUMN_FR_MIN,
   resizeColumnFlexWithStacks,
 } from "@/lib/proposal-columns";
 import {
@@ -115,9 +114,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
@@ -620,47 +616,9 @@ function SectionInsertMenu({
           Content
         </p>
         <div className="pb-1">
-          {SECTION_INSERT_OPTIONS.map((opt) => {
-            if (opt.id === "sx-columns") {
-              const ColIcon = opt.icon;
-              return (
-                <DropdownMenuSub key={opt.id}>
-                  <DropdownMenuSubTrigger
-                    className={cn(
-                      "flex w-full cursor-default select-none items-center gap-2 rounded-none px-2.5 py-1.5 text-[13px] text-zinc-100 outline-none focus:bg-white/10 focus:text-white data-[state=open]:bg-white/10",
-                    )}
-                  >
-                    <span className="flex h-5 w-5 items-center justify-center rounded-[5px] bg-white/[0.06] ring-1 ring-white/10">
-                      <ColIcon className="h-3 w-3 text-zinc-100" aria-hidden />
-                    </span>
-                    {opt.label}
-                    <ChevronRight className="ml-auto h-3.5 w-3.5 shrink-0 text-zinc-500" aria-hidden />
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent
-                    sideOffset={4}
-                    className="z-50 min-w-[11rem] overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950 p-0.5 text-zinc-100 shadow-xl"
-                  >
-                    {([2, 3, 4] as const).map((n) => (
-                      <DropdownMenuItem
-                        key={n}
-                        className="cursor-pointer gap-2 rounded-md px-2.5 py-1.5 text-[13px] text-zinc-100 focus:bg-white/10 focus:text-white"
-                        onClick={(e: React.MouseEvent) => {
-                          e.preventDefault();
-                          onAdd(createColumnsBlock(n));
-                          setOpen(false);
-                        }}
-                        onSelect={(e: Event) => e.preventDefault()}
-                      >
-                        <ColumnBarsMini count={n} className="text-zinc-300" />
-                        {n} columns
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
-              );
-            }
-            return <DarkInsertRow key={opt.id} icon={opt.icon} label={opt.label} onPick={() => pick(opt)} />;
-          })}
+          {SECTION_INSERT_OPTIONS.map((opt) => (
+            <DarkInsertRow key={opt.id} icon={opt.icon} label={opt.label} onPick={() => pick(opt)} />
+          ))}
         </div>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -676,6 +634,35 @@ function patchColumnStackAtIndex(
     ...cols,
     stacks: cols.stacks.map((s, i) => (i === columnIndex ? stack : s)),
   };
+}
+
+function ColumnResizeGrip({
+  gripped,
+  onPointerDown,
+}: {
+  gripped: boolean;
+  onPointerDown: (e: React.PointerEvent) => void;
+}) {
+  return (
+    <div
+      role="separator"
+      aria-orientation="vertical"
+      className="relative z-10 hidden w-6 shrink-0 select-none touch-none cursor-col-resize md:block"
+      onPointerDown={onPointerDown}
+    >
+      <div
+        className="mx-auto flex h-full min-h-[100px] w-full cursor-col-resize items-center justify-center"
+      >
+        <div
+          className={cn(
+            "min-h-[3rem] w-1 rounded-full transition-colors",
+            gripped ? "bg-sky-500 shadow-[0_0_10px_rgba(14,165,233,0.45)]" : "bg-sky-500/85",
+          )}
+          aria-hidden
+        />
+      </div>
+    </div>
+  );
 }
 
 function NestedColumnBlockFields({
@@ -727,12 +714,78 @@ function NestedColumnBlockFields({
 function ColumnsBlockFields({
   block,
   onChange,
+  resizeLayoutActive,
+  onExitResizeLayout,
 }: {
   block: ColumnsBlock;
   onChange: (next: ColumnsBlock) => void;
+  resizeLayoutActive?: boolean;
+  onExitResizeLayout?: () => void;
 }) {
   const columnCount = block.stacks.length as ColumnLayoutCount;
   const allColumnsEmpty = block.stacks.every((s) => s.length === 0);
+  const resizeMode = Boolean(resizeLayoutActive);
+  const columnWidthRefs = React.useRef<(HTMLDivElement | null)[]>([]);
+  const blockRef = React.useRef(block);
+  blockRef.current = block;
+  const onChangeRef = React.useRef(onChange);
+  onChangeRef.current = onChange;
+  const [dragDividerIndex, setDragDividerIndex] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    if (!resizeMode) return;
+    const onEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onExitResizeLayout?.();
+    };
+    window.addEventListener("keydown", onEsc);
+    return () => window.removeEventListener("keydown", onEsc);
+  }, [resizeMode, onExitResizeLayout]);
+
+  React.useEffect(() => {
+    if (dragDividerIndex === null) return;
+    const di = dragDividerIndex;
+
+    function applyFromClientX(clientX: number) {
+      const elL = columnWidthRefs.current[di];
+      const elR = columnWidthRefs.current[di + 1];
+      if (!elL || !elR) return;
+      const rl = elL.getBoundingClientRect();
+      const rr = elR.getBoundingClientRect();
+      const span = rr.right - rl.left;
+      if (span < 40) return;
+      let t = (clientX - rl.left) / span;
+      t = Math.min(0.93, Math.max(0.07, t));
+      const b = blockRef.current;
+      const weights = coerceColumnFlex(b.stacks.length, b.columnFlex);
+      const pair = weights[di] + weights[di + 1];
+      const newLeftUnclamped = t * pair;
+      const newLeft = Math.min(pair - PROPOSAL_COLUMN_FR_MIN, Math.max(PROPOSAL_COLUMN_FR_MIN, newLeftUnclamped));
+      const newRight = pair - newLeft;
+      const next = [...weights];
+      next[di] = clampFr(newLeft);
+      next[di + 1] = clampFr(newRight);
+      onChangeRef.current({
+        ...b,
+        columnFlex: normalizeColumnFlexForStorage(next.length, next),
+      });
+    }
+
+    function onMove(e: PointerEvent) {
+      applyFromClientX(e.clientX);
+    }
+    function onUp(e: PointerEvent) {
+      applyFromClientX(e.clientX);
+      setDragDividerIndex(null);
+    }
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+    };
+  }, [dragDividerIndex]);
 
   function ColumnPane({
     label,
@@ -838,8 +891,6 @@ function ColumnsBlockFields({
   );
 
   const flexRow = coerceColumnFlex(columnCount, block.columnFlex);
-  const colsTemplate = columnFlexToGridTemplate(flexRow);
-  const sumFr = flexRow.reduce((a, b) => a + b, 0) || 1;
 
   return (
     <div className="space-y-8">
@@ -857,68 +908,47 @@ function ColumnsBlockFields({
         </div>
       )}
 
-      <div className="space-y-3 rounded-lg border border-border/70 bg-muted/25 px-3 py-3 dark:bg-muted/15">
-        <div className="flex flex-wrap items-end justify-between gap-2">
-          <div className="min-w-0">
-            <p className="text-xs font-medium text-foreground">Column widths</p>
-            <p className="mt-0.5 max-w-xl text-[11px] text-muted-foreground">
-              Adjust each column&apos;s relative width (medium screens and wider). Sizes are percentages of the row after
-              normalizing sliders.
-            </p>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-8 shrink-0 text-xs"
-            onClick={() => onChange({ ...block, columnFlex: undefined })}
-          >
-            Equal widths
-          </Button>
-        </div>
-        <div className="space-y-3 pt-1">
-          {flexRow.map((w, colIdx) => (
-            <div key={colIdx} className="space-y-1">
-              <div className="flex items-center justify-between gap-3 text-[11px] text-muted-foreground">
-                <span className="text-foreground/90">Column {colIdx + 1}</span>
-                <span className="tabular-nums">{Math.round((w / sumFr) * 100)}%</span>
-              </div>
-              <input
-                type="range"
-                className="h-2 w-full cursor-pointer accent-primary"
-                aria-valuemin={PROPOSAL_COLUMN_FR_MIN}
-                aria-valuemax={PROPOSAL_COLUMN_FR_MAX}
-                aria-valuenow={Math.min(PROPOSAL_COLUMN_FR_MAX, Math.max(PROPOSAL_COLUMN_FR_MIN, w))}
-                aria-label={`Column ${colIdx + 1} relative width`}
-                min={PROPOSAL_COLUMN_FR_MIN}
-                max={PROPOSAL_COLUMN_FR_MAX}
-                step={0.05}
-                value={Math.min(PROPOSAL_COLUMN_FR_MAX, Math.max(PROPOSAL_COLUMN_FR_MIN, w))}
-                onChange={(e) => {
-                  const v = Number(e.target.value);
-                  const next = [...flexRow];
-                  next[colIdx] = Number.isFinite(v) ? v : next[colIdx];
-                  onChange({
-                    ...block,
-                    columnFlex: normalizeColumnFlexForStorage(next.length, next),
-                  });
-                }}
-              />
-            </div>
-          ))}
-        </div>
-      </div>
+      {resizeMode ? (
+        <p className="text-center text-[12px] font-medium text-sky-600 dark:text-sky-300 md:text-left">
+          Drag the blue lines between columns to adjust width — Done when finished.
+        </p>
+      ) : null}
 
       <div
         className={cn(
-          PROPOSAL_COLUMNS_GRID_CLASS,
+          "flex flex-col gap-6 md:flex-row md:items-stretch",
           PROPOSAL_DOCUMENT_COLUMNS_ROW_GAP_CLASSES,
-          columnCount >= 4 ? "md:gap-x-6" : columnCount === 3 ? "md:gap-x-8" : "md:gap-x-10",
+          columnCount >= 4 ? "md:gap-x-5" : columnCount === 3 ? "md:gap-x-7" : "md:gap-x-8",
+          resizeMode &&
+            "rounded-xl border-2 border-dashed border-sky-500/55 bg-sky-500/[0.03] px-1 py-2 md:px-2 dark:border-sky-400/50 dark:bg-sky-950/15",
         )}
-        style={{ ["--proposal-cols" as string]: colsTemplate } as React.CSSProperties}
       >
         {block.stacks.map((stack, i) => (
-          <ColumnPane key={i} label={`Column ${i + 1}`} columnIndex={i} stack={stack} />
+          <React.Fragment key={`${block.id}-col-${i}`}>
+            <div
+              ref={(el) => {
+                columnWidthRefs.current[i] = el;
+              }}
+              className={cn(
+                "min-w-0 md:min-w-[3.5rem]",
+                resizeMode &&
+                  "rounded-lg border border-sky-400/40 bg-background/60 px-2 py-2 ring-1 ring-sky-500/20 dark:bg-background/40",
+              )}
+              style={{ flex: `${flexRow[i]} 1 0%` } as React.CSSProperties}
+            >
+              <ColumnPane label={`Column ${i + 1}`} columnIndex={i} stack={stack} />
+            </div>
+            {resizeMode && i < block.stacks.length - 1 ? (
+              <ColumnResizeGrip
+                gripped={dragDividerIndex === i}
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setDragDividerIndex(i);
+                }}
+              />
+            ) : null}
+          </React.Fragment>
         ))}
       </div>
     </div>
@@ -948,6 +978,13 @@ function SectionBlockFields({
   );
 
   const children = block.children;
+  const [columnsLayoutEditingId, setColumnsLayoutEditingId] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (columnsLayoutEditingId && !children.some((c) => c.id === columnsLayoutEditingId)) {
+      setColumnsLayoutEditingId(null);
+    }
+  }, [children, columnsLayoutEditingId]);
 
   function setChildren(nextChildren: ProposalContentBlock[]) {
     onChange({ ...block, children: nextChildren });
@@ -960,6 +997,7 @@ function SectionBlockFields({
   function removeChild(childId: string) {
     setChildren(children.filter((c) => c.id !== childId));
     if (selectedBlockId === childId) onSelectBlock(null);
+    if (columnsLayoutEditingId === childId) setColumnsLayoutEditingId(null);
   }
 
   function addChildAt(b: ProposalBlock, index: number) {
@@ -1037,7 +1075,12 @@ function SectionBlockFields({
                 <SortableShell
                   id={child.id}
                   selected={isSelected}
-                  onSelect={() => onSelectBlock(child.id)}
+                  onSelect={() => {
+                    setColumnsLayoutEditingId((prev) =>
+                      prev !== null && prev !== child.id ? null : prev,
+                    );
+                    onSelectBlock(child.id);
+                  }}
                   toolbar={({ dragAttributes, dragListeners }) => {
                     const dragHandle = (
                       <Tooltip delayDuration={320}>
@@ -1057,6 +1100,7 @@ function SectionBlockFields({
                         </TooltipContent>
                       </Tooltip>
                     );
+                    const compactColumnsChrome = child.type === "columns";
                     return (
                       <BlockToolbar
                         appearance="surface"
@@ -1074,6 +1118,36 @@ function SectionBlockFields({
                         onDuplicate={() => duplicateChild(child.id)}
                         deleteLabel="Remove block"
                         onDelete={() => removeChild(child.id)}
+                        compactChrome={compactColumnsChrome}
+                        compactPrimarySlot={
+                          compactColumnsChrome ? (
+                            columnsLayoutEditingId === child.id ? (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setColumnsLayoutEditingId(null);
+                                }}
+                                className="inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium text-teal-700 transition-colors hover:bg-teal-500/15 dark:text-teal-400 dark:hover:bg-teal-500/10"
+                              >
+                                <Check className="h-4 w-4 shrink-0" aria-hidden />
+                                Done
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setColumnsLayoutEditingId(child.id);
+                                }}
+                                className="inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+                              >
+                                <Pencil className="h-4 w-4 shrink-0" aria-hidden />
+                                Edit columns
+                              </button>
+                            )
+                          ) : undefined
+                        }
                         // Inner blocks now mirror the section toolbar: drag handle leads,
                         // overflow "more" menu is suppressed (Duplicate/Delete already
                         // sit inline). The packages add-ons removal action is the only
@@ -1134,6 +1208,10 @@ function SectionBlockFields({
                     }}
                     getBlockStyle={getBlockStyle}
                     applyBlockStyle={applyBlockStyle}
+                    columnsLayoutEditing={{
+                      activeId: columnsLayoutEditingId,
+                      setActiveId: setColumnsLayoutEditingId,
+                    }}
                   />
                 </SortableShell>
                 <InsertBlockSlot context="section" variant="between" onAdd={(b) => addChildAt(b, idx + 1)} />
@@ -1163,12 +1241,17 @@ function BlockFields({
   selection,
   getBlockStyle,
   applyBlockStyle,
+  columnsLayoutEditing,
 }: {
   block: ProposalBlock;
   onChange: (next: ProposalBlock) => void;
   selection?: { selectedId: string | null; onSelect: (id: string | null) => void };
   getBlockStyle?: (b: ProposalBlock) => BlockStyle | undefined;
   applyBlockStyle?: (id: string, style: BlockStyle | undefined) => void;
+  columnsLayoutEditing?: {
+    activeId: string | null;
+    setActiveId: React.Dispatch<React.SetStateAction<string | null>>;
+  };
 }) {
   const patch = (next: ProposalBlock) => onChange(next);
   const sectionChrome = useProposalSectionEditorChrome();
@@ -1412,7 +1495,14 @@ function BlockFields({
       );
     case "columns": {
       const col = block as ColumnsBlock;
-      return <ColumnsBlockFields block={col} onChange={(next) => patch(next)} />;
+      return (
+        <ColumnsBlockFields
+          block={col}
+          onChange={(next) => patch(next)}
+          resizeLayoutActive={columnsLayoutEditing?.activeId === col.id}
+          onExitResizeLayout={() => columnsLayoutEditing?.setActiveId(null)}
+        />
+      );
     }
     case "accordion":
       return <AccordionBlockEditor block={block as AccordionBlock} onChange={(next) => patch(next)} />;
@@ -1715,6 +1805,7 @@ export function ProposalDocumentEditor({
   const skipNextTemplateNameBlurSaveRef = React.useRef(false);
   const [blocks, setBlocks] = React.useState<ProposalBlock[]>(initialDocument.blocks);
   const [selectedBlockId, setSelectedBlockId] = React.useState<string | null>(null);
+  const [rootColumnsLayoutEditingId, setRootColumnsLayoutEditingId] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [sending, setSending] = React.useState(false);
   const [message, setMessage] = React.useState<string | null>(null);
@@ -1725,6 +1816,12 @@ export function ProposalDocumentEditor({
       coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
+
+  React.useEffect(() => {
+    if (rootColumnsLayoutEditingId && !blocks.some((b) => b.id === rootColumnsLayoutEditingId)) {
+      setRootColumnsLayoutEditingId(null);
+    }
+  }, [blocks, rootColumnsLayoutEditingId]);
 
   const proposalTitleFrozenRef = React.useRef<string | null>(null);
   const documentTitle = React.useMemo(() => {
@@ -1829,6 +1926,7 @@ export function ProposalDocumentEditor({
   function removeBlock(id: string) {
     setBlocks((prev) => prev.filter((b) => b.id !== id));
     setSelectedBlockId((current) => (current === id ? null : current));
+    setRootColumnsLayoutEditingId((current) => (current === id ? null : current));
   }
 
   function addBlockAt(block: ProposalBlock, index: number) {
@@ -2055,7 +2153,12 @@ export function ProposalDocumentEditor({
           {blocks.length === 0 ? (
             <InsertBlockSlot variant="empty" onAdd={(b) => addBlockAt(b, 0)} />
           ) : (
-            <div onClick={() => setSelectedBlockId(null)}>
+            <div
+              onClick={() => {
+                setSelectedBlockId(null);
+                setRootColumnsLayoutEditingId(null);
+              }}
+            >
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
                 <SortableContext items={blocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
                   <InsertBlockSlot onAdd={(b) => addBlockAt(b, 0)} />
@@ -2067,7 +2170,12 @@ export function ProposalDocumentEditor({
                         <SortableShell
                           id={block.id}
                           selected={isSelected}
-                          onSelect={() => setSelectedBlockId(block.id)}
+                          onSelect={() => {
+                            setRootColumnsLayoutEditingId((prev) =>
+                              prev !== null && prev !== block.id ? null : prev,
+                            );
+                            setSelectedBlockId(block.id);
+                          }}
                           toolbar={({ dragAttributes, dragListeners }) => {
                             const isSection = block.type === "section";
                             const dragHandle = (
@@ -2088,6 +2196,7 @@ export function ProposalDocumentEditor({
                                 </TooltipContent>
                               </Tooltip>
                             );
+                            const compactColumnsChrome = block.type === "columns";
                             return (
                             <BlockToolbar
                               appearance="surface"
@@ -2109,6 +2218,36 @@ export function ProposalDocumentEditor({
                               onMoveDown={() => moveBlock(block.id, 1)}
                               onDuplicate={() => duplicateBlock(block.id)}
                               onDelete={() => removeBlock(block.id)}
+                              compactChrome={compactColumnsChrome}
+                              compactPrimarySlot={
+                                compactColumnsChrome ? (
+                                  rootColumnsLayoutEditingId === block.id ? (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setRootColumnsLayoutEditingId(null);
+                                      }}
+                                      className="inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium text-teal-700 transition-colors hover:bg-teal-500/15 dark:text-teal-400 dark:hover:bg-teal-500/10"
+                                    >
+                                      <Check className="h-4 w-4 shrink-0" aria-hidden />
+                                      Done
+                                    </button>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setRootColumnsLayoutEditingId(block.id);
+                                      }}
+                                      className="inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+                                    >
+                                      <Pencil className="h-4 w-4 shrink-0" aria-hidden />
+                                      Edit columns
+                                    </button>
+                                  )
+                                ) : undefined
+                              }
                               overflowLeadingAction={
                                 block.type === "packages" && packagesAddonsSectionActive(block as PackagesBlock)
                                   ? {
@@ -2153,6 +2292,10 @@ export function ProposalDocumentEditor({
                             }}
                             getBlockStyle={getBlockStyle}
                             applyBlockStyle={applyBlockStyle}
+                            columnsLayoutEditing={{
+                              activeId: rootColumnsLayoutEditingId,
+                              setActiveId: setRootColumnsLayoutEditingId,
+                            }}
                           />
                         </SortableShell>
                         <InsertBlockSlot onAdd={(b) => addBlockAt(b, idx + 1)} />
