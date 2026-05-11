@@ -95,7 +95,6 @@ function ProposalCreateControls({
           disabled={busy}
           aria-label="Proposal template"
         >
-          <option value="">Standard (auto-filled)</option>
           {proposalTemplates.map((t) => (
             <option key={t.id} value={t.id}>
               {t.name}
@@ -137,7 +136,22 @@ export function CustomerDetailView({
   const router = useRouter();
   const [tab, setTab] = React.useState("overview");
   const [busy, setBusy] = React.useState<string | null>(null);
-  const [proposalTemplateId, setProposalTemplateId] = React.useState("");
+  const [proposalTemplateId, setProposalTemplateId] = React.useState(
+    () => proposalTemplates[0]?.id ?? "",
+  );
+  const proposalTemplateIdsKey = proposalTemplates.map((t) => t.id).join(",");
+
+  React.useEffect(() => {
+    const list = proposalTemplates;
+    if (list.length === 0) {
+      setProposalTemplateId("");
+      return;
+    }
+    setProposalTemplateId((prev) =>
+      prev && list.some((t) => t.id === prev) ? prev : list[0].id,
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sync when template *set* changes, not array identity
+  }, [proposalTemplateIdsKey]);
   const [noteBody, setNoteBody] = React.useState("");
   const [noteKind, setNoteKind] = React.useState<CustomerNoteRecord["kind"]>("note");
   const [noteError, setNoteError] = React.useState<string | null>(null);
