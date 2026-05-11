@@ -412,7 +412,10 @@ export function ProposalRichText({
     TIPTAP_PROSE_TYPOGRAPHY,
     seamless
       ? cn(
-          "proposal-rich-text max-w-none rounded-none border-0 bg-transparent px-3 py-2 text-sm leading-relaxed shadow-none outline-none focus-within:outline-none hover:!bg-transparent dark:hover:!bg-transparent",
+          "proposal-rich-text max-w-none rounded-none border-0 bg-transparent px-3 py-2 text-sm leading-relaxed shadow-none outline-none focus-within:outline-none",
+          // Stay visually merged with the section band (no hover/focus panel tint).
+          "!bg-transparent hover:!bg-transparent focus:!bg-transparent focus-within:!bg-transparent active:!bg-transparent",
+          "selection:bg-transparent dark:!bg-transparent dark:hover:!bg-transparent dark:focus:!bg-transparent dark:focus-within:!bg-transparent",
           minHeightClass,
           prefersLight
             ? "text-white/[0.92] [&_a]:text-sky-200 [&_a]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-white/25 [&_blockquote]:pl-4 [&_blockquote]:italic"
@@ -474,7 +477,10 @@ export function ProposalRichText({
         className={cn(
           "proposal-rich-text-skel animate-pulse rounded-lg",
           minHeightClass,
-          seamless ? (prefersLight ? "bg-white/10" : "bg-muted/35") : "bg-muted/40",
+          // Inside a section the surface stays the section's chosen colour — any
+          // skeleton tint reads as a coloured rectangle layered on top, which
+          // looked like the editor itself had a different fill.
+          seamless ? "bg-transparent" : "bg-muted/40",
         )}
       />
     );

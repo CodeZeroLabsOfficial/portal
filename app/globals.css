@@ -56,6 +56,31 @@
     @apply bg-background text-foreground antialiased;
   }
 
+  /*
+   * Proposal section editor: every nested editable surface (TipTap ProseMirror
+   * editors, inline rich-text wrappers, raw inputs/textareas) must stay flush
+   * with the section's chosen backdrop colour — no card/muted/background tint
+   * may leak through, otherwise inner blocks read as a different colour to the
+   * section.
+   *
+   * The TipTap editable element ships with class `ProseMirror` only (no
+   * `tiptap` class), so the selector targets that directly alongside our
+   * `.proposal-rich-text` marker.
+   */
+  [data-proposal-section-editor] .ProseMirror,
+  [data-proposal-section-editor] .proposal-rich-text {
+    background-color: transparent !important;
+  }
+  [data-proposal-section-editor] .ProseMirror:hover,
+  [data-proposal-section-editor] .ProseMirror:focus,
+  [data-proposal-section-editor] .ProseMirror:focus-visible,
+  [data-proposal-section-editor] .ProseMirror:focus-within,
+  [data-proposal-section-editor] .proposal-rich-text:hover,
+  [data-proposal-section-editor] .proposal-rich-text:focus,
+  [data-proposal-section-editor] .proposal-rich-text:focus-within {
+    background-color: transparent !important;
+  }
+
   /* Portal workspace: #0D0D16 base, #673AB7 accent */
   .portal-ui {
     --background: 240 26% 7%;

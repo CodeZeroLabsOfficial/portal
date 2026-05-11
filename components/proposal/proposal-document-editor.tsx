@@ -495,9 +495,12 @@ function SortableShell({
                 "transition-none",
                 selected
                   ? prefersLightSection
-                    ? "rounded-[2px] ring-1 ring-white/30 ring-offset-0 hover:ring-white/30"
-                    : "rounded-[2px] ring-1 ring-primary/40 ring-offset-0 hover:ring-primary/40"
-                  : "rounded-[2px] bg-transparent hover:!bg-transparent dark:hover:!bg-transparent active:!bg-transparent",
+                    ? "rounded-[2px] ring-1 ring-white/40 ring-offset-0"
+                    : "rounded-[2px] ring-1 ring-primary/50 ring-offset-0"
+                  : "rounded-[2px]",
+                // Flush with section backdrop — no hover/focus tint behind nested editors or inputs.
+                "!bg-transparent hover:!bg-transparent focus-within:!bg-transparent active:!bg-transparent",
+                "dark:!bg-transparent dark:hover:!bg-transparent dark:focus-within:!bg-transparent dark:active:!bg-transparent",
               )
             : cn(
                 "transition-colors",
