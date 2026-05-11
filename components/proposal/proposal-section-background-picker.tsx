@@ -247,24 +247,6 @@ export function ProposalSectionBackgroundPicker({
             onChange={(v) => patch({ blurStrength: Math.round(v) })}
           />
 
-          <label
-            className={cn(
-              "flex cursor-pointer items-center justify-between gap-4 rounded-xl px-3 py-2.5 ring-1",
-              subtleFrame,
-            )}
-          >
-            <span className="text-xs font-semibold tracking-tight">Background card</span>
-            <input
-              type="checkbox"
-              className={cn(
-                "h-4 w-4 shrink-0 cursor-pointer rounded-sm border-border accent-primary outline-none ring-offset-background",
-                elevated ? "border-zinc-600" : "border-input",
-              )}
-              checked={Boolean(model.contentCard)}
-              onChange={(e) => patch({ contentCard: e.target.checked })}
-            />
-          </label>
-
           <div className={cn("-mx-px flex flex-wrap gap-2 pt-1", elevated ? "border-t border-white/10" : "border-t border-border/70")}>
             <Button
               type="button"

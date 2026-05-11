@@ -61,21 +61,8 @@ export function ProposalSectionShell({
         ? "shadow-lg ring-1 ring-black/[0.08] dark:ring-white/10"
         : "shadow-[0_2px_32px_-10px_rgba(15,23,42,0.12)] ring-1 ring-zinc-950/[0.06]";
 
-  const inner =
-    resolved.contentCard ? (
-      <div
-        className={cn(
-          "backdrop-blur-md",
-          prefersLight
-            ? "rounded-2xl border border-white/15 bg-black/36 p-5 shadow-inner sm:p-8 md:p-10"
-            : "rounded-2xl border border-border/60 bg-card/92 p-5 shadow-inner sm:p-8 md:p-10",
-        )}
-      >
-        {children}
-      </div>
-    ) : (
-      children
-    );
+  /** Always flush with the backdrop — nested “content card” fills fought the chosen section colour. */
+  const inner = children;
 
   const shellInner = (
     <div

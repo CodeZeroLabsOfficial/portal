@@ -910,69 +910,92 @@ function SectionBlockFields({
                   id={child.id}
                   selected={isSelected}
                   onSelect={() => onSelectBlock(child.id)}
-                  toolbar={({ dragAttributes, dragListeners }) => (
-                    <BlockToolbar
-                      appearance="surface"
-                      blockType={
-                        child.type === "pricing"
-                          ? "pricing"
-                          : child.type === "packages"
-                            ? "packages"
-                            : "other"
-                      }
-                      canMoveUp={idx > 0}
-                      canMoveDown={idx < children.length - 1}
-                      onMoveUp={() => moveChild(child.id, -1)}
-                      onMoveDown={() => moveChild(child.id, 1)}
-                      onDuplicate={() => duplicateChild(child.id)}
-                      deleteLabel="Remove block"
-                      onDelete={() => removeChild(child.id)}
-                      overflowLeadingAction={
-                        child.type === "packages" && packagesAddonsSectionActive(child as PackagesBlock)
-                          ? {
-                              label: "Remove add-ons table",
-                              onClick: () => {
-                                const p = child as PackagesBlock;
-                                updateChild(child.id, {
-                                  ...p,
-                                  addonsSectionEnabled: false,
-                                } as ProposalContentBlock);
-                              },
-                            }
-                          : undefined
-                      }
-                      style={supportsStyle ? getBlockStyle(child) : undefined}
-                      onStyleChange={
-                        supportsStyle ? (next) => applyBlockStyle(child.id, next) : undefined
-                      }
-                      backdropPickerSlot={
-                        child.type === "splash" ? (
-                          <ProposalSplashBackgroundPicker
-                            block={child as SplashBlock}
-                            onChange={(next) => updateChild(child.id, next as ProposalContentBlock)}
-                          />
-                        ) : undefined
-                      }
-                      trailingSlot={
-                        <Tooltip delayDuration={320}>
-                          <TooltipTrigger asChild>
-                            <button
-                              type="button"
-                              className="touch-none inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
-                              aria-label={`Reorder ${blockLabel(child.type)}`}
-                              {...dragAttributes}
-                              {...dragListeners}
-                            >
-                              <GripVertical className="h-4 w-4" />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent side="bottom" className="text-xs">
-                            Drag to move · arrows nudge precisely
-                          </TooltipContent>
-                        </Tooltip>
-                      }
-                    />
-                  )}
+                  toolbar={({ dragAttributes, dragListeners }) => {
+                    const dragHandle = (
+                      <Tooltip delayDuration={320}>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            className="touch-none inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+                            aria-label={`Reorder ${blockLabel(child.type)}`}
+                            {...dragAttributes}
+                            {...dragListeners}
+                          >
+                            <GripVertical className="h-4 w-4" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="text-xs">
+                          Drag to move · arrows nudge precisely
+                        </TooltipContent>
+                      </Tooltip>
+                    );
+                    return (
+                      <BlockToolbar
+                        appearance="surface"
+                        blockType={
+                          child.type === "pricing"
+                            ? "pricing"
+                            : child.type === "packages"
+                              ? "packages"
+                              : "other"
+                        }
+                        canMoveUp={idx > 0}
+                        canMoveDown={idx < children.length - 1}
+                        onMoveUp={() => moveChild(child.id, -1)}
+                        onMoveDown={() => moveChild(child.id, 1)}
+                        onDuplicate={() => duplicateChild(child.id)}
+                        deleteLabel="Remove block"
+                        onDelete={() => removeChild(child.id)}
+                        // Inner blocks now mirror the section toolbar: drag handle leads,
+                        // overflow "more" menu is suppressed (Duplicate/Delete already
+                        // sit inline). The packages add-ons removal action is the only
+                        // overflow-only lever, so it's promoted into the visible row
+                        // via `auxiliarySlot` when applicable.
+                        showOverflowMenu={false}
+                        auxiliarySlot={
+                          child.type === "packages" &&
+                          packagesAddonsSectionActive(child as PackagesBlock) ? (
+                            <Tooltip delayDuration={320}>
+                              <TooltipTrigger asChild>
+                                <button
+                                  type="button"
+                                  className="inline-flex h-8 items-center gap-1 rounded-full px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+                                  onClick={() => {
+                                    const p = child as PackagesBlock;
+                                    updateChild(child.id, {
+                                      ...p,
+                                      addonsSectionEnabled: false,
+                                    } as ProposalContentBlock);
+                                  }}
+                                  aria-label="Remove add-ons table"
+                                >
+                                  Remove add-ons
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent side="bottom" className="text-xs">
+                                Remove the add-ons sub-table from this Packages block
+                              </TooltipContent>
+                            </Tooltip>
+                          ) : undefined
+                        }
+                        style={supportsStyle ? getBlockStyle(child) : undefined}
+                        onStyleChange={
+                          supportsStyle ? (next) => applyBlockStyle(child.id, next) : undefined
+                        }
+                        backdropPickerSlot={
+                          child.type === "splash" ? (
+                            <ProposalSplashBackgroundPicker
+                              block={child as SplashBlock}
+                              onChange={(next) =>
+                                updateChild(child.id, next as ProposalContentBlock)
+                              }
+                            />
+                          ) : undefined
+                        }
+                        leadingSlot={dragHandle}
+                      />
+                    );
+                  }}
                 >
                   <BlockFields
                     block={child}
