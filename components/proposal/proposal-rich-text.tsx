@@ -3,7 +3,7 @@
 import * as React from "react";
 import { type Editor, EditorContent, useEditor } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react";
-import { Extension, isTextSelection } from "@tiptap/core";
+import { Extension } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
@@ -415,7 +415,7 @@ export function ProposalRichText({
           "proposal-rich-text max-w-none rounded-none border-0 bg-transparent px-3 py-2 text-sm leading-relaxed shadow-none outline-none focus-within:outline-none",
           // Stay visually merged with the section band (no hover/focus panel tint).
           "!bg-transparent hover:!bg-transparent focus:!bg-transparent focus-within:!bg-transparent active:!bg-transparent",
-          "selection:bg-transparent dark:!bg-transparent dark:hover:!bg-transparent dark:focus:!bg-transparent dark:focus-within:!bg-transparent",
+          "dark:!bg-transparent dark:hover:!bg-transparent dark:focus:!bg-transparent dark:focus-within:!bg-transparent",
           minHeightClass,
           prefersLight
             ? "text-white/[0.92] [&_a]:text-sky-200 [&_a]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-white/25 [&_blockquote]:pl-4 [&_blockquote]:italic"
@@ -490,34 +490,10 @@ export function ProposalRichText({
     <div className="relative">
       <BubbleMenu
         editor={editor}
-        updateDelay={0}
-        tippyOptions={{
-          duration: 80,
-          placement: "top",
-          maxWidth: 720,
-          /** Section shells use overflow/stacking; mount above the canvas so the bar isn’t clipped. */
-          appendTo: () => document.body,
-          zIndex: 10050,
-          popperOptions: { strategy: "fixed" },
-        }}
-        shouldShow={({ editor: ed, element, view, state, from, to }) => {
+        tippyOptions={{ duration: 80, placement: "top", maxWidth: 720 }}
+        shouldShow={({ editor: ed, from, to }) => {
           if (!ed.isEditable) return false;
-          const { doc, selection } = state;
-          const isChildOfMenu =
-            typeof document !== "undefined" &&
-            document.activeElement != null &&
-            element.contains(document.activeElement);
-          const hasEditorFocus = view.hasFocus() || isChildOfMenu;
-
-          const isEmptyTextBlock =
-            !doc.textBetween(from, to).length && isTextSelection(selection);
-          const collapsedInHeading = headerVariant && ed.isActive("heading");
-          if (isEmptyTextBlock && !collapsedInHeading) return false;
-
-          const hasTextRange = from !== to || !selection.empty;
-          if (hasTextRange) return true;
-
-          if (!hasEditorFocus) return false;
+          if (from !== to) return true;
           if (!headerVariant) return false;
           return ed.isActive("heading");
         }}

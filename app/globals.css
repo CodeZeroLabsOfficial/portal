@@ -81,11 +81,6 @@
     background-color: transparent !important;
   }
 
-  /* Public (and editor) section bands: no nested fill on typographic content — only the backdrop colour shows. */
-  .proposal-section-shell .proposal-rich-text * {
-    background-color: transparent !important;
-  }
-
   /* Portal workspace: #0D0D16 base, #673AB7 accent */
   .portal-ui {
     --background: 240 26% 7%;

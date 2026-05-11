@@ -503,7 +503,7 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
           </DropdownMenu>
         </div>
       ) : (
-        <div className="mt-8 overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
+        <div className="mt-8 overflow-hidden rounded-xl border border-border/70 bg-card text-left shadow-sm">
           <div
             className="flex flex-wrap items-center gap-3 rounded-t-xl border-b border-dashed px-4 py-3"
             style={{ ...headerSimpleSolid, borderBottomColor: headerSimpleDividerColor }}
@@ -568,11 +568,11 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
             />
           </div>
         </div>
-        <div className="overflow-x-auto bg-card">
-          <table className="w-full min-w-[480px] text-sm">
+        <div className="overflow-x-auto bg-card text-left">
+          <table className="w-full min-w-[480px] text-left text-sm">
             <thead>
               <tr className="border-b border-dashed border-border/50 bg-card text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                <th className="px-4 py-2.5">Description</th>
+                <th className="px-4 py-2.5 text-left">Description</th>
                 <th className="px-4 py-2.5 text-right">Item</th>
                 {editableAddonQty ? <th className="px-4 py-2.5 text-right">Quantity</th> : null}
                 <th className="px-4 py-2.5 text-right">Price</th>
@@ -597,8 +597,8 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
                   : null;
                 return (
                   <tr key={li.id} className="group/row">
-                    <td className="px-4 py-3 align-middle">
-                      <div className="flex flex-col gap-1">
+                    <td className="px-4 py-3 text-left align-middle">
+                      <div className="flex flex-col items-start gap-1">
                         <InlineText
                           tone="light"
                           value={li.label}

@@ -425,8 +425,8 @@ export function PackagesBlockPublic({
       </div>
 
       {addonsActive && addonLines.length > 0 ? (
-        <div className={cn("mt-[50px]", isVisual ? "text-center" : "text-left")}>
-          <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
+        <div className="mt-[50px] text-left">
+          <div className="overflow-hidden rounded-xl border border-border/70 bg-card text-left shadow-sm">
             <div
               className="flex flex-wrap items-center justify-between gap-3 border-b border-dashed px-4 py-3"
               style={{
@@ -442,11 +442,11 @@ export function PackagesBlockPublic({
                 <span className="ml-1 text-[10px] font-medium opacity-90">/ mo</span>
               </p>
             </div>
-            <div className="overflow-x-auto bg-card">
-              <table className="w-full min-w-[320px] text-sm">
+            <div className="overflow-x-auto bg-card text-left">
+              <table className="w-full min-w-[320px] text-left text-sm [&_thead_th:first-child]:!text-left [&_tbody_td:first-child]:!text-left">
                 <thead>
                   <tr className="border-b border-dashed border-border/50 bg-card text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                    <th className="px-4 py-2.5">Description</th>
+                    <th className="px-4 py-2.5 !text-left">Description</th>
                     <th className="px-4 py-2.5 text-right">Item</th>
                     {allowAddonEdit ? <th className="px-4 py-2.5 text-right">Quantity</th> : null}
                     <th className="px-4 py-2.5 text-right">Price</th>
@@ -459,9 +459,9 @@ export function PackagesBlockPublic({
                     const lineTotal = Math.round(li.unitAmountMinor * qRaw);
                     return (
                       <tr key={li.id} className={cn("transition-opacity", hidden && "opacity-40")}>
-                        <td className="px-4 py-3 align-middle">
-                          <div className="flex flex-col gap-1">
-                            <span className="font-medium text-foreground">{li.label}</span>
+                        <td className="px-4 py-3 !text-left align-middle">
+                          <div className="flex min-w-0 w-full flex-col items-start gap-1 text-left">
+                            <span className="block w-full text-left font-medium text-foreground">{li.label}</span>
                             {li.optional ? (
                               <label className="flex cursor-pointer items-center gap-2 text-[12px] text-muted-foreground">
                                 <input
