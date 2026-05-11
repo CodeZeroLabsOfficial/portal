@@ -8,6 +8,7 @@ import {
   type ResolvedSectionBackground,
 } from "@/lib/section-background";
 import type { SectionBackground } from "@/types/proposal";
+import { PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES } from "@/lib/proposal-public-layout";
 
 /**
  * Re-map shadcn semantic tokens for a bright section surface. Parent routes (e.g. `portal-ui`)
@@ -38,20 +39,41 @@ export function ProposalSectionShell({
 
   const prefersLight = sectionPrefersLightForeground(resolved);
   const viewerEdge = viewportBleed && variant === "viewer";
-  const shellRadius =
-    variant === "editor" ? cn("rounded-xl") : viewerEdge ? "rounded-none" : cn("rounded-3xl md:rounded-[1.85rem]");
+  const editorCanvas = variant === "editor";
+  const shellRadius = editorCanvas
+    ? "rounded-none"
+    : viewerEdge
+      ? "rounded-none"
+      : cn("rounded-3xl md:rounded-[1.85rem]");
   const gutter =
-    variant === "editor"
-      ? cn("px-4 py-6 sm:px-5 sm:py-8")
+    editorCanvas
+      ? cn("py-8 sm:py-10 md:py-12")
       : viewerEdge
         ? cn("px-0 py-10 sm:py-14 md:py-16")
         : cn("px-6 py-10 sm:px-10 sm:py-14 md:px-14 md:py-16");
-  const surfaceChrome =
-    viewerEdge
+  const surfaceChrome = editorCanvas
+    ? "rounded-none shadow-none ring-0"
+    : viewerEdge
       ? "shadow-none ring-0 border-y border-black/[0.07] dark:border-white/[0.08]"
       : prefersLight
         ? "shadow-lg ring-1 ring-black/[0.08] dark:ring-white/10"
         : "shadow-[0_2px_32px_-10px_rgba(15,23,42,0.12)] ring-1 ring-zinc-950/[0.06]";
+
+  const inner =
+    resolved.contentCard ? (
+      <div
+        className={cn(
+          "backdrop-blur-md",
+          prefersLight
+            ? "rounded-2xl border border-white/15 bg-black/36 p-5 shadow-inner sm:p-8 md:p-10"
+            : "rounded-2xl border border-border/60 bg-card/92 p-5 shadow-inner sm:p-8 md:p-10",
+        )}
+      >
+        {children}
+      </div>
+    ) : (
+      children
+    );
 
   return (
     <div
@@ -71,19 +93,10 @@ export function ProposalSectionShell({
       <SectionBackdropLayers resolved={resolved} />
 
       <div className={cn("relative z-10", gutter)}>
-        {resolved.contentCard ? (
-          <div
-            className={cn(
-              "backdrop-blur-md",
-              prefersLight
-                ? "rounded-2xl border border-white/15 bg-black/36 p-5 shadow-inner sm:p-8 md:p-10"
-                : "rounded-2xl border border-border/60 bg-card/92 p-5 shadow-inner sm:p-8 md:p-10",
-            )}
-          >
-            {children}
-          </div>
+        {editorCanvas ? (
+          <div className={PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES}>{inner}</div>
         ) : (
-          children
+          inner
         )}
       </div>
     </div>

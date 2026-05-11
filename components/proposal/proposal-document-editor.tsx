@@ -110,7 +110,7 @@ import {
   DEFAULT_PACKAGES_UPFRONT_COST_12_MINOR,
   PACKAGE_TIER_UNLIMITED_VALUE,
 } from "@/lib/package-tier-limits";
-import { resolveSectionBackground, sectionPrefersLightForeground } from "@/lib/section-background";
+import { resolveSectionBackground } from "@/lib/section-background";
 import { defaultSplashBlock } from "@/lib/splash-block";
 import {
   ProposalSplashBackgroundPicker,
@@ -487,8 +487,10 @@ function SortableShell({
           onSelect();
         }}
         className={cn(
-          "relative rounded-lg px-2 py-2.5 transition-colors [-webkit-tap-highlight-color:transparent]",
-          selected ? "bg-primary/[0.07] ring-1 ring-primary/35 dark:bg-primary/10" : "hover:bg-muted/45",
+          "relative px-0 py-1.5 transition-colors [-webkit-tap-highlight-color:transparent]",
+          selected
+            ? "rounded-[2px] ring-1 ring-primary/45 ring-offset-2 ring-offset-transparent"
+            : "rounded-[2px] hover:bg-black/[0.03] dark:hover:bg-white/[0.04]",
         )}
       >
         <div className="min-w-0">{children}</div>
@@ -581,7 +583,15 @@ function NestedColumnBlockFields({
   const patchNested = (next: ProposalBlock) => onChange(next as ProposalColumnChildBlock);
   switch (block.type) {
     case "header":
-      return <Input value={block.text} onChange={(e) => patchNested({ ...block, text: e.target.value })} />;
+      return (
+        <Input
+          aria-label="Heading"
+          placeholder="Title"
+          className="border-0 bg-transparent px-0 text-base font-semibold tracking-tight shadow-none focus-visible:ring-0"
+          value={block.text}
+          onChange={(e) => patchNested({ ...block, text: e.target.value })}
+        />
+      );
     case "text":
       return (
         <ProposalRichText
@@ -647,46 +657,37 @@ function ColumnsBlockFields({
       setStack(stack.map((c) => (c.id === childId ? nextChild : c)));
     }
     return (
-      <div className="space-y-2 rounded-xl border border-border/60 bg-background/40 p-3">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
+      <div className="min-w-0 space-y-4">
+        <span className="sr-only">{label}</span>
+        <div className="flex justify-end">
           <SectionInsertMenu
             align="end"
             onAdd={addToEnd}
             trigger={
-              <Button type="button" variant="outline" size="sm" className="h-7 gap-1 text-[11px]">
+              <Button type="button" variant="ghost" size="sm" className="h-8 gap-1 text-[12px] text-muted-foreground hover:text-foreground">
                 <Plus className="h-3.5 w-3.5" /> Add
               </Button>
             }
           />
         </div>
         {stack.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-border/60 px-3 py-6 text-center text-xs text-muted-foreground">
-            Empty · use{" "}
-            <span className="font-semibold">
-              Content → Add · <kbd className="rounded bg-muted px-1 font-sans text-[11px]">+</kbd>
-            </span>
+          <p className="rounded-md border border-dashed border-border/50 px-3 py-8 text-center text-xs text-muted-foreground">
+            Empty column — use Add above or drop from the library.
           </p>
         ) : (
           stack.map((child, idx) => (
-            <div key={child.id} className="rounded-lg border border-border/50 bg-card/60 p-2">
-              <div className="mb-2 flex flex-wrap gap-1">
-                <Button type="button" variant="ghost" size="sm" disabled={idx === 0} onClick={() => move(child.id, -1)}>
+            <div key={child.id} className="group/colitem space-y-2 pb-8 border-b border-border/25 last:border-0 last:pb-0">
+              <div className="flex flex-wrap items-center gap-1 opacity-100 transition-opacity md:opacity-0 md:group-hover/colitem:opacity-100 md:group-focus-within/colitem:opacity-100">
+                <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" disabled={idx === 0} onClick={() => move(child.id, -1)}>
                   Up
                 </Button>
-                <Button type="button" variant="ghost" size="sm" disabled={idx === stack.length - 1} onClick={() => move(child.id, 1)}>
+                <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" disabled={idx === stack.length - 1} onClick={() => move(child.id, 1)}>
                   Down
                 </Button>
-                <Button type="button" variant="ghost" size="sm" onClick={() => dup(child.id)}>
+                <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => dup(child.id)}>
                   Duplicate
                 </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="text-destructive"
-                  onClick={() => removeAt(child.id)}
-                >
+                <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs text-destructive hover:text-destructive" onClick={() => removeAt(child.id)}>
                   Remove
                 </Button>
               </div>
@@ -699,8 +700,8 @@ function ColumnsBlockFields({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="grid gap-3 md:grid-cols-2">
+    <div className="space-y-8 md:space-y-0">
+      <div className="grid gap-10 md:grid-cols-2 md:gap-14">
         <ColumnPane label="Left column" side="left" stack={block.left} />
         <ColumnPane label="Right column" side="right" stack={block.right} />
       </div>
@@ -844,156 +845,157 @@ function SectionBlockFields({
 
   const resolvedBg = resolveSectionBackground(block.background);
   const backdropOn = resolvedBg.active;
-  const lightPaperSection = backdropOn && !sectionPrefersLightForeground(resolvedBg);
+
+  const sectionStack =
+    children.length === 0 ? (
+      <div className="flex flex-col items-center gap-5 py-14 text-center">
+        <div className="max-w-[20rem] space-y-1">
+          <p className="text-sm font-medium text-foreground">Group related content</p>
+          <p className="text-xs text-muted-foreground">
+            Stack headings, prose, visuals, layouts, accordion panels, and more — then reorder with the contextual
+            controls.
+          </p>
+        </div>
+        <SectionInsertMenu
+          align="center"
+          onAdd={(b) => addChildAt(b, 0)}
+          trigger={
+            <button
+              type="button"
+              className={cn(
+                "inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold text-white shadow-lg",
+                "bg-gradient-to-b from-zinc-800 to-black ring-2 ring-black/85 transition-colors hover:to-zinc-900",
+              )}
+            >
+              <Plus className="h-4 w-4" /> Content
+            </button>
+          }
+        />
+      </div>
+    ) : (
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onChildDragEnd}>
+        <SortableContext items={children.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+          <InsertBlockSlot context="section" variant="between" onAdd={(b) => addChildAt(b, 0)} />
+          {children.map((child, idx) => {
+            const isSelected = selectedBlockId === child.id;
+            const supportsStyle = child.type === "packages";
+            return (
+              <React.Fragment key={child.id}>
+                <SortableShell
+                  id={child.id}
+                  selected={isSelected}
+                  onSelect={() => onSelectBlock(child.id)}
+                  toolbar={({ dragAttributes, dragListeners }) => (
+                    <BlockToolbar
+                      appearance="surface"
+                      blockType={
+                        child.type === "pricing"
+                          ? "pricing"
+                          : child.type === "packages"
+                            ? "packages"
+                            : "other"
+                      }
+                      canMoveUp={idx > 0}
+                      canMoveDown={idx < children.length - 1}
+                      onMoveUp={() => moveChild(child.id, -1)}
+                      onMoveDown={() => moveChild(child.id, 1)}
+                      onDuplicate={() => duplicateChild(child.id)}
+                      deleteLabel="Remove block"
+                      onDelete={() => removeChild(child.id)}
+                      style={supportsStyle ? getBlockStyle(child) : undefined}
+                      onStyleChange={
+                        supportsStyle ? (next) => applyBlockStyle(child.id, next) : undefined
+                      }
+                      backdropPickerSlot={
+                        child.type === "splash" ? (
+                          <ProposalSplashBackgroundPicker
+                            block={child as SplashBlock}
+                            onChange={(next) => updateChild(child.id, next as ProposalContentBlock)}
+                          />
+                        ) : undefined
+                      }
+                      trailingSlot={
+                        <Tooltip delayDuration={320}>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              className="touch-none inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+                              aria-label={`Reorder ${blockLabel(child.type)}`}
+                              {...dragAttributes}
+                              {...dragListeners}
+                            >
+                              <GripVertical className="h-4 w-4" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom" className="text-xs">
+                            Drag to move · arrows nudge precisely
+                          </TooltipContent>
+                        </Tooltip>
+                      }
+                    />
+                  )}
+                >
+                  <BlockFields
+                    block={child}
+                    onChange={(next) => updateChild(child.id, next as ProposalContentBlock)}
+                    selection={{
+                      selectedId: selectedBlockId,
+                      onSelect: onSelectBlock,
+                    }}
+                    getBlockStyle={getBlockStyle}
+                    applyBlockStyle={applyBlockStyle}
+                  />
+                </SortableShell>
+                <InsertBlockSlot context="section" variant="between" onAdd={(b) => addChildAt(b, idx + 1)} />
+              </React.Fragment>
+            );
+          })}
+        </SortableContext>
+      </DndContext>
+    );
+
+  const addContentHint =
+    children.length > 0 ? (
+      <div className="flex flex-wrap items-center justify-center gap-2 pb-5 pt-2 text-center text-[11px] text-muted-foreground">
+        <span className="text-muted-foreground/80">+ between rows ·</span>
+        <SectionInsertMenu
+          align="center"
+          onAdd={(b) => addChildAt(b, children.length)}
+          trigger={
+            <button type="button" className="font-medium text-foreground/90 underline decoration-border underline-offset-2 hover:text-foreground">
+              Content gallery
+            </button>
+          }
+        />
+      </div>
+    ) : null;
 
   return (
     <ProposalSectionShell background={block.background} variant="editor">
-      <div className="space-y-3">
-        <div
-          className={cn(
-            "-mx-1 rounded-xl px-1 py-1",
-            backdropOn
-              ? lightPaperSection
-                ? "border border-zinc-200/60"
-                : "border border-white/28 bg-transparent/35 backdrop-blur-[1px] sm:bg-transparent/45"
-              : "border border-dashed border-border/65 bg-muted/20 sm:bg-muted/[0.35]",
-          )}
-        >
-        {children.length === 0 ? (
-          <div className="flex flex-col items-center gap-5 py-14 text-center">
-            <div className="max-w-[20rem] space-y-1">
-              <p className="text-sm font-medium text-foreground">Group related content</p>
-              <p className="text-xs text-muted-foreground">
-                Stack headings, prose, visuals, layouts, accordion panels, and more — then reorder with the contextual
-                controls.
-              </p>
-            </div>
-            <SectionInsertMenu
-              align="center"
-              onAdd={(b) => addChildAt(b, 0)}
-              trigger={
-                <button
-                  type="button"
-                  className={cn(
-                    "inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold text-white shadow-lg",
-                    "bg-gradient-to-b from-zinc-800 to-black ring-2 ring-black/85 transition-colors hover:to-zinc-900",
-                  )}
-                >
-                  <Plus className="h-4 w-4" /> Content
-                </button>
-              }
-            />
-          </div>
+      <div className="space-y-1">
+        {backdropOn ? (
+          <>
+            {sectionStack}
+            {addContentHint}
+          </>
         ) : (
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onChildDragEnd}>
-            <SortableContext items={children.map((c) => c.id)} strategy={verticalListSortingStrategy}>
-              <InsertBlockSlot context="section" variant="between" onAdd={(b) => addChildAt(b, 0)} />
-              {children.map((child, idx) => {
-                const isSelected = selectedBlockId === child.id;
-                const supportsStyle = child.type === "packages";
-                return (
-                  <React.Fragment key={child.id}>
-                    <SortableShell
-                      id={child.id}
-                      selected={isSelected}
-                      onSelect={() => onSelectBlock(child.id)}
-                      toolbar={({ dragAttributes, dragListeners }) => (
-                        <BlockToolbar
-                          appearance="surface"
-                          blockType={
-                            child.type === "pricing"
-                              ? "pricing"
-                              : child.type === "packages"
-                                ? "packages"
-                                : "other"
-                          }
-                          canMoveUp={idx > 0}
-                          canMoveDown={idx < children.length - 1}
-                          onMoveUp={() => moveChild(child.id, -1)}
-                          onMoveDown={() => moveChild(child.id, 1)}
-                          onDuplicate={() => duplicateChild(child.id)}
-                          deleteLabel="Remove block"
-                          onDelete={() => removeChild(child.id)}
-                          style={supportsStyle ? getBlockStyle(child) : undefined}
-                          onStyleChange={
-                            supportsStyle ? (next) => applyBlockStyle(child.id, next) : undefined
-                          }
-                          backdropPickerSlot={
-                            child.type === "splash" ? (
-                              <ProposalSplashBackgroundPicker
-                                block={child as SplashBlock}
-                                onChange={(next) => updateChild(child.id, next as ProposalContentBlock)}
-                              />
-                            ) : undefined
-                          }
-                          trailingSlot={
-                            <Tooltip delayDuration={320}>
-                              <TooltipTrigger asChild>
-                                <button
-                                  type="button"
-                                  className="touch-none inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
-                                  aria-label={`Reorder ${blockLabel(child.type)}`}
-                                  {...dragAttributes}
-                                  {...dragListeners}
-                                >
-                                  <GripVertical className="h-4 w-4" />
-                                </button>
-                              </TooltipTrigger>
-                              <TooltipContent side="bottom" className="text-xs">
-                                Drag to move · arrows nudge precisely
-                              </TooltipContent>
-                            </Tooltip>
-                          }
-                        />
-                      )}
-                    >
-                      <BlockFields
-                        block={child}
-                        onChange={(next) => updateChild(child.id, next as ProposalContentBlock)}
-                        getBlockStyle={getBlockStyle}
-                        applyBlockStyle={applyBlockStyle}
-                      />
-                    </SortableShell>
-                    <InsertBlockSlot context="section" variant="between" onAdd={(b) => addChildAt(b, idx + 1)} />
-                  </React.Fragment>
-                );
-              })}
-            </SortableContext>
-          </DndContext>
-        )}
-        {children.length > 0 ? (
-          <div className="flex flex-wrap items-center justify-center gap-2 pb-8 pt-4 text-center text-xs text-muted-foreground">
-            <span className="inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-muted px-1.5 font-semibold text-foreground ring-1 ring-border">
-              +
-            </span>
-            <span>
-              Add content · use the luminous (+) row markers or browse the&nbsp;
-              <SectionInsertMenu
-                align="center"
-                onAdd={(b) => addChildAt(b, children.length)}
-                trigger={
-                  <button
-                    type="button"
-                    className="font-semibold underline decoration-muted-foreground/80 underline-offset-2 hover:text-foreground"
-                  >
-                    Browse Content gallery
-                  </button>
-                }
-              />
-            </span>
+          <div className="rounded-xl border border-dashed border-border/65 bg-muted/15 px-1 py-1 sm:bg-muted/[0.35]">
+            {sectionStack}
+            {addContentHint}
           </div>
-        ) : null}
+        )}
+        <div className="flex justify-center pb-1 pt-0.5">
+          <SectionInsertMenu
+            onAdd={(b) => addChildAt(b, children.length)}
+            trigger={
+              <Button type="button" variant="ghost" size="sm" className="gap-1.5 text-[13px] text-muted-foreground hover:text-foreground">
+                <Plus className="h-4 w-4" aria-hidden /> Insert from gallery
+                <ChevronDown className="h-4 w-4 opacity-60" aria-hidden />
+              </Button>
+            }
+          />
+        </div>
       </div>
-      <SectionInsertMenu
-        onAdd={(b) => addChildAt(b, children.length)}
-        trigger={
-          <Button type="button" variant="outline" size="sm" className="gap-2">
-            <Plus className="h-4 w-4" aria-hidden /> Insert from gallery
-            <ChevronDown className="h-4 w-4 opacity-75" aria-hidden />
-          </Button>
-        }
-      />
-    </div>
     </ProposalSectionShell>
   );
 }
@@ -1035,14 +1037,16 @@ function BlockFields({
       const b = block as HeaderBlock;
       return (
         <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label htmlFor={`h-${b.id}`}>Heading text</Label>
-            <Input
-              id={`h-${b.id}`}
-              value={b.text}
-              onChange={(e) => patch({ ...b, text: e.target.value })}
-            />
-          </div>
+          <Input
+            id={`h-${b.id}`}
+            aria-label="Heading"
+            placeholder="Heading"
+            className={cn(
+              "border-0 bg-transparent px-0 text-2xl font-semibold tracking-tight shadow-none focus-visible:ring-0 md:text-3xl",
+            )}
+            value={b.text}
+            onChange={(e) => patch({ ...b, text: e.target.value })}
+          />
         </div>
       );
     }
