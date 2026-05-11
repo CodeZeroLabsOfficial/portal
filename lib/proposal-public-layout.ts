@@ -54,12 +54,30 @@ export const PROPOSAL_DOCUMENT_BLOCK_INNER_PAD_CLASSES = "py-[50px]";
 export const PROPOSAL_DOCUMENT_ROOT_STACK_GAP_CLASSES = "flex flex-col gap-0 py-[50px]";
 
 /**
- * Large top margin before this root block when it should separate from the previous block — only when a
- * root **section** band is involved, and never next to **splash** (hero stays flush to following content).
+ * Root-level header/text blocks each used to get full `py-[50px]`, which stacks to ~100px between a Heading
+ * block and the following Text block. Inside a **Section** block those siblings share one padded wrapper
+ * instead (`proposalSectionChildGapBefore`), so the gap looked much tighter — same blocks, different DOM.
+ * `proposalDocumentRootInnerColumnVerticalPad` + `proposalDocumentRootBlockGapBefore` align root pairs with
+ * section interior rhythm (`mt-10`).
+ */
+export function proposalDocumentRootInnerColumnVerticalPad(
+  block: ProposalBlock,
+  prev: ProposalBlock | undefined,
+  next: ProposalBlock | undefined,
+): string {
+  if (block.type === "header" && next?.type === "text") return "pt-[50px] pb-0";
+  if (block.type === "text" && prev?.type === "header") return "pt-0 pb-[50px]";
+  return PROPOSAL_DOCUMENT_BLOCK_INNER_PAD_CLASSES;
+}
+
+/**
+ * Large top margin before this root block when it should separate from the previous block — section bands,
+ * and heading→text at root (matches section interior).
  */
 export function proposalDocumentRootBlockGapBefore(prev: ProposalBlock, curr: ProposalBlock): string | undefined {
   if (prev.type === "splash" || curr.type === "splash") return undefined;
   if (prev.type === "section" || curr.type === "section") return "mt-[100px]";
+  if (prev.type === "header" && curr.type === "text") return "mt-10";
   return undefined;
 }
 /** Row gap for `columns` layout in the public viewer (horizontal gap unchanged). */

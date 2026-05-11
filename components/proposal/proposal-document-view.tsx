@@ -15,6 +15,7 @@ import {
   PROPOSAL_DOCUMENT_COLUMNS_ROW_GAP_CLASSES,
   PROPOSAL_DOCUMENT_ROOT_STACK_GAP_CLASSES,
   proposalDocumentRootBlockGapBefore,
+  proposalDocumentRootInnerColumnVerticalPad,
   proposalSectionChildGapBefore,
   PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES,
   PROPOSAL_PUBLIC_VIEWPORT_BREAKOUT_CLASSES,
@@ -397,6 +398,8 @@ export function ProposalDocumentView({
       {viewportSectionBleed ? (
         <div className={cn("w-full", PROPOSAL_DOCUMENT_ROOT_STACK_GAP_CLASSES)}>
           {document.blocks.map((block, idx) => {
+            const prevRoot = idx > 0 ? document.blocks[idx - 1] : undefined;
+            const nextRoot = idx < document.blocks.length - 1 ? document.blocks[idx + 1] : undefined;
             const gapBefore =
               idx > 0 ? proposalDocumentRootBlockGapBefore(document.blocks[idx - 1]!, block) : undefined;
             const splashRootBand = Boolean(viewportSectionBleed && block.type === "splash");
@@ -427,7 +430,7 @@ export function ProposalDocumentView({
                 key={block.id}
                 className={cn(
                   PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES,
-                  PROPOSAL_DOCUMENT_BLOCK_INNER_PAD_CLASSES,
+                  proposalDocumentRootInnerColumnVerticalPad(block, prevRoot, nextRoot),
                   "shrink-0",
                   gapBefore,
                 )}
@@ -439,24 +442,29 @@ export function ProposalDocumentView({
         </div>
       ) : (
         <div className={cn(PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES, PROPOSAL_DOCUMENT_ROOT_STACK_GAP_CLASSES)}>
-          {document.blocks.map((block, idx) => (
-            <section
-              key={block.id}
-              className={cn(
-                "space-y-0",
-                block.type !== "section" && PROPOSAL_DOCUMENT_BLOCK_INNER_PAD_CLASSES,
-                idx > 0 ? proposalDocumentRootBlockGapBefore(document.blocks[idx - 1]!, block) : undefined,
-              )}
-            >
-              <BlockView
-                block={block}
-                shareToken={shareToken}
-                publicSelections={publicSelections}
-                viewportSectionBleed={false}
-                splashPublicPresentation={block.type === "splash" ? "nestedColumn" : undefined}
-              />
-            </section>
-          ))}
+          {document.blocks.map((block, idx) => {
+            const prevRoot = idx > 0 ? document.blocks[idx - 1] : undefined;
+            const nextRoot = idx < document.blocks.length - 1 ? document.blocks[idx + 1] : undefined;
+            return (
+              <section
+                key={block.id}
+                className={cn(
+                  "space-y-0",
+                  block.type !== "section" &&
+                    proposalDocumentRootInnerColumnVerticalPad(block, prevRoot, nextRoot),
+                  idx > 0 ? proposalDocumentRootBlockGapBefore(document.blocks[idx - 1]!, block) : undefined,
+                )}
+              >
+                <BlockView
+                  block={block}
+                  shareToken={shareToken}
+                  publicSelections={publicSelections}
+                  viewportSectionBleed={false}
+                  splashPublicPresentation={block.type === "splash" ? "nestedColumn" : undefined}
+                />
+              </section>
+            );
+          })}
         </div>
       )}
     </article>
