@@ -1,3 +1,5 @@
+import type { ProposalBlock } from "@/types/proposal";
+
 /**
  * Public proposal pages — vertical shell spacing + a centered reading column utility.
  * Proposal document chrome applies `PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES` to the optional logo,
@@ -34,9 +36,19 @@ export const PROPOSAL_DOCUMENT_BLOCK_STACK_CLASSES = "space-y-[100px]";
  */
 export const PROPOSAL_DOCUMENT_BLOCK_INNER_PAD_CLASSES = "py-[50px]";
 /**
- * Root stack in `ProposalDocumentView`: `py-[50px]` pads the first/last blocks; `gap-[100px]` spaces
- * siblings (50px below + 50px above each pair). Flex gap avoids margin-collapse against `<main>` / shells.
+ * Root stack wrapper in `ProposalDocumentView`: vertical document padding only. Space **between** root
+ * blocks uses `proposalDocumentRootBlockGapBefore` on each item after the first (section-adjacent only).
  */
-export const PROPOSAL_DOCUMENT_ROOT_STACK_GAP_CLASSES = "flex flex-col gap-[100px] py-[50px]";
+export const PROPOSAL_DOCUMENT_ROOT_STACK_GAP_CLASSES = "flex flex-col gap-0 py-[50px]";
+
+/**
+ * Large top margin before this root block when it should separate from the previous block — only when a
+ * root **section** band is involved, and never next to **splash** (hero stays flush to following content).
+ */
+export function proposalDocumentRootBlockGapBefore(prev: ProposalBlock, curr: ProposalBlock): string | undefined {
+  if (prev.type === "splash" || curr.type === "splash") return undefined;
+  if (prev.type === "section" || curr.type === "section") return "mt-[100px]";
+  return undefined;
+}
 /** Row gap for `columns` layout in the public viewer (horizontal gap unchanged). */
 export const PROPOSAL_DOCUMENT_COLUMNS_ROW_GAP_CLASSES = "gap-y-[100px]";

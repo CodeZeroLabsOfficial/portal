@@ -23,7 +23,6 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import {
   ArrowLeft,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Coins,
@@ -987,26 +986,13 @@ function SectionBlockFields({
 
   return (
     <ProposalSectionShell background={block.background} variant="editor">
-      <div className="space-y-1">
-        {backdropOn ? (
-          sectionStack
-        ) : (
-          <div className="rounded-xl border border-dashed border-border/65 bg-muted/15 px-1 py-1 sm:bg-muted/[0.35]">
-            {sectionStack}
-          </div>
-        )}
-        <div className="flex justify-center pb-1 pt-0.5">
-          <SectionInsertMenu
-            onAdd={(b) => addChildAt(b, children.length)}
-            trigger={
-              <Button type="button" variant="ghost" size="sm" className="gap-1.5 text-[13px] text-muted-foreground hover:text-foreground">
-                <Plus className="h-4 w-4" aria-hidden /> Insert from gallery
-                <ChevronDown className="h-4 w-4 opacity-60" aria-hidden />
-              </Button>
-            }
-          />
+      {backdropOn ? (
+        sectionStack
+      ) : (
+        <div className="rounded-xl border border-dashed border-border/65 bg-muted/15 px-1 py-1 sm:bg-muted/[0.35]">
+          {sectionStack}
         </div>
-      </div>
+      )}
     </ProposalSectionShell>
   );
 }

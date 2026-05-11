@@ -15,6 +15,7 @@ import {
   PROPOSAL_DOCUMENT_BLOCK_STACK_CLASSES,
   PROPOSAL_DOCUMENT_COLUMNS_ROW_GAP_CLASSES,
   PROPOSAL_DOCUMENT_ROOT_STACK_GAP_CLASSES,
+  proposalDocumentRootBlockGapBefore,
   PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES,
   PROPOSAL_PUBLIC_VIEWPORT_BREAKOUT_CLASSES,
 } from "@/lib/proposal-public-layout";
@@ -387,7 +388,9 @@ export function ProposalDocumentView({
       ) : null}
       {viewportSectionBleed ? (
         <div className={cn("w-full", PROPOSAL_DOCUMENT_ROOT_STACK_GAP_CLASSES)}>
-          {document.blocks.map((block) => {
+          {document.blocks.map((block, idx) => {
+            const gapBefore =
+              idx > 0 ? proposalDocumentRootBlockGapBefore(document.blocks[idx - 1]!, block) : undefined;
             const splashRootBand = Boolean(viewportSectionBleed && block.type === "splash");
             const child = (
               <BlockView
@@ -406,7 +409,7 @@ export function ProposalDocumentView({
             );
             if (block.type === "section" || splashRootBand) {
               return (
-                <section key={block.id} className="w-full shrink-0">
+                <section key={block.id} className={cn("w-full shrink-0", gapBefore)}>
                   {child}
                 </section>
               );
@@ -414,7 +417,12 @@ export function ProposalDocumentView({
             return (
               <section
                 key={block.id}
-                className={cn(PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES, PROPOSAL_DOCUMENT_BLOCK_INNER_PAD_CLASSES, "shrink-0")}
+                className={cn(
+                  PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES,
+                  PROPOSAL_DOCUMENT_BLOCK_INNER_PAD_CLASSES,
+                  "shrink-0",
+                  gapBefore,
+                )}
               >
                 {child}
               </section>
@@ -423,12 +431,13 @@ export function ProposalDocumentView({
         </div>
       ) : (
         <div className={cn(PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES, PROPOSAL_DOCUMENT_ROOT_STACK_GAP_CLASSES)}>
-          {document.blocks.map((block) => (
+          {document.blocks.map((block, idx) => (
             <section
               key={block.id}
               className={cn(
                 "space-y-0",
                 block.type !== "section" && PROPOSAL_DOCUMENT_BLOCK_INNER_PAD_CLASSES,
+                idx > 0 ? proposalDocumentRootBlockGapBefore(document.blocks[idx - 1]!, block) : undefined,
               )}
             >
               <BlockView
