@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Check, Loader2 } from "lucide-react";
+import { Check, ChevronDown, Loader2 } from "lucide-react";
 import type { PackagesBlock, PackagesPublicSelection } from "@/types/proposal";
 import { formatCurrencyAmount } from "@/lib/format";
 import { formatPackageTierIncluded } from "@/lib/package-tier-limits";
@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { readableForeground, resolveBlockStyle, withAlpha } from "@/lib/block-style";
 import { saveProposalPackageSelectionAction } from "@/server/actions/proposal-builder";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export interface PackagesBlockPublicProps {
   block: PackagesBlock;
@@ -46,6 +47,7 @@ export function PackagesBlockPublic({
   );
   const [pendingTierId, setPendingTierId] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+  const [addonsTableOpen, setAddonsTableOpen] = React.useState(true);
 
   const addonsActive = packagesAddonsSectionActive(block);
   const addonLines = block.addonLineItems ?? [];
@@ -421,117 +423,148 @@ export function PackagesBlockPublic({
 
       {addonsActive && addonLines.length > 0 ? (
         <div className="mt-[50px] text-left">
-          <div className="overflow-hidden rounded-xl border border-border/70 bg-card text-left shadow-sm">
-            <div
-              className="flex flex-wrap items-center gap-3 border-b border-dashed px-4 py-3"
-              style={{
-                backgroundColor: style.primaryColor,
-                color: totalBarFg,
-                borderBottomColor: totalBarFg === "#ffffff" ? "rgba(255,255,255,0.28)" : "rgba(15,23,42,0.18)",
-              }}
-            >
-              <p className="text-sm font-semibold">{addonsTitle}</p>
-            </div>
-            <div className="overflow-x-auto bg-card text-left">
-              <table className="w-full min-w-[320px] text-left text-sm [&_thead_th:first-child]:!text-left [&_tbody_td:first-child]:!text-left">
-                <thead>
-                  <tr className="border-b border-dashed border-border/50 bg-card text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                    <th className="px-4 py-2.5 !text-left">Description</th>
-                    <th className="px-4 py-2.5 text-right">Item</th>
-                    {allowAddonEdit ? <th className="px-4 py-2.5 text-right">Quantity</th> : null}
-                    <th className="px-4 py-2.5 text-right">Price</th>
-                  </tr>
-                </thead>
-                <tbody className="[&_tr]:border-b [&_tr]:border-dashed [&_tr]:border-border/40">
-                  {addonLines.map((li) => {
-                    const qRaw = addonQty[li.id] ?? effectivePricingLineQuantity(li);
-                    const hidden = Boolean(li.optional && addonOptOff[li.id]);
-                    const lineTotal = Math.round(li.unitAmountMinor * qRaw);
-                    return (
-                      <tr key={li.id} className={cn("transition-opacity", hidden && "opacity-40")}>
-                        <td className="px-4 py-3 !text-left align-middle">
-                          <div className="flex min-w-0 w-full flex-col items-start gap-1 text-left">
-                            <span className="block w-full text-left font-medium text-foreground">{li.label}</span>
-                            {li.optional ? (
-                              <label className="flex cursor-pointer items-center gap-2 text-[12px] text-muted-foreground">
+          <TooltipProvider delayDuration={300}>
+            <div className="overflow-hidden rounded-xl border border-border/70 bg-card text-left shadow-sm">
+              <div
+                className={cn(
+                  "flex flex-wrap items-center gap-3 px-4 py-3",
+                  addonsTableOpen && "border-b border-dashed",
+                )}
+                style={{
+                  backgroundColor: style.primaryColor,
+                  color: totalBarFg,
+                  ...(addonsTableOpen
+                    ? {
+                        borderBottomColor:
+                          totalBarFg === "#ffffff" ? "rgba(255,255,255,0.28)" : "rgba(15,23,42,0.18)",
+                      }
+                    : {}),
+                }}
+              >
+                <p className="min-w-0 flex-1 text-sm font-semibold">{addonsTitle}</p>
+                <div className="flex shrink-0 items-center gap-3">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        id="packages-addons-toggle"
+                        aria-expanded={addonsTableOpen}
+                        aria-controls="packages-addons-table"
+                        onClick={() => setAddonsTableOpen((o) => !o)}
+                        className={cn(
+                          "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-colors",
+                          totalBarFg === "#ffffff"
+                            ? "border-white/35 bg-white/10 hover:bg-white/18"
+                            : "border-foreground/15 bg-foreground/[0.06] hover:bg-foreground/10",
+                        )}
+                        style={{ color: totalBarFg }}
+                      >
+                        <ChevronDown
+                          className={cn(
+                            "h-4 w-4 transition-transform duration-200",
+                            !addonsTableOpen && "-rotate-180",
+                          )}
+                          aria-hidden
+                        />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      {addonsTableOpen ? "Close section" : "Open section"}
+                    </TooltipContent>
+                  </Tooltip>
+                  <div className="text-right">
+                    <p className="block text-[10px] font-semibold uppercase tracking-wide opacity-90">Subtotal</p>
+                    <p className="mt-0.5 text-lg font-semibold tabular-nums leading-none">
+                      {formatCurrencyAmount(addonsSubtotalMinor, currency)}
+                      <span className="ml-1 text-xs font-medium opacity-90">/ mo</span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div
+                id="packages-addons-table"
+                hidden={!addonsTableOpen}
+                className="overflow-x-auto bg-card text-left"
+              >
+                <table className="w-full min-w-[320px] text-left text-sm [&_thead_th:first-child]:!text-left [&_tbody_td:first-child]:!text-left">
+                  <thead>
+                    <tr className="border-b border-dashed border-border/50 bg-card text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                      <th className="px-4 py-2.5 !text-left">Description</th>
+                      <th className="px-4 py-2.5 text-right">Item</th>
+                      {allowAddonEdit ? <th className="px-4 py-2.5 text-right">Quantity</th> : null}
+                      <th className="px-4 py-2.5 text-right">Price</th>
+                    </tr>
+                  </thead>
+                  <tbody className="[&_tr]:border-b [&_tr]:border-dashed [&_tr]:border-border/40">
+                    {addonLines.map((li) => {
+                      const qRaw = addonQty[li.id] ?? effectivePricingLineQuantity(li);
+                      const hidden = Boolean(li.optional && addonOptOff[li.id]);
+                      const lineTotal = Math.round(li.unitAmountMinor * qRaw);
+                      return (
+                        <tr key={li.id} className={cn("transition-opacity", hidden && "opacity-40")}>
+                          <td className="px-4 py-3 !text-left align-middle">
+                            <div className="flex min-w-0 w-full flex-col items-start gap-1 text-left">
+                              <span className="block w-full text-left font-medium text-foreground">{li.label}</span>
+                              {li.optional ? (
+                                <label className="flex cursor-pointer items-center gap-2 text-[12px] text-muted-foreground">
+                                  <input
+                                    type="checkbox"
+                                    className="h-3.5 w-3.5 rounded border-border accent-primary"
+                                    checked={!addonOptOff[li.id]}
+                                    disabled={!interactive || !selectedTierId}
+                                    onChange={(e) => {
+                                      const on = e.target.checked;
+                                      setAddonOptOff((prev) => ({ ...prev, [li.id]: !on }));
+                                      if (interactive && shareToken && selectedTierId) {
+                                        void flushAddonsToServer(
+                                          addonQty,
+                                          { ...addonOptOff, [li.id]: !on },
+                                        );
+                                      }
+                                    }}
+                                  />
+                                  Include add-on
+                                </label>
+                              ) : null}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-right align-middle tabular-nums text-muted-foreground">
+                            {formatCurrencyAmount(li.unitAmountMinor, currency)}
+                          </td>
+                          {allowAddonEdit ? (
+                            <td className="px-4 py-3 text-right align-middle">
+                              <span className="inline-flex items-center justify-end gap-1.5 tabular-nums">
                                 <input
-                                  type="checkbox"
-                                  className="h-3.5 w-3.5 rounded border-border accent-primary"
-                                  checked={!addonOptOff[li.id]}
-                                  disabled={!interactive || !selectedTierId}
+                                  type="number"
+                                  min={0}
+                                  step={1}
+                                  disabled={hidden || !interactive || !selectedTierId}
+                                  className="w-14 rounded-md border border-border/60 bg-background px-2 py-1 text-right text-foreground outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/25"
+                                  value={qRaw}
                                   onChange={(e) => {
-                                    const on = e.target.checked;
-                                    setAddonOptOff((prev) => ({ ...prev, [li.id]: !on }));
-                                    if (interactive && shareToken && selectedTierId) {
-                                      void flushAddonsToServer(
-                                        addonQty,
-                                        { ...addonOptOff, [li.id]: !on },
-                                      );
-                                    }
+                                    const n = Number(e.target.value);
+                                    if (!Number.isFinite(n) || n < 0) return;
+                                    setAddonQty((prev) => ({ ...prev, [li.id]: Math.floor(n) }));
+                                  }}
+                                  onBlur={() => {
+                                    void flushAddonsToServer();
                                   }}
                                 />
-                                Include add-on
-                              </label>
-                            ) : null}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-right align-middle tabular-nums text-muted-foreground">
-                          {formatCurrencyAmount(li.unitAmountMinor, currency)}
-                        </td>
-                        {allowAddonEdit ? (
-                          <td className="px-4 py-3 text-right align-middle">
-                            <span className="inline-flex items-center justify-end gap-1.5 tabular-nums">
-                              <input
-                                type="number"
-                                min={0}
-                                step={1}
-                                disabled={hidden || !interactive || !selectedTierId}
-                                className="w-14 rounded-md border border-border/60 bg-background px-2 py-1 text-right text-foreground outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/25"
-                                value={qRaw}
-                                onChange={(e) => {
-                                  const n = Number(e.target.value);
-                                  if (!Number.isFinite(n) || n < 0) return;
-                                  setAddonQty((prev) => ({ ...prev, [li.id]: Math.floor(n) }));
-                                }}
-                                onBlur={() => {
-                                  void flushAddonsToServer();
-                                }}
-                              />
-                              <span className="text-xs text-muted-foreground">{qtyUnit}</span>
-                            </span>
+                                <span className="text-xs text-muted-foreground">{qtyUnit}</span>
+                              </span>
+                            </td>
+                          ) : null}
+                          <td className="px-4 py-3 text-right align-middle tabular-nums font-medium text-foreground">
+                            {hidden ? "—" : formatCurrencyAmount(lineTotal, currency)}
                           </td>
-                        ) : null}
-                        <td className="px-4 py-3 text-right align-middle tabular-nums font-medium text-foreground">
-                          {hidden ? "—" : formatCurrencyAmount(lineTotal, currency)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-                <tfoot>
-                  <tr
-                    className="border-t border-dashed"
-                    style={{
-                      backgroundColor: style.primaryColor,
-                      color: totalBarFg,
-                      borderTopColor: totalBarFg === "#ffffff" ? "rgba(255,255,255,0.28)" : "rgba(15,23,42,0.18)",
-                    }}
-                  >
-                    <td
-                      colSpan={allowAddonEdit ? 3 : 2}
-                      className="px-4 py-3 !text-left align-middle text-[11px] font-semibold uppercase tracking-wide opacity-90"
-                    >
-                      Monthly subtotal
-                    </td>
-                    <td className="px-4 py-3 text-right align-middle tabular-nums font-semibold">
-                      <span className="text-base">{formatCurrencyAmount(addonsSubtotalMinor, currency)}</span>
-                      <span className="ml-1 text-[10px] font-medium opacity-90">/ mo</span>
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
+          </TooltipProvider>
           {!selectedTierId && interactive ? (
             <p className="mt-2 text-[11px] text-muted-foreground">
               Select a plan above to configure add-ons and save your choices.

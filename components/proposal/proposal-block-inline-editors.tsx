@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, Plus, Sparkles, TableProperties, X } from "lucide-react";
+import { Check, ChevronDown, Plus, Sparkles, TableProperties, X } from "lucide-react";
 import type {
   PackageTier,
   PackagesBlock,
@@ -32,6 +32,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 function newId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `b-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -279,6 +280,7 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
   const tiers = block.tiers ?? [];
   const currency = (block.currency ?? "aud").toUpperCase();
   const [term, setTerm] = React.useState<"12_months" | "24_months">("24_months");
+  const [addonsSectionOpen, setAddonsSectionOpen] = React.useState(true);
   const style = resolveBlockStyle(block.style);
   const isVisual = style.variant === "visual";
 
@@ -503,187 +505,209 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
           </DropdownMenu>
         </div>
       ) : (
-        <div className="mt-8 overflow-hidden rounded-xl border border-border/70 bg-card text-left shadow-sm">
-          <div
-            className="flex flex-wrap items-center gap-3 rounded-t-xl border-b border-dashed px-4 py-3"
-            style={{ ...headerSimpleSolid, borderBottomColor: headerSimpleDividerColor }}
-          >
-            <div className="min-w-0 flex-1">
-              <InlineText
-                tone="dark"
-                value={block.addonsTitle ?? ""}
-                placeholder="Add-ons"
-                onChange={(v) => patch({ addonsTitle: v || undefined })}
-                ariaLabel="Add-ons section title"
-                className="text-base font-semibold"
-                inputClassName="w-full text-base font-semibold"
-              />
+        <TooltipProvider delayDuration={300}>
+          <div className="mt-8 overflow-hidden rounded-xl border border-border/70 bg-card text-left shadow-sm">
+            <div
+              className={cn(
+                "flex flex-wrap items-center gap-3 rounded-t-xl px-4 py-3",
+                addonsSectionOpen && "border-b border-dashed",
+              )}
+              style={{ ...headerSimpleSolid, borderBottomColor: headerSimpleDividerColor }}
+            >
+              <div className="min-w-0 flex-1">
+                <InlineText
+                  tone="dark"
+                  value={block.addonsTitle ?? ""}
+                  placeholder="Add-ons"
+                  onChange={(v) => patch({ addonsTitle: v || undefined })}
+                  ariaLabel="Add-ons section title"
+                  className="text-base font-semibold"
+                  inputClassName="w-full text-base font-semibold"
+                />
+              </div>
+              <div className="flex shrink-0 items-center gap-3">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      aria-expanded={addonsSectionOpen}
+                      aria-controls="packages-inline-addons-table"
+                      onClick={() => setAddonsSectionOpen((o) => !o)}
+                      className={cn(
+                        "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-colors",
+                        headerBarFg === "#ffffff"
+                          ? "border-white/35 bg-white/10 hover:bg-white/18"
+                          : "border-foreground/15 bg-foreground/[0.06] hover:bg-foreground/10",
+                      )}
+                      style={{ color: headerBarFg }}
+                    >
+                      <ChevronDown
+                        className={cn(
+                          "h-4 w-4 transition-transform duration-200",
+                          !addonsSectionOpen && "-rotate-180",
+                        )}
+                        aria-hidden
+                      />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">
+                    {addonsSectionOpen ? "Close section" : "Open section"}
+                  </TooltipContent>
+                </Tooltip>
+                <div className="text-right" style={{ color: headerBarFg }}>
+                  <span className="block text-[10px] font-semibold uppercase tracking-wide opacity-90">Subtotal</span>
+                  <div className="mt-0.5 text-lg font-semibold tabular-nums leading-none">
+                    {formatCurrencyAmount(addonsPreviewMinor, currency)}
+                    <span className="ml-1 text-xs font-medium opacity-90">/ mo</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div id="packages-inline-addons-table" hidden={!addonsSectionOpen}>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-dashed border-border/50 bg-muted/10 px-4 py-2 text-[11px]">
+                <label className="flex cursor-pointer items-center gap-1.5 text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    checked={editableAddonQty}
+                    onChange={(e) => patch({ allowAddonQuantityEdit: e.target.checked })}
+                    className="h-3 w-3 accent-primary"
+                  />
+                  Editable qty
+                </label>
+                <div className="flex flex-1 flex-wrap items-center gap-2 sm:justify-end">
+                  <span className="text-muted-foreground">Qty label</span>
+                  <Input
+                    value={addonQtyUnitDraft}
+                    onChange={(e) =>
+                      patch({
+                        addonQuantityUnitLabel: e.target.value.trim()
+                          ? e.target.value.trim().slice(0, 40)
+                          : undefined,
+                      })
+                    }
+                    placeholder="Unit"
+                    className="h-8 w-28 bg-background text-xs"
+                    aria-label="Add-on quantity suffix"
+                  />
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-muted-foreground">Summary label</span>
+                  <Input
+                    value={block.totalSectionLabel ?? ""}
+                    onChange={(e) =>
+                      patch({
+                        totalSectionLabel: e.target.value.trim() ? e.target.value.trim().slice(0, 120) : undefined,
+                      })
+                    }
+                    placeholder="Total"
+                    className="h-8 w-32 bg-background text-xs"
+                    aria-label="Packages summary bar title"
+                  />
+                </div>
+              </div>
+              <div className="overflow-x-auto bg-card text-left">
+                <table className="w-full min-w-[480px] text-left text-sm">
+                    <thead>
+                      <tr className="border-b border-dashed border-border/50 bg-card text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                        <th className="px-4 py-2.5 text-left">Description</th>
+                        <th className="px-4 py-2.5 text-right">Item</th>
+                        {editableAddonQty ? <th className="px-4 py-2.5 text-right">Quantity</th> : null}
+                        <th className="px-4 py-2.5 text-right">Price</th>
+                        <th className="w-8 px-2 py-2.5" />
+                      </tr>
+                    </thead>
+                    <tbody className="[&_tr]:border-b [&_tr]:border-dashed [&_tr]:border-border/40">
+                      {addonLineItems.map((li) => {
+                        const q = effectivePricingLineQuantity(li);
+                        const lineTotal = Math.round(li.unitAmountMinor * q);
+                        const qtyProps = editableAddonQty
+                          ? {
+                              tone: "light" as const,
+                              value: q,
+                              min: 0,
+                              step: 1,
+                              width: "w-16" as const,
+                              onChange: (v: number) => patchAddonLine(li.id, { quantity: v }),
+                              ariaLabel: "Default quantity" as const,
+                              className: "text-foreground" as const,
+                            }
+                          : null;
+                        return (
+                          <tr key={li.id} className="group/row">
+                            <td className="px-4 py-3 text-left align-middle">
+                              <div className="flex flex-col items-start gap-1">
+                                <InlineText
+                                  tone="light"
+                                  value={li.label}
+                                  placeholder="Add-on label"
+                                  onChange={(v) => patchAddonLine(li.id, { label: v })}
+                                  ariaLabel="Add-on label"
+                                  className="font-medium text-foreground"
+                                  inputClassName="w-full font-medium text-foreground"
+                                />
+                                <label className="flex cursor-pointer items-center gap-2 text-[11px] text-muted-foreground">
+                                  <input
+                                    type="checkbox"
+                                    checked={Boolean(li.optional)}
+                                    onChange={(e) => patchAddonLine(li.id, { optional: e.target.checked })}
+                                    className="h-3 w-3 accent-primary"
+                                  />
+                                  Optional (buyer can turn off)
+                                </label>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-right align-middle tabular-nums text-muted-foreground">
+                              <InlinePrice
+                                tone="light"
+                                minor={li.unitAmountMinor}
+                                currency={currency}
+                                onChange={(v) => patchAddonLine(li.id, { unitAmountMinor: v })}
+                                ariaLabel="Unit price"
+                                className="text-muted-foreground"
+                              />
+                            </td>
+                            {qtyProps ? (
+                              <td className="px-4 py-3 text-right align-middle">
+                                <span className="inline-flex items-center justify-end gap-1.5 tabular-nums">
+                                  <InlineNumber {...qtyProps} />
+                                  <span className="text-xs text-muted-foreground">{addonQtyUnitDraft}</span>
+                                </span>
+                              </td>
+                            ) : null}
+                            <td className="px-4 py-3 text-right align-middle tabular-nums font-medium text-foreground">
+                              {formatCurrencyAmount(lineTotal, currency)}
+                            </td>
+                            <td className="px-2 py-3 text-right align-middle">
+                              <button
+                                type="button"
+                                onClick={() => removeAddonLine(li.id)}
+                                aria-label="Remove add-on"
+                                className="rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover/row:opacity-100"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      <tr>
+                        <td colSpan={editableAddonQty ? 5 : 4} className="px-4 py-2">
+                          <button
+                            type="button"
+                            onClick={addAddonLine}
+                            className="flex w-full items-center gap-2 rounded-md border border-dashed border-border bg-transparent px-2 py-1.5 text-left text-sm text-muted-foreground transition-colors hover:border-primary/60 hover:bg-muted/30 hover:text-foreground"
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                            Add add-on line
+                          </button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+              </div>
             </div>
           </div>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-dashed border-border/50 bg-muted/10 px-4 py-2 text-[11px]">
-          <label className="flex cursor-pointer items-center gap-1.5 text-muted-foreground">
-            <input
-              type="checkbox"
-              checked={editableAddonQty}
-              onChange={(e) => patch({ allowAddonQuantityEdit: e.target.checked })}
-              className="h-3 w-3 accent-primary"
-            />
-            Editable qty
-          </label>
-          <div className="flex flex-1 flex-wrap items-center gap-2 sm:justify-end">
-            <span className="text-muted-foreground">Qty label</span>
-            <Input
-              value={addonQtyUnitDraft}
-              onChange={(e) =>
-                patch({
-                  addonQuantityUnitLabel: e.target.value.trim()
-                    ? e.target.value.trim().slice(0, 40)
-                    : undefined,
-                })
-              }
-              placeholder="Unit"
-              className="h-8 w-28 bg-background text-xs"
-              aria-label="Add-on quantity suffix"
-            />
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-muted-foreground">Summary label</span>
-            <Input
-              value={block.totalSectionLabel ?? ""}
-              onChange={(e) =>
-                patch({
-                  totalSectionLabel: e.target.value.trim() ? e.target.value.trim().slice(0, 120) : undefined,
-                })
-              }
-              placeholder="Total"
-              className="h-8 w-32 bg-background text-xs"
-              aria-label="Packages summary bar title"
-            />
-          </div>
-        </div>
-        <div className="overflow-x-auto bg-card text-left">
-          <table className="w-full min-w-[480px] text-left text-sm">
-            <thead>
-              <tr className="border-b border-dashed border-border/50 bg-card text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                <th className="px-4 py-2.5 text-left">Description</th>
-                <th className="px-4 py-2.5 text-right">Item</th>
-                {editableAddonQty ? <th className="px-4 py-2.5 text-right">Quantity</th> : null}
-                <th className="px-4 py-2.5 text-right">Price</th>
-                <th className="w-8 px-2 py-2.5" />
-              </tr>
-            </thead>
-            <tbody className="[&_tr]:border-b [&_tr]:border-dashed [&_tr]:border-border/40">
-              {addonLineItems.map((li) => {
-                const q = effectivePricingLineQuantity(li);
-                const lineTotal = Math.round(li.unitAmountMinor * q);
-                const qtyProps = editableAddonQty
-                  ? {
-                      tone: "light" as const,
-                      value: q,
-                      min: 0,
-                      step: 1,
-                      width: "w-16" as const,
-                      onChange: (v: number) => patchAddonLine(li.id, { quantity: v }),
-                      ariaLabel: "Default quantity" as const,
-                      className: "text-foreground" as const,
-                    }
-                  : null;
-                return (
-                  <tr key={li.id} className="group/row">
-                    <td className="px-4 py-3 text-left align-middle">
-                      <div className="flex flex-col items-start gap-1">
-                        <InlineText
-                          tone="light"
-                          value={li.label}
-                          placeholder="Add-on label"
-                          onChange={(v) => patchAddonLine(li.id, { label: v })}
-                          ariaLabel="Add-on label"
-                          className="font-medium text-foreground"
-                          inputClassName="w-full font-medium text-foreground"
-                        />
-                        <label className="flex cursor-pointer items-center gap-2 text-[11px] text-muted-foreground">
-                          <input
-                            type="checkbox"
-                            checked={Boolean(li.optional)}
-                            onChange={(e) => patchAddonLine(li.id, { optional: e.target.checked })}
-                            className="h-3 w-3 accent-primary"
-                          />
-                          Optional (buyer can turn off)
-                        </label>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-right align-middle tabular-nums text-muted-foreground">
-                      <InlinePrice
-                        tone="light"
-                        minor={li.unitAmountMinor}
-                        currency={currency}
-                        onChange={(v) => patchAddonLine(li.id, { unitAmountMinor: v })}
-                        ariaLabel="Unit price"
-                        className="text-muted-foreground"
-                      />
-                    </td>
-                    {qtyProps ? (
-                      <td className="px-4 py-3 text-right align-middle">
-                        <span className="inline-flex items-center justify-end gap-1.5 tabular-nums">
-                          <InlineNumber {...qtyProps} />
-                          <span className="text-xs text-muted-foreground">{addonQtyUnitDraft}</span>
-                        </span>
-                      </td>
-                    ) : null}
-                    <td className="px-4 py-3 text-right align-middle tabular-nums font-medium text-foreground">
-                      {formatCurrencyAmount(lineTotal, currency)}
-                    </td>
-                    <td className="px-2 py-3 text-right align-middle">
-                      <button
-                        type="button"
-                        onClick={() => removeAddonLine(li.id)}
-                        aria-label="Remove add-on"
-                        className="rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover/row:opacity-100"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-              <tr>
-                <td colSpan={editableAddonQty ? 5 : 4} className="px-4 py-2">
-                  <button
-                    type="button"
-                    onClick={addAddonLine}
-                    className="flex w-full items-center gap-2 rounded-md border border-dashed border-border bg-transparent px-2 py-1.5 text-left text-sm text-muted-foreground transition-colors hover:border-primary/60 hover:bg-muted/30 hover:text-foreground"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    Add add-on line
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-            <tfoot>
-              <tr
-                className="border-t border-dashed"
-                style={{ ...headerSimpleSolid, borderTopColor: headerSimpleDividerColor }}
-              >
-                <td
-                  colSpan={editableAddonQty ? 3 : 2}
-                  className="px-4 py-3 text-left align-middle text-[11px] font-semibold uppercase tracking-wide opacity-90"
-                  style={{ color: headerBarFg }}
-                >
-                  Monthly subtotal
-                </td>
-                <td
-                  className="px-4 py-3 text-right align-middle tabular-nums font-semibold"
-                  style={{ color: headerBarFg }}
-                >
-                  <span className="text-lg leading-none">{formatCurrencyAmount(addonsPreviewMinor, currency)}</span>
-                  <span className="ml-1 text-xs font-medium opacity-90">/ mo</span>
-                </td>
-                <td className="w-8 px-2 py-3" style={{ ...headerSimpleSolid }} />
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      </div>
+        </TooltipProvider>
       )}
 
       <div
