@@ -17,6 +17,7 @@ import {
   AlignLeft,
   AlignRight,
   Bold,
+  Braces,
   ChevronDown,
   ChevronUp,
   Italic,
@@ -29,6 +30,7 @@ import {
   Underline as UnderlineIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PROPOSAL_MERGE_TOKEN_CHOICES } from "@/lib/proposal-template-tokens";
 import { useProposalSectionEditorChrome } from "@/components/proposal/proposal-section-editor-chrome";
 
 declare module "@tiptap/core" {
@@ -393,6 +395,92 @@ function AlignmentPicker({ editor }: { editor: Editor }) {
   );
 }
 
+function MergeFieldMenu({
+  editor,
+  seamlessBright,
+  compact,
+}: {
+  editor: Editor;
+  /** Hero / seamless section chrome — light foreground on tinted band. */
+  seamlessBright?: boolean;
+  /** Icon-sized trigger for nested toolbars (e.g. BubbleMenu). */
+  compact?: boolean;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const rootRef = React.useRef<HTMLDivElement>(null);
+  useCloseBubbleToolbarMenu(open, setOpen, rootRef);
+
+  const shellBtn = compact
+    ? "inline-flex h-7 w-7 items-center justify-center rounded border-zinc-600 bg-transparent text-zinc-300 hover:bg-white/10 hover:text-white"
+    : seamlessBright
+      ? "border-white/25 bg-white/[0.08] text-white/90 hover:bg-white/15 hover:text-white"
+      : "border-border/70 bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground";
+
+  function insert(snippet: string) {
+    editor.chain().focus().insertContent(snippet).run();
+    setOpen(false);
+  }
+
+  return (
+    <div className="relative" ref={rootRef}>
+      <button
+        type="button"
+        onPointerDown={(e) => {
+          e.preventDefault();
+          setOpen((v) => !v);
+        }}
+        aria-label="Insert merge field"
+        aria-expanded={open}
+        aria-haspopup="menu"
+        className={cn(
+          !compact &&
+            "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[12px] font-medium transition-colors",
+          compact && shellBtn,
+          !compact && shellBtn,
+        )}
+      >
+        <Braces className={cn("shrink-0 opacity-90", compact ? "h-4 w-4" : "h-3.5 w-3.5 opacity-80")} aria-hidden />
+        {compact ? null : (
+          <>
+            <span className="whitespace-nowrap">Merge field</span>
+            <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
+          </>
+        )}
+      </button>
+      {open ? (
+        <div
+          role="menu"
+          className={cn(BUBBLE_MENU_PANEL_CLASS, "left-auto right-0 min-w-[260px]")}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <div className="border-b border-white/10 px-2 pb-2 pt-1">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">CRM merge tokens</p>
+            <p className="mt-1 text-[11px] leading-snug text-zinc-400">
+              Insert placeholders — replaced when generating a proposal from a customer or opportunity.
+            </p>
+          </div>
+          <div className="max-h-[min(50vh,20rem)] overflow-y-auto p-1">
+            {PROPOSAL_MERGE_TOKEN_CHOICES.map((opt) => (
+              <button
+                key={opt.insert}
+                type="button"
+                role="menuitem"
+                className="flex w-full flex-col items-start rounded px-2 py-1.5 text-left outline-none hover:bg-white/10 focus-visible:bg-white/10"
+                onPointerDown={(e) => e.preventDefault()}
+                onClick={() => insert(opt.insert)}
+              >
+                <span className="text-[13px] font-medium leading-tight text-zinc-100">{opt.label}</span>
+                <code className="mt-0.5 text-[11px] text-sky-300/90">{opt.insert}</code>
+                {opt.hint ? <span className="mt-1 text-[10px] leading-snug text-zinc-500">{opt.hint}</span> : null}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function LinkButton({ editor }: { editor: Editor }) {
   const active = editor.isActive("link");
   return (
@@ -582,6 +670,8 @@ export function ProposalRichText({
           <ToolbarDivider />
           <AlignmentPicker editor={editor} />
           <LinkButton editor={editor} />
+          <ToolbarDivider />
+          <MergeFieldMenu editor={editor} compact />
           <ToolbarButton
             ariaLabel="Image from URL"
             onClick={() => {
@@ -618,6 +708,9 @@ export function ProposalRichText({
           </ToolbarButton>
         </div>
       </BubbleMenu>
+      <div className="flex justify-end px-3 pb-1.5 pt-1 sm:px-4">
+        <MergeFieldMenu editor={editor} seamlessBright={seamless && prefersLight} />
+      </div>
       <EditorContent editor={editor} />
     </div>
   );

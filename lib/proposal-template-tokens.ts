@@ -47,6 +47,21 @@ export function replaceProposalTokens(text: string, ctx: ProposalTokenContext): 
   return out;
 }
 
+/** Merge tokens for the proposal editor (`insert` must stay in sync with replaceProposalTokens). */
+export const PROPOSAL_MERGE_TOKEN_CHOICES: readonly {
+  readonly insert: string;
+  readonly label: string;
+  readonly hint?: string;
+}[] = [
+  { insert: "{{name}}", label: "Contact name", hint: "Customer name from CRM" },
+  { insert: "{{client}}", label: "Client", hint: "Synonym for contact name — e.g. “For {{client}}”" },
+  { insert: "{{email}}", label: "Email" },
+  { insert: "{{company}}", label: "Company" },
+  { insert: "{{opportunity}}", label: "Opportunity title" },
+  { insert: "{{deal_amount}}", label: "Deal amount", hint: "Formatted when merging from an opportunity" },
+  { insert: "{{date}}", label: "Date", hint: "Long date when the proposal is merged" },
+];
+
 function mapContentBlock(block: ProposalContentBlock, ctx: ProposalTokenContext): ProposalContentBlock {
   switch (block.type) {
     case "splash":
