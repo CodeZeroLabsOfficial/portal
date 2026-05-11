@@ -2,7 +2,27 @@
  * Columns block layout helpers — widths as CSS Grid `fr` tracks.
  */
 
-import type { ColumnsBlockGapPreset, ColumnsBlockRowAlign } from "@/types/proposal";
+import type { ColumnsBlockGapPreset, ColumnsBlockRowAlign, ProposalColumnChildBlock } from "@/types/proposal";
+
+/** Supported column counts for a Columns block (Firestore + editor). */
+export type ColumnLayoutCount = 2 | 3 | 4;
+
+/** Grow or shrink column stacks, merging overflow into the last kept column. */
+export function resizeColumnStacks(
+  stacks: ProposalColumnChildBlock[][],
+  nextCount: ColumnLayoutCount,
+): ProposalColumnChildBlock[][] {
+  if (stacks.length === nextCount) return stacks;
+  if (nextCount > stacks.length) {
+    return [...stacks, ...Array.from({ length: nextCount - stacks.length }, () => [])];
+  }
+  const head = stacks.slice(0, nextCount);
+  const tailMerged = stacks.slice(nextCount).flat();
+  if (tailMerged.length === 0) return head;
+  const next = head.map((s) => [...s]);
+  next[nextCount - 1] = [...next[nextCount - 1], ...tailMerged];
+  return next;
+}
 
 export const PROPOSAL_COLUMN_FR_MIN = 0.12;
 export const PROPOSAL_COLUMN_FR_MAX = 24;
@@ -28,6 +48,30 @@ export function coerceColumnFlex(columnCount: number, flex: number[] | undefined
     return flex.map((x) => clampFr(x));
   }
   return Array.from({ length: columnCount }, () => 1);
+}
+
+/**
+ * Integer percentages (sum 100) from flex weights — for editor labels next to
+ * column resize handles. Uses largest-remainder so totals stay exact.
+ */
+export function columnFlexPercents(weights: number[]): number[] {
+  const n = weights.length;
+  if (n === 0) return [];
+  const sum = weights.reduce((a, b) => a + b, 0);
+  if (!(sum > 0)) {
+    const q = Math.floor(100 / n);
+    const r = 100 - q * n;
+    return weights.map((_, i) => q + (i < r ? 1 : 0));
+  }
+  const exact = weights.map((w) => (w / sum) * 100);
+  const floors = exact.map((x) => Math.floor(x));
+  let rem = 100 - floors.reduce((a, b) => a + b, 0);
+  const order = exact.map((x, i) => ({ i, r: x - floors[i] })).sort((a, b) => b.r - a.r);
+  const out = [...floors];
+  for (let k = 0; k < rem; k++) {
+    out[order[k % order.length].i]++;
+  }
+  return out;
 }
 
 export function clampFr(x: number): number {

@@ -18,7 +18,14 @@ export interface ProposalTokenContext {
   mergedAt?: Date;
 }
 
-/** Replace merge tokens in strings (case-insensitive): `{{name}}`, `{{client}}` (same as name), `{{email}}`, `{{company}}`, `{{opportunity}}`, `{{deal_amount}}`, `{{date}}`. */
+function firstNameFromFullName(fullName: string): string {
+  const t = fullName.trim();
+  if (!t) return "";
+  const [first] = t.split(/\s+/);
+  return first ?? "";
+}
+
+/** Replace merge tokens in strings (case-insensitive): `{{name}}`, `{{first_name}}`, `{{client}}` (same as name), `{{email}}`, `{{company}}`, `{{opportunity}}`, `{{deal_amount}}`, `{{date}}`. */
 export function replaceProposalTokens(text: string, ctx: ProposalTokenContext): string {
   const { customer, opportunity } = ctx;
   const at = ctx.mergedAt ?? new Date();
@@ -35,8 +42,10 @@ export function replaceProposalTokens(text: string, ctx: ProposalTokenContext): 
   }
 
   const name = customer.name?.trim() ?? "";
+  const firstName = firstNameFromFullName(name);
   const vars: Record<string, string> = {
     name,
+    first_name: firstName,
     /** Common synonym in templates (e.g. “For {{client}}”). */
     client: name,
     email: customer.email?.trim() ?? "",
@@ -60,6 +69,11 @@ export const PROPOSAL_MERGE_TOKEN_CHOICES: readonly {
   readonly hint?: string;
 }[] = [
   { insert: "{{name}}", label: "Contact name", hint: "Customer name from CRM" },
+  {
+    insert: "{{first_name}}",
+    label: "First name",
+    hint: "First word of the contact name — e.g. “Hi {{first_name}}”",
+  },
   { insert: "{{client}}", label: "Client", hint: "Synonym for contact name — e.g. “For {{client}}”" },
   { insert: "{{email}}", label: "Email" },
   { insert: "{{company}}", label: "Company" },

@@ -89,12 +89,13 @@ import { DeleteProposalTemplateButton } from "@/components/proposal/delete-propo
 import { ColumnsBlockLayoutControls } from "@/components/proposal/columns-block-layout-controls";
 import {
   clampFr,
+  ColumnLayoutCount,
   coerceColumnFlex,
+  columnFlexPercents,
   columnsBlockMdGapX,
   columnsBlockMdItemsClass,
   normalizeColumnFlexForStorage,
   PROPOSAL_COLUMN_FR_MIN,
-  resizeColumnFlexWithStacks,
 } from "@/lib/proposal-columns";
 import {
   PROPOSAL_DOCUMENT_COLUMNS_ROW_GAP_CLASSES,
@@ -303,40 +304,12 @@ const LIBRARY_BLOCK_OPTIONS: BlockOption[] = [
   { id: "spacer", type: "spacer", label: "Spacing", icon: MoveVertical, accent: "text-zinc-400", accentBg: "bg-zinc-500/10" },
 ];
 
-type ColumnLayoutCount = 2 | 3 | 4;
-
 function createColumnsBlock(count: ColumnLayoutCount): ColumnsBlock {
   return {
     id: newId(),
     type: "columns",
     stacks: Array.from({ length: count }, () => []),
   };
-}
-
-function resizeColumnStacks(
-  stacks: ProposalColumnChildBlock[][],
-  nextCount: ColumnLayoutCount,
-): ProposalColumnChildBlock[][] {
-  if (stacks.length === nextCount) return stacks;
-  if (nextCount > stacks.length) {
-    return [...stacks, ...Array.from({ length: nextCount - stacks.length }, () => [])];
-  }
-  const head = stacks.slice(0, nextCount);
-  const tailMerged = stacks.slice(nextCount).flat();
-  if (tailMerged.length === 0) return head;
-  const next = head.map((s) => [...s]);
-  next[nextCount - 1] = [...next[nextCount - 1], ...tailMerged];
-  return next;
-}
-
-function ColumnBarsMini({ count, className }: { count: ColumnLayoutCount; className?: string }) {
-  return (
-    <span className={cn("flex h-3.5 items-end gap-0.5", className)} aria-hidden>
-      {Array.from({ length: count }, (_, i) => (
-        <span key={i} className="h-3 w-[3px] shrink-0 rounded-[1px] bg-current opacity-75" />
-      ))}
-    </span>
-  );
 }
 
 function createBlock(type: ProposalBlock["type"]): ProposalBlock {
@@ -651,12 +624,10 @@ function ColumnResizeGrip({
     <div
       role="separator"
       aria-orientation="vertical"
-      className="relative z-10 hidden w-6 shrink-0 select-none touch-none cursor-col-resize md:block"
+      className="relative z-10 hidden w-3 shrink-0 cursor-col-resize select-none touch-none md:block"
       onPointerDown={onPointerDown}
     >
-      <div
-        className="mx-auto flex h-full min-h-[100px] w-full cursor-col-resize items-center justify-center"
-      >
+      <div className="flex h-full min-h-[100px] w-full cursor-col-resize items-center justify-center">
         <div
           className={cn(
             "min-h-[3rem] w-1 rounded-full transition-colors",
@@ -872,50 +843,26 @@ function ColumnsBlockFields({
     );
   }
 
-  const countPicker = (
-    <div className="flex flex-wrap items-center justify-center gap-2">
-      {([2, 3, 4] as const).map((n) => (
-        <Button
-          key={n}
-          type="button"
-          variant={columnCount === n ? "default" : "outline"}
-          size="sm"
-          className="h-10 gap-2 border-border bg-background px-4 shadow-sm"
-          onClick={() => {
-            const nextStacks = resizeColumnStacks(block.stacks, n);
-            const nextFlex = resizeColumnFlexWithStacks(block.columnFlex, columnCount, n);
-            onChange({ ...block, stacks: nextStacks, columnFlex: nextFlex });
-          }}
-        >
-          <ColumnBarsMini count={n} className="text-foreground" />
-          {n} columns
-        </Button>
-      ))}
-    </div>
-  );
-
   const flexRow = coerceColumnFlex(columnCount, block.columnFlex);
+  const flexPercents = resizeMode ? columnFlexPercents(flexRow) : [];
 
   return (
     <div className="space-y-8">
       {allColumnsEmpty ? (
-        <div className="rounded-xl border border-sky-500/35 bg-sky-500/[0.04] px-4 py-5 dark:border-sky-400/30 dark:bg-sky-950/20">
-          <p className="text-center text-sm font-medium text-sky-950 dark:text-sky-100">
-            Choose how many columns to start with
-          </p>
-          <div className="mt-4">{countPicker}</div>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-2 border-b border-border/60 pb-4 sm:flex-row sm:items-center sm:justify-between">
-          <span className="text-xs font-medium text-muted-foreground">Column count</span>
-          {countPicker}
-        </div>
-      )}
+        <p className="rounded-md border border-dashed border-border/55 bg-muted/20 px-3 py-6 text-center text-xs text-muted-foreground">
+          Use <strong className="font-medium text-foreground">Edit columns</strong> in the toolbar to choose how many columns you need, then add blocks in each column.
+        </p>
+      ) : null}
 
       {resizeMode ? (
-        <p className="text-center text-[12px] font-medium text-sky-600 dark:text-sky-300 md:text-left">
-          Drag the blue lines between columns to adjust width — Done when finished.
-        </p>
+        <div className="space-y-1.5">
+          <p className="text-center text-[12px] font-medium text-sky-600 dark:text-sky-300 md:text-left">
+            Drag the blue lines to adjust width — Done when finished.
+          </p>
+          <p className="text-center text-sm font-semibold tracking-tight tabular-nums text-sky-950 dark:text-sky-50 md:text-left">
+            {flexPercents.map((p) => `${p}%`).join(" · ")}
+          </p>
+        </div>
       ) : null}
 
       {(() => {
@@ -924,16 +871,17 @@ function ColumnsBlockFields({
             ? Math.min(64, Math.max(0, Math.round(block.insetPaddingPx)))
             : 0;
         const gapClasses = columnsBlockMdGapX(block.columnGap, columnCount);
+        const gapClassesEffective = resizeMode ? "md:gap-x-0" : gapClasses;
         const itemsClasses = columnsBlockMdItemsClass(block.rowAlign);
         const columnRow = (
           <div
             className={cn(
               "flex flex-col gap-6 md:flex-row",
               PROPOSAL_DOCUMENT_COLUMNS_ROW_GAP_CLASSES,
-              gapClasses,
+              gapClassesEffective,
               itemsClasses,
               resizeMode &&
-                "rounded-xl border-2 border-dashed border-sky-500/55 bg-sky-500/[0.03] px-1 py-2 md:px-2 dark:border-sky-400/50 dark:bg-sky-950/15",
+                "rounded-xl border-2 border-dashed border-sky-500/55 bg-sky-500/[0.03] py-1 dark:border-sky-400/50 dark:bg-sky-950/15",
             )}
           >
             {block.stacks.map((stack, i) => (
@@ -945,7 +893,7 @@ function ColumnsBlockFields({
                   className={cn(
                     "min-w-0 md:min-w-[3.5rem]",
                     resizeMode &&
-                      "rounded-lg border border-sky-400/40 bg-background/60 px-2 py-2 ring-1 ring-sky-500/20 dark:bg-background/40",
+                      "rounded-lg border border-sky-400/40 bg-background/60 py-1 ring-1 ring-sky-500/20 dark:bg-background/40 md:px-0 md:py-1",
                   )}
                   style={{ flex: `${flexRow[i]} 1 0%` } as React.CSSProperties}
                 >
@@ -2144,12 +2092,6 @@ export function ProposalDocumentEditor({
               </Button>
             </div>
           </div>
-          <p className="text-xs text-muted-foreground">
-            The public proposal title matches the template name. Use merge tokens in text and splash blocks: {"{{name}}"}
-            {" / "}
-            {"{{client}}"}, {"{{email}}"}, {"{{company}}"}, {"{{opportunity}}"}, {"{{deal_amount}}"}, {"{{date}}"} when generating from a
-            customer or deal.
-          </p>
           {message ? <span className="block text-sm text-muted-foreground">{message}</span> : null}
         </>
       ) : (
