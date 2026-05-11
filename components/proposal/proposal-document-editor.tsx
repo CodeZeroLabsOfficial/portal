@@ -105,6 +105,9 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
@@ -181,8 +184,9 @@ function cloneBlockWithFreshIds(block: ProposalBlock): ProposalBlock {
       return {
         ...block,
         id: newId(),
-        left: block.left.map((c) => cloneBlockWithFreshIds(c as ProposalBlock) as ProposalColumnChildBlock),
-        right: block.right.map((c) => cloneBlockWithFreshIds(c as ProposalBlock) as ProposalColumnChildBlock),
+        stacks: block.stacks.map((stack) =>
+          stack.map((c) => cloneBlockWithFreshIds(c as ProposalBlock) as ProposalColumnChildBlock),
+        ),
       };
     case "icon":
       return { ...block, id: newId() };
@@ -287,6 +291,42 @@ const LIBRARY_BLOCK_OPTIONS: BlockOption[] = [
   { id: "divider", type: "divider", label: "Divider", icon: SeparatorHorizontal, accent: "text-slate-400", accentBg: "bg-slate-500/10" },
   { id: "spacer", type: "spacer", label: "Spacing", icon: MoveVertical, accent: "text-zinc-400", accentBg: "bg-zinc-500/10" },
 ];
+
+type ColumnLayoutCount = 2 | 3 | 4;
+
+function createColumnsBlock(count: ColumnLayoutCount): ColumnsBlock {
+  return {
+    id: newId(),
+    type: "columns",
+    stacks: Array.from({ length: count }, () => []),
+  };
+}
+
+function resizeColumnStacks(
+  stacks: ProposalColumnChildBlock[][],
+  nextCount: ColumnLayoutCount,
+): ProposalColumnChildBlock[][] {
+  if (stacks.length === nextCount) return stacks;
+  if (nextCount > stacks.length) {
+    return [...stacks, ...Array.from({ length: nextCount - stacks.length }, () => [])];
+  }
+  const head = stacks.slice(0, nextCount);
+  const tailMerged = stacks.slice(nextCount).flat();
+  if (tailMerged.length === 0) return head;
+  const next = head.map((s) => [...s]);
+  next[nextCount - 1] = [...next[nextCount - 1], ...tailMerged];
+  return next;
+}
+
+function ColumnBarsMini({ count, className }: { count: ColumnLayoutCount; className?: string }) {
+  return (
+    <span className={cn("flex h-3.5 items-end gap-0.5", className)} aria-hidden>
+      {Array.from({ length: count }, (_, i) => (
+        <span key={i} className="h-3 w-[3px] shrink-0 rounded-[1px] bg-current opacity-75" />
+      ))}
+    </span>
+  );
+}
 
 function createBlock(type: ProposalBlock["type"]): ProposalBlock {
   const id = newId();
@@ -414,12 +454,7 @@ function createBlock(type: ProposalBlock["type"]): ProposalBlock {
         panels: [{ id: newId(), title: "Question", html: "<p></p>" }],
       };
     case "columns":
-      return {
-        id,
-        type: "columns",
-        left: [],
-        right: [],
-      };
+      return createColumnsBlock(2);
     case "icon":
       return { id, type: "icon", emoji: "✨", label: "" };
     case "section":
@@ -574,21 +609,62 @@ function SectionInsertMenu({
           Content
         </p>
         <div className="pb-1">
-          {SECTION_INSERT_OPTIONS.map((opt) => (
-            <DarkInsertRow key={opt.id} icon={opt.icon} label={opt.label} onPick={() => pick(opt)} />
-          ))}
+          {SECTION_INSERT_OPTIONS.map((opt) => {
+            if (opt.id === "sx-columns") {
+              const ColIcon = opt.icon;
+              return (
+                <DropdownMenuSub key={opt.id}>
+                  <DropdownMenuSubTrigger
+                    className={cn(
+                      "flex w-full cursor-default select-none items-center gap-2 rounded-none px-2.5 py-1.5 text-[13px] text-zinc-100 outline-none focus:bg-white/10 focus:text-white data-[state=open]:bg-white/10",
+                    )}
+                  >
+                    <span className="flex h-5 w-5 items-center justify-center rounded-[5px] bg-white/[0.06] ring-1 ring-white/10">
+                      <ColIcon className="h-3 w-3 text-zinc-100" aria-hidden />
+                    </span>
+                    {opt.label}
+                    <ChevronRight className="ml-auto h-3.5 w-3.5 shrink-0 text-zinc-500" aria-hidden />
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent
+                    sideOffset={4}
+                    className="z-50 min-w-[11rem] overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950 p-0.5 text-zinc-100 shadow-xl"
+                  >
+                    {([2, 3, 4] as const).map((n) => (
+                      <DropdownMenuItem
+                        key={n}
+                        className="cursor-pointer gap-2 rounded-md px-2.5 py-1.5 text-[13px] text-zinc-100 focus:bg-white/10 focus:text-white"
+                        onClick={(e: React.MouseEvent) => {
+                          e.preventDefault();
+                          onAdd(createColumnsBlock(n));
+                          setOpen(false);
+                        }}
+                        onSelect={(e: Event) => e.preventDefault()}
+                      >
+                        <ColumnBarsMini count={n} className="text-zinc-300" />
+                        {n} columns
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+              );
+            }
+            return <DarkInsertRow key={opt.id} icon={opt.icon} label={opt.label} onPick={() => pick(opt)} />;
+          })}
         </div>
       </DropdownMenuContent>
     </DropdownMenu>
   );
 }
 
-function patchColumnStacks(
+function patchColumnStackAtIndex(
   cols: ColumnsBlock,
-  side: "left" | "right",
+  columnIndex: number,
   stack: ProposalColumnChildBlock[],
 ): ColumnsBlock {
-  return side === "left" ? { ...cols, left: stack } : { ...cols, right: stack };
+  return {
+    ...cols,
+    stacks: cols.stacks.map((s, i) => (i === columnIndex ? stack : s)),
+  };
 }
 
 function NestedColumnBlockFields({
@@ -644,17 +720,20 @@ function ColumnsBlockFields({
   block: ColumnsBlock;
   onChange: (next: ColumnsBlock) => void;
 }) {
+  const columnCount = block.stacks.length as ColumnLayoutCount;
+  const allColumnsEmpty = block.stacks.every((s) => s.length === 0);
+
   function ColumnPane({
     label,
-    side,
+    columnIndex,
     stack,
   }: {
     label: string;
-    side: "left" | "right";
+    columnIndex: number;
     stack: ProposalColumnChildBlock[];
   }) {
     function setStack(next: ProposalColumnChildBlock[]) {
-      onChange(patchColumnStacks(block, side, next));
+      onChange(patchColumnStackAtIndex(block, columnIndex, next));
     }
     function addToEnd(insert: ProposalBlock) {
       const n = [...stack];
@@ -725,11 +804,50 @@ function ColumnsBlockFields({
     );
   }
 
+  const countPicker = (
+    <div className="flex flex-wrap items-center justify-center gap-2">
+      {([2, 3, 4] as const).map((n) => (
+        <Button
+          key={n}
+          type="button"
+          variant={columnCount === n ? "default" : "outline"}
+          size="sm"
+          className="h-10 gap-2 border-border bg-background px-4 shadow-sm"
+          onClick={() => onChange({ ...block, stacks: resizeColumnStacks(block.stacks, n) })}
+        >
+          <ColumnBarsMini count={n} className="text-foreground" />
+          {n} columns
+        </Button>
+      ))}
+    </div>
+  );
+
   return (
-    <div className="space-y-8 md:space-y-0">
-      <div className="grid gap-10 md:grid-cols-2 md:gap-14">
-        <ColumnPane label="Left column" side="left" stack={block.left} />
-        <ColumnPane label="Right column" side="right" stack={block.right} />
+    <div className="space-y-8">
+      {allColumnsEmpty ? (
+        <div className="rounded-xl border border-sky-500/35 bg-sky-500/[0.04] px-4 py-5 dark:border-sky-400/30 dark:bg-sky-950/20">
+          <p className="text-center text-sm font-medium text-sky-950 dark:text-sky-100">
+            Choose how many columns to start with
+          </p>
+          <div className="mt-4">{countPicker}</div>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2 border-b border-border/60 pb-4 sm:flex-row sm:items-center sm:justify-between">
+          <span className="text-xs font-medium text-muted-foreground">Column count</span>
+          {countPicker}
+        </div>
+      )}
+      <div
+        className={cn(
+          "grid gap-10 md:gap-12",
+          columnCount === 2 && "md:grid-cols-2",
+          columnCount === 3 && "md:grid-cols-3",
+          columnCount === 4 && "md:grid-cols-4",
+        )}
+      >
+        {block.stacks.map((stack, i) => (
+          <ColumnPane key={i} label={`Column ${i + 1}`} columnIndex={i} stack={stack} />
+        ))}
       </div>
     </div>
   );
@@ -1701,11 +1819,10 @@ export function ProposalDocumentEditor({
           return { ...c, style } as ProposalContentBlock;
         }
         if (c.type === "columns") {
-          const nl = applyStyleToStacks(c.left);
-          const nr = applyStyleToStacks(c.right);
-          if (nl !== c.left || nr !== c.right) {
+          const nextStacks = c.stacks.map((stack) => applyStyleToStacks(stack));
+          if (nextStacks.some((s, i) => s !== c.stacks[i])) {
             changed = true;
-            return { ...c, left: nl, right: nr };
+            return { ...c, stacks: nextStacks };
           }
         }
         return c;
@@ -1732,11 +1849,11 @@ export function ProposalDocumentEditor({
           return b;
         }
         if (b.type === "columns") {
-          return {
-            ...b,
-            left: applyStyleToStacks(b.left),
-            right: applyStyleToStacks(b.right),
-          };
+          const nextStacks = b.stacks.map((stack) => applyStyleToStacks(stack));
+          if (nextStacks.some((s, i) => s !== b.stacks[i])) {
+            return { ...b, stacks: nextStacks };
+          }
+          return b;
         }
         return b;
       }),

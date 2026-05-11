@@ -277,34 +277,30 @@ function BlockView({
         </div>
       );
     case "columns": {
-      const left = block.left ?? [];
-      const right = block.right ?? [];
+      const stacks = block.stacks?.length ? block.stacks : [[], []];
+      const colCount = stacks.length;
+      const gridCols =
+        colCount >= 4
+          ? "md:grid-cols-4 md:gap-x-6"
+          : colCount === 3
+            ? "md:grid-cols-3 md:gap-x-8"
+            : "md:grid-cols-2 md:gap-x-10";
       return (
-        <div className={cn("grid gap-x-10 md:grid-cols-2", PROPOSAL_DOCUMENT_COLUMNS_ROW_GAP_CLASSES)}>
-          <div className="flex flex-col">
-            {left.map((c) => (
-              <BlockView
-                key={c.id}
-                block={c}
-                shareToken={shareToken}
-                publicSelections={publicSelections}
-                viewportSectionBleed={viewportSectionBleed}
-                splashPublicPresentation={splashPublicPresentation}
-              />
-            ))}
-          </div>
-          <div className="flex flex-col">
-            {right.map((c) => (
-              <BlockView
-                key={c.id}
-                block={c}
-                shareToken={shareToken}
-                publicSelections={publicSelections}
-                viewportSectionBleed={viewportSectionBleed}
-                splashPublicPresentation={splashPublicPresentation}
-              />
-            ))}
-          </div>
+        <div className={cn("grid", gridCols, PROPOSAL_DOCUMENT_COLUMNS_ROW_GAP_CLASSES)}>
+          {stacks.map((stack, colIdx) => (
+            <div key={colIdx} className="flex min-w-0 flex-col">
+              {stack.map((c) => (
+                <BlockView
+                  key={c.id}
+                  block={c}
+                  shareToken={shareToken}
+                  publicSelections={publicSelections}
+                  viewportSectionBleed={viewportSectionBleed}
+                  splashPublicPresentation={splashPublicPresentation}
+                />
+              ))}
+            </div>
+          ))}
         </div>
       );
     }

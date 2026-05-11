@@ -79,8 +79,9 @@ function cloneBlock(block: ProposalBlock): ProposalBlock {
       return {
         ...block,
         id,
-        left: block.left.map((c) => cloneBlock(c as ProposalBlock) as ProposalColumnChildBlock),
-        right: block.right.map((c) => cloneBlock(c as ProposalBlock) as ProposalColumnChildBlock),
+        stacks: block.stacks.map((stack) =>
+          stack.map((c) => cloneBlock(c as ProposalBlock) as ProposalColumnChildBlock),
+        ),
       };
     case "icon":
       return { ...block, id };

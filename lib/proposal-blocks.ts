@@ -3,11 +3,10 @@ import type { ProposalBlock, ProposalColumnChildBlock, ProposalContentBlock } fr
 function* walkNestedContent(block: ProposalContentBlock): Generator<ProposalContentBlock> {
   yield block;
   if (block.type === "columns") {
-    for (const c of block.left) {
-      yield* walkNestedContent(c as ProposalContentBlock);
-    }
-    for (const c of block.right) {
-      yield* walkNestedContent(c as ProposalContentBlock);
+    for (const stack of block.stacks) {
+      for (const c of stack) {
+        yield* walkNestedContent(c as ProposalContentBlock);
+      }
     }
   }
 }
@@ -38,7 +37,11 @@ function findInsideColumnStack(stack: ProposalColumnChildBlock[], id: string): P
 function findNestedContentSubtree(block: ProposalContentBlock, id: string): ProposalBlock | undefined {
   if (block.id === id) return block as ProposalBlock;
   if (block.type === "columns") {
-    return findInsideColumnStack(block.left, id) ?? findInsideColumnStack(block.right, id);
+    for (const stack of block.stacks) {
+      const hit = findInsideColumnStack(stack, id);
+      if (hit) return hit;
+    }
+    return undefined;
   }
   return undefined;
 }
@@ -54,7 +57,7 @@ export function findProposalBlockById(blocks: ProposalBlock[], id: string): Prop
       }
     }
     if (b.type === "columns") {
-      const inner = findInsideColumnStack([...b.left, ...b.right], id);
+      const inner = findInsideColumnStack(b.stacks.flat(), id);
       if (inner) return inner;
     }
   }

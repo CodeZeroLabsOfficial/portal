@@ -299,11 +299,11 @@ export type ProposalColumnChildBlock =
   | SpacerBlock
   | IconBlock;
 
-/** Two-pane layout — each side holds column-safe blocks only. */
+/** Multi-column layout (2–4) — each stack holds column-safe blocks only. */
 export interface ColumnsBlock extends ProposalBlockBase {
   type: "columns";
-  left: ProposalColumnChildBlock[];
-  right: ProposalColumnChildBlock[];
+  /** Column stacks left-to-right; length 2–4. */
+  stacks: ProposalColumnChildBlock[][];
 }
 
 /** Blocks allowed inside a section (sections do not nest). */

@@ -168,8 +168,9 @@ function mapContentBlock(block: ProposalContentBlock, ctx: ProposalTokenContext)
     case "columns":
       return {
         ...block,
-        left: block.left.map((c) => mapContentBlock(c as ProposalContentBlock, ctx) as ProposalColumnChildBlock),
-        right: block.right.map((c) => mapContentBlock(c as ProposalContentBlock, ctx) as ProposalColumnChildBlock),
+        stacks: block.stacks.map((stack) =>
+          stack.map((c) => mapContentBlock(c as ProposalContentBlock, ctx) as ProposalColumnChildBlock),
+        ),
       };
     case "icon":
       return {

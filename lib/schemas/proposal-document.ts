@@ -367,11 +367,34 @@ const columnInnerSchema = z.preprocess((raw) => {
   return raw;
 }, columnInnerUnionSchema);
 
+function normalizeColumnsBlockInput(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object") return raw;
+  const o = raw as Record<string, unknown>;
+  if (o.type !== "columns") return raw;
+
+  let stacksUnknown: unknown[] = [];
+  if (Array.isArray(o.stacks)) {
+    stacksUnknown = o.stacks.map((cell) => (Array.isArray(cell) ? cell : []));
+  } else {
+    const left = Array.isArray(o.left) ? o.left : [];
+    const right = Array.isArray(o.right) ? o.right : [];
+    stacksUnknown = [left, right];
+  }
+
+  while (stacksUnknown.length < 2) stacksUnknown.push([]);
+  if (stacksUnknown.length > 4) {
+    const head = stacksUnknown.slice(0, 3);
+    const tail = stacksUnknown.slice(3).flat();
+    stacksUnknown = [...head, tail];
+  }
+
+  return { id: o.id, type: "columns", stacks: stacksUnknown };
+}
+
 const columnsBlockSchema = z.object({
   id: idSchema,
   type: z.literal("columns"),
-  left: z.array(columnInnerSchema).default([]),
-  right: z.array(columnInnerSchema).default([]),
+  stacks: z.array(z.array(columnInnerSchema)).min(2).max(4),
 });
 
 /** Blocks inside a section — same as top-level except no nested `section`. */
@@ -395,8 +418,14 @@ const nestedBlockUnionSchema = z.discriminatedUnion("type", [
 ]);
 
 const nestedBlockSchema = z.preprocess((raw) => {
-  if (raw && typeof raw === "object" && (raw as Record<string, unknown>).type === "packages") {
-    return normalizePackagesBlockInput(raw);
+  if (raw && typeof raw === "object") {
+    const r = raw as Record<string, unknown>;
+    if (r.type === "packages") {
+      return normalizePackagesBlockInput(raw);
+    }
+    if (r.type === "columns") {
+      return normalizeColumnsBlockInput(raw);
+    }
   }
   return raw;
 }, nestedBlockUnionSchema);
@@ -429,10 +458,16 @@ const blockUnionSchema = z.discriminatedUnion("type", [
   sectionBlockSchema,
 ]);
 
-/** Migrates legacy packages blocks before discriminatedUnion matching. */
+/** Migrates legacy packages / columns shapes before discriminatedUnion matching. */
 const blockSchema = z.preprocess((raw) => {
-  if (raw && typeof raw === "object" && (raw as Record<string, unknown>).type === "packages") {
-    return normalizePackagesBlockInput(raw);
+  if (raw && typeof raw === "object") {
+    const r = raw as Record<string, unknown>;
+    if (r.type === "packages") {
+      return normalizePackagesBlockInput(raw);
+    }
+    if (r.type === "columns") {
+      return normalizeColumnsBlockInput(raw);
+    }
   }
   return raw;
 }, blockUnionSchema);
