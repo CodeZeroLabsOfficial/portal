@@ -9,6 +9,7 @@ export const DEFAULT_HIGHLIGHT_COLOR = "#673AB7";
 export const STYLE_PRESET_COLORS: ReadonlyArray<{ value: string; label: string }> = [
   { value: "#673AB7", label: "Purple" },
   { value: "#4543F7", label: "Indigo" },
+  { value: "#0D0D15", label: "Charcoal" },
   { value: "#0F172A", label: "Slate" },
   { value: "#475569", label: "Steel" },
   { value: "#94A3B8", label: "Pebble" },

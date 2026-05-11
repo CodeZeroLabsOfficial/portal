@@ -101,7 +101,7 @@ export function PackagesBlockPublic({
   const activeTermFg = readableForeground(style.primaryColor);
   const totalBarFg = readableForeground(style.primaryColor);
   const addonsTitle = block.addonsTitle ?? "Add-ons";
-  const totalSectionLabel = block.totalSectionLabel ?? "Monthly total";
+  const totalSectionLabel = block.totalSectionLabel ?? "Total";
   const qtyUnit = (block.addonQuantityUnitLabel ?? "Unit").trim() || "Unit";
   const allowAddonEdit = block.allowAddonQuantityEdit !== false;
 
@@ -178,19 +178,14 @@ export function PackagesBlockPublic({
       className={cn("w-full min-w-0 text-foreground", !interactive && "opacity-95")}
     >
       <div className={cn(isVisual ? "text-center" : "text-left")}>
-        <h2
-          className={cn(
-            "font-semibold tracking-tight text-foreground",
-            isVisual ? "text-lg md:text-xl" : "text-base md:text-lg",
-          )}
-        >
+        <h1 className="scroll-mt-20 text-3xl font-semibold tracking-tight text-foreground">
           {title}
-        </h2>
+        </h1>
 
         <div
           className={cn(
             "flex max-w-sm",
-            isVisual ? "mx-auto mt-3 justify-center" : "mt-2",
+            isVisual ? "mx-auto mt-4 justify-center" : "mt-4",
           )}
         >
           <div
@@ -531,31 +526,31 @@ export function PackagesBlockPublic({
 
       <div
         className={cn(
-          "mt-[50px] flex flex-wrap items-start justify-between gap-3 rounded-xl border border-border/70 px-4 py-3 shadow-sm",
+          "mt-[50px] flex flex-col gap-2 rounded-xl border border-border/70 px-4 py-3 shadow-sm",
           isVisual ? "mx-auto max-w-md" : "",
         )}
         style={{ backgroundColor: style.primaryColor, color: totalBarFg }}
       >
-        <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-wide opacity-90">{totalSectionLabel}</p>
-          {!selectedTierId ? (
-            <p className="mt-0.5 text-xs opacity-85">Choose a plan to include subscription pricing in this total.</p>
-          ) : null}
+        <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+          <span className="min-w-0 shrink text-xl font-semibold leading-none sm:text-2xl">{totalSectionLabel}</span>
+          <div className="min-w-0 shrink-0 text-right">
+            <span className="text-xl font-semibold tabular-nums leading-none sm:text-2xl">
+              {formatCurrencyAmount(monthlyTotalMinor, currency)}
+            </span>
+            <p className="mt-0.5 text-xs font-medium opacity-90">/ month</p>
+          </div>
         </div>
-        <div className="min-w-0 text-right">
-          <p className="text-xl font-semibold tabular-nums sm:text-2xl">
-            {formatCurrencyAmount(monthlyTotalMinor, currency)}
+        {!selectedTierId ? (
+          <p className="text-xs opacity-85">Choose a plan to include subscription pricing in this total.</p>
+        ) : null}
+        {selectedTierId || addonsSubtotalMinor > 0 ? (
+          <p className="max-w-[280px] text-pretty text-left text-[11px] leading-snug opacity-80 sm:ml-auto sm:text-right">
+            Total commitment over {termMonths} mo:{" "}
+            <span className="whitespace-nowrap tabular-nums font-medium opacity-95">
+              {formatCurrencyAmount(commitmentTotalMinor, currency)}
+            </span>
           </p>
-          <p className="mt-0.5 text-xs font-medium opacity-90">/ month</p>
-          {selectedTierId || addonsSubtotalMinor > 0 ? (
-            <p className="mt-2 max-w-[280px] text-pretty text-left text-[11px] leading-snug opacity-80 sm:ml-auto sm:text-right">
-              Total commitment over {termMonths} mo:{" "}
-              <span className="whitespace-nowrap tabular-nums font-medium opacity-95">
-                {formatCurrencyAmount(commitmentTotalMinor, currency)}
-              </span>
-            </p>
-          ) : null}
-        </div>
+        ) : null}
       </div>
     </div>
   );

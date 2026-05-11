@@ -188,7 +188,7 @@ export interface PackagesBlock extends ProposalBlockBase {
   allowAddonQuantityEdit?: boolean;
   /** Suffix after quantity in the add-ons table (default: “Unit”). */
   addonQuantityUnitLabel?: string;
-  /** Label for the packages summary bar (default: “Monthly total”). */
+  /** Label for the packages summary bar (default: “Total”). */
   totalSectionLabel?: string;
   /**
    * When true, the add-ons table is shown in the builder and on the public page.

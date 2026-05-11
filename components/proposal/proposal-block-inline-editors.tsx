@@ -375,7 +375,7 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
       addonsTitle: block.addonsTitle?.trim() || "Add-ons",
       allowAddonQuantityEdit: true,
       addonQuantityUnitLabel: block.addonQuantityUnitLabel?.trim() || "Unit",
-      totalSectionLabel: block.totalSectionLabel?.trim() || "Monthly total",
+      totalSectionLabel: block.totalSectionLabel?.trim() || "Total",
     });
   }
 
@@ -390,19 +390,19 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
           onChange={(v) => patch({ title: v })}
           ariaLabel="Section title"
           className={cn(
-            "inline-block font-semibold tracking-tight text-foreground",
-            isVisual ? "text-lg md:text-xl" : "text-base md:text-lg",
+            "inline-block text-3xl font-semibold tracking-tight text-foreground",
+            isVisual && "text-center",
           )}
           inputClassName={cn(
-            "inline-block font-semibold tracking-tight text-foreground",
-            isVisual ? "text-lg md:text-xl text-center" : "text-base md:text-lg",
+            "inline-block text-3xl font-semibold tracking-tight text-foreground",
+            isVisual && "text-center",
           )}
         />
 
         <div
           className={cn(
             "flex max-w-sm",
-            isVisual ? "mx-auto mt-3 justify-center" : "mt-2",
+            isVisual ? "mx-auto mt-4 justify-center" : "mt-4",
           )}
         >
           <div
@@ -562,7 +562,7 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
                   totalSectionLabel: e.target.value.trim() ? e.target.value.trim().slice(0, 120) : undefined,
                 })
               }
-              placeholder="Monthly total"
+              placeholder="Total"
               className="h-8 w-32 bg-background text-xs"
               aria-label="Packages summary bar title"
             />
@@ -673,35 +673,36 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
 
       <div
         className={cn(
-          "mt-4 flex flex-wrap items-start justify-between gap-3 rounded-xl border border-border/70 px-4 py-3 shadow-sm",
+          "mt-4 flex flex-col gap-2 rounded-xl border border-border/70 px-4 py-3 shadow-sm",
           isVisual ? "mx-auto max-w-md" : "",
         )}
         style={{ backgroundColor: style.primaryColor, color: headerBarFg }}
       >
-        <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-wide opacity-90">
-            {block.totalSectionLabel?.trim() || "Monthly total"} (preview)
-          </p>
-          {!previewTierId ? (
-            <p className="mt-0.5 text-xs opacity-85">
-              <span>Add tiers to preview the plan portion of this total.</span>
-            </p>
-          ) : null}
+        <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+          <span className="inline-flex min-w-0 shrink flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xl font-semibold leading-none sm:text-2xl">
+            <span>{block.totalSectionLabel?.trim() || "Total"}</span>
+            <span className="text-sm font-medium opacity-90 sm:text-base">(preview)</span>
+          </span>
+          <div className="min-w-0 shrink-0 text-right">
+            <span className="text-xl font-semibold tabular-nums leading-none sm:text-2xl">
+              {formatCurrencyAmount(monthlyPreviewMinor, currency)}
+            </span>
+            <p className="mt-0.5 text-xs font-medium opacity-90">/ month</p>
+          </div>
         </div>
-        <div className="min-w-0 text-right">
-          <p className="text-xl font-semibold tabular-nums sm:text-2xl">
-            {formatCurrencyAmount(monthlyPreviewMinor, currency)}
+        {!previewTierId ? (
+          <p className="text-xs opacity-85">
+            <span>Add tiers to preview the plan portion of this total.</span>
           </p>
-          <p className="mt-0.5 text-xs font-medium opacity-90">/ month</p>
-          {previewTierId || addonsPreviewMinor > 0 ? (
-            <p className="mt-2 max-w-[280px] text-pretty text-left text-[11px] leading-snug opacity-80 sm:ml-auto sm:text-right">
-              Total commitment over {previewTermMonths} mo:{" "}
-              <span className="whitespace-nowrap tabular-nums font-medium opacity-95">
-                {formatCurrencyAmount(commitmentPreviewMinor, currency)}
-              </span>
-            </p>
-          ) : null}
-        </div>
+        ) : null}
+        {previewTierId || addonsPreviewMinor > 0 ? (
+          <p className="max-w-[280px] text-pretty text-left text-[11px] leading-snug opacity-80 sm:ml-auto sm:text-right">
+            Total commitment over {previewTermMonths} mo:{" "}
+            <span className="whitespace-nowrap tabular-nums font-medium opacity-95">
+              {formatCurrencyAmount(commitmentPreviewMinor, currency)}
+            </span>
+          </p>
+        ) : null}
       </div>
     </div>
   );
