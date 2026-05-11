@@ -121,6 +121,7 @@ import {
   ProposalSplashBackgroundPicker,
   SplashBlockInspector,
 } from "@/components/proposal/proposal-splash-editor";
+import { AccordionBlockEditor } from "@/components/proposal/accordion-block-editor";
 
 function newId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `b-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -730,69 +731,6 @@ function ColumnsBlockFields({
         <ColumnPane label="Left column" side="left" stack={block.left} />
         <ColumnPane label="Right column" side="right" stack={block.right} />
       </div>
-    </div>
-  );
-}
-
-function AccordionBlockEditor({
-  block,
-  onChange,
-}: {
-  block: AccordionBlock;
-  onChange: (next: AccordionBlock) => void;
-}) {
-  return (
-    <div className="space-y-4">
-      {(block.panels ?? []).map((p, idx) => (
-        <div key={p.id} className="space-y-2 rounded-xl border border-border/60 bg-muted/15 p-3">
-          <Label className="text-xs">Heading</Label>
-          <Input
-            value={p.title}
-            onChange={(e) =>
-              onChange({
-                ...block,
-                panels: block.panels.map((x, i) => (i === idx ? { ...x, title: e.target.value } : x)),
-              })
-            }
-          />
-          <ProposalRichText
-            html={p.html ?? (p.body ? `<p>${escapeHtml(p.body)}</p>` : "<p></p>")}
-            onChange={(html) =>
-              onChange({
-                ...block,
-                panels: block.panels.map((x, i) => (i === idx ? { ...x, html, body: undefined } : x)),
-              })
-            }
-          />
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="text-destructive"
-            onClick={() =>
-              onChange({
-                ...block,
-                panels: block.panels.filter((x) => x.id !== p.id),
-              })
-            }
-          >
-            Remove panel
-          </Button>
-        </div>
-      ))}
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={() =>
-          onChange({
-            ...block,
-            panels: [...(block.panels ?? []), { id: newId(), title: "New panel", html: "<p></p>" }],
-          })
-        }
-      >
-        Add panel
-      </Button>
     </div>
   );
 }

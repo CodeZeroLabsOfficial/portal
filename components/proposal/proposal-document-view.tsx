@@ -21,7 +21,7 @@ import { escapeHtml } from "@/lib/escape-html";
 import { sanitizeProposalHtml } from "@/lib/sanitize-proposal-html";
 import { WORKSPACE_DETAIL_PAGE_TITLE_CLASS } from "@/lib/workspace-page-typography";
 import { cn } from "@/lib/utils";
-import { ChevronDown } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { embedVideoSrc } from "@/components/proposal/embed-video";
 import { PricingBlockPublic } from "@/components/proposal/pricing-block-public";
 import { PackagesBlockPublic } from "@/components/proposal/packages-block-public";
@@ -312,22 +312,29 @@ function BlockView({
       return (
         <div className="overflow-hidden rounded-2xl border border-border/70">
           {(block.panels ?? []).map((p) => (
-            <details key={p.id} className="group border-b border-border/60 px-5 py-3 last:border-b-0 [&_summary::-webkit-details-marker]:hidden">
-              <summary className="flex cursor-pointer select-none items-center justify-between gap-4 text-base font-semibold text-foreground">
+            <details
+              key={p.id}
+              className="group border-b border-border/60 last:border-b-0 [&_summary::-webkit-details-marker]:hidden"
+            >
+              <summary className="flex cursor-pointer list-none select-none items-center justify-between gap-4 px-4 py-4 text-lg font-semibold tracking-tight text-foreground sm:px-5 [&::-webkit-details-marker]:hidden">
                 <span>{p.title.trim() ? p.title : "Untitled panel"}</span>
-                <ChevronDown className="h-5 w-5 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden />
+                <ChevronRight
+                  className="h-5 w-5 shrink-0 text-cyan-500 transition-transform group-open:rotate-90 dark:text-cyan-400"
+                  aria-hidden
+                />
               </summary>
-              <div className="mt-4 pb-1">
+              <div className="mx-4 mb-4 mt-0 rounded-xl bg-white px-3 py-3 text-zinc-900 shadow-sm ring-1 ring-black/[0.06] sm:mx-5 sm:px-4 dark:ring-white/10">
                 {p.html?.trim() ? (
                   <div
                     className={cn(
-                      "proposal-rich-text max-w-none text-sm leading-relaxed text-muted-foreground",
-                      "[&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-3",
+                      "proposal-rich-text max-w-none text-sm leading-relaxed text-zinc-800",
+                      "[&_a]:text-cyan-700 [&_a]:underline",
+                      "[&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-3 [&_p:last-child]:mb-0",
                     )}
                     dangerouslySetInnerHTML={{ __html: sanitizeProposalHtml(p.html) }}
                   />
                 ) : (
-                  <div className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">{p.body ?? ""}</div>
+                  <div className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-800">{p.body ?? ""}</div>
                 )}
               </div>
             </details>

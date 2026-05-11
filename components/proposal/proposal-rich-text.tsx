@@ -28,12 +28,6 @@ import {
   Strikethrough,
   Underline as UnderlineIcon,
 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { useProposalSectionEditorChrome } from "@/components/proposal/proposal-section-editor-chrome";
 
@@ -138,6 +132,35 @@ const ALIGN_OPTIONS: { value: "left" | "center" | "right"; icon: typeof AlignLef
   { value: "right", icon: AlignRight, label: "Right" },
 ];
 
+const BUBBLE_MENU_PANEL_CLASS =
+  "absolute left-0 top-full z-[100] mt-1 rounded-md border border-zinc-700 bg-zinc-900 p-1 text-zinc-100 shadow-lg";
+
+/** Radix dropdowns portal to `document.body`; inside TipTap's Tippy bubble that breaks anchor geometry. Inline panels stay under the trigger. */
+function useCloseBubbleToolbarMenu(
+  open: boolean,
+  setOpen: React.Dispatch<React.SetStateAction<boolean>>,
+  containerRef: React.RefObject<HTMLElement | null>,
+) {
+  React.useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (e: PointerEvent) => {
+      const el = containerRef.current;
+      if (!el) return;
+      const t = e.target;
+      if (t instanceof Node && !el.contains(t)) setOpen(false);
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown, true);
+    document.addEventListener("keydown", onKeyDown, true);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown, true);
+      document.removeEventListener("keydown", onKeyDown, true);
+    };
+  }, [open, setOpen, containerRef]);
+}
+
 function ToolbarButton({
   active,
   onClick,
@@ -175,56 +198,68 @@ function ToolbarDivider() {
 }
 
 function HeadingPicker({ editor }: { editor: Editor }) {
+  const [open, setOpen] = React.useState(false);
+  const rootRef = React.useRef<HTMLDivElement>(null);
   const active = getActiveHeading(editor);
+  useCloseBubbleToolbarMenu(open, setOpen, rootRef);
+
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          onMouseDown={(e) => e.preventDefault()}
-          aria-label="Text style"
-          className="inline-flex items-center gap-1.5 rounded px-2 py-1 text-sm text-zinc-100 transition-colors hover:bg-white/10"
-        >
-          <span className="inline-flex h-5 w-7 items-center justify-center rounded bg-white/10 text-[11px] font-semibold tabular-nums text-zinc-100">
-            {active.shortLabel}
-          </span>
-          <span>{active.label}</span>
-          <ChevronDown className="h-3.5 w-3.5 text-zinc-400" />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent
-        align="start"
-        sideOffset={6}
-        className="min-w-[200px] border-zinc-700 bg-zinc-900 p-1 text-zinc-100"
+    <div className="relative" ref={rootRef}>
+      <button
+        type="button"
+        onPointerDown={(e) => {
+          e.preventDefault();
+          setOpen((v) => !v);
+        }}
+        aria-label="Text style"
+        aria-expanded={open}
+        aria-haspopup="menu"
+        className="inline-flex items-center gap-1.5 rounded px-2 py-1 text-sm text-zinc-100 transition-colors hover:bg-white/10"
       >
-        {HEADING_OPTIONS.map((opt) => {
-          const isActive = active.value === opt.value;
-          return (
-            <DropdownMenuItem
-              key={opt.value}
-              onSelect={(e) => {
-                e.preventDefault();
-                applyHeadingOption(editor, opt);
-              }}
-              className={cn(
-                "flex items-center gap-2 rounded text-zinc-200 focus:bg-white/10 focus:text-white",
-                isActive && "bg-white/10 text-white",
-              )}
-            >
-              <span
+        <span className="inline-flex h-5 w-7 items-center justify-center rounded bg-white/10 text-[11px] font-semibold tabular-nums text-zinc-100">
+          {active.shortLabel}
+        </span>
+        <span>{active.label}</span>
+        <ChevronDown className="h-3.5 w-3.5 text-zinc-400" />
+      </button>
+      {open ? (
+        <div
+          role="menu"
+          className={cn(BUBBLE_MENU_PANEL_CLASS, "min-w-[200px]")}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          {HEADING_OPTIONS.map((opt) => {
+            const isActive = active.value === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                role="menuitem"
                 className={cn(
-                  "inline-block w-7 text-center text-xs font-semibold",
-                  isActive ? "text-sky-400" : "text-zinc-400",
+                  "flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-zinc-200 outline-none hover:bg-white/10 hover:text-white focus-visible:bg-white/10 focus-visible:text-white",
+                  isActive && "bg-white/10 text-white",
                 )}
+                onPointerDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  applyHeadingOption(editor, opt);
+                  setOpen(false);
+                }}
               >
-                {opt.shortLabel}
-              </span>
-              <span>{opt.label}</span>
-            </DropdownMenuItem>
-          );
-        })}
-      </DropdownMenuContent>
-    </DropdownMenu>
+                <span
+                  className={cn(
+                    "inline-block w-7 text-center text-xs font-semibold",
+                    isActive ? "text-sky-400" : "text-zinc-400",
+                  )}
+                >
+                  {opt.shortLabel}
+                </span>
+                <span>{opt.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -301,48 +336,60 @@ function ColorControl({ editor }: { editor: Editor }) {
 }
 
 function AlignmentPicker({ editor }: { editor: Editor }) {
+  const [open, setOpen] = React.useState(false);
+  const rootRef = React.useRef<HTMLDivElement>(null);
   const current =
     ALIGN_OPTIONS.find((a) => editor.isActive({ textAlign: a.value })) ?? ALIGN_OPTIONS[0];
   const Icon = current.icon;
+  useCloseBubbleToolbarMenu(open, setOpen, rootRef);
+
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          onMouseDown={(e) => e.preventDefault()}
-          aria-label="Text alignment"
-          className="inline-flex h-7 w-7 items-center justify-center rounded text-zinc-300 transition-colors hover:bg-white/10 hover:text-white"
-        >
-          <Icon className="h-4 w-4" />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent
-        align="start"
-        sideOffset={6}
-        className="border-zinc-700 bg-zinc-900 p-1 text-zinc-100"
+    <div className="relative" ref={rootRef}>
+      <button
+        type="button"
+        onPointerDown={(e) => {
+          e.preventDefault();
+          setOpen((v) => !v);
+        }}
+        aria-label="Text alignment"
+        aria-expanded={open}
+        aria-haspopup="menu"
+        className="inline-flex h-7 w-7 items-center justify-center rounded text-zinc-300 transition-colors hover:bg-white/10 hover:text-white"
       >
-        {ALIGN_OPTIONS.map((a) => {
-          const Ic = a.icon;
-          const isActive = current.value === a.value;
-          return (
-            <DropdownMenuItem
-              key={a.value}
-              onSelect={(e) => {
-                e.preventDefault();
-                editor.chain().focus().setTextAlign(a.value).run();
-              }}
-              className={cn(
-                "rounded text-zinc-200 focus:bg-white/10 focus:text-white",
-                isActive && "bg-white/10 text-white",
-              )}
-            >
-              <Ic className="mr-2 h-4 w-4" />
-              {a.label}
-            </DropdownMenuItem>
-          );
-        })}
-      </DropdownMenuContent>
-    </DropdownMenu>
+        <Icon className="h-4 w-4" />
+      </button>
+      {open ? (
+        <div
+          role="menu"
+          className={cn(BUBBLE_MENU_PANEL_CLASS, "min-w-[9rem]")}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          {ALIGN_OPTIONS.map((a) => {
+            const Ic = a.icon;
+            const isActive = current.value === a.value;
+            return (
+              <button
+                key={a.value}
+                type="button"
+                role="menuitem"
+                className={cn(
+                  "flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-zinc-200 outline-none hover:bg-white/10 hover:text-white focus-visible:bg-white/10 focus-visible:text-white",
+                  isActive && "bg-white/10 text-white",
+                )}
+                onPointerDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  editor.chain().focus().setTextAlign(a.value).run();
+                  setOpen(false);
+                }}
+              >
+                <Ic className="h-4 w-4 shrink-0" />
+                {a.label}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
