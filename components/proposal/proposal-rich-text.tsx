@@ -3,7 +3,7 @@
 import * as React from "react";
 import { type Editor, EditorContent, useEditor } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react";
-import { Extension } from "@tiptap/core";
+import { Extension, isTextSelection } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
@@ -490,10 +490,34 @@ export function ProposalRichText({
     <div className="relative">
       <BubbleMenu
         editor={editor}
-        tippyOptions={{ duration: 80, placement: "top", maxWidth: 720 }}
-        shouldShow={({ editor: ed, from, to }) => {
+        updateDelay={0}
+        tippyOptions={{
+          duration: 80,
+          placement: "top",
+          maxWidth: 720,
+          /** Section shells use overflow/stacking; mount above the canvas so the bar isn’t clipped. */
+          appendTo: () => document.body,
+          zIndex: 10050,
+          popperOptions: { strategy: "fixed" },
+        }}
+        shouldShow={({ editor: ed, element, view, state, from, to }) => {
           if (!ed.isEditable) return false;
-          if (from !== to) return true;
+          const { doc, selection } = state;
+          const isChildOfMenu =
+            typeof document !== "undefined" &&
+            document.activeElement != null &&
+            element.contains(document.activeElement);
+          const hasEditorFocus = view.hasFocus() || isChildOfMenu;
+
+          const isEmptyTextBlock =
+            !doc.textBetween(from, to).length && isTextSelection(selection);
+          const collapsedInHeading = headerVariant && ed.isActive("heading");
+          if (isEmptyTextBlock && !collapsedInHeading) return false;
+
+          const hasTextRange = from !== to || !selection.empty;
+          if (hasTextRange) return true;
+
+          if (!hasEditorFocus) return false;
           if (!headerVariant) return false;
           return ed.isActive("heading");
         }}

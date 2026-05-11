@@ -62,7 +62,11 @@ function mapContentBlock(block: ProposalContentBlock, ctx: ProposalTokenContext)
         },
       };
     case "header":
-      return { ...block, text: replaceProposalTokens(block.text, ctx) };
+      return {
+        ...block,
+        text: replaceProposalTokens(block.text, ctx),
+        html: block.html !== undefined ? replaceProposalTokens(block.html, ctx) : block.html,
+      };
     case "text":
       return {
         ...block,
