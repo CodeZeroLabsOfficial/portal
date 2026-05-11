@@ -48,10 +48,12 @@ export function proposalSectionChildGapBefore(prev: ProposalContentBlock, curr: 
  */
 export const PROPOSAL_DOCUMENT_BLOCK_INNER_PAD_CLASSES = "py-[50px]";
 /**
- * Root stack wrapper in `ProposalDocumentView`: vertical document padding only. Space **between** root
- * blocks uses `proposalDocumentRootBlockGapBefore` on each item after the first (section-adjacent only).
+ * Root stack wrapper in `ProposalDocumentView`: bottom padding only (`pb-[50px]`).
+ * Do **not** use `py-[50px]` here — section/column inner wrappers already use `py-[50px]` (`PROPOSAL_DOCUMENT_BLOCK_INNER_PAD_CLASSES`),
+ * and stacking both made the **first** section’s heading sit ~100px below the page edge while later sections looked tighter.
+ * Space **between** root blocks uses `proposalDocumentRootBlockGapBefore`.
  */
-export const PROPOSAL_DOCUMENT_ROOT_STACK_GAP_CLASSES = "flex flex-col gap-0 py-[50px]";
+export const PROPOSAL_DOCUMENT_ROOT_STACK_GAP_CLASSES = "flex flex-col gap-0 pb-[50px]";
 
 /**
  * Root-level header/text blocks each used to get full `py-[50px]`, which stacks to ~100px between a Heading
