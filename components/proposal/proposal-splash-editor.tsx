@@ -12,8 +12,6 @@ import { escapeHtml } from "@/lib/escape-html";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { normalizeSplashVideoUrlInput } from "@/lib/splash-video-url";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -388,54 +386,19 @@ export function ProposalSplashBackgroundPicker({
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm font-medium text-foreground">Background video</span>
                     <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
-                      {model.videoUrl?.trim() || "Watch URL, embed URL, iframe, or MP4"}
+                      {model.videoUrl?.trim() || "YouTube, Vimeo, or direct file"}
                     </span>
                   </span>
                 </button>
                 <div className="space-y-1.5">
-                  <Label className="text-[11px] font-semibold text-muted-foreground">Video URL or embed</Label>
-                  <Textarea
+                  <Label className="text-[11px] font-semibold text-muted-foreground">Video URL</Label>
+                  <Input
                     id={`splash-video-url-${block.id}`}
-                    rows={3}
                     value={model.videoUrl ?? ""}
                     onChange={(e) => patchBg({ type: "video", videoUrl: e.target.value })}
-                    onBlur={(e) => {
-                      const raw = e.target.value.trim();
-                      if (!raw) return;
-                      const n = normalizeSplashVideoUrlInput(raw);
-                      if (n && n !== raw) patchBg({ type: "video", videoUrl: n });
-                    }}
-                    placeholder={
-                      "https://youtube.com/watch?v=… or paste an iframe from YouTube / Vimeo · MP4/WebM direct URL"
-                    }
+                    placeholder="https://…"
                     spellCheck={false}
-                    className="resize-y text-sm leading-snug"
                   />
-                  <p className="text-[11px] leading-relaxed text-muted-foreground">
-                    Paste a normal link, an embed URL (with{" "}
-                    <code className="rounded bg-muted px-0.5 text-[10px]">controls=0</code> if you like), or the full{" "}
-                    <code className="rounded bg-muted px-0.5 text-[10px]">&lt;iframe&gt;</code> markup — we strip the{" "}
-                    <code className="rounded bg-muted px-0.5 text-[10px]">src</code> on blur. Use the option below to hide
-                    player chrome for YouTube/Vimeo.
-                  </p>
-                  <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-border/70 bg-muted/15 px-3 py-2.5">
-                    <input
-                      type="checkbox"
-                      className="mt-0.5 h-4 w-4 shrink-0 rounded border-border accent-primary"
-                      checked={model.videoHideControls !== false}
-                      onChange={(e) => patchBg({ videoHideControls: e.target.checked })}
-                    />
-                    <span className="min-w-0">
-                      <span className="block text-sm font-medium leading-tight text-foreground">
-                        Hide playback controls
-                      </span>
-                      <span className="mt-0.5 block text-[11px] leading-snug text-muted-foreground">
-                        Default on — matches a chrome-free splash backdrop (YouTube{" "}
-                        <code className="rounded bg-muted px-0.5 text-[10px]">controls=0</code>, Vimeo background mode).
-                        Turn off to show the provider&apos;s controls (e.g. while testing).
-                      </span>
-                    </span>
-                  </label>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-[11px] font-semibold text-muted-foreground">Poster (mobile)</Label>

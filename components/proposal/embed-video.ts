@@ -10,11 +10,7 @@ export function embedVideoSrc(url: string): { kind: "youtube" | "vimeo" | "ifram
       return { kind: "youtube", src: `https://www.youtube-nocookie.com/embed/${id}` };
     }
 
-    const isYoutubeHost =
-      host.endsWith("youtube.com") ||
-      host === "youtube-nocookie.com" ||
-      host.endsWith(".youtube-nocookie.com");
-    if (isYoutubeHost) {
+    if (host.endsWith("youtube.com")) {
       const v = u.searchParams.get("v");
       if (v) return { kind: "youtube", src: `https://www.youtube-nocookie.com/embed/${v}` };
       const parts = u.pathname.split("/").filter(Boolean);

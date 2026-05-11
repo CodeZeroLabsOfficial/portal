@@ -56,34 +56,6 @@
     @apply bg-background text-foreground antialiased;
   }
 
-  /*
-   * Splash background `<video>`: suppress Safari/WebKit native UI (often prev / pause / skip)
-   * that appears during playback — these paint as shadow pseudo-elements on the media element.
-   */
-  video.proposal-splash-bg-video {
-    -webkit-touch-callout: none;
-    user-select: none;
-  }
-  video.proposal-splash-bg-video::-webkit-media-controls,
-  video.proposal-splash-bg-video::-webkit-media-controls-enclosure,
-  video.proposal-splash-bg-video::-webkit-media-controls-panel,
-  video.proposal-splash-bg-video::-webkit-media-controls-play-button,
-  video.proposal-splash-bg-video::-webkit-media-controls-start-playback-button,
-  video.proposal-splash-bg-video::-webkit-media-controls-overlay-play-button,
-  video.proposal-splash-bg-video::-webkit-media-controls-overlay-enclosure,
-  video.proposal-splash-bg-video::-webkit-media-controls-current-time-display,
-  video.proposal-splash-bg-video::-webkit-media-controls-time-remaining-display,
-  video.proposal-splash-bg-video::-webkit-media-controls-timeline,
-  video.proposal-splash-bg-video::-webkit-media-controls-volume-slider,
-  video.proposal-splash-bg-video::-webkit-media-controls-fullscreen-button,
-  video.proposal-splash-bg-video::-webkit-media-controls-toggle-closed-captions-button,
-  video.proposal-splash-bg-video::-webkit-media-controls-wireless-playback-picker-button {
-    display: none !important;
-    opacity: 0 !important;
-    visibility: hidden !important;
-    pointer-events: none !important;
-  }
-
   /* Portal workspace: #0D0D16 base, #673AB7 accent */
   .portal-ui {
     --background: 240 26% 7%;
