@@ -6,7 +6,7 @@ import { setProposalSharePasswordAction } from "@/server/actions/proposal-builde
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 export interface ProposalShareSettingsProps {
@@ -36,10 +36,6 @@ export function ProposalShareSettings({ proposalId, hasPassword, className }: Pr
           <Lock className="h-5 w-5 text-muted-foreground" aria-hidden />
           Public link protection
         </CardTitle>
-        <CardDescription>
-          Optional password before the customer can view this proposal on the web. Share the password out-of-band (call,
-          SMS).
-        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4 p-6">
         <div className="space-y-2">

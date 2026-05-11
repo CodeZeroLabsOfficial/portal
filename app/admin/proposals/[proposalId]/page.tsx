@@ -3,7 +3,8 @@ import { notFound, redirect } from "next/navigation";
 import { Clock, Eye, FileText } from "lucide-react";
 import { getCurrentSessionUser } from "@/lib/auth/server-session";
 import { getAdminProposalRecord } from "@/server/firestore/portal-data";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WorkspaceShell } from "@/components/portal/workspace-shell";
 import { ProposalDocumentEditorLazy } from "@/components/proposal/proposal-document-editor-lazy";
 import { ProposalShareSettings } from "@/components/proposal/proposal-share-settings";
@@ -37,7 +38,6 @@ export default async function AdminProposalDetailPage({ params, searchParams }: 
   const sp = await searchParams;
   const customerBackId = proposal.customerId?.trim() || firstQueryString(sp.customer);
 
-  const blockCount = proposal.document.blocks?.length ?? 0;
   const recipient = proposal.recipientEmail?.trim() || null;
 
   const proposalDetailsSlot = (
@@ -48,17 +48,15 @@ export default async function AdminProposalDetailPage({ params, searchParams }: 
             <FileText className="h-5 w-5 text-muted-foreground" aria-hidden />
             Proposal details
           </CardTitle>
-          <CardDescription>
-            Blocks, public opens, and CRM links. Publish from the toolbar when you are ready to stage deals and unlock
-            analytics on the public link.
-          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5 p-6 text-sm">
           <dl className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1">
-              <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Blocks</dt>
-              <dd className="text-foreground">
-                {blockCount} {blockCount === 1 ? "block" : "blocks"}
+              <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Status</dt>
+              <dd>
+                <Badge variant="outline" className="capitalize">
+                  {proposal.status}
+                </Badge>
               </dd>
             </div>
             <div className="space-y-1">

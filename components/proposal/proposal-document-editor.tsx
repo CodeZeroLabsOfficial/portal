@@ -76,7 +76,6 @@ import type {
   TextBlock,
   VideoBlock,
 } from "@/types/proposal";
-import { Badge } from "@/components/ui/badge";
 import { ProposalRichText } from "@/components/proposal/proposal-rich-text";
 import { ProposalDocumentView } from "@/components/proposal/proposal-document-view";
 import { ProposalSectionShell } from "@/components/proposal/proposal-section-shell";
@@ -2127,14 +2126,6 @@ export function ProposalDocumentEditor({
               ) : null}
             </div>
             <div className="flex flex-wrap items-center justify-end gap-2">
-              <Badge variant="outline" className="capitalize">
-                {initialStatus}
-              </Badge>
-              {proposalEditShellToolbar.recipientEmail ? (
-                <span className="text-sm text-muted-foreground">
-                  To · {proposalEditShellToolbar.recipientEmail}
-                </span>
-              ) : null}
               {proposalEditShellToolbar.shareToken ? (
                 <Button variant="outline" size="sm" className="gap-2" asChild>
                   <Link
