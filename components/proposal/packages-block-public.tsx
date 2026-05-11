@@ -425,7 +425,7 @@ export function PackagesBlockPublic({
       </div>
 
       {addonsActive && addonLines.length > 0 ? (
-        <div className={cn("mt-8", isVisual ? "text-center" : "text-left")}>
+        <div className={cn("mt-[50px]", isVisual ? "text-center" : "text-left")}>
           <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
             <div
               className="flex flex-wrap items-center justify-between gap-3 border-b border-dashed px-4 py-3"
@@ -531,7 +531,7 @@ export function PackagesBlockPublic({
 
       <div
         className={cn(
-          "mt-4 flex flex-wrap items-start justify-between gap-3 rounded-xl border border-border/70 px-4 py-3 shadow-sm",
+          "mt-[50px] flex flex-wrap items-start justify-between gap-3 rounded-xl border border-border/70 px-4 py-3 shadow-sm",
           isVisual ? "mx-auto max-w-md" : "",
         )}
         style={{ backgroundColor: style.primaryColor, color: totalBarFg }}

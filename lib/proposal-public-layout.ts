@@ -1,4 +1,4 @@
-import type { ProposalBlock } from "@/types/proposal";
+import type { ProposalBlock, ProposalContentBlock } from "@/types/proposal";
 
 /**
  * Public proposal pages — vertical shell spacing + a centered reading column utility.
@@ -28,9 +28,21 @@ export const PROPOSAL_PUBLIC_VIEWPORT_BREAKOUT_CLASSES =
   "relative left-1/2 w-screen max-w-[100vw] -translate-x-1/2 print:w-full print:max-w-none print:translate-x-0 print:left-0";
 
 /**
- * Vertical rhythm between sibling proposal blocks (root, inside sections, column stacks).
+ * Default vertical gap between siblings inside section/column stacks (after the first child). Heading → rich
+ * text is slightly tighter — see `proposalSectionChildGapBefore`.
+ *
+ * Previously this was `mt-[100px]`, which made e.g. **text → packages** feel enormous next to **header → text**
+ * (`mt-10`) inside the same section band.
  */
-export const PROPOSAL_DOCUMENT_BLOCK_STACK_CLASSES = "space-y-[100px]";
+export const PROPOSAL_DOCUMENT_SECTION_SIBLING_GAP_CLASSES = "mt-12";
+
+/**
+ * Top margin before an item in a section or column stack (not used on the first child).
+ */
+export function proposalSectionChildGapBefore(prev: ProposalContentBlock, curr: ProposalContentBlock): string {
+  if (prev.type === "header" && curr.type === "text") return "mt-10";
+  return PROPOSAL_DOCUMENT_SECTION_SIBLING_GAP_CLASSES;
+}
 /**
  * Padding inside a section’s inner column (above/below stacked children).
  */

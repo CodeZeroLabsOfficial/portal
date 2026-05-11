@@ -12,10 +12,10 @@ import type {
 } from "@/types/proposal";
 import {
   PROPOSAL_DOCUMENT_BLOCK_INNER_PAD_CLASSES,
-  PROPOSAL_DOCUMENT_BLOCK_STACK_CLASSES,
   PROPOSAL_DOCUMENT_COLUMNS_ROW_GAP_CLASSES,
   PROPOSAL_DOCUMENT_ROOT_STACK_GAP_CLASSES,
   proposalDocumentRootBlockGapBefore,
+  proposalSectionChildGapBefore,
   PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES,
   PROPOSAL_PUBLIC_VIEWPORT_BREAKOUT_CLASSES,
 } from "@/lib/proposal-public-layout";
@@ -59,25 +59,29 @@ function BlockView({
     /** Grouped layouts render children sequentially with generous vertical rhythm. */
     case "section": {
       const sb = block as SectionBlock;
-      const stack = sb.children.map((c) => (
-        <BlockView
+      const stack = sb.children.map((c, i) => (
+        <div
           key={c.id}
-          block={c}
-          shareToken={shareToken}
-          publicSelections={publicSelections}
-          viewportSectionBleed={viewportSectionBleed}
-          splashPublicPresentation={
-            viewportSectionBleed && c.type === "splash" ? "nestedColumn" : splashPublicPresentation
-          }
-        />
+          className={cn(i > 0 && proposalSectionChildGapBefore(sb.children[i - 1]!, c))}
+        >
+          <BlockView
+            block={c}
+            shareToken={shareToken}
+            publicSelections={publicSelections}
+            viewportSectionBleed={viewportSectionBleed}
+            splashPublicPresentation={
+              viewportSectionBleed && c.type === "splash" ? "nestedColumn" : splashPublicPresentation
+            }
+          />
+        </div>
       ));
       const body = viewportSectionBleed ? (
         <div className={cn(PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES, PROPOSAL_DOCUMENT_BLOCK_INNER_PAD_CLASSES)}>
-          <div className={PROPOSAL_DOCUMENT_BLOCK_STACK_CLASSES}>{stack}</div>
+          <div className="flex flex-col">{stack}</div>
         </div>
       ) : (
         <div className={cn(PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES, PROPOSAL_DOCUMENT_BLOCK_INNER_PAD_CLASSES)}>
-          <div className={PROPOSAL_DOCUMENT_BLOCK_STACK_CLASSES}>{stack}</div>
+          <div className="flex flex-col">{stack}</div>
         </div>
       );
       return (
@@ -279,30 +283,34 @@ function BlockView({
         </div>
       );
     case "columns": {
+      const left = block.left ?? [];
+      const right = block.right ?? [];
       return (
         <div className={cn("grid gap-x-10 md:grid-cols-2", PROPOSAL_DOCUMENT_COLUMNS_ROW_GAP_CLASSES)}>
-          <div className={PROPOSAL_DOCUMENT_BLOCK_STACK_CLASSES}>
-            {(block.left ?? []).map((c) => (
-              <BlockView
-                key={c.id}
-                block={c}
-                shareToken={shareToken}
-                publicSelections={publicSelections}
-                viewportSectionBleed={viewportSectionBleed}
-                splashPublicPresentation={splashPublicPresentation}
-              />
+          <div className="flex flex-col">
+            {left.map((c, i) => (
+              <div key={c.id} className={cn(i > 0 && proposalSectionChildGapBefore(left[i - 1]!, c))}>
+                <BlockView
+                  block={c}
+                  shareToken={shareToken}
+                  publicSelections={publicSelections}
+                  viewportSectionBleed={viewportSectionBleed}
+                  splashPublicPresentation={splashPublicPresentation}
+                />
+              </div>
             ))}
           </div>
-          <div className={PROPOSAL_DOCUMENT_BLOCK_STACK_CLASSES}>
-            {(block.right ?? []).map((c) => (
-              <BlockView
-                key={c.id}
-                block={c}
-                shareToken={shareToken}
-                publicSelections={publicSelections}
-                viewportSectionBleed={viewportSectionBleed}
-                splashPublicPresentation={splashPublicPresentation}
-              />
+          <div className="flex flex-col">
+            {right.map((c, i) => (
+              <div key={c.id} className={cn(i > 0 && proposalSectionChildGapBefore(right[i - 1]!, c))}>
+                <BlockView
+                  block={c}
+                  shareToken={shareToken}
+                  publicSelections={publicSelections}
+                  viewportSectionBleed={viewportSectionBleed}
+                  splashPublicPresentation={splashPublicPresentation}
+                />
+              </div>
             ))}
           </div>
         </div>
