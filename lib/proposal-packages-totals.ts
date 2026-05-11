@@ -8,14 +8,32 @@ export function packagesAddonsSectionActive(block: PackagesBlock): boolean {
   return (block.addonLineItems ?? []).length > 0;
 }
 
-/** Contract-style plan total (matches `computeProposalTotalMinor` package branch). */
+export function packageTermMonths(sel: Pick<PackagesPublicSelection, "term">): number {
+  return sel.term === "24_months" ? 24 : 12;
+}
+
+/** Contract-style plan total (months × tier monthly rate). */
 export function packagePlanContractMinor(block: PackagesBlock, sel: PackagesPublicSelection): number {
   const tier = block.tiers.find((t) => t.id === sel.tierId);
   if (!tier) return 0;
-  const months = sel.term === "24_months" ? 24 : 12;
+  const months = packageTermMonths(sel);
   const monthly =
     sel.term === "24_months" ? (tier.monthlyCost24Minor ?? 0) : (tier.monthlyCost12Minor ?? 0);
   return monthly * months;
+}
+
+/** Per-month recurring total: tier rate plus add-on line totals (each line is a monthly amount). */
+export function packageMonthlyTotalMinor(block: PackagesBlock, sel: PackagesPublicSelection): number {
+  const tier = block.tiers.find((t) => t.id === sel.tierId);
+  if (!tier) return 0;
+  const monthly =
+    sel.term === "24_months" ? (tier.monthlyCost24Minor ?? 0) : (tier.monthlyCost12Minor ?? 0);
+  return monthly + packageAddonsTotalMinor(block, sel);
+}
+
+/** Full contract value: plan commitment plus add-ons billed each month for the term. */
+export function packageCommitmentTotalMinor(block: PackagesBlock, sel: PackagesPublicSelection): number {
+  return packagePlanContractMinor(block, sel) + packageAddonsTotalMinor(block, sel) * packageTermMonths(sel);
 }
 
 function addonLineTotal(
@@ -32,7 +50,7 @@ function addonLineTotal(
   return Math.round(li.unitAmountMinor * q);
 }
 
-/** Sum of add-on line totals using persisted selection and/or live viewer maps. */
+/** Sum of add-on line totals (per month) using persisted selection and/or live viewer maps. */
 export function packageAddonsTotalMinor(
   block: PackagesBlock,
   sel: Pick<PackagesPublicSelection, "addonQuantities" | "addonOptionalOff"> | undefined,

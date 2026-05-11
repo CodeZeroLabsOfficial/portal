@@ -11,7 +11,8 @@ import type {
   SplashBlock,
 } from "@/types/proposal";
 import {
-  PROPOSAL_DOCUMENT_BLOCK_EDGE_PAD_CLASSES,
+  PROPOSAL_DOCUMENT_BLOCK_INNER_PAD_CLASSES,
+  PROPOSAL_DOCUMENT_BLOCK_ROOT_MARGIN_CLASSES,
   PROPOSAL_DOCUMENT_BLOCK_STACK_CLASSES,
   PROPOSAL_DOCUMENT_COLUMNS_ROW_GAP_CLASSES,
   PROPOSAL_DOCUMENT_ROOT_STACK_GAP_CLASSES,
@@ -71,11 +72,11 @@ function BlockView({
         />
       ));
       const body = viewportSectionBleed ? (
-        <div className={cn(PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES, PROPOSAL_DOCUMENT_BLOCK_EDGE_PAD_CLASSES)}>
+        <div className={cn(PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES, PROPOSAL_DOCUMENT_BLOCK_INNER_PAD_CLASSES)}>
           <div className={PROPOSAL_DOCUMENT_BLOCK_STACK_CLASSES}>{stack}</div>
         </div>
       ) : (
-        <div className={cn(PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES, PROPOSAL_DOCUMENT_BLOCK_EDGE_PAD_CLASSES)}>
+        <div className={cn(PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES, PROPOSAL_DOCUMENT_BLOCK_INNER_PAD_CLASSES)}>
           <div className={PROPOSAL_DOCUMENT_BLOCK_STACK_CLASSES}>{stack}</div>
         </div>
       );
@@ -406,13 +407,16 @@ export function ProposalDocumentView({
             );
             if (block.type === "section" || splashRootBand) {
               return (
-                <section key={block.id} className={cn("w-full", splashRootBand && PROPOSAL_DOCUMENT_BLOCK_EDGE_PAD_CLASSES)}>
+                <section key={block.id} className={cn("w-full", PROPOSAL_DOCUMENT_BLOCK_ROOT_MARGIN_CLASSES)}>
                   {child}
                 </section>
               );
             }
             return (
-              <section key={block.id} className={cn(PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES, PROPOSAL_DOCUMENT_BLOCK_EDGE_PAD_CLASSES)}>
+              <section
+                key={block.id}
+                className={cn(PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES, PROPOSAL_DOCUMENT_BLOCK_ROOT_MARGIN_CLASSES)}
+              >
                 {child}
               </section>
             );
@@ -423,7 +427,11 @@ export function ProposalDocumentView({
           {document.blocks.map((block) => (
             <section
               key={block.id}
-              className={cn("space-y-0", block.type !== "section" && PROPOSAL_DOCUMENT_BLOCK_EDGE_PAD_CLASSES)}
+              className={cn(
+                "space-y-0",
+                PROPOSAL_DOCUMENT_BLOCK_ROOT_MARGIN_CLASSES,
+                block.type !== "section" && PROPOSAL_DOCUMENT_BLOCK_INNER_PAD_CLASSES,
+              )}
             >
               <BlockView
                 block={block}

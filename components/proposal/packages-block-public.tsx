@@ -9,7 +9,9 @@ import { formatPackageTierIncluded } from "@/lib/package-tier-limits";
 import { effectivePricingLineQuantity } from "@/lib/pricing-line-quantity";
 import {
   packageAddonsTotalMinor,
-  packagePlanContractMinor,
+  packageCommitmentTotalMinor,
+  packageMonthlyTotalMinor,
+  packageTermMonths,
   packagesAddonsSectionActive,
 } from "@/lib/proposal-packages-totals";
 import { cn } from "@/lib/utils";
@@ -99,7 +101,7 @@ export function PackagesBlockPublic({
   const activeTermFg = readableForeground(style.primaryColor);
   const totalBarFg = readableForeground(style.primaryColor);
   const addonsTitle = block.addonsTitle ?? "Add-ons";
-  const totalSectionLabel = block.totalSectionLabel ?? "Total";
+  const totalSectionLabel = block.totalSectionLabel ?? "Monthly total";
   const qtyUnit = (block.addonQuantityUnitLabel ?? "Unit").trim() || "Unit";
   const allowAddonEdit = block.allowAddonQuantityEdit !== false;
 
@@ -114,12 +116,17 @@ export function PackagesBlockPublic({
       }
     : undefined;
 
-  const planSubtotalMinor = selectionDraft ? packagePlanContractMinor(block, selectionDraft) : 0;
   const addonsSubtotalMinor =
     selectionDraft != null
       ? packageAddonsTotalMinor(block, selectionDraft)
       : packageAddonsTotalMinor(block, undefined, addonQty, addonOptOff);
-  const grandTotalMinor = planSubtotalMinor + addonsSubtotalMinor;
+  const termMonths = packageTermMonths({ term });
+  const monthlyTotalMinor = selectionDraft
+    ? packageMonthlyTotalMinor(block, selectionDraft)
+    : addonsSubtotalMinor;
+  const commitmentTotalMinor = selectionDraft
+    ? packageCommitmentTotalMinor(block, selectionDraft)
+    : addonsSubtotalMinor * termMonths;
 
   async function flushAddonsToServer(nextQty?: Record<string, number>, nextOpt?: Record<string, boolean>) {
     if (!interactive || !shareToken || !selectedTierId) return;
@@ -430,8 +437,9 @@ export function PackagesBlockPublic({
             >
               <p className="text-sm font-semibold">{addonsTitle}</p>
               <p className="text-[11px] font-semibold uppercase tracking-wide opacity-90">
-                Subtotal{" "}
+                Monthly subtotal{" "}
                 <span className="text-base tabular-nums">{formatCurrencyAmount(addonsSubtotalMinor, currency)}</span>
+                <span className="ml-1 text-[10px] font-medium opacity-90">/ mo</span>
               </p>
             </div>
             <div className="overflow-x-auto bg-card">
@@ -523,30 +531,31 @@ export function PackagesBlockPublic({
 
       <div
         className={cn(
-          "mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 px-4 py-3 shadow-sm",
+          "mt-4 flex flex-wrap items-start justify-between gap-3 rounded-xl border border-border/70 px-4 py-3 shadow-sm",
           isVisual ? "mx-auto max-w-md" : "",
         )}
         style={{ backgroundColor: style.primaryColor, color: totalBarFg }}
       >
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-wide opacity-90">{totalSectionLabel}</p>
-          {selectedTierId ? (
-            <p className="mt-0.5 text-xs opacity-85">
-              Plan ({term === "24_months" ? "24" : "12"} mo): {formatCurrencyAmount(planSubtotalMinor, currency)}
-              {addonsActive && addonLines.length > 0 ? (
-                <>
-                  {" "}
-                  · Add-ons: {formatCurrencyAmount(addonsSubtotalMinor, currency)}
-                </>
-              ) : null}
-            </p>
-          ) : (
+          {!selectedTierId ? (
             <p className="mt-0.5 text-xs opacity-85">Choose a plan to include subscription pricing in this total.</p>
-          )}
+          ) : null}
         </div>
-        <p className="text-xl font-semibold tabular-nums sm:text-2xl">
-          {formatCurrencyAmount(grandTotalMinor, currency)}
-        </p>
+        <div className="min-w-0 text-right">
+          <p className="text-xl font-semibold tabular-nums sm:text-2xl">
+            {formatCurrencyAmount(monthlyTotalMinor, currency)}
+          </p>
+          <p className="mt-0.5 text-xs font-medium opacity-90">/ month</p>
+          {selectedTierId || addonsSubtotalMinor > 0 ? (
+            <p className="mt-2 max-w-[280px] text-pretty text-left text-[11px] leading-snug opacity-80 sm:ml-auto sm:text-right">
+              Total commitment over {termMonths} mo:{" "}
+              <span className="whitespace-nowrap tabular-nums font-medium opacity-95">
+                {formatCurrencyAmount(commitmentTotalMinor, currency)}
+              </span>
+            </p>
+          ) : null}
+        </div>
       </div>
     </div>
   );

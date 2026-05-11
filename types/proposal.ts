@@ -179,7 +179,7 @@ export interface PackagesBlock extends ProposalBlockBase {
   tiers: PackageTier[];
   /** Visual style overrides (variant + colours). */
   style?: BlockStyle;
-  /** Optional add-ons (same shape as pricing line items) shown below tiers. */
+  /** Optional add-ons (same shape as pricing line items); each line is a per-month amount for the selected term. */
   addonLineItems?: PricingLineItem[];
   /** Title above the add-ons table (default in UI: “Add-ons”). */
   addonsTitle?: string;
@@ -187,7 +187,7 @@ export interface PackagesBlock extends ProposalBlockBase {
   allowAddonQuantityEdit?: boolean;
   /** Suffix after quantity in the add-ons table (default: “Unit”). */
   addonQuantityUnitLabel?: string;
-  /** Label for the combined total row (default: “Total”). */
+  /** Label for the packages summary bar (default: “Monthly total”). */
   totalSectionLabel?: string;
   /**
    * When true, the add-ons table is shown in the builder and on the public page.

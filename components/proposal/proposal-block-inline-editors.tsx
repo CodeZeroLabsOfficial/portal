@@ -20,7 +20,9 @@ import {
 import { effectivePricingLineQuantity } from "@/lib/pricing-line-quantity";
 import {
   packageAddonsTotalMinor,
-  packagePlanContractMinor,
+  packageCommitmentTotalMinor,
+  packageMonthlyTotalMinor,
+  packageTermMonths,
   packagesAddonsSectionActive,
 } from "@/lib/proposal-packages-totals";
 import { Input } from "@/components/ui/input";
@@ -329,11 +331,25 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
   }
   const previewSel: PackagesPublicSelection | undefined =
     previewTierId != null
-      ? { kind: "packages", tierId: previewTierId, term, updatedAtMs: 0 }
+      ? {
+          kind: "packages",
+          tierId: previewTierId,
+          term,
+          updatedAtMs: 0,
+          addonQuantities: mockAddonQty,
+          addonOptionalOff: {},
+        }
       : undefined;
-  const addonsPreviewMinor = packageAddonsTotalMinor(block, undefined, mockAddonQty, {});
-  const planPreviewMinor = previewSel ? packagePlanContractMinor(block, previewSel) : 0;
-  const grandPreviewMinor = previewSel ? planPreviewMinor + addonsPreviewMinor : addonsPreviewMinor;
+  const addonsPreviewMinor = previewSel
+    ? packageAddonsTotalMinor(block, previewSel)
+    : packageAddonsTotalMinor(block, undefined, mockAddonQty, {});
+  const previewTermMonths = packageTermMonths({ term });
+  const monthlyPreviewMinor = previewSel
+    ? packageMonthlyTotalMinor(block, previewSel)
+    : addonsPreviewMinor;
+  const commitmentPreviewMinor = previewSel
+    ? packageCommitmentTotalMinor(block, previewSel)
+    : addonsPreviewMinor * previewTermMonths;
 
   const label12 = block.plan12Label ?? "12 months";
   const label24 = block.plan24Label ?? "24 months";
@@ -359,7 +375,7 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
       addonsTitle: block.addonsTitle?.trim() || "Add-ons",
       allowAddonQuantityEdit: true,
       addonQuantityUnitLabel: block.addonQuantityUnitLabel?.trim() || "Unit",
-      totalSectionLabel: block.totalSectionLabel?.trim() || "Total",
+      totalSectionLabel: block.totalSectionLabel?.trim() || "Monthly total",
     });
   }
 
@@ -504,9 +520,10 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
               />
             </div>
             <div className="flex shrink-0 flex-col items-end gap-0.5 text-right">
-              <span className="text-[10px] font-semibold uppercase tracking-wide opacity-90">Subtotal</span>
+              <span className="text-[10px] font-semibold uppercase tracking-wide opacity-90">Monthly subtotal</span>
               <span className="text-lg font-semibold tabular-nums leading-none">
                 {formatCurrencyAmount(addonsPreviewMinor, currency)}
+                <span className="ml-1 text-xs font-medium opacity-90">/ mo</span>
               </span>
             </div>
           </div>
@@ -537,7 +554,7 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
             />
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="text-muted-foreground">Total label</span>
+            <span className="text-muted-foreground">Summary label</span>
             <Input
               value={block.totalSectionLabel ?? ""}
               onChange={(e) =>
@@ -545,9 +562,9 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
                   totalSectionLabel: e.target.value.trim() ? e.target.value.trim().slice(0, 120) : undefined,
                 })
               }
-              placeholder="Total"
+              placeholder="Monthly total"
               className="h-8 w-32 bg-background text-xs"
-              aria-label="Combined total row label"
+              aria-label="Packages summary bar title"
             />
           </div>
         </div>
@@ -656,36 +673,35 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
 
       <div
         className={cn(
-          "mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 px-4 py-3 shadow-sm",
+          "mt-4 flex flex-wrap items-start justify-between gap-3 rounded-xl border border-border/70 px-4 py-3 shadow-sm",
           isVisual ? "mx-auto max-w-md" : "",
         )}
         style={{ backgroundColor: style.primaryColor, color: headerBarFg }}
       >
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-wide opacity-90">
-            {block.totalSectionLabel?.trim() || "Total"} (preview)
+            {block.totalSectionLabel?.trim() || "Monthly total"} (preview)
           </p>
-          <p className="mt-0.5 text-xs opacity-85">
-            {previewTierId ? (
-              <>
-                Plan ({term === "24_months" ? "24" : "12"} mo,{" "}
-                {tiers.find((t) => t.id === previewTierId)?.name ?? "tier"}):{" "}
-                {formatCurrencyAmount(planPreviewMinor, currency)}
-                {addonsActive && addonLineItems.length > 0 ? (
-                  <>
-                    {" "}
-                    · Add-ons: {formatCurrencyAmount(addonsPreviewMinor, currency)}
-                  </>
-                ) : null}
-              </>
-            ) : (
+          {!previewTierId ? (
+            <p className="mt-0.5 text-xs opacity-85">
               <span>Add tiers to preview the plan portion of this total.</span>
-            )}
-          </p>
+            </p>
+          ) : null}
         </div>
-        <p className="text-xl font-semibold tabular-nums sm:text-2xl">
-          {formatCurrencyAmount(grandPreviewMinor, currency)}
-        </p>
+        <div className="min-w-0 text-right">
+          <p className="text-xl font-semibold tabular-nums sm:text-2xl">
+            {formatCurrencyAmount(monthlyPreviewMinor, currency)}
+          </p>
+          <p className="mt-0.5 text-xs font-medium opacity-90">/ month</p>
+          {previewTierId || addonsPreviewMinor > 0 ? (
+            <p className="mt-2 max-w-[280px] text-pretty text-left text-[11px] leading-snug opacity-80 sm:ml-auto sm:text-right">
+              Total commitment over {previewTermMonths} mo:{" "}
+              <span className="whitespace-nowrap tabular-nums font-medium opacity-95">
+                {formatCurrencyAmount(commitmentPreviewMinor, currency)}
+              </span>
+            </p>
+          ) : null}
+        </div>
       </div>
     </div>
   );

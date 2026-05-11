@@ -85,7 +85,6 @@ import {
 import { BlockToolbar } from "@/components/proposal/proposal-block-toolbar";
 import { DeleteProposalTemplateButton } from "@/components/proposal/delete-proposal-template-button";
 import {
-  PROPOSAL_DOCUMENT_BLOCK_GROUP_TOP_CLASSES,
   PROPOSAL_PUBLIC_DOCUMENT_OUTER_CLASSES,
   PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES,
 } from "@/lib/proposal-public-layout";
@@ -898,7 +897,7 @@ function SectionBlockFields({
             const isSelected = selectedBlockId === child.id;
             const supportsStyle = child.type === "packages";
             return (
-              <div key={child.id} className={cn(idx > 0 && PROPOSAL_DOCUMENT_BLOCK_GROUP_TOP_CLASSES)}>
+              <div key={child.id}>
                 <SortableShell
                   id={child.id}
                   selected={isSelected}
@@ -1893,7 +1892,7 @@ export function ProposalDocumentEditor({
                     const isSelected = selectedBlockId === block.id;
                     const supportsStyle = block.type === "packages";
                     return (
-                      <div key={block.id} className={cn(idx > 0 && PROPOSAL_DOCUMENT_BLOCK_GROUP_TOP_CLASSES)}>
+                      <div key={block.id}>
                         <SortableShell
                           id={block.id}
                           selected={isSelected}
