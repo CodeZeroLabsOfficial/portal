@@ -8,8 +8,10 @@ import { motion } from "framer-motion";
 import {
   ArrowLeft,
   Building2,
+  Clock,
   CreditCard,
   ExternalLink,
+  Eye,
   FileText,
   FolderOpen,
   ListChecks,
@@ -67,6 +69,23 @@ function rollupFromSubscriptions(subs: SubscriptionRecord[]): string {
   if (statuses.length === 1) return `Subscription · ${statuses[0]}`;
   return `Subscriptions · ${statuses.join(", ")}`;
 }
+
+/** Saved / sent / viewed flags for CRM proposal rows (list is always persisted → saved is always true). */
+function proposalLifecycleFlags(p: ProposalRecord) {
+  const saved = true;
+  const sent = p.status !== "draft";
+  const viewed =
+    p.status === "viewed" ||
+    p.status === "accepted" ||
+    p.status === "declined" ||
+    (typeof p.viewCount === "number" && p.viewCount > 0) ||
+    (typeof p.lastViewedAtMs === "number" && p.lastViewedAtMs > 0);
+  return { saved, sent, viewed };
+}
+
+const proposalLifecycleBadgeActive =
+  "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400";
+const proposalLifecycleBadgeInactive = "border-border/60 text-muted-foreground opacity-80";
 
 function ProposalCreateControls({
   proposalTemplates,
@@ -575,48 +594,119 @@ export function CustomerDetailView({
             </Card>
           ) : (
             <ul className="space-y-2">
-              {proposalsMatched.map((p) => (
+              {proposalsMatched.map((p) => {
+                const { saved, sent, viewed } = proposalLifecycleFlags(p);
+                return (
                 <li
                   key={p.id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/60 bg-card/50 px-4 py-3"
+                  className="flex flex-col gap-3 rounded-xl border border-border/60 bg-card/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
                 >
-                  <div>
-                    <p className="font-medium text-foreground">{p.title}</p>
-                    <p className="text-xs capitalize text-muted-foreground">Status: {p.status}</p>
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <div>
+                      <p className="font-medium text-foreground">{p.title}</p>
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        <Badge
+                          variant="outline"
+                          title="Proposal document stored for this customer."
+                          className={cn("text-xs font-medium", saved ? proposalLifecycleBadgeActive : proposalLifecycleBadgeInactive)}
+                        >
+                          Saved
+                        </Badge>
+                        <Badge
+                          variant="outline"
+                          title={
+                            sent
+                              ? "Public link has been published (sent stage or later)."
+                              : "Still a draft — publish from the proposal editor when ready."
+                          }
+                          className={cn("text-xs font-medium", sent ? proposalLifecycleBadgeActive : proposalLifecycleBadgeInactive)}
+                        >
+                          Sent
+                        </Badge>
+                        <Badge
+                          variant="outline"
+                          title={
+                            viewed
+                              ? "Recipient opened the public proposal (or completed an action there)."
+                              : "No recorded opens on the public link yet."
+                          }
+                          className={cn("text-xs font-medium", viewed ? proposalLifecycleBadgeActive : proposalLifecycleBadgeInactive)}
+                        >
+                          Viewed
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-x-4 gap-y-2 rounded-lg border border-border/50 bg-muted/15 px-3 py-2 text-xs text-muted-foreground">
+                      <span className="inline-flex items-center gap-1.5">
+                        <Eye className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                        <span className="text-foreground/90">
+                          {typeof p.viewCount === "number" ? (
+                            <>
+                              <span className="font-medium tabular-nums text-foreground">{p.viewCount}</span>
+                              {p.viewCount === 1 ? " open" : " opens"}
+                            </>
+                          ) : (
+                            "Opens not recorded"
+                          )}
+                        </span>
+                      </span>
+                      <span className="inline-flex items-center gap-1.5">
+                        <Clock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                        <span className="text-foreground/90">
+                          {typeof p.totalEngagementSeconds === "number" ? (
+                            <>
+                              <span className="font-medium tabular-nums text-foreground">
+                                {Math.max(0, Math.round(p.totalEngagementSeconds / 60))}
+                              </span>
+                              {" min on page"}
+                            </>
+                          ) : (
+                            "Engagement not recorded"
+                          )}
+                        </span>
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button variant="outline" size="sm" className="gap-1.5" asChild>
-                      <Link href={`/admin/proposals/${p.id}?customer=${encodeURIComponent(customer.id)}`}>
-                        <Pencil className="h-3.5 w-3.5" aria-hidden />
-                        Edit
-                      </Link>
-                    </Button>
+                  <div className="flex shrink-0 flex-wrap items-center gap-1.5 sm:self-start">
                     <Button
                       type="button"
                       variant="outline"
-                      size="sm"
-                      className="gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      size="icon"
+                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                       disabled={deletingProposalId === p.id}
+                      aria-label={`Delete proposal “${p.title}”`}
                       onClick={() => void deleteProposal(p.id, p.title)}
                     >
                       {deletingProposalId === p.id ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
                       ) : (
-                        <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                        <Trash2 className="h-4 w-4" aria-hidden />
                       )}
-                      Delete
+                    </Button>
+                    <Button variant="outline" size="icon" asChild>
+                      <Link
+                        href={`/admin/proposals/${p.id}?customer=${encodeURIComponent(customer.id)}`}
+                        aria-label={`Edit proposal “${p.title}”`}
+                      >
+                        <Pencil className="h-4 w-4" aria-hidden />
+                      </Link>
                     </Button>
                     {p.shareToken ? (
-                      <Button variant="outline" size="sm" className="gap-1.5" asChild>
-                        <Link href={`/p/${p.shareToken}`} target="_blank" rel="noopener noreferrer">
-                          <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-                          Public view
+                      <Button variant="outline" size="icon" asChild>
+                        <Link
+                          href={`/p/${p.shareToken}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label="Open public proposal preview"
+                        >
+                          <ExternalLink className="h-4 w-4" aria-hidden />
                         </Link>
                       </Button>
                     ) : null}
                   </div>
                 </li>
-              ))}
+                );
+              })}
             </ul>
           )}
         </TabsContent>

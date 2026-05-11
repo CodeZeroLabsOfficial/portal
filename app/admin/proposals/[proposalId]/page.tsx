@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { FileText } from "lucide-react";
+import { Clock, Eye, FileText } from "lucide-react";
 import { getCurrentSessionUser } from "@/lib/auth/server-session";
 import { getAdminProposalRecord } from "@/server/firestore/portal-data";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -61,20 +61,30 @@ export default async function AdminProposalDetailPage({ params, searchParams }: 
                 {blockCount} {blockCount === 1 ? "block" : "blocks"}
               </dd>
             </div>
-            {typeof proposal.viewCount === "number" ? (
-              <div className="space-y-1">
-                <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Public opens</dt>
-                <dd className="tabular-nums text-foreground">{proposal.viewCount}</dd>
-              </div>
-            ) : null}
-            {typeof proposal.totalEngagementSeconds === "number" ? (
-              <div className="space-y-1">
-                <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Approx. engagement</dt>
-                <dd className="text-foreground">
-                  {Math.max(0, Math.round(proposal.totalEngagementSeconds / 60))} minutes on page
-                </dd>
-              </div>
-            ) : null}
+            <div className="space-y-1">
+              <dt className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <Eye className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
+                Public opens
+              </dt>
+              <dd className="tabular-nums text-foreground">
+                {typeof proposal.viewCount === "number" ? proposal.viewCount : "Not recorded"}
+              </dd>
+            </div>
+            <div className="space-y-1">
+              <dt className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <Clock className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
+                Approx. engagement
+              </dt>
+              <dd className="text-foreground">
+                {typeof proposal.totalEngagementSeconds === "number" ? (
+                  <>
+                    {Math.max(0, Math.round(proposal.totalEngagementSeconds / 60))} minutes on page
+                  </>
+                ) : (
+                  "Not recorded"
+                )}
+              </dd>
+            </div>
             <div className="space-y-1 sm:col-span-2">
               <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Recipient</dt>
               <dd className="text-foreground">{recipient ?? "—"}</dd>
