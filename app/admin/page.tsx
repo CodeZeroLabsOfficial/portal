@@ -20,6 +20,7 @@ export default async function AdminHomePage() {
       displayName={user.displayName ?? ""}
       userLabel={user.email || user.uid}
       showMainHeader={false}
+      showRightAside
       rightAside={<AdminHomeRightAside data={data} />}
     >
       <AdminHomeDashboard

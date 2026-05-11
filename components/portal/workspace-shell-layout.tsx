@@ -43,7 +43,7 @@ const SIDEBAR_COLLAPSED_KEY = "portal-sidebar-collapsed";
 
 /** Matches `<main>` horizontal padding; negative margin lets content span the full main column. */
 const WORKSPACE_MAIN_CONTENT_CLASS =
-  "w-full min-w-0 max-w-none space-y-6 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8";
+  "w-full min-w-0 max-w-none space-y-6 -mx-3 px-3 sm:-mx-4 sm:px-4";
 
 interface WorkspaceShellLayoutProps {
   title: string;
@@ -52,7 +52,7 @@ interface WorkspaceShellLayoutProps {
   userLabel: string;
   displayName?: string;
   rightAside?: ReactNode;
-  /** When false, the xl+ right sidebar column is not rendered. */
+  /** When true, the xl+ right sidebar column is rendered (opt-in; default off for full-width main). */
   showRightAside?: boolean;
   showMainHeader?: boolean;
   contentClassName?: string;
@@ -131,7 +131,7 @@ export function WorkspaceShellLayout({
   userLabel,
   displayName = "",
   rightAside,
-  showRightAside = true,
+  showRightAside = false,
   showMainHeader = true,
   contentClassName,
   secondaryNav,
@@ -284,7 +284,7 @@ export function WorkspaceShellLayout({
 
         <div className="flex min-w-0 flex-1 flex-col bg-[#0D0D16]">
           <header className="sticky top-0 z-20 border-b border-white/[0.06] bg-[#0D0D16]/95 backdrop-blur-md">
-            <div className="flex h-14 w-full items-center gap-3 px-4 sm:px-6 lg:px-8">
+            <div className="flex h-14 w-full items-center gap-3 px-3 sm:px-4">
               <div className="relative hidden min-w-0 flex-1 lg:block">
                 <Search
                   className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 stroke-[1.5] text-zinc-400"
@@ -426,7 +426,7 @@ export function WorkspaceShellLayout({
                 {secondaryNav}
               </div>
             ) : null}
-            <main className="min-w-0 flex-1 overflow-auto px-4 py-8 sm:px-6 lg:px-8">
+            <main className="min-w-0 flex-1 overflow-auto px-3 py-8 sm:px-4">
               <div className={cn(WORKSPACE_MAIN_CONTENT_CLASS, contentClassName)}>
                 {showMainHeader ? (
                   <div className="mb-2 hidden lg:block">
