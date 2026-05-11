@@ -4,6 +4,7 @@ import {
   PROPOSAL_COLUMN_FR_MIN,
   normalizeColumnFlexForStorage,
 } from "@/lib/proposal-columns";
+import { normalizePackagesTotalSectionLabelForPersistence } from "@/lib/proposal-packages-totals";
 import type { ProposalBlock, ProposalContentBlock, ProposalDocument, SectionBackground } from "@/types/proposal";
 
 const idSchema = z.string().min(4);
@@ -238,9 +239,9 @@ function normalizePackagesBlockInput(raw: unknown): unknown {
   if (typeof o.addonQuantityUnitLabel === "string" && o.addonQuantityUnitLabel.trim()) {
     block.addonQuantityUnitLabel = o.addonQuantityUnitLabel.trim().slice(0, 40);
   }
-  if (typeof o.totalSectionLabel === "string" && o.totalSectionLabel.trim()) {
-    block.totalSectionLabel = o.totalSectionLabel.trim().slice(0, 120);
-  }
+  delete block.totalSectionLabel;
+  const totalSectionLabel = normalizePackagesTotalSectionLabelForPersistence(o.totalSectionLabel);
+  if (totalSectionLabel !== undefined) block.totalSectionLabel = totalSectionLabel;
   if (o.addonsSectionEnabled === true) block.addonsSectionEnabled = true;
   if (o.addonsSectionEnabled === false) block.addonsSectionEnabled = false;
 

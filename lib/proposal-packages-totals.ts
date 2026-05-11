@@ -112,3 +112,23 @@ export function packageAddonsTotalMinor(
   }
   return sum;
 }
+
+const LEGACY_PACKAGES_TOTAL_HEADING = /^monthly total$/i;
+
+/** Shown in the packages bottom summary bar when the block has no custom heading. */
+export const DEFAULT_PACKAGES_TOTAL_SECTION_LABEL = "Total";
+
+/** Heading for the coloured total bar (legacy “Monthly total” → “Total”). */
+export function resolvePackagesTotalSectionLabel(raw: string | undefined | null): string {
+  const t = typeof raw === "string" ? raw.trim() : "";
+  if (!t || LEGACY_PACKAGES_TOTAL_HEADING.test(t)) return DEFAULT_PACKAGES_TOTAL_SECTION_LABEL;
+  return t;
+}
+
+/** Persisted `totalSectionLabel`: empty and legacy wording are stored as absent. */
+export function normalizePackagesTotalSectionLabelForPersistence(raw: unknown): string | undefined {
+  if (typeof raw !== "string") return undefined;
+  const t = raw.trim().slice(0, 120);
+  if (!t || LEGACY_PACKAGES_TOTAL_HEADING.test(t)) return undefined;
+  return t;
+}

@@ -282,9 +282,9 @@ export function CustomerDetailView({
             Customers
           </Link>
         </Button>
-        <Button variant="secondary" size="sm" className="gap-1.5 shadow-sm" asChild>
+        <Button variant="ghost" size="sm" className="-mr-2 gap-1.5 text-muted-foreground hover:text-foreground" asChild>
           <Link href={`/admin/customers/${customer.id}/edit`}>
-            <Pencil className="h-3.5 w-3.5" aria-hidden />
+            <Pencil className="h-4 w-4" aria-hidden />
             Edit
           </Link>
         </Button>
@@ -617,7 +617,39 @@ export function CustomerDetailView({
                   key={p.id}
                   className="flex flex-col gap-3 rounded-xl border border-border/60 bg-card/50 px-4 py-3"
                 >
-                  <p className="min-w-0 font-medium text-foreground">{p.title}</p>
+                  <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                    <p className="min-w-0 flex-1 font-medium text-foreground">{p.title}</p>
+                    <div className="flex shrink-0 flex-wrap items-center justify-end gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                      <span className="inline-flex items-center gap-1.5">
+                        <Eye className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                        <span className="text-foreground/90">
+                          {typeof p.viewCount === "number" ? (
+                            <>
+                              <span className="font-medium tabular-nums text-foreground">{p.viewCount}</span>
+                              {p.viewCount === 1 ? " open" : " opens"}
+                            </>
+                          ) : (
+                            "Opens not recorded"
+                          )}
+                        </span>
+                      </span>
+                      <span className="inline-flex items-center gap-1.5">
+                        <Clock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                        <span className="text-foreground/90">
+                          {typeof p.totalEngagementSeconds === "number" ? (
+                            <>
+                              <span className="font-medium tabular-nums text-foreground">
+                                {Math.max(0, Math.round(p.totalEngagementSeconds / 60))}
+                              </span>
+                              {" min on page"}
+                            </>
+                          ) : (
+                            "Engagement not recorded"
+                          )}
+                        </span>
+                      </span>
+                    </div>
+                  </div>
                   <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
                     <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-2">
                       <Badge
@@ -627,38 +659,8 @@ export function CustomerDetailView({
                       >
                         {phase === "saved" ? "Saved" : phase === "sent" ? "Sent" : "Viewed"}
                       </Badge>
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground sm:ml-auto">
-                        <span className="inline-flex items-center gap-1.5">
-                          <Eye className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
-                          <span className="text-foreground/90">
-                            {typeof p.viewCount === "number" ? (
-                              <>
-                                <span className="font-medium tabular-nums text-foreground">{p.viewCount}</span>
-                                {p.viewCount === 1 ? " open" : " opens"}
-                              </>
-                            ) : (
-                              "Opens not recorded"
-                            )}
-                          </span>
-                        </span>
-                        <span className="inline-flex items-center gap-1.5">
-                          <Clock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
-                          <span className="text-foreground/90">
-                            {typeof p.totalEngagementSeconds === "number" ? (
-                              <>
-                                <span className="font-medium tabular-nums text-foreground">
-                                  {Math.max(0, Math.round(p.totalEngagementSeconds / 60))}
-                                </span>
-                                {" min on page"}
-                              </>
-                            ) : (
-                              "Engagement not recorded"
-                            )}
-                          </span>
-                        </span>
-                      </div>
                     </div>
-                    <div className="flex shrink-0 items-center gap-1.5">
+                    <div className="flex shrink-0 items-center gap-1.5 sm:ml-auto">
                       <Button
                         type="button"
                         variant="outline"

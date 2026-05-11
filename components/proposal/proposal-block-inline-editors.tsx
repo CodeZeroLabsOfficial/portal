@@ -19,11 +19,13 @@ import {
 } from "@/lib/package-tier-limits";
 import { effectivePricingLineQuantity } from "@/lib/pricing-line-quantity";
 import {
+  normalizePackagesTotalSectionLabelForPersistence,
   packageAddonsTotalMinor,
   packageCommitmentTotalMinor,
   packageMonthlyTotalMinor,
   packageTermMonths,
   packagesAddonsSectionActive,
+  resolvePackagesTotalSectionLabel,
 } from "@/lib/proposal-packages-totals";
 import { Input } from "@/components/ui/input";
 import {
@@ -378,7 +380,7 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
       addonsTitle: block.addonsTitle?.trim() || "Add-ons",
       allowAddonQuantityEdit: true,
       addonQuantityUnitLabel: block.addonQuantityUnitLabel?.trim() || "Unit",
-      totalSectionLabel: block.totalSectionLabel?.trim() || "Total",
+      totalSectionLabel: normalizePackagesTotalSectionLabelForPersistence(block.totalSectionLabel),
     });
   }
 
@@ -602,7 +604,7 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
                     value={block.totalSectionLabel ?? ""}
                     onChange={(e) =>
                       patch({
-                        totalSectionLabel: e.target.value.trim() ? e.target.value.trim().slice(0, 120) : undefined,
+                        totalSectionLabel: normalizePackagesTotalSectionLabelForPersistence(e.target.value),
                       })
                     }
                     placeholder="Total"
@@ -725,7 +727,7 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
       >
         <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
           <span className="inline-flex min-w-0 shrink flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xl font-semibold leading-none sm:text-2xl">
-            <span>{block.totalSectionLabel?.trim() || "Total"}</span>
+            <span>{resolvePackagesTotalSectionLabel(block.totalSectionLabel)}</span>
             <span className="text-sm font-medium opacity-90 sm:text-base">(preview)</span>
           </span>
           <div className="min-w-0 shrink-0 text-right">

@@ -13,6 +13,7 @@ import {
   packageMonthlyTotalMinor,
   packageTermMonths,
   packagesAddonsSectionActive,
+  resolvePackagesTotalSectionLabel,
 } from "@/lib/proposal-packages-totals";
 import { cn } from "@/lib/utils";
 import { readableForeground, resolveBlockStyle, withAlpha } from "@/lib/block-style";
@@ -104,7 +105,7 @@ export function PackagesBlockPublic({
   const activeTermFg = readableForeground(style.primaryColor);
   const totalBarFg = readableForeground(style.primaryColor);
   const addonsTitle = block.addonsTitle ?? "Add-ons";
-  const totalSectionLabel = block.totalSectionLabel ?? "Total";
+  const totalSectionLabel = resolvePackagesTotalSectionLabel(block.totalSectionLabel);
   const qtyUnit = (block.addonQuantityUnitLabel ?? "Unit").trim() || "Unit";
   const allowAddonEdit = block.allowAddonQuantityEdit !== false;
 
