@@ -5,11 +5,19 @@ import type { ProposalBlock, ProposalColumnChildBlock, ProposalContentBlock, Pro
 export interface ProposalTokenContext {
   customer: CustomerRecord;
   opportunity?: OpportunityRecord | null;
+  /**
+   * Used for `{{date}}` (long localised date). When omitted, `replaceProposalTokens` uses the time of each call;
+   * `applyProposalTokensToDocument` sets this once so every field in a document shares the same value.
+   */
+  mergedAt?: Date;
 }
 
-/** Replace merge tokens in strings (case-insensitive): `{{name}}`, `{{client}}` (same as name), `{{email}}`, `{{company}}`, `{{opportunity}}`, `{{deal_amount}}`. */
+/** Replace merge tokens in strings (case-insensitive): `{{name}}`, `{{client}}` (same as name), `{{email}}`, `{{company}}`, `{{opportunity}}`, `{{deal_amount}}`, `{{date}}`. */
 export function replaceProposalTokens(text: string, ctx: ProposalTokenContext): string {
   const { customer, opportunity } = ctx;
+  const at = ctx.mergedAt ?? new Date();
+  /** Long calendar date at merge time (fixed locale so server region does not change output). */
+  const date = at.toLocaleDateString("en-AU", { dateStyle: "long" });
   const company = customer.company?.trim() ?? "";
   const oppName = opportunity?.name?.trim() ?? "";
   let dealAmount = "";
@@ -29,6 +37,7 @@ export function replaceProposalTokens(text: string, ctx: ProposalTokenContext): 
     company,
     opportunity: oppName,
     deal_amount: dealAmount,
+    date,
   };
 
   let out = text;
@@ -184,7 +193,8 @@ function mapTopLevelBlock(block: ProposalBlock, ctx: ProposalTokenContext): Prop
 }
 
 export function applyProposalTokensToDocument(doc: ProposalDocument, ctx: ProposalTokenContext): ProposalDocument {
-  const title = replaceProposalTokens(doc.title, ctx);
-  const blocks = doc.blocks.map((block) => mapTopLevelBlock(block, ctx));
+  const effectiveCtx: ProposalTokenContext = { ...ctx, mergedAt: ctx.mergedAt ?? new Date() };
+  const title = replaceProposalTokens(doc.title, effectiveCtx);
+  const blocks = doc.blocks.map((block) => mapTopLevelBlock(block, effectiveCtx));
   return { title, blocks };
 }
