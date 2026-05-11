@@ -82,6 +82,7 @@ function cloneBlock(block: ProposalBlock): ProposalBlock {
         stacks: block.stacks.map((stack) =>
           stack.map((c) => cloneBlock(c as ProposalBlock) as ProposalColumnChildBlock),
         ),
+        ...(block.columnFlex ? { columnFlex: [...block.columnFlex] } : {}),
       };
     case "icon":
       return { ...block, id };

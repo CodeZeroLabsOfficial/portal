@@ -11,6 +11,11 @@ import type {
   SplashBlock,
 } from "@/types/proposal";
 import {
+  PROPOSAL_COLUMNS_GRID_CLASS,
+  columnFlexToGridTemplate,
+  coerceColumnFlex,
+} from "@/lib/proposal-columns";
+import {
   PROPOSAL_DOCUMENT_BLOCK_INNER_PAD_CLASSES,
   PROPOSAL_DOCUMENT_COLUMNS_ROW_GAP_CLASSES,
   PROPOSAL_DOCUMENT_ROOT_STACK_GAP_CLASSES,
@@ -279,14 +284,18 @@ function BlockView({
     case "columns": {
       const stacks = block.stacks?.length ? block.stacks : [[], []];
       const colCount = stacks.length;
-      const gridCols =
-        colCount >= 4
-          ? "md:grid-cols-4 md:gap-x-6"
-          : colCount === 3
-            ? "md:grid-cols-3 md:gap-x-8"
-            : "md:grid-cols-2 md:gap-x-10";
+      const flexRow = coerceColumnFlex(colCount, block.columnFlex);
+      const gapX =
+        colCount >= 4 ? "md:gap-x-6" : colCount === 3 ? "md:gap-x-8" : "md:gap-x-10";
       return (
-        <div className={cn("grid", gridCols, PROPOSAL_DOCUMENT_COLUMNS_ROW_GAP_CLASSES)}>
+        <div
+          className={cn(PROPOSAL_COLUMNS_GRID_CLASS, PROPOSAL_DOCUMENT_COLUMNS_ROW_GAP_CLASSES, gapX)}
+          style={
+            {
+              ["--proposal-cols" as string]: columnFlexToGridTemplate(flexRow),
+            } as React.CSSProperties
+          }
+        >
           {stacks.map((stack, colIdx) => (
             <div key={colIdx} className="flex min-w-0 flex-col">
               {stack.map((c) => (

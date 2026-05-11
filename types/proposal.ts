@@ -304,6 +304,11 @@ export interface ColumnsBlock extends ProposalBlockBase {
   type: "columns";
   /** Column stacks left-to-right; length 2–4. */
   stacks: ProposalColumnChildBlock[][];
+  /**
+   * Horizontal flex ratios for CSS `grid-template-columns` (same length as `stacks`).
+   * Omitted → equal widths. Larger values consume more space relative to siblings.
+   */
+  columnFlex?: number[];
 }
 
 /** Blocks allowed inside a section (sections do not nest). */

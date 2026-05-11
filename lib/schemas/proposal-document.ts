@@ -1,4 +1,9 @@
 import { z } from "zod";
+import {
+  PROPOSAL_COLUMN_FR_MAX,
+  PROPOSAL_COLUMN_FR_MIN,
+  normalizeColumnFlexForStorage,
+} from "@/lib/proposal-columns";
 import type { ProposalBlock, ProposalContentBlock, ProposalDocument, SectionBackground } from "@/types/proposal";
 
 const idSchema = z.string().min(4);
@@ -388,13 +393,33 @@ function normalizeColumnsBlockInput(raw: unknown): unknown {
     stacksUnknown = [...head, tail];
   }
 
-  return { id: o.id, type: "columns", stacks: stacksUnknown };
+  let columnFlexParsed: number[] | undefined;
+  if (Array.isArray(o.columnFlex)) {
+    const nums = o.columnFlex.map((x) => {
+      if (typeof x === "number" && Number.isFinite(x)) return x;
+      const n = typeof x === "string" ? Number(x) : Number.NaN;
+      return n;
+    });
+    if (nums.every((n) => typeof n === "number" && Number.isFinite(n))) {
+      columnFlexParsed = normalizeColumnFlexForStorage(stacksUnknown.length, nums);
+    }
+  }
+
+  return {
+    id: o.id,
+    type: "columns",
+    stacks: stacksUnknown,
+    ...(columnFlexParsed ? { columnFlex: columnFlexParsed } : {}),
+  };
 }
 
 const columnsBlockSchema = z.object({
   id: idSchema,
   type: z.literal("columns"),
   stacks: z.array(z.array(columnInnerSchema)).min(2).max(4),
+  columnFlex: z
+    .array(z.number().finite().min(PROPOSAL_COLUMN_FR_MIN).max(PROPOSAL_COLUMN_FR_MAX))
+    .optional(),
 });
 
 /** Blocks inside a section — same as top-level except no nested `section`. */

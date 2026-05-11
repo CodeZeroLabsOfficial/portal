@@ -86,6 +86,16 @@ import {
 import { BlockToolbar } from "@/components/proposal/proposal-block-toolbar";
 import { DeleteProposalTemplateButton } from "@/components/proposal/delete-proposal-template-button";
 import {
+  PROPOSAL_COLUMNS_GRID_CLASS,
+  PROPOSAL_COLUMN_FR_MAX,
+  PROPOSAL_COLUMN_FR_MIN,
+  columnFlexToGridTemplate,
+  coerceColumnFlex,
+  normalizeColumnFlexForStorage,
+  resizeColumnFlexWithStacks,
+} from "@/lib/proposal-columns";
+import {
+  PROPOSAL_DOCUMENT_COLUMNS_ROW_GAP_CLASSES,
   PROPOSAL_PUBLIC_DOCUMENT_OUTER_CLASSES,
   PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES,
 } from "@/lib/proposal-public-layout";
@@ -187,6 +197,7 @@ function cloneBlockWithFreshIds(block: ProposalBlock): ProposalBlock {
         stacks: block.stacks.map((stack) =>
           stack.map((c) => cloneBlockWithFreshIds(c as ProposalBlock) as ProposalColumnChildBlock),
         ),
+        ...(block.columnFlex ? { columnFlex: [...block.columnFlex] } : {}),
       };
     case "icon":
       return { ...block, id: newId() };
@@ -813,7 +824,11 @@ function ColumnsBlockFields({
           variant={columnCount === n ? "default" : "outline"}
           size="sm"
           className="h-10 gap-2 border-border bg-background px-4 shadow-sm"
-          onClick={() => onChange({ ...block, stacks: resizeColumnStacks(block.stacks, n) })}
+          onClick={() => {
+            const nextStacks = resizeColumnStacks(block.stacks, n);
+            const nextFlex = resizeColumnFlexWithStacks(block.columnFlex, columnCount, n);
+            onChange({ ...block, stacks: nextStacks, columnFlex: nextFlex });
+          }}
         >
           <ColumnBarsMini count={n} className="text-foreground" />
           {n} columns
@@ -821,6 +836,10 @@ function ColumnsBlockFields({
       ))}
     </div>
   );
+
+  const flexRow = coerceColumnFlex(columnCount, block.columnFlex);
+  const colsTemplate = columnFlexToGridTemplate(flexRow);
+  const sumFr = flexRow.reduce((a, b) => a + b, 0) || 1;
 
   return (
     <div className="space-y-8">
@@ -837,13 +856,66 @@ function ColumnsBlockFields({
           {countPicker}
         </div>
       )}
+
+      <div className="space-y-3 rounded-lg border border-border/70 bg-muted/25 px-3 py-3 dark:bg-muted/15">
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-foreground">Column widths</p>
+            <p className="mt-0.5 max-w-xl text-[11px] text-muted-foreground">
+              Adjust each column&apos;s relative width (medium screens and wider). Sizes are percentages of the row after
+              normalizing sliders.
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 shrink-0 text-xs"
+            onClick={() => onChange({ ...block, columnFlex: undefined })}
+          >
+            Equal widths
+          </Button>
+        </div>
+        <div className="space-y-3 pt-1">
+          {flexRow.map((w, colIdx) => (
+            <div key={colIdx} className="space-y-1">
+              <div className="flex items-center justify-between gap-3 text-[11px] text-muted-foreground">
+                <span className="text-foreground/90">Column {colIdx + 1}</span>
+                <span className="tabular-nums">{Math.round((w / sumFr) * 100)}%</span>
+              </div>
+              <input
+                type="range"
+                className="h-2 w-full cursor-pointer accent-primary"
+                aria-valuemin={PROPOSAL_COLUMN_FR_MIN}
+                aria-valuemax={PROPOSAL_COLUMN_FR_MAX}
+                aria-valuenow={Math.min(PROPOSAL_COLUMN_FR_MAX, Math.max(PROPOSAL_COLUMN_FR_MIN, w))}
+                aria-label={`Column ${colIdx + 1} relative width`}
+                min={PROPOSAL_COLUMN_FR_MIN}
+                max={PROPOSAL_COLUMN_FR_MAX}
+                step={0.05}
+                value={Math.min(PROPOSAL_COLUMN_FR_MAX, Math.max(PROPOSAL_COLUMN_FR_MIN, w))}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  const next = [...flexRow];
+                  next[colIdx] = Number.isFinite(v) ? v : next[colIdx];
+                  onChange({
+                    ...block,
+                    columnFlex: normalizeColumnFlexForStorage(next.length, next),
+                  });
+                }}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div
         className={cn(
-          "grid gap-10 md:gap-12",
-          columnCount === 2 && "md:grid-cols-2",
-          columnCount === 3 && "md:grid-cols-3",
-          columnCount === 4 && "md:grid-cols-4",
+          PROPOSAL_COLUMNS_GRID_CLASS,
+          PROPOSAL_DOCUMENT_COLUMNS_ROW_GAP_CLASSES,
+          columnCount >= 4 ? "md:gap-x-6" : columnCount === 3 ? "md:gap-x-8" : "md:gap-x-10",
         )}
+        style={{ ["--proposal-cols" as string]: colsTemplate } as React.CSSProperties}
       >
         {block.stacks.map((stack, i) => (
           <ColumnPane key={i} label={`Column ${i + 1}`} columnIndex={i} stack={stack} />

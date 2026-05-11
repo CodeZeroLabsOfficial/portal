@@ -103,4 +103,21 @@
     --input: 248 18% 18%;
     --ring: 262 52% 47%;
   }
+
+  /*
+   * Proposal columns: stack on narrow viewports; `--proposal-cols` from document data on md+.
+   * Matches `proposal-document-view.tsx` / editor column blocks.
+   */
+  .proposal-columns-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  @media (min-width: 768px) {
+    .proposal-columns-grid {
+      grid-template-columns: var(
+        --proposal-cols,
+        minmax(0, 1fr) minmax(0, 1fr)
+      );
+    }
+  }
 }

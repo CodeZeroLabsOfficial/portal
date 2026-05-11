@@ -171,6 +171,7 @@ function mapContentBlock(block: ProposalContentBlock, ctx: ProposalTokenContext)
         stacks: block.stacks.map((stack) =>
           stack.map((c) => mapContentBlock(c as ProposalContentBlock, ctx) as ProposalColumnChildBlock),
         ),
+        ...(block.columnFlex ? { columnFlex: [...block.columnFlex] } : {}),
       };
     case "icon":
       return {
