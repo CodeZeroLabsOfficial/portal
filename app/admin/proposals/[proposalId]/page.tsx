@@ -9,7 +9,16 @@ import { WorkspaceShell } from "@/components/portal/workspace-shell";
 import { ProposalDocumentEditorLazy } from "@/components/proposal/proposal-document-editor-lazy";
 import { ProposalShareSettings } from "@/components/proposal/proposal-share-settings";
 import { findProposalBlockById } from "@/lib/proposal-blocks";
-import type { PackagesBlock } from "@/types/proposal";
+import { cn } from "@/lib/utils";
+import type { PackagesBlock, ProposalStatus } from "@/types/proposal";
+
+const PROPOSAL_STATUS_BADGE_CLASS: Partial<Record<ProposalStatus, string>> = {
+  draft: "border-amber-500/40 text-amber-600 dark:text-amber-400",
+  sent: "border-sky-500/40 text-sky-600 dark:text-sky-400",
+  accepted: "border-emerald-500/40 text-emerald-600 dark:text-emerald-400",
+  declined: "border-red-500/40 text-red-600 dark:text-red-400",
+  expired: "border-red-500/40 text-red-600 dark:text-red-400",
+};
 
 interface PageProps {
   params: Promise<{ proposalId: string }>;
@@ -57,7 +66,10 @@ export default async function AdminProposalDetailPage({ params, searchParams }: 
                 Status
               </dt>
               <dd>
-                <Badge variant="outline" className="capitalize">
+                <Badge
+                  variant="outline"
+                  className={cn("capitalize", PROPOSAL_STATUS_BADGE_CLASS[proposal.status])}
+                >
                   {proposal.status}
                 </Badge>
               </dd>
