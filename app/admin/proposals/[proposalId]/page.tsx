@@ -83,17 +83,9 @@ export default async function AdminProposalDetailPage({ params, searchParams }: 
               </dt>
               <dd className="text-foreground">
                 {dealValue ? (
-                  <>
-                    <div className="font-medium tabular-nums">
-                      {formatCurrencyAmount(dealValue.totalMinor, dealValue.currency)}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {dealValue.tierName} · {dealValue.termMonths} months
-                      {dealValue.addonsActive > 0
-                        ? ` · ${dealValue.addonsActive} add-on${dealValue.addonsActive === 1 ? "" : "s"}`
-                        : ""}
-                    </div>
-                  </>
+                  <span className="font-medium tabular-nums">
+                    {formatCurrencyAmount(dealValue.totalMinor, dealValue.currency)}
+                  </span>
                 ) : (
                   "—"
                 )}

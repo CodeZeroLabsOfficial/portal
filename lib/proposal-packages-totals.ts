@@ -60,11 +60,6 @@ function addonLineTotal(
 export interface ProposalDealValueSummary {
   totalMinor: number;
   currency: string;
-  termMonths: 12 | 24;
-  tierName: string;
-  addonsActive: number;
-  /** True when no buyer selection exists yet — value is derived from the recommended/first tier at 12 months. */
-  isFallback: boolean;
 }
 
 /**
@@ -92,22 +87,9 @@ export function computeProposalDealValue(
     const tier = block.tiers.find((t) => t.id === sel.tierId) ?? fallbackTier;
     const effective: PackagesPublicSelection = { ...sel, tierId: tier.id };
 
-    let addonsActive = 0;
-    if (packagesAddonsSectionActive(block)) {
-      const optOff = sel.addonOptionalOff ?? {};
-      for (const li of block.addonLineItems ?? []) {
-        if (li.optional && optOff[li.id]) continue;
-        addonsActive += 1;
-      }
-    }
-
     return {
       totalMinor: packageCommitmentTotalMinor(block, effective),
       currency: block.currency || "aud",
-      termMonths: packageTermMonths(effective) === 24 ? 24 : 12,
-      tierName: tier.name?.trim() || "Plan",
-      addonsActive,
-      isFallback: !persisted,
     };
   }
   return null;
