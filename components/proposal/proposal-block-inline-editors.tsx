@@ -12,6 +12,10 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatCurrencyAmount } from "@/lib/format";
 import { readableForeground, resolveBlockStyle, withAlpha } from "@/lib/block-style";
+import {
+  DEFAULT_PACKAGES_UPFRONT_COST_12_MINOR,
+  PACKAGE_TIER_UNLIMITED_VALUE,
+} from "@/lib/package-tier-limits";
 import { effectivePricingLineQuantity } from "@/lib/pricing-line-quantity";
 import { Input } from "@/components/ui/input";
 
@@ -252,6 +256,7 @@ function defaultTier(): PackageTier {
     includedAdmins: 0,
     monthlyCost12Minor: 0,
     monthlyCost24Minor: 0,
+    upfrontCost12Minor: DEFAULT_PACKAGES_UPFRONT_COST_12_MINOR,
     features: [],
   };
 }
@@ -753,18 +758,36 @@ function StatRow({
   onChange: (next: number) => void;
   tone: "light" | "dark";
 }) {
+  const isUnlimited = value >= PACKAGE_TIER_UNLIMITED_VALUE;
+
   return (
     <li className="flex items-center justify-between gap-2">
       <span className="font-medium">{label}</span>
-      <InlineNumber
-        tone={tone}
-        value={value}
-        onChange={onChange}
-        min={0}
-        step={1}
-        width="w-20"
-        ariaLabel={label}
-      />
+      {isUnlimited ? (
+        <div className="flex items-center gap-2">
+          <span className="tabular-nums">Unlimited</span>
+          <button
+            type="button"
+            onClick={() => onChange(1)}
+            className={cn(
+              "rounded px-1 text-[11px] underline-offset-2 hover:underline",
+              tone === "dark" ? "text-white/85 hover:text-white" : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            Set limit
+          </button>
+        </div>
+      ) : (
+        <InlineNumber
+          tone={tone}
+          value={value}
+          onChange={onChange}
+          min={0}
+          step={1}
+          width="w-20"
+          ariaLabel={label}
+        />
+      )}
     </li>
   );
 }

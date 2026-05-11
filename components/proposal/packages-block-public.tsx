@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Check, Loader2 } from "lucide-react";
 import type { PackagesBlock, PackagesPublicSelection } from "@/types/proposal";
 import { formatCurrencyAmount } from "@/lib/format";
+import { formatPackageTierIncluded } from "@/lib/package-tier-limits";
 import { cn } from "@/lib/utils";
 import { readableForeground, resolveBlockStyle, withAlpha } from "@/lib/block-style";
 import { saveProposalPackageSelectionAction } from "@/server/actions/proposal-builder";
@@ -237,14 +238,16 @@ export function PackagesBlockPublic({
                   style={isRecommended ? { color: recommendedFg } : undefined}
                 >
                   <li>
-                    <span className="font-medium">Included users</span>: {tier.includedUsers ?? 0}
+                    <span className="font-medium">Included users</span>:{" "}
+                    {formatPackageTierIncluded(tier.includedUsers)}
                   </li>
                   <li>
                     <span className="font-medium">Included locations</span>:{" "}
-                    {tier.includedLocations ?? 0}
+                    {formatPackageTierIncluded(tier.includedLocations)}
                   </li>
                   <li>
-                    <span className="font-medium">Included admins</span>: {tier.includedAdmins ?? 0}
+                    <span className="font-medium">Included admins</span>:{" "}
+                    {formatPackageTierIncluded(tier.includedAdmins)}
                   </li>
                 </ul>
 

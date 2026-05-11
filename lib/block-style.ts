@@ -1,12 +1,13 @@
 import type { BlockStyle } from "@/types/proposal";
 
 /** Default Plans / Quote primary tone — matches the inline editor "select a colour" swatches. */
-export const DEFAULT_PRIMARY_COLOR = "#4543F7";
+export const DEFAULT_PRIMARY_COLOR = "#673AB7";
 /** Default Plans / Quote highlight tone — used for the recommended tier and totals row. */
-export const DEFAULT_HIGHLIGHT_COLOR = "#4543F7";
+export const DEFAULT_HIGHLIGHT_COLOR = "#673AB7";
 
 /** Preset swatches surfaced in the Style popover for the interactive proposal editor. */
 export const STYLE_PRESET_COLORS: ReadonlyArray<{ value: string; label: string }> = [
+  { value: "#673AB7", label: "Purple" },
   { value: "#4543F7", label: "Indigo" },
   { value: "#0F172A", label: "Slate" },
   { value: "#475569", label: "Steel" },

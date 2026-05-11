@@ -106,6 +106,10 @@ import {
 import { cn } from "@/lib/utils";
 import { escapeHtml } from "@/lib/escape-html";
 import { DEFAULT_HIGHLIGHT_COLOR, DEFAULT_PRIMARY_COLOR } from "@/lib/block-style";
+import {
+  DEFAULT_PACKAGES_UPFRONT_COST_12_MINOR,
+  PACKAGE_TIER_UNLIMITED_VALUE,
+} from "@/lib/package-tier-limits";
 import { resolveSectionBackground } from "@/lib/section-background";
 import { defaultSplashBlock } from "@/lib/splash-block";
 import {
@@ -318,6 +322,7 @@ function createBlock(type: ProposalBlock["type"]): ProposalBlock {
       const t1 = newId();
       const t2 = newId();
       const t3 = newId();
+      const t4 = newId();
       return {
         id,
         type: "packages",
@@ -325,39 +330,56 @@ function createBlock(type: ProposalBlock["type"]): ProposalBlock {
         title: "Packages",
         plan12Label: "12 months",
         plan24Label: "24 months",
+        style: {
+          variant: "visual",
+          primaryColor: DEFAULT_PRIMARY_COLOR,
+          highlightColor: DEFAULT_HIGHLIGHT_COLOR,
+        },
         tiers: [
           {
             id: t1,
-            name: "Basic",
-            includedUsers: 5,
+            name: "Starter",
+            includedUsers: 3,
             includedLocations: 1,
             includedAdmins: 1,
-            monthlyCost12Minor: 600,
-            monthlyCost24Minor: 500,
-            upfrontCost12Minor: 1200,
-            features: ["Email support"],
+            monthlyCost12Minor: 49_900,
+            monthlyCost24Minor: 29_900,
+            upfrontCost12Minor: DEFAULT_PACKAGES_UPFRONT_COST_12_MINOR,
+            features: [],
           },
           {
             id: t2,
-            name: "Standard",
-            includedUsers: 25,
-            includedLocations: 3,
-            includedAdmins: 2,
-            monthlyCost12Minor: 1000,
-            monthlyCost24Minor: 850,
-            upfrontCost12Minor: 2500,
+            name: "Professional",
+            includedUsers: 5,
+            includedLocations: 1,
+            includedAdmins: 1,
+            monthlyCost12Minor: 59_900,
+            monthlyCost24Minor: 37_900,
+            upfrontCost12Minor: DEFAULT_PACKAGES_UPFRONT_COST_12_MINOR,
             recommended: true,
-            features: ["24h support", "Onboarding session"],
+            features: [],
           },
           {
             id: t3,
             name: "Premium",
-            includedUsers: 100,
-            includedLocations: 10,
-            includedAdmins: 5,
-            monthlyCost12Minor: 1700,
-            monthlyCost24Minor: 1450,
-            features: ["Priority support", "Dedicated success manager"],
+            includedUsers: 10,
+            includedLocations: 1,
+            includedAdmins: 1,
+            monthlyCost12Minor: 69_900,
+            monthlyCost24Minor: 49_900,
+            upfrontCost12Minor: DEFAULT_PACKAGES_UPFRONT_COST_12_MINOR,
+            features: [],
+          },
+          {
+            id: t4,
+            name: "Enterprise",
+            includedUsers: PACKAGE_TIER_UNLIMITED_VALUE,
+            includedLocations: PACKAGE_TIER_UNLIMITED_VALUE,
+            includedAdmins: PACKAGE_TIER_UNLIMITED_VALUE,
+            monthlyCost12Minor: 149_900,
+            monthlyCost24Minor: 99_900,
+            upfrontCost12Minor: DEFAULT_PACKAGES_UPFRONT_COST_12_MINOR,
+            features: [],
           },
         ],
       };
