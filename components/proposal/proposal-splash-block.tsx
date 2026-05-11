@@ -11,6 +11,7 @@ import {
   splashHeightMinStyle,
 } from "@/lib/splash-block";
 import { PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES } from "@/lib/proposal-public-layout";
+import { SplashDirectVideoCanvas } from "@/components/proposal/splash-direct-video-canvas";
 
 const RICH_PUBLIC =
   "proposal-rich-text max-w-none text-sm leading-relaxed [&_a]:text-sky-200 [&_a]:underline [&_blockquote]:my-4 [&_blockquote]:border-l-4 [&_blockquote]:border-white/35 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-white/75 [&_h1]:mt-0 [&_h1]:text-3xl [&_h1]:font-semibold [&_h2]:mt-2 [&_h2]:text-2xl [&_h2]:font-semibold [&_h3]:mt-2 [&_h3]:text-xl [&_h3]:font-semibold [&_h4]:mt-2 [&_h4]:text-base [&_h4]:font-semibold [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-3 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5 [&_img]:max-h-32 [&_img]:rounded-lg [&_img]:object-contain";
@@ -120,26 +121,15 @@ function SplashMediaLayers({
               <iframe
                 title="Background video"
                 src={resolved.embedSrc}
-                className="pointer-events-none absolute left-1/2 top-1/2 h-[115%] min-h-full w-[115%] min-w-full -translate-x-1/2 -translate-y-1/2 border-0 opacity-95"
+                className="pointer-events-none absolute left-1/2 top-0 min-h-[122%] min-w-[118%] max-w-none -translate-x-1/2 border-0 opacity-95"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope"
               />
             ) : (
-              <video
-                key={resolved.videoUrl}
-                className="proposal-splash-bg-video absolute inset-0 h-full w-full object-cover"
-                style={{ objectPosition: resolved.objectPosition }}
-                autoPlay={mode === "public"}
-                controls={false}
-                controlsList="nodownload nofullscreen noremoteplayback noplaybackrate"
-                disablePictureInPicture
-                disableRemotePlayback
-                muted
-                loop
-                playsInline
-                preload="metadata"
+              <SplashDirectVideoCanvas
+                src={resolved.videoUrl}
+                objectPosition={resolved.objectPosition}
                 poster={poster}
-                src={resolved.videoUrl || undefined}
-                tabIndex={-1}
+                autoPlay
               />
             )}
             {/*
