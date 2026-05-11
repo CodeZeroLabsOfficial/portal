@@ -88,6 +88,11 @@ export interface SplashBlockBackground {
   blur?: number;
   /** Shown under text on small screens instead of motion, and as `<video poster>` when supported. */
   posterUrl?: string;
+  /**
+   * When true or omitted, YouTube/Vimeo iframe backgrounds hide player chrome (`controls=0`, Vimeo background mode).
+   * Set to false to show native playback controls on the embed.
+   */
+  videoHideControls?: boolean;
 }
 
 export type SplashBlockHeight =

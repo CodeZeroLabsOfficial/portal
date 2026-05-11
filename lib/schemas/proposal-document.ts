@@ -77,6 +77,7 @@ const splashBackgroundSchema = z.object({
   tintMode: z.enum(["normal", "blend"]).optional(),
   blur: z.number().finite().min(0).max(24).optional(),
   posterUrl: relaxedUrl,
+  videoHideControls: z.boolean().optional(),
 });
 
 const splashHeightSchema = z.union([

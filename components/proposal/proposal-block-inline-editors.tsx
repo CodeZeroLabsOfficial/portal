@@ -290,27 +290,8 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
   const label12 = block.plan12Label ?? "12 months";
   const label24 = block.plan24Label ?? "24 months";
 
-  /** Visual variant uses primaryColor as a soft hero tint behind the cards. */
-  const containerStyle: React.CSSProperties | undefined = isVisual
-    ? {
-        background: `linear-gradient(180deg, ${withAlpha(style.primaryColor, 0.08)} 0%, ${withAlpha(
-          style.primaryColor,
-          0.02,
-        )} 100%)`,
-        borderColor: withAlpha(style.primaryColor, 0.18),
-      }
-    : undefined;
-
   return (
-    <div
-      className={cn(
-        "relative overflow-hidden text-foreground transition-colors",
-        isVisual
-          ? "rounded-xl border bg-card p-4 shadow-sm md:p-6"
-          : "rounded-xl border border-border/70 bg-card px-4 py-3 md:px-5 md:py-4",
-      )}
-      style={containerStyle}
-    >
+    <div className="relative w-full min-w-0 text-foreground">
       {/* Header: title + term toggle. The remove icon now lives in the floating toolbar. */}
       <div className={cn(isVisual ? "text-center" : "text-left")}>
         <InlineText

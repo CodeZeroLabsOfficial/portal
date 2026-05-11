@@ -84,26 +84,9 @@ export function PackagesBlockPublic({
     router.refresh();
   }
 
-  const containerStyle: React.CSSProperties | undefined = isVisual
-    ? {
-        background: `linear-gradient(180deg, ${withAlpha(style.primaryColor, 0.08)} 0%, ${withAlpha(
-          style.primaryColor,
-          0.02,
-        )} 100%)`,
-        borderColor: withAlpha(style.primaryColor, 0.18),
-      }
-    : undefined;
-
   return (
     <div
-      className={cn(
-        "overflow-hidden text-foreground transition-colors",
-        isVisual
-          ? "rounded-xl border bg-card p-4 shadow-sm md:p-6"
-          : "rounded-xl border border-border/70 bg-card px-4 py-3 md:px-5 md:py-4",
-        !interactive && "opacity-95 ring-1 ring-dashed ring-border",
-      )}
-      style={containerStyle}
+      className={cn("w-full min-w-0 text-foreground", !interactive && "opacity-95")}
     >
       <div className={cn(isVisual ? "text-center" : "text-left")}>
         <h2

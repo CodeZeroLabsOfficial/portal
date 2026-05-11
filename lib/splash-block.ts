@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import { readableForeground } from "@/lib/block-style";
 import { embedVideoSrc } from "@/components/proposal/embed-video";
+import { normalizeSplashVideoUrlInput } from "@/lib/splash-video-url";
 import type { SplashBlock, SplashBlockBackground, SplashBlockHeight } from "@/types/proposal";
 
 const DEFAULT_BEACH =
@@ -72,7 +73,7 @@ function normalizeCssHex(input?: string): string | null {
   return null;
 }
 
-function youtubeBackgroundSrc(pageUrl: string): string | null {
+function youtubeBackgroundSrc(pageUrl: string, hidePlaybackChrome = true): string | null {
   const emb = embedVideoSrc(pageUrl);
   if (!emb || emb.kind === "iframe") return null;
   const base = emb.src;
@@ -83,23 +84,34 @@ function youtubeBackgroundSrc(pageUrl: string): string | null {
       if (!id) return null;
       u.searchParams.set("autoplay", "1");
       u.searchParams.set("mute", "1");
-      u.searchParams.set("controls", "0");
       u.searchParams.set("playsinline", "1");
       u.searchParams.set("rel", "0");
       u.searchParams.set("modestbranding", "1");
       u.searchParams.set("showinfo", "0");
-      u.searchParams.set("fs", "0");
-      u.searchParams.set("disablekb", "1");
       u.searchParams.set("iv_load_policy", "3");
       u.searchParams.set("loop", "1");
       u.searchParams.set("playlist", id);
+      if (hidePlaybackChrome) {
+        u.searchParams.set("controls", "0");
+        u.searchParams.set("fs", "0");
+        u.searchParams.set("disablekb", "1");
+      } else {
+        u.searchParams.set("controls", "1");
+        u.searchParams.delete("fs");
+        u.searchParams.delete("disablekb");
+      }
       return u.toString();
     }
     if (emb.kind === "vimeo") {
       u.searchParams.set("autoplay", "1");
       u.searchParams.set("muted", "1");
-      u.searchParams.set("background", "1");
-      u.searchParams.set("controls", "0");
+      if (hidePlaybackChrome) {
+        u.searchParams.set("background", "1");
+        u.searchParams.set("controls", "0");
+      } else {
+        u.searchParams.delete("background");
+        u.searchParams.set("controls", "1");
+      }
       return u.toString();
     }
   } catch {
@@ -120,25 +132,28 @@ export function resolveSplashBackdrop(bg: SplashBlockBackground | undefined): Re
   const kind = merged.type === "video" || merged.type === "image" ? merged.type : "color";
   const colorHex = normalizeCssHex(merged.color) ?? "#0f172a";
   const imageUrl = (merged.url ?? "").trim();
-  const videoUrl = (merged.videoUrl ?? "").trim();
+  const rawVideoUrl = (merged.videoUrl ?? "").trim();
+  const videoUrlNorm = rawVideoUrl ? normalizeSplashVideoUrlInput(rawVideoUrl) : "";
   const posterUrl = (merged.posterUrl ?? "").trim() || (kind === "image" ? imageUrl : "");
 
+  const hideEmbedChrome = merged.videoHideControls !== false;
+
   let embedSrc: string | null = null;
-  if (kind === "video" && videoUrl) {
-    embedSrc = youtubeBackgroundSrc(videoUrl);
+  if (kind === "video" && videoUrlNorm) {
+    embedSrc = youtubeBackgroundSrc(videoUrlNorm, hideEmbedChrome);
   }
 
-  const isDirectVideo = kind === "video" && Boolean(videoUrl) && !embedSrc;
+  const isDirectVideo = kind === "video" && Boolean(videoUrlNorm) && !embedSrc;
 
   let prefersLightForeground = false;
   if (kind === "image" && imageUrl) prefersLightForeground = true;
-  else if (kind === "video" && videoUrl) prefersLightForeground = true;
+  else if (kind === "video" && videoUrlNorm) prefersLightForeground = true;
   else prefersLightForeground = readableForeground(colorHex) === "#ffffff";
 
   return {
     kind,
     imageUrl,
-    videoUrl,
+    videoUrl: kind === "video" ? videoUrlNorm : "",
     colorHex,
     embedSrc,
     isDirectVideo,
