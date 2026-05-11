@@ -9,6 +9,14 @@ import {
 } from "@/lib/section-background";
 import type { SectionBackground } from "@/types/proposal";
 
+/**
+ * Re-map shadcn semantic tokens for a bright section surface. Parent routes (e.g. `portal-ui`)
+ * often assume a dark canvas; without this, `text-foreground` stays light-on-light when the
+ * section fill is white or mist.
+ */
+const LIGHT_SECTION_SURFACE =
+  "[color-scheme:light] [--background:0_0%_100%] [--foreground:220_18%_13%] [--card:0_0%_100%] [--card-foreground:220_18%_13%] [--popover:0_0%_100%] [--popover-foreground:220_18%_13%] [--muted:220_20%_95%] [--muted-foreground:220_10%_44%] [--border:220_16%_88%] [--input:220_16%_88%] [--secondary:220_20%_95%] [--secondary-foreground:220_15%_18%] [--accent:220_20%_94%] [--accent-foreground:220_15%_18%] [--primary:262_52%_47%] [--primary-foreground:0_0%_100%] [--ring:262_52%_47%] [--destructive:0_72%_50%] [--destructive-foreground:210_40%_98%]";
+
 /** Backdrop visuals shared by proposal preview and proposal editor canvases. */
 export function ProposalSectionShell({
   background,
@@ -38,9 +46,12 @@ export function ProposalSectionShell({
       : viewerEdge
         ? cn("px-0 py-10 sm:py-14 md:py-16")
         : cn("px-6 py-10 sm:px-10 sm:py-14 md:px-14 md:py-16");
-  const surfaceChrome = viewerEdge
-    ? "shadow-none ring-0 border-y border-black/[0.07] dark:border-white/[0.08]"
-    : "shadow-lg ring-1 ring-black/[0.08] dark:ring-white/10";
+  const surfaceChrome =
+    viewerEdge
+      ? "shadow-none ring-0 border-y border-black/[0.07] dark:border-white/[0.08]"
+      : prefersLight
+        ? "shadow-lg ring-1 ring-black/[0.08] dark:ring-white/10"
+        : "shadow-[0_2px_32px_-10px_rgba(15,23,42,0.12)] ring-1 ring-zinc-950/[0.06]";
 
   return (
     <div
@@ -48,6 +59,7 @@ export function ProposalSectionShell({
         "proposal-section-shell relative isolate min-h-[220px] w-full min-w-0 overflow-hidden",
         surfaceChrome,
         shellRadius,
+        !prefersLight && LIGHT_SECTION_SURFACE,
         prefersLight &&
           cn(
             "text-white [&_h2]:!text-white",

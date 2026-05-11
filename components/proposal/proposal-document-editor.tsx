@@ -110,7 +110,7 @@ import {
   DEFAULT_PACKAGES_UPFRONT_COST_12_MINOR,
   PACKAGE_TIER_UNLIMITED_VALUE,
 } from "@/lib/package-tier-limits";
-import { resolveSectionBackground } from "@/lib/section-background";
+import { resolveSectionBackground, sectionPrefersLightForeground } from "@/lib/section-background";
 import { defaultSplashBlock } from "@/lib/splash-block";
 import {
   ProposalSplashBackgroundPicker,
@@ -842,7 +842,9 @@ function SectionBlockFields({
     setChildren(arrayMove(children, oldIndex, newIndex));
   }
 
-  const backdropOn = resolveSectionBackground(block.background).active;
+  const resolvedBg = resolveSectionBackground(block.background);
+  const backdropOn = resolvedBg.active;
+  const lightPaperSection = backdropOn && !sectionPrefersLightForeground(resolvedBg);
 
   return (
     <ProposalSectionShell background={block.background} variant="editor">
@@ -851,7 +853,9 @@ function SectionBlockFields({
           className={cn(
             "-mx-1 rounded-xl px-1 py-1",
             backdropOn
-              ? "border border-white/28 bg-transparent/35 backdrop-blur-[1px] sm:bg-transparent/45"
+              ? lightPaperSection
+                ? "border border-zinc-200/60"
+                : "border border-white/28 bg-transparent/35 backdrop-blur-[1px] sm:bg-transparent/45"
               : "border border-dashed border-border/65 bg-muted/20 sm:bg-muted/[0.35]",
           )}
         >
