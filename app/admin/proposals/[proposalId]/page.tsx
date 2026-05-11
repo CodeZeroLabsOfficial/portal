@@ -8,9 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WorkspaceShell } from "@/components/portal/workspace-shell";
 import { ProposalDocumentEditorLazy } from "@/components/proposal/proposal-document-editor-lazy";
 import { ProposalShareSettings } from "@/components/proposal/proposal-share-settings";
-import { findProposalBlockById } from "@/lib/proposal-blocks";
 import { cn } from "@/lib/utils";
-import type { PackagesBlock, ProposalStatus } from "@/types/proposal";
+import type { ProposalStatus } from "@/types/proposal";
 
 const PROPOSAL_STATUS_BADGE_CLASS: Partial<Record<ProposalStatus, string>> = {
   draft: "border-amber-500/40 text-amber-600 dark:text-amber-400",
@@ -106,30 +105,6 @@ export default async function AdminProposalDetailPage({ params, searchParams }: 
               <dd className="text-foreground">{recipient ?? "—"}</dd>
             </div>
           </dl>
-
-          {proposal.publicSelections && Object.keys(proposal.publicSelections).length > 0 ? (
-            <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Buyer selection (public link)
-              </p>
-              <ul className="mt-2 list-disc space-y-1 pl-4">
-                {Object.entries(proposal.publicSelections).map(([blockId, sel]) => {
-                  if (sel.kind !== "packages") return null;
-                  const blk = findProposalBlockById(proposal.document.blocks, blockId);
-                  const pb: PackagesBlock | undefined = blk?.type === "packages" ? blk : undefined;
-                  const tierName =
-                    pb?.tiers?.find((t) => t.id === sel.tierId)?.name ?? `${sel.tierId.slice(0, 6)}…`;
-                  const termLabel =
-                    sel.term === "12_months" ? "12 months" : sel.term === "24_months" ? "24 months" : "Term";
-                  return (
-                    <li key={blockId}>
-                      <span className="font-medium text-foreground">{tierName}</span> · {termLabel}
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          ) : null}
 
           {(proposal.sourceTemplateId || proposal.customerId || proposal.opportunityId) && (
             <div className="space-y-3 border-t border-border/60 pt-4">
