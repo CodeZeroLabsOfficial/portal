@@ -120,7 +120,7 @@ export function ColumnsBlockLayoutControls({
               className="cursor-pointer gap-2"
               onClick={(e) => {
                 e.stopPropagation();
-                onPatch({ rowAlign: opt.value });
+                onPatch({ rowAlign: opt.value === "stretch" ? undefined : opt.value });
               }}
             >
               {align === opt.value ? <Check className="h-4 w-4 shrink-0 opacity-70" aria-hidden /> : <span className="w-4" />}
