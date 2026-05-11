@@ -412,7 +412,10 @@ export function ProposalDocumentView({
               );
             }
             return (
-              <section key={block.id} className={cn(PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES, "shrink-0")}>
+              <section
+                key={block.id}
+                className={cn(PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES, PROPOSAL_DOCUMENT_BLOCK_INNER_PAD_CLASSES, "shrink-0")}
+              >
                 {child}
               </section>
             );
