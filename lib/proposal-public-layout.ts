@@ -30,14 +30,13 @@ export const PROPOSAL_PUBLIC_VIEWPORT_BREAKOUT_CLASSES =
  */
 export const PROPOSAL_DOCUMENT_BLOCK_STACK_CLASSES = "space-y-[100px]";
 /**
- * Padding inside a section’s inner column (above/below stacked children). Root-level spacing between
- * blocks uses `PROPOSAL_DOCUMENT_BLOCK_ROOT_MARGIN_CLASSES` instead so full-bleed sections get a visible
- * gap outside the colored band.
+ * Padding inside a section’s inner column (above/below stacked children).
  */
 export const PROPOSAL_DOCUMENT_BLOCK_INNER_PAD_CLASSES = "py-[50px]";
-/** `ProposalDocumentView` only: 50px margin above/below each root block (public + preview). */
-export const PROPOSAL_DOCUMENT_BLOCK_ROOT_MARGIN_CLASSES = "my-[50px]";
-/** Root document list: no flex gap — vertical rhythm is root margins + inner stacks. */
-export const PROPOSAL_DOCUMENT_ROOT_STACK_GAP_CLASSES = "gap-0";
+/**
+ * Root stack in `ProposalDocumentView`: `py-[50px]` pads the first/last blocks; `gap-[100px]` spaces
+ * siblings (50px below + 50px above each pair). Flex gap avoids margin-collapse against `<main>` / shells.
+ */
+export const PROPOSAL_DOCUMENT_ROOT_STACK_GAP_CLASSES = "flex flex-col gap-[100px] py-[50px]";
 /** Row gap for `columns` layout in the public viewer (horizontal gap unchanged). */
 export const PROPOSAL_DOCUMENT_COLUMNS_ROW_GAP_CLASSES = "gap-y-[100px]";

@@ -12,7 +12,6 @@ import type {
 } from "@/types/proposal";
 import {
   PROPOSAL_DOCUMENT_BLOCK_INNER_PAD_CLASSES,
-  PROPOSAL_DOCUMENT_BLOCK_ROOT_MARGIN_CLASSES,
   PROPOSAL_DOCUMENT_BLOCK_STACK_CLASSES,
   PROPOSAL_DOCUMENT_COLUMNS_ROW_GAP_CLASSES,
   PROPOSAL_DOCUMENT_ROOT_STACK_GAP_CLASSES,
@@ -387,7 +386,7 @@ export function ProposalDocumentView({
         </div>
       ) : null}
       {viewportSectionBleed ? (
-        <div className={cn("flex w-full flex-col", PROPOSAL_DOCUMENT_ROOT_STACK_GAP_CLASSES)}>
+        <div className={cn("w-full", PROPOSAL_DOCUMENT_ROOT_STACK_GAP_CLASSES)}>
           {document.blocks.map((block) => {
             const splashRootBand = Boolean(viewportSectionBleed && block.type === "splash");
             const child = (
@@ -407,29 +406,25 @@ export function ProposalDocumentView({
             );
             if (block.type === "section" || splashRootBand) {
               return (
-                <section key={block.id} className={cn("w-full", PROPOSAL_DOCUMENT_BLOCK_ROOT_MARGIN_CLASSES)}>
+                <section key={block.id} className="w-full shrink-0">
                   {child}
                 </section>
               );
             }
             return (
-              <section
-                key={block.id}
-                className={cn(PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES, PROPOSAL_DOCUMENT_BLOCK_ROOT_MARGIN_CLASSES)}
-              >
+              <section key={block.id} className={cn(PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES, "shrink-0")}>
                 {child}
               </section>
             );
           })}
         </div>
       ) : (
-        <div className={cn(PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES, PROPOSAL_DOCUMENT_ROOT_STACK_GAP_CLASSES, "flex flex-col")}>
+        <div className={cn(PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES, PROPOSAL_DOCUMENT_ROOT_STACK_GAP_CLASSES)}>
           {document.blocks.map((block) => (
             <section
               key={block.id}
               className={cn(
                 "space-y-0",
-                PROPOSAL_DOCUMENT_BLOCK_ROOT_MARGIN_CLASSES,
                 block.type !== "section" && PROPOSAL_DOCUMENT_BLOCK_INNER_PAD_CLASSES,
               )}
             >
