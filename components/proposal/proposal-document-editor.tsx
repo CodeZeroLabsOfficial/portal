@@ -1790,8 +1790,9 @@ export function ProposalDocumentEditor({
             />
           </div>
           <p className="text-xs text-muted-foreground md:col-span-2">
-            The public proposal title matches the template name. Use merge tokens in text blocks: {"{{name}}"},{" "}
-            {"{{email}}"}, {"{{company}}"}, {"{{opportunity}}"}, {"{{deal_amount}}"} when generating from a customer or
+            The public proposal title matches the template name. Use merge tokens in text and splash blocks: {"{{name}}"}
+            {" / "}
+            {"{{client}}"}, {"{{email}}"}, {"{{company}}"}, {"{{opportunity}}"}, {"{{deal_amount}}"} when generating from a customer or
             deal.
           </p>
         </div>

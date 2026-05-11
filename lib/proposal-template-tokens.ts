@@ -7,7 +7,7 @@ export interface ProposalTokenContext {
   opportunity?: OpportunityRecord | null;
 }
 
-/** Replace `{{name}}`, `{{email}}`, `{{company}}`, `{{opportunity}}`, `{{deal_amount}}` in strings (case-insensitive). */
+/** Replace merge tokens in strings (case-insensitive): `{{name}}`, `{{client}}` (same as name), `{{email}}`, `{{company}}`, `{{opportunity}}`, `{{deal_amount}}`. */
 export function replaceProposalTokens(text: string, ctx: ProposalTokenContext): string {
   const { customer, opportunity } = ctx;
   const company = customer.company?.trim() ?? "";
@@ -20,8 +20,11 @@ export function replaceProposalTokens(text: string, ctx: ProposalTokenContext): 
     });
   }
 
+  const name = customer.name?.trim() ?? "";
   const vars: Record<string, string> = {
-    name: customer.name?.trim() ?? "",
+    name,
+    /** Common synonym in templates (e.g. “For {{client}}”). */
+    client: name,
     email: customer.email?.trim() ?? "",
     company,
     opportunity: oppName,
@@ -37,6 +40,27 @@ export function replaceProposalTokens(text: string, ctx: ProposalTokenContext): 
 
 function mapContentBlock(block: ProposalContentBlock, ctx: ProposalTokenContext): ProposalContentBlock {
   switch (block.type) {
+    case "splash":
+      return {
+        ...block,
+        html: block.html !== undefined ? replaceProposalTokens(block.html, ctx) : block.html,
+        body: block.body !== undefined ? replaceProposalTokens(block.body, ctx) : block.body,
+        background: {
+          ...block.background,
+          url:
+            block.background.url !== undefined
+              ? replaceProposalTokens(block.background.url, ctx)
+              : block.background.url,
+          videoUrl:
+            block.background.videoUrl !== undefined
+              ? replaceProposalTokens(block.background.videoUrl, ctx)
+              : block.background.videoUrl,
+          posterUrl:
+            block.background.posterUrl !== undefined
+              ? replaceProposalTokens(block.background.posterUrl, ctx)
+              : block.background.posterUrl,
+        },
+      };
     case "header":
       return { ...block, text: replaceProposalTokens(block.text, ctx) };
     case "text":
