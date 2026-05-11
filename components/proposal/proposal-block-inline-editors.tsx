@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, Plus, Sparkles, X } from "lucide-react";
+import { Check, Plus, Sparkles, TableProperties, X } from "lucide-react";
 import type {
   PackageTier,
   PackagesBlock,
@@ -18,8 +18,18 @@ import {
   PACKAGE_TIER_UNLIMITED_VALUE,
 } from "@/lib/package-tier-limits";
 import { effectivePricingLineQuantity } from "@/lib/pricing-line-quantity";
-import { packageAddonsTotalMinor, packagePlanContractMinor } from "@/lib/proposal-packages-totals";
+import {
+  packageAddonsTotalMinor,
+  packagePlanContractMinor,
+  packagesAddonsSectionActive,
+} from "@/lib/proposal-packages-totals";
 import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 function newId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `b-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -336,6 +346,23 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
     borderColor: style.primaryColor,
   };
 
+  const addonsActive = packagesAddonsSectionActive(block);
+
+  function enableAddonsTable() {
+    const nextLines =
+      addonLineItems.length > 0
+        ? addonLineItems
+        : [{ id: newId(), label: "Line item", unitAmountMinor: 0, quantity: 0 }];
+    patch({
+      addonsSectionEnabled: true,
+      addonLineItems: nextLines,
+      addonsTitle: block.addonsTitle?.trim() || "Add-ons",
+      allowAddonQuantityEdit: true,
+      addonQuantityUnitLabel: block.addonQuantityUnitLabel?.trim() || "Unit",
+      totalSectionLabel: block.totalSectionLabel?.trim() || "Total",
+    });
+  }
+
   return (
     <div className="relative w-full min-w-0 text-foreground">
       {/* Header: title + term toggle. The remove icon now lives in the floating toolbar. */}
@@ -429,29 +456,68 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
         </button>
       </div>
 
-      <div className="mt-8 overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
-        <div
-          className="flex flex-wrap items-center gap-3 rounded-t-xl border-b border-dashed px-4 py-3"
-          style={{ ...headerSimpleSolid, borderBottomColor: headerSimpleDividerColor }}
-        >
-          <div className="min-w-0 flex-1">
-            <InlineText
-              tone="dark"
-              value={block.addonsTitle ?? ""}
-              placeholder="Add-ons"
-              onChange={(v) => patch({ addonsTitle: v || undefined })}
-              ariaLabel="Add-ons section title"
-              className="text-base font-semibold"
-              inputClassName="w-full text-base font-semibold"
-            />
-          </div>
-          <div className="flex shrink-0 flex-col items-end gap-0.5 text-right">
-            <span className="text-[10px] font-semibold uppercase tracking-wide opacity-90">Subtotal</span>
-            <span className="text-lg font-semibold tabular-nums leading-none">
-              {formatCurrencyAmount(addonsPreviewMinor, currency)}
-            </span>
-          </div>
+      {!addonsActive ? (
+        <div className="group/pkginsert relative mt-6 flex items-center justify-center py-1.5">
+          <div className="pointer-events-none absolute inset-x-10 top-1/2 h-px -translate-y-1/2 bg-border opacity-0 transition-opacity group-hover/pkginsert:opacity-80 group-focus-within/pkginsert:opacity-80" />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                aria-label="Add table"
+                className="relative z-10 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-sm transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:border-primary data-[state=open]:bg-primary data-[state=open]:text-primary-foreground"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="center" sideOffset={4} className="w-[min(200px,calc(100vw-2rem))] p-1">
+              <p className="px-2 pb-1 pt-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                Add to plan
+              </p>
+              <DropdownMenuItem
+                className="cursor-pointer gap-2 rounded-sm"
+                onSelect={(e) => e.preventDefault()}
+                onClick={() => enableAddonsTable()}
+              >
+                <span className="flex h-5 w-5 items-center justify-center rounded-[5px] bg-muted ring-1 ring-border">
+                  <TableProperties className="h-3 w-3" aria-hidden />
+                </span>
+                Table
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
+      ) : (
+        <div className="mt-8 overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
+          <div
+            className="flex flex-wrap items-center gap-3 rounded-t-xl border-b border-dashed px-4 py-3"
+            style={{ ...headerSimpleSolid, borderBottomColor: headerSimpleDividerColor }}
+          >
+            <div className="min-w-0 flex-1">
+              <InlineText
+                tone="dark"
+                value={block.addonsTitle ?? ""}
+                placeholder="Add-ons"
+                onChange={(v) => patch({ addonsTitle: v || undefined })}
+                ariaLabel="Add-ons section title"
+                className="text-base font-semibold"
+                inputClassName="w-full text-base font-semibold"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => patch({ addonsSectionEnabled: false })}
+              className="shrink-0 rounded-md px-2 py-1 text-[11px] font-semibold opacity-90 transition-colors hover:bg-white/15"
+              style={{ color: headerBarFg }}
+            >
+              Remove table
+            </button>
+            <div className="flex shrink-0 flex-col items-end gap-0.5 text-right">
+              <span className="text-[10px] font-semibold uppercase tracking-wide opacity-90">Subtotal</span>
+              <span className="text-lg font-semibold tabular-nums leading-none">
+                {formatCurrencyAmount(addonsPreviewMinor, currency)}
+              </span>
+            </div>
+          </div>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-dashed border-border/50 bg-muted/10 px-4 py-2 text-[11px]">
           <label className="flex cursor-pointer items-center gap-1.5 text-muted-foreground">
             <input
@@ -594,6 +660,7 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
           </table>
         </div>
       </div>
+      )}
 
       <div
         className={cn(
@@ -612,7 +679,7 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
                 Plan ({term === "24_months" ? "24" : "12"} mo,{" "}
                 {tiers.find((t) => t.id === previewTierId)?.name ?? "tier"}):{" "}
                 {formatCurrencyAmount(planPreviewMinor, currency)}
-                {addonLineItems.length > 0 ? (
+                {addonsActive && addonLineItems.length > 0 ? (
                   <>
                     {" "}
                     · Add-ons: {formatCurrencyAmount(addonsPreviewMinor, currency)}

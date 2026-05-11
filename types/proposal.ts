@@ -187,6 +187,12 @@ export interface PackagesBlock extends ProposalBlockBase {
   addonQuantityUnitLabel?: string;
   /** Label for the combined total row (default: “Total”). */
   totalSectionLabel?: string;
+  /**
+   * When true, the add-ons table is shown in the builder and on the public page.
+   * When false, the section is hidden (data may remain). Omitted: legacy blocks
+   * show add-ons only if `addonLineItems` is non-empty.
+   */
+  addonsSectionEnabled?: boolean;
 }
 
 /** Persisted when the recipient selects a package on the public proposal. Keyed by block id. */

@@ -1,6 +1,13 @@
 import type { PackagesBlock, PackagesPublicSelection, PricingLineItem } from "@/types/proposal";
 import { effectivePricingLineQuantity } from "@/lib/pricing-line-quantity";
 
+/** Whether add-ons contribute to UI and billing for this block. */
+export function packagesAddonsSectionActive(block: PackagesBlock): boolean {
+  if (block.addonsSectionEnabled === true) return true;
+  if (block.addonsSectionEnabled === false) return false;
+  return (block.addonLineItems ?? []).length > 0;
+}
+
 /** Contract-style plan total (matches `computeProposalTotalMinor` package branch). */
 export function packagePlanContractMinor(block: PackagesBlock, sel: PackagesPublicSelection): number {
   const tier = block.tiers.find((t) => t.id === sel.tierId);
@@ -32,6 +39,7 @@ export function packageAddonsTotalMinor(
   liveQty?: Record<string, number>,
   liveOptOff?: Record<string, boolean>,
 ): number {
+  if (!packagesAddonsSectionActive(block)) return 0;
   const items = block.addonLineItems ?? [];
   const qtyMap = { ...sel?.addonQuantities, ...liveQty };
   const optOff = { ...sel?.addonOptionalOff, ...liveOptOff };

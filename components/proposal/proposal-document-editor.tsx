@@ -84,7 +84,10 @@ import {
 } from "@/components/proposal/proposal-block-inline-editors";
 import { BlockToolbar } from "@/components/proposal/proposal-block-toolbar";
 import { DeleteProposalTemplateButton } from "@/components/proposal/delete-proposal-template-button";
-import { PROPOSAL_PUBLIC_DOCUMENT_OUTER_CLASSES } from "@/lib/proposal-public-layout";
+import {
+  PROPOSAL_PUBLIC_DOCUMENT_OUTER_CLASSES,
+  PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES,
+} from "@/lib/proposal-public-layout";
 import { saveProposalDocumentAction, sendProposalAction } from "@/server/actions/proposal-builder";
 import { saveProposalTemplateAction } from "@/server/actions/proposal-templates";
 import { Button } from "@/components/ui/button";
@@ -343,14 +346,7 @@ function createBlock(type: ProposalBlock["type"]): ProposalBlock {
             features: [],
           },
         ],
-        addonLineItems: [
-          { id: newId(), label: "3 User Pack", unitAmountMinor: 4_900, quantity: 0 },
-          { id: newId(), label: "5 User Pack", unitAmountMinor: 7_900, quantity: 0 },
-        ],
-        addonsTitle: "Add-ons",
-        allowAddonQuantityEdit: true,
-        addonQuantityUnitLabel: "Unit",
-        totalSectionLabel: "Total",
+        addonsSectionEnabled: false,
       };
     }
     case "form":
@@ -1072,7 +1068,11 @@ function BlockFields({
     }
     case "packages": {
       const b = block as PackagesBlock;
-      return <PackagesInlineEditor block={b} onChange={patch} />;
+      return (
+        <div className={cn(!seamlessSection && PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES)}>
+          <PackagesInlineEditor block={b} onChange={patch} />
+        </div>
+      );
     }
     case "form": {
       const b = block as FormBlock;
@@ -1721,7 +1721,7 @@ export function ProposalDocumentEditor({
     <div className="space-y-6">
       {isTemplate && templateId ? (
         <>
-          <div className="flex flex-wrap items-end gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <Button
               variant="ghost"
               size="sm"
@@ -1743,7 +1743,7 @@ export function ProposalDocumentEditor({
                 Open public viewer
               </Link>
             </Button>
-            <div className="min-h-9 min-w-[10rem] flex-1 basis-[14rem] border-b border-border pb-1.5">
+            <div className="flex h-8 min-w-[10rem] flex-1 basis-[14rem] items-center border-b border-border">
               {templateNameEditing ? (
                 <Input
                   autoFocus
@@ -1765,7 +1765,7 @@ export function ProposalDocumentEditor({
                     void saveAndExitTemplateNameEdit();
                   }}
                   placeholder="Template name"
-                  className="h-8 border-0 bg-transparent px-0 text-base font-medium text-foreground shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                  className="h-8 border-0 bg-transparent px-0 text-xs font-medium text-foreground shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                 />
               ) : (
                 <button
@@ -1773,12 +1773,12 @@ export function ProposalDocumentEditor({
                   disabled={saving}
                   aria-label="Edit template name"
                   onClick={() => setTemplateNameEditing(true)}
-                  className="flex w-full min-w-0 items-center gap-2 rounded-sm text-left outline-none ring-offset-background transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+                  className="flex h-8 w-full min-w-0 items-center gap-2 rounded-sm text-left text-xs font-medium outline-none ring-offset-background transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
                 >
-                  <span className="min-w-0 flex-1 truncate text-base font-medium text-foreground">
+                  <span className="min-w-0 flex-1 truncate text-foreground">
                     {templateName.trim() || "Untitled template"}
                   </span>
-                  <Pencil className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                  <Pencil className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
                 </button>
               )}
             </div>

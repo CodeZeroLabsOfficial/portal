@@ -7,7 +7,11 @@ import type { PackagesBlock, PackagesPublicSelection } from "@/types/proposal";
 import { formatCurrencyAmount } from "@/lib/format";
 import { formatPackageTierIncluded } from "@/lib/package-tier-limits";
 import { effectivePricingLineQuantity } from "@/lib/pricing-line-quantity";
-import { packageAddonsTotalMinor, packagePlanContractMinor } from "@/lib/proposal-packages-totals";
+import {
+  packageAddonsTotalMinor,
+  packagePlanContractMinor,
+  packagesAddonsSectionActive,
+} from "@/lib/proposal-packages-totals";
 import { cn } from "@/lib/utils";
 import { readableForeground, resolveBlockStyle, withAlpha } from "@/lib/block-style";
 import { saveProposalPackageSelectionAction } from "@/server/actions/proposal-builder";
@@ -41,6 +45,7 @@ export function PackagesBlockPublic({
   const [pendingTierId, setPendingTierId] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
+  const addonsActive = packagesAddonsSectionActive(block);
   const addonLines = block.addonLineItems ?? [];
   const addonIdsKey = addonLines.map((l) => l.id).join(",");
 
@@ -412,7 +417,7 @@ export function PackagesBlockPublic({
         })}
       </div>
 
-      {addonLines.length > 0 ? (
+      {addonsActive && addonLines.length > 0 ? (
         <div className={cn("mt-8", isVisual ? "text-center" : "text-left")}>
           <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
             <div
@@ -528,7 +533,7 @@ export function PackagesBlockPublic({
           {selectedTierId ? (
             <p className="mt-0.5 text-xs opacity-85">
               Plan ({term === "24_months" ? "24" : "12"} mo): {formatCurrencyAmount(planSubtotalMinor, currency)}
-              {addonLines.length > 0 ? (
+              {addonsActive && addonLines.length > 0 ? (
                 <>
                   {" "}
                   · Add-ons: {formatCurrencyAmount(addonsSubtotalMinor, currency)}

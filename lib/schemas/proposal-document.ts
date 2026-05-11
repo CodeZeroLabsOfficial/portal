@@ -234,6 +234,8 @@ function normalizePackagesBlockInput(raw: unknown): unknown {
   if (typeof o.totalSectionLabel === "string" && o.totalSectionLabel.trim()) {
     block.totalSectionLabel = o.totalSectionLabel.trim().slice(0, 120);
   }
+  if (o.addonsSectionEnabled === true) block.addonsSectionEnabled = true;
+  if (o.addonsSectionEnabled === false) block.addonsSectionEnabled = false;
 
   return block;
 }
@@ -265,6 +267,7 @@ const packagesBlockSchema = z.object({
   allowAddonQuantityEdit: z.boolean().optional(),
   addonQuantityUnitLabel: z.string().min(1).max(40).optional(),
   totalSectionLabel: z.string().max(120).optional(),
+  addonsSectionEnabled: z.boolean().optional(),
 });
 
 const formFieldSchema = z.object({
