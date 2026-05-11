@@ -6,6 +6,7 @@ import { z } from "zod";
 import { requireStaffSession } from "@/lib/auth/server-session";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import { runAdminWrite } from "@/lib/firebase/admin-write";
+import { encodeProposalDocumentForFirestore } from "@/lib/proposal-firestore-document";
 import { parseProposalDocument } from "@/lib/schemas/proposal-document";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { getProposalTemplateForStaff } from "@/server/firestore/proposal-templates";
@@ -92,7 +93,7 @@ export async function saveProposalTemplateAction(
           description: parsed.data.description?.trim()
             ? parsed.data.description.trim()
             : FieldValue.delete(),
-          document: normalized,
+          document: encodeProposalDocumentForFirestore(normalized),
           updatedAtMs: Date.now(),
           updatedAt: FieldValue.serverTimestamp(),
         }),

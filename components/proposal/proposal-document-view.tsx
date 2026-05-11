@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import type {
+  AccordionBlock,
   ProposalBlock,
   ProposalBranding,
   ProposalContentBlock,
@@ -32,6 +33,7 @@ import { ChevronRight } from "lucide-react";
 import { embedVideoSrc } from "@/components/proposal/embed-video";
 import { PricingBlockPublic } from "@/components/proposal/pricing-block-public";
 import { PackagesBlockPublic } from "@/components/proposal/packages-block-public";
+import { ProposalAccordionExpandSurface } from "@/components/proposal/proposal-accordion-expand-surface";
 import { ProposalSectionShell } from "@/components/proposal/proposal-section-shell";
 import { ProposalSplashBlockCanvas } from "@/components/proposal/proposal-splash-block";
 
@@ -44,6 +46,63 @@ export interface ProposalDocumentViewProps {
   publicSelections?: ProposalPublicSelections;
   /** When true, root `section` bands span the full width of `<main>`; copy stays in the inner column */
   viewportSectionBleed?: boolean;
+}
+
+function AccordionPublicView({ block }: { block: AccordionBlock }) {
+  const accordionPanels = block.panels ?? [];
+  const [openById, setOpenById] = React.useState<Record<string, boolean>>({});
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-border/70">
+      {accordionPanels.map((p, panelIdx) => {
+        const open = Boolean(openById[p.id]);
+        const contentId = `proposal-accordion-${block.id}-${p.id}`;
+        return (
+          <div key={p.id} className="border-b border-border/60 last:border-b-0">
+            <button
+              type="button"
+              className="flex w-full cursor-pointer list-none select-none items-center justify-between gap-4 px-4 py-4 text-left text-lg font-semibold tracking-tight text-foreground sm:px-5"
+              aria-expanded={open}
+              aria-controls={contentId}
+              onClick={() => setOpenById((prev) => ({ ...prev, [p.id]: !prev[p.id] }))}
+            >
+              <span>{p.title.trim() ? p.title : "Untitled panel"}</span>
+              <ChevronRight
+                className={cn(
+                  "h-5 w-5 shrink-0 text-[#673AB7] transition-transform duration-200 ease-out",
+                  open && "rotate-90",
+                )}
+                aria-hidden
+              />
+            </button>
+            <ProposalAccordionExpandSurface
+              open={open}
+              motionKey={contentId}
+              id={contentId}
+              data-proposal-accordion-light-surface
+              className={cn(
+                "w-full border-t border-border/45 bg-white px-4 py-4 text-zinc-900 sm:px-5",
+                panelIdx === accordionPanels.length - 1 && "rounded-b-2xl",
+              )}
+            >
+              {p.html?.trim() ? (
+                <div
+                  className={cn(
+                    "proposal-rich-text max-w-none text-sm leading-relaxed text-zinc-900",
+                    "[&_a]:text-cyan-700 [&_a]:underline",
+                    "[&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-3 [&_p:last-child]:mb-0",
+                  )}
+                  dangerouslySetInnerHTML={{ __html: sanitizeProposalHtml(p.html) }}
+                />
+              ) : (
+                <div className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-900">{p.body ?? ""}</div>
+              )}
+            </ProposalAccordionExpandSurface>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 function BlockView({
@@ -326,41 +385,7 @@ function BlockView({
       );
     }
     case "accordion": {
-      return (
-        <div className="overflow-hidden rounded-2xl border border-border/70">
-          {(block.panels ?? []).map((p) => (
-            <details
-              key={p.id}
-              className="group border-b border-border/60 last:border-b-0 [&_summary::-webkit-details-marker]:hidden"
-            >
-              <summary className="flex cursor-pointer list-none select-none items-center justify-between gap-4 px-4 py-4 text-lg font-semibold tracking-tight text-foreground sm:px-5 [&::-webkit-details-marker]:hidden">
-                <span>{p.title.trim() ? p.title : "Untitled panel"}</span>
-                <ChevronRight
-                  className="h-5 w-5 shrink-0 text-[#673AB7] transition-transform group-open:rotate-90"
-                  aria-hidden
-                />
-              </summary>
-              <div
-                data-proposal-accordion-light-surface
-                className="mx-4 mb-4 mt-0 rounded-xl bg-white px-3 py-3 text-zinc-900 shadow-sm ring-1 ring-black/[0.06] sm:mx-5 sm:px-4 dark:ring-white/10"
-              >
-                {p.html?.trim() ? (
-                  <div
-                    className={cn(
-                      "proposal-rich-text max-w-none text-sm leading-relaxed text-zinc-800",
-                      "[&_a]:text-cyan-700 [&_a]:underline",
-                      "[&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-3 [&_p:last-child]:mb-0",
-                    )}
-                    dangerouslySetInnerHTML={{ __html: sanitizeProposalHtml(p.html) }}
-                  />
-                ) : (
-                  <div className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-800">{p.body ?? ""}</div>
-                )}
-              </div>
-            </details>
-          ))}
-        </div>
-      );
+      return <AccordionPublicView block={block} />;
     }
     case "icon": {
       if (!block.emoji && !block.label) return null;

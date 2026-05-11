@@ -372,6 +372,27 @@ const columnInnerSchema = z.preprocess((raw) => {
   return raw;
 }, columnInnerUnionSchema);
 
+/** Reverses Firestore column encoding (`[{ blocks }]`) back to in-memory `Block[][]`. */
+function unwrapColumnStacksFromFirestore(stacksRaw: unknown): unknown {
+  if (!Array.isArray(stacksRaw) || stacksRaw.length === 0) {
+    return stacksRaw;
+  }
+  const first = stacksRaw[0];
+  const isFirestoreCell =
+    first !== null &&
+    typeof first === "object" &&
+    !Array.isArray(first) &&
+    "blocks" in first &&
+    Array.isArray((first as { blocks: unknown }).blocks);
+  if (!isFirestoreCell) {
+    return stacksRaw;
+  }
+  return stacksRaw.map((cell) => {
+    const c = cell as { blocks?: unknown };
+    return Array.isArray(c.blocks) ? c.blocks : [];
+  });
+}
+
 function normalizeColumnsBlockInput(raw: unknown): unknown {
   if (!raw || typeof raw !== "object") return raw;
   const o = raw as Record<string, unknown>;
@@ -379,7 +400,10 @@ function normalizeColumnsBlockInput(raw: unknown): unknown {
 
   let stacksUnknown: unknown[] = [];
   if (Array.isArray(o.stacks)) {
-    stacksUnknown = o.stacks.map((cell) => (Array.isArray(cell) ? cell : []));
+    const unwrapped = unwrapColumnStacksFromFirestore(o.stacks);
+    stacksUnknown = Array.isArray(unwrapped)
+      ? unwrapped.map((cell) => (Array.isArray(cell) ? cell : []))
+      : [];
   } else {
     const left = Array.isArray(o.left) ? o.left : [];
     const right = Array.isArray(o.right) ? o.right : [];

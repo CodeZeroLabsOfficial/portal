@@ -7,6 +7,7 @@ import { z } from "zod";
 import { requireStaffSession } from "@/lib/auth/server-session";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import { COLLECTIONS } from "@/server/firestore/collections";
+import { encodeProposalDocumentForFirestore } from "@/lib/proposal-firestore-document";
 import { parseProposalDocument } from "@/lib/schemas/proposal-document";
 import { effectivePricingLineQuantity } from "@/lib/pricing-line-quantity";
 import { findProposalBlockById } from "@/lib/proposal-blocks";
@@ -78,7 +79,7 @@ export async function saveProposalDocumentAction(
         .doc(parsed.data.proposalId)
         .update({
           title: parsed.data.title,
-          document: normalized,
+          document: encodeProposalDocumentForFirestore(normalized),
           documentVersion: FieldValue.increment(1),
           updatedAtMs: Date.now(),
           updatedAt: FieldValue.serverTimestamp(),

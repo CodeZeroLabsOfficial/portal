@@ -8,6 +8,7 @@ import { ProposalSectionEditorChromeContext } from "@/components/proposal/propos
 import { escapeHtml } from "@/lib/escape-html";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { ProposalAccordionExpandSurface } from "@/components/proposal/proposal-accordion-expand-surface";
 
 function newPanelId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `p-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -73,7 +74,7 @@ export function AccordionBlockEditor({
           const contentId = `accordion-panel-${p.id}`;
           return (
             <div key={p.id} className="group/panel border-b border-border/60 last:border-b-0">
-              <div className="flex items-center gap-2 px-4 pt-4 sm:px-5">
+              <div className="flex items-center gap-2 px-4 py-4 sm:px-5">
                 <input
                   value={p.title}
                   onChange={(e) => updatePanel(idx, { title: e.target.value })}
@@ -126,23 +127,26 @@ export function AccordionBlockEditor({
                   </button>
                 </div>
               </div>
-              {open ? (
-                <div
-                  id={contentId}
-                  data-proposal-accordion-light-surface
-                  className="mx-4 mb-4 mt-1 rounded-xl bg-white px-3 py-3 text-zinc-900 shadow-sm ring-1 ring-black/[0.06] sm:mx-5 sm:px-4 dark:ring-white/10"
-                  onPointerDown={(e) => e.stopPropagation()}
-                >
-                  <ProposalSectionEditorChromeContext.Provider value={LIGHT_SECTION_CHROME}>
-                    <ProposalRichText
-                      key={p.id}
-                      html={panelEditorHtml(p)}
-                      className="[&_.ProseMirror]:min-h-[100px]"
-                      onChange={(html) => updatePanel(idx, { html, body: undefined })}
-                    />
-                  </ProposalSectionEditorChromeContext.Provider>
-                </div>
-              ) : null}
+              <ProposalAccordionExpandSurface
+                open={open}
+                motionKey={contentId}
+                id={contentId}
+                data-proposal-accordion-light-surface
+                className={cn(
+                  "w-full border-t border-border/45 bg-white px-4 py-4 text-zinc-900 sm:px-5",
+                  idx === panels.length - 1 && "rounded-b-2xl",
+                )}
+                onPointerDown={(e) => e.stopPropagation()}
+              >
+                <ProposalSectionEditorChromeContext.Provider value={LIGHT_SECTION_CHROME}>
+                  <ProposalRichText
+                    key={p.id}
+                    html={panelEditorHtml(p)}
+                    className="!px-0 [&_.ProseMirror]:min-h-[100px]"
+                    onChange={(html) => updatePanel(idx, { html, body: undefined })}
+                  />
+                </ProposalSectionEditorChromeContext.Provider>
+              </ProposalAccordionExpandSurface>
             </div>
           );
         })}

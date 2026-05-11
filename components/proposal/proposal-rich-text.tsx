@@ -395,26 +395,10 @@ function AlignmentPicker({ editor }: { editor: Editor }) {
   );
 }
 
-function MergeFieldMenu({
-  editor,
-  seamlessBright,
-  compact,
-}: {
-  editor: Editor;
-  /** Hero / seamless section chrome — light foreground on tinted band. */
-  seamlessBright?: boolean;
-  /** Icon-sized trigger for nested toolbars (e.g. BubbleMenu). */
-  compact?: boolean;
-}) {
+function MergeFieldMenu({ editor }: { editor: Editor }) {
   const [open, setOpen] = React.useState(false);
   const rootRef = React.useRef<HTMLDivElement>(null);
   useCloseBubbleToolbarMenu(open, setOpen, rootRef);
-
-  const shellBtn = compact
-    ? "inline-flex h-7 w-7 items-center justify-center rounded border-zinc-600 bg-transparent text-zinc-300 hover:bg-white/10 hover:text-white"
-    : seamlessBright
-      ? "border-white/25 bg-white/[0.08] text-white/90 hover:bg-white/15 hover:text-white"
-      : "border-border/70 bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground";
 
   function insert(snippet: string) {
     editor.chain().focus().insertContent(snippet).run();
@@ -432,20 +416,9 @@ function MergeFieldMenu({
         aria-label="Insert merge field"
         aria-expanded={open}
         aria-haspopup="menu"
-        className={cn(
-          !compact &&
-            "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[12px] font-medium transition-colors",
-          compact && shellBtn,
-          !compact && shellBtn,
-        )}
+        className="inline-flex h-7 w-7 items-center justify-center rounded border border-zinc-600 bg-transparent text-zinc-300 transition-colors hover:bg-white/10 hover:text-white"
       >
-        <Braces className={cn("shrink-0 opacity-90", compact ? "h-4 w-4" : "h-3.5 w-3.5 opacity-80")} aria-hidden />
-        {compact ? null : (
-          <>
-            <span className="whitespace-nowrap">Merge field</span>
-            <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
-          </>
-        )}
+        <Braces className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
       </button>
       {open ? (
         <div
@@ -629,8 +602,8 @@ export function ProposalRichText({
         shouldShow={({ editor: ed, from, to }) => {
           if (!ed.isEditable) return false;
           if (from !== to) return true;
-          if (!headerVariant) return false;
-          return ed.isActive("heading");
+          if (headerVariant && ed.isActive("heading")) return true;
+          return ed.isFocused;
         }}
       >
         <div className="flex items-center gap-0.5 rounded-lg border border-zinc-800 bg-zinc-950/95 p-1 text-zinc-100 shadow-2xl backdrop-blur">
@@ -671,7 +644,7 @@ export function ProposalRichText({
           <AlignmentPicker editor={editor} />
           <LinkButton editor={editor} />
           <ToolbarDivider />
-          <MergeFieldMenu editor={editor} compact />
+          <MergeFieldMenu editor={editor} />
           <ToolbarButton
             ariaLabel="Image from URL"
             onClick={() => {
@@ -708,9 +681,6 @@ export function ProposalRichText({
           </ToolbarButton>
         </div>
       </BubbleMenu>
-      <div className="flex justify-end px-3 pb-1.5 pt-1 sm:px-4">
-        <MergeFieldMenu editor={editor} seamlessBright={seamless && prefersLight} />
-      </div>
       <EditorContent editor={editor} />
     </div>
   );

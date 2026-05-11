@@ -10,6 +10,7 @@ import { getCustomerRecordForOrg } from "@/server/firestore/crm-customers";
 import { getOpportunityForStaff } from "@/server/firestore/crm-opportunities";
 import { getProposalTemplateForStaff } from "@/server/firestore/proposal-templates";
 import { cloneBrandingFromTemplate, cloneProposalDocument } from "@/lib/proposal-clone-document";
+import { encodeProposalDocumentForFirestore } from "@/lib/proposal-firestore-document";
 import { applyProposalTokensToDocument } from "@/lib/proposal-template-tokens";
 import { escapeHtml } from "@/lib/escape-html";
 import { logError } from "@/lib/logging";
@@ -183,7 +184,7 @@ export async function createDraftProposalFromCustomerAction(
       recipientEmail,
       status: "draft",
       shareToken,
-      document: omitUndefinedDeep(document),
+      document: omitUndefinedDeep(encodeProposalDocumentForFirestore(document)),
       createdAtMs: now,
       updatedAtMs: now,
       createdAt: FieldValue.serverTimestamp(),
@@ -271,7 +272,7 @@ export async function createDraftProposalFromOpportunityAction(
       recipientEmail,
       status: "draft",
       shareToken,
-      document: omitUndefinedDeep(document),
+      document: omitUndefinedDeep(encodeProposalDocumentForFirestore(document)),
       createdAtMs: now,
       updatedAtMs: now,
       createdAt: FieldValue.serverTimestamp(),
