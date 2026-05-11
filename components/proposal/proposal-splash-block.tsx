@@ -115,32 +115,41 @@ function SplashMediaLayers({
           className={cn("absolute inset-0", motionClass)}
           style={{ filter, transform: scale ? `scale(${scale})` : undefined }}
         >
-          {resolved.embedSrc ? (
-            <iframe
-              title="Background video"
-              src={resolved.embedSrc}
-              className="pointer-events-none absolute left-1/2 top-1/2 h-[115%] min-h-full w-[115%] min-w-full -translate-x-1/2 -translate-y-1/2 border-0 opacity-95"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope"
-            />
-          ) : (
-            <video
-              key={resolved.videoUrl}
-              className="proposal-splash-bg-video h-full w-full object-cover"
-              style={{ objectPosition: resolved.objectPosition }}
-              autoPlay={mode === "public"}
-              controls={false}
-              controlsList="nodownload nofullscreen noremoteplayback"
-              disablePictureInPicture
-              disableRemotePlayback
-              muted
-              loop
-              playsInline
-              preload="metadata"
-              poster={poster}
-              src={resolved.videoUrl || undefined}
-              tabIndex={-1}
-            />
-          )}
+          <div className="relative h-full w-full overflow-hidden">
+            {resolved.embedSrc ? (
+              <iframe
+                title="Background video"
+                src={resolved.embedSrc}
+                className="pointer-events-none absolute left-1/2 top-1/2 h-[115%] min-h-full w-[115%] min-w-full -translate-x-1/2 -translate-y-1/2 border-0 opacity-95"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope"
+              />
+            ) : (
+              <video
+                key={resolved.videoUrl}
+                className="proposal-splash-bg-video absolute inset-0 h-full w-full object-cover"
+                style={{ objectPosition: resolved.objectPosition }}
+                autoPlay={mode === "public"}
+                controls={false}
+                controlsList="nodownload nofullscreen noremoteplayback noplaybackrate"
+                disablePictureInPicture
+                disableRemotePlayback
+                muted
+                loop
+                playsInline
+                preload="metadata"
+                poster={poster}
+                src={resolved.videoUrl || undefined}
+                tabIndex={-1}
+              />
+            )}
+            {/*
+              Parent stack uses pointer-events-none so proposal content stays clickable.
+              This layer uses pointer-events:auto so taps never reach `<video>` / the iframe surface —
+              Safari/WebKit often promote skip/play overlays only after the element receives interaction.
+              YouTube/Vimeo UI still lives inside a cross-origin iframe and can only be minimized via URL params.
+            */}
+            <div className="absolute inset-0 z-[5] bg-transparent" aria-hidden style={{ pointerEvents: "auto" }} />
+          </div>
         </div>
         {mode === "public" ? (
           <div className="absolute inset-0 md:hidden">
