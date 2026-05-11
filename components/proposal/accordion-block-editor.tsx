@@ -108,7 +108,7 @@ export function AccordionBlockEditor({
                   </Button>
                   <button
                     type="button"
-                    className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-cyan-500 transition-colors hover:bg-white/10 hover:text-cyan-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/40"
+                    className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-[#673AB7] transition-colors hover:bg-white/10 hover:text-[#5E35B1] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#673AB7]/40"
                     aria-expanded={open}
                     aria-controls={contentId}
                     aria-label={open ? "Collapse panel" : "Expand panel"}

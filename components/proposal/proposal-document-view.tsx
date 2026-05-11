@@ -319,7 +319,7 @@ function BlockView({
               <summary className="flex cursor-pointer list-none select-none items-center justify-between gap-4 px-4 py-4 text-lg font-semibold tracking-tight text-foreground sm:px-5 [&::-webkit-details-marker]:hidden">
                 <span>{p.title.trim() ? p.title : "Untitled panel"}</span>
                 <ChevronRight
-                  className="h-5 w-5 shrink-0 text-cyan-500 transition-transform group-open:rotate-90 dark:text-cyan-400"
+                  className="h-5 w-5 shrink-0 text-[#673AB7] transition-transform group-open:rotate-90"
                   aria-hidden
                 />
               </summary>
