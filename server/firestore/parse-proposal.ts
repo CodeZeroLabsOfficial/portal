@@ -67,11 +67,29 @@ function parsePublicSelections(raw: unknown): ProposalPublicSelections | undefin
     const tierId = asString(o.tierId);
     const term = parsePackagesTerm(o);
     if (!tierId || !term) continue;
+    const addonQuantities: Record<string, number> = {};
+    const aq = o.addonQuantities;
+    if (aq && typeof aq === "object" && !Array.isArray(aq)) {
+      for (const [lid, raw] of Object.entries(aq as Record<string, unknown>)) {
+        if (typeof raw === "number" && Number.isFinite(raw) && raw >= 0) {
+          addonQuantities[lid] = Math.floor(raw);
+        }
+      }
+    }
+    const addonOptionalOff: Record<string, boolean> = {};
+    const ao = o.addonOptionalOff;
+    if (ao && typeof ao === "object" && !Array.isArray(ao)) {
+      for (const [lid, raw] of Object.entries(ao as Record<string, unknown>)) {
+        if (raw === true) addonOptionalOff[lid] = true;
+      }
+    }
     out[key] = {
       kind: "packages",
       tierId,
       term,
       updatedAtMs: asNumber(o.updatedAtMs) ?? Date.now(),
+      ...(Object.keys(addonQuantities).length > 0 ? { addonQuantities } : {}),
+      ...(Object.keys(addonOptionalOff).length > 0 ? { addonOptionalOff } : {}),
     };
   }
   return Object.keys(out).length > 0 ? out : undefined;

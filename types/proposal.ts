@@ -177,6 +177,16 @@ export interface PackagesBlock extends ProposalBlockBase {
   tiers: PackageTier[];
   /** Visual style overrides (variant + colours). */
   style?: BlockStyle;
+  /** Optional add-ons (same shape as pricing line items) shown below tiers. */
+  addonLineItems?: PricingLineItem[];
+  /** Title above the add-ons table (default in UI: “Add-ons”). */
+  addonsTitle?: string;
+  /** Let the recipient change add-on quantities on the public page. */
+  allowAddonQuantityEdit?: boolean;
+  /** Suffix after quantity in the add-ons table (default: “Unit”). */
+  addonQuantityUnitLabel?: string;
+  /** Label for the combined total row (default: “Total”). */
+  totalSectionLabel?: string;
 }
 
 /** Persisted when the recipient selects a package on the public proposal. Keyed by block id. */
@@ -185,6 +195,10 @@ export interface PackagesPublicSelection {
   tierId: string;
   term: "12_months" | "24_months";
   updatedAtMs: number;
+  /** Buyer quantity overrides keyed by add-on line id. */
+  addonQuantities?: Record<string, number>;
+  /** Buyer opted out of optional add-ons keyed by line id. */
+  addonOptionalOff?: Record<string, boolean>;
 }
 
 export type ProposalPublicSelections = Record<string, PackagesPublicSelection>;

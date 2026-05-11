@@ -170,6 +170,26 @@ function normalizePackageTierInput(raw: unknown): unknown {
   return tier;
 }
 
+function normalizeAddonLineItemInput(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object") return raw;
+  const o = raw as Record<string, unknown>;
+  const id = typeof o.id === "string" && o.id.length >= 4 ? o.id : undefined;
+  if (!id) return null;
+  const row: Record<string, unknown> = {
+    id,
+    label: typeof o.label === "string" ? o.label : "",
+    unitAmountMinor:
+      typeof o.unitAmountMinor === "number" && Number.isFinite(o.unitAmountMinor)
+        ? Math.max(0, Math.round(o.unitAmountMinor))
+        : 0,
+  };
+  if (typeof o.quantity === "number" && Number.isFinite(o.quantity) && o.quantity >= 0) {
+    row.quantity = Math.floor(o.quantity);
+  }
+  if (o.optional === true) row.optional = true;
+  return row;
+}
+
 function normalizePackagesBlockInput(raw: unknown): unknown {
   if (!raw || typeof raw !== "object") return raw;
   const o = raw as Record<string, unknown>;
@@ -199,6 +219,22 @@ function normalizePackagesBlockInput(raw: unknown): unknown {
   if (plan12) block.plan12Label = plan12;
   if (plan24) block.plan24Label = plan24;
 
+  if (Array.isArray(o.addonLineItems)) {
+    const lines = o.addonLineItems
+      .map(normalizeAddonLineItemInput)
+      .filter((x): x is Record<string, unknown> => Boolean(x && typeof (x as Record<string, unknown>).id === "string"));
+    if (lines.length > 0) block.addonLineItems = lines;
+  }
+
+  if (typeof o.addonsTitle === "string" && o.addonsTitle.trim()) block.addonsTitle = o.addonsTitle.trim();
+  if (o.allowAddonQuantityEdit === false) block.allowAddonQuantityEdit = false;
+  if (typeof o.addonQuantityUnitLabel === "string" && o.addonQuantityUnitLabel.trim()) {
+    block.addonQuantityUnitLabel = o.addonQuantityUnitLabel.trim().slice(0, 40);
+  }
+  if (typeof o.totalSectionLabel === "string" && o.totalSectionLabel.trim()) {
+    block.totalSectionLabel = o.totalSectionLabel.trim().slice(0, 120);
+  }
+
   return block;
 }
 
@@ -224,6 +260,11 @@ const packagesBlockSchema = z.object({
   plan24Label: z.string().optional(),
   tiers: z.array(packageTierSchema).default([]),
   style: blockStyleSchema.optional(),
+  addonLineItems: z.array(pricingLineSchema).optional(),
+  addonsTitle: z.string().optional(),
+  allowAddonQuantityEdit: z.boolean().optional(),
+  addonQuantityUnitLabel: z.string().min(1).max(40).optional(),
+  totalSectionLabel: z.string().max(120).optional(),
 });
 
 const formFieldSchema = z.object({

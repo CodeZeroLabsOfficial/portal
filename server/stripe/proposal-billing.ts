@@ -2,6 +2,7 @@ import Stripe from "stripe";
 import { DEFAULT_CURRENCY } from "@/lib/constants";
 import { findProposalBlockById, iterateProposalContentBlocks } from "@/lib/proposal-blocks";
 import type { CustomerRecord } from "@/types/customer";
+import { packageAddonsTotalMinor, packagePlanContractMinor } from "@/lib/proposal-packages-totals";
 import type { PackagesBlock, PricingBlock, ProposalRecord } from "@/types/proposal";
 
 /** Sum line items from pricing blocks and accepted package selections (publicSelections). */
@@ -27,12 +28,9 @@ export function computeProposalTotalMinor(proposal: ProposalRecord): number {
       const raw = findProposalBlockById(blocks, blockId);
       if (!raw || raw.type !== "packages") continue;
       const pb = raw as PackagesBlock;
-      const tier = pb.tiers.find((t) => t.id === sel.tierId);
-      if (!tier) continue;
-      const months = sel.term === "24_months" ? 24 : 12;
-      const monthly =
-        sel.term === "24_months" ? tier.monthlyCost24Minor : tier.monthlyCost12Minor;
-      total += monthly * months;
+      if (!pb.tiers.some((t) => t.id === sel.tierId)) continue;
+      total += packagePlanContractMinor(pb, sel);
+      total += packageAddonsTotalMinor(pb, sel);
     }
   }
 

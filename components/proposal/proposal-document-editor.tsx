@@ -40,6 +40,7 @@ import {
   MonitorPlay,
   Mountain,
   Package,
+  Pencil,
   PenLine,
   Plus,
   Save,
@@ -48,7 +49,6 @@ import {
   SeparatorHorizontal,
   SquarePen,
   Star,
-  TableProperties,
   type LucideIcon,
 } from "lucide-react";
 import type {
@@ -90,7 +90,6 @@ import { saveProposalTemplateAction } from "@/server/actions/proposal-templates"
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Tooltip,
@@ -139,6 +138,7 @@ function cloneBlockWithFreshIds(block: ProposalBlock): ProposalBlock {
         ...block,
         id: newId(),
         tiers: (block.tiers ?? []).map((t) => ({ ...t, id: newId(), features: [...(t.features ?? [])] })),
+        addonLineItems: (block.addonLineItems ?? []).map((li) => ({ ...li, id: newId() })),
       };
     case "form":
       return {
@@ -191,43 +191,12 @@ interface BlockOption {
   factory?: () => ProposalBlock;
 }
 
-/** Pricing block presets: standard quote totals vs optional add-ons line-items table (interactive proposal). */
-function createAddonsTableBlock(): ProposalBlock {
-  const id = newId();
-  return {
-    id,
-    type: "pricing",
-    currency: "aud",
-    title: "Add-ons",
-    allowQuantityEdit: true,
-    quantityUnitLabel: "Unit",
-    style: {
-      variant: "simple",
-      primaryColor: DEFAULT_PRIMARY_COLOR,
-      highlightColor: DEFAULT_HIGHLIGHT_COLOR,
-    },
-    lineItems: [
-      { id: newId(), label: "3 User Pack", unitAmountMinor: 4_900, quantity: 0 },
-      { id: newId(), label: "5 User Pack", unitAmountMinor: 7_900, quantity: 0 },
-    ],
-  };
-}
-
-/** Primary tile grid in the insert popover (includes Quote line items + optional add-ons table). */
+/** Primary tile grid in the insert popover (includes Quote line items). */
 const PRIMARY_BLOCK_OPTIONS: BlockOption[] = [
   { id: "text", type: "text", label: "Text", icon: ScrollText, accent: "text-violet-500", accentBg: "bg-violet-500/10" },
   { id: "header", type: "header", label: "Heading", icon: Heading, accent: "text-sky-500", accentBg: "bg-sky-500/10" },
   { id: "splash", type: "splash", label: "Splash", icon: Mountain, accent: "text-teal-400", accentBg: "bg-teal-500/10" },
   { id: "pricing-quote", type: "pricing", label: "Quote", icon: Coins, accent: "text-emerald-500", accentBg: "bg-emerald-500/10" },
-  {
-    id: "pricing-table",
-    type: "pricing",
-    label: "Table",
-    icon: TableProperties,
-    accent: "text-emerald-600",
-    accentBg: "bg-emerald-500/10",
-    factory: createAddonsTableBlock,
-  },
   { id: "packages", type: "packages", label: "Plans", icon: Package, accent: "text-amber-500", accentBg: "bg-amber-500/10" },
   { id: "video", type: "video", label: "Video", icon: MonitorPlay, accent: "text-rose-500", accentBg: "bg-rose-500/10" },
   { id: "signature", type: "signature", label: "Accept", icon: PenLine, accent: "text-cyan-500", accentBg: "bg-cyan-500/10" },
@@ -258,15 +227,6 @@ const SECTION_INSERT_OPTIONS: BlockOption[] = [
     icon: LayoutGrid,
     accent: "text-cyan-500",
     accentBg: "bg-cyan-500/10",
-  },
-  {
-    id: "sx-table",
-    type: "pricing",
-    label: "Table",
-    icon: TableProperties,
-    accent: "text-emerald-600",
-    accentBg: "bg-emerald-500/10",
-    factory: createAddonsTableBlock,
   },
   {
     id: "sx-accordion",
@@ -383,6 +343,14 @@ function createBlock(type: ProposalBlock["type"]): ProposalBlock {
             features: [],
           },
         ],
+        addonLineItems: [
+          { id: newId(), label: "3 User Pack", unitAmountMinor: 4_900, quantity: 0 },
+          { id: newId(), label: "5 User Pack", unitAmountMinor: 7_900, quantity: 0 },
+        ],
+        addonsTitle: "Add-ons",
+        allowAddonQuantityEdit: true,
+        addonQuantityUnitLabel: "Unit",
+        totalSectionLabel: "Total",
       };
     }
     case "form":
@@ -1520,7 +1488,8 @@ export function ProposalDocumentEditor({
 }: ProposalDocumentEditorProps) {
   const isTemplate = variant === "template";
   const [templateName, setTemplateName] = React.useState(initialTemplateName);
-  const [templateDescription, setTemplateDescription] = React.useState(initialTemplateDescription);
+  const [templateNameEditing, setTemplateNameEditing] = React.useState(false);
+  const skipNextTemplateNameBlurSaveRef = React.useRef(false);
   const [blocks, setBlocks] = React.useState<ProposalBlock[]>(initialDocument.blocks);
   const [selectedBlockId, setSelectedBlockId] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
@@ -1573,7 +1542,7 @@ export function ProposalDocumentEditor({
       const res = await saveProposalTemplateAction({
         templateId,
         name: templateName.trim() || "Untitled template",
-        description: templateDescription.trim() || undefined,
+        description: initialTemplateDescription?.trim() || undefined,
         title: documentTitle,
         document: doc,
       });
@@ -1593,6 +1562,12 @@ export function ProposalDocumentEditor({
     });
     setSaving(false);
     setMessage(res.ok ? "Saved." : res.message);
+  }
+
+  async function saveAndExitTemplateNameEdit() {
+    if (!isTemplate || !templateId) return;
+    setTemplateNameEditing(false);
+    await save();
   }
 
   async function send() {
@@ -1746,7 +1721,7 @@ export function ProposalDocumentEditor({
     <div className="space-y-6">
       {isTemplate && templateId ? (
         <>
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-end gap-3">
             <Button
               variant="ghost"
               size="sm"
@@ -1768,6 +1743,45 @@ export function ProposalDocumentEditor({
                 Open public viewer
               </Link>
             </Button>
+            <div className="min-h-9 min-w-[10rem] flex-1 basis-[14rem] border-b border-border pb-1.5">
+              {templateNameEditing ? (
+                <Input
+                  autoFocus
+                  aria-label="Template name"
+                  value={templateName}
+                  disabled={saving}
+                  onChange={(e) => setTemplateName(e.target.value)}
+                  onBlur={() => {
+                    if (skipNextTemplateNameBlurSaveRef.current) {
+                      skipNextTemplateNameBlurSaveRef.current = false;
+                      return;
+                    }
+                    void saveAndExitTemplateNameEdit();
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key !== "Enter") return;
+                    e.preventDefault();
+                    skipNextTemplateNameBlurSaveRef.current = true;
+                    void saveAndExitTemplateNameEdit();
+                  }}
+                  placeholder="Template name"
+                  className="h-8 border-0 bg-transparent px-0 text-base font-medium text-foreground shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                />
+              ) : (
+                <button
+                  type="button"
+                  disabled={saving}
+                  aria-label="Edit template name"
+                  onClick={() => setTemplateNameEditing(true)}
+                  className="flex w-full min-w-0 items-center gap-2 rounded-sm text-left outline-none ring-offset-background transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+                >
+                  <span className="min-w-0 flex-1 truncate text-base font-medium text-foreground">
+                    {templateName.trim() || "Untitled template"}
+                  </span>
+                  <Pencil className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                </button>
+              )}
+            </div>
             <div className="ml-auto flex flex-wrap items-center gap-2">
               <DeleteProposalTemplateButton
                 templateId={templateId}
@@ -1779,6 +1793,12 @@ export function ProposalDocumentEditor({
               </Button>
             </div>
           </div>
+          <p className="text-xs text-muted-foreground">
+            The public proposal title matches the template name. Use merge tokens in text and splash blocks: {"{{name}}"}
+            {" / "}
+            {"{{client}}"}, {"{{email}}"}, {"{{company}}"}, {"{{opportunity}}"}, {"{{deal_amount}}"} when generating from a customer or
+            deal.
+          </p>
           {message ? <span className="block text-sm text-muted-foreground">{message}</span> : null}
         </>
       ) : (
@@ -1802,37 +1822,6 @@ export function ProposalDocumentEditor({
           ) : null}
         </div>
       )}
-
-      {isTemplate ? (
-        <div className="grid gap-4 rounded-xl border border-border/70 bg-muted/15 p-4 md:grid-cols-2">
-          <div className="space-y-2 md:col-span-1">
-            <Label htmlFor="tmpl-name">Template name</Label>
-            <Input
-              id="tmpl-name"
-              value={templateName}
-              onChange={(e) => setTemplateName(e.target.value)}
-              placeholder="e.g. Enterprise SaaS"
-            />
-          </div>
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="tmpl-desc">Description (internal)</Label>
-            <Textarea
-              id="tmpl-desc"
-              value={templateDescription}
-              onChange={(e) => setTemplateDescription(e.target.value)}
-              placeholder="When to use this template…"
-              rows={2}
-              className="resize-y"
-            />
-          </div>
-          <p className="text-xs text-muted-foreground md:col-span-2">
-            The public proposal title matches the template name. Use merge tokens in text and splash blocks: {"{{name}}"}
-            {" / "}
-            {"{{client}}"}, {"{{email}}"}, {"{{company}}"}, {"{{opportunity}}"}, {"{{deal_amount}}"} when generating from a customer or
-            deal.
-          </p>
-        </div>
-      ) : null}
 
       <Tabs defaultValue="edit">
         <TabsList>

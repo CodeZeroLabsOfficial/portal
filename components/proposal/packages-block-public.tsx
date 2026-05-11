@@ -6,6 +6,8 @@ import { Check, Loader2 } from "lucide-react";
 import type { PackagesBlock, PackagesPublicSelection } from "@/types/proposal";
 import { formatCurrencyAmount } from "@/lib/format";
 import { formatPackageTierIncluded } from "@/lib/package-tier-limits";
+import { effectivePricingLineQuantity } from "@/lib/pricing-line-quantity";
+import { packageAddonsTotalMinor, packagePlanContractMinor } from "@/lib/proposal-packages-totals";
 import { cn } from "@/lib/utils";
 import { readableForeground, resolveBlockStyle, withAlpha } from "@/lib/block-style";
 import { saveProposalPackageSelectionAction } from "@/server/actions/proposal-builder";
@@ -39,10 +41,45 @@ export function PackagesBlockPublic({
   const [pendingTierId, setPendingTierId] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
+  const addonLines = block.addonLineItems ?? [];
+  const addonIdsKey = addonLines.map((l) => l.id).join(",");
+
+  const [addonQty, setAddonQty] = React.useState<Record<string, number>>(() => {
+    const next: Record<string, number> = {};
+    for (const li of addonLines) {
+      const s = initialSelection?.addonQuantities?.[li.id];
+      next[li.id] =
+        typeof s === "number" && Number.isFinite(s) && s >= 0
+          ? Math.floor(s)
+          : effectivePricingLineQuantity(li);
+    }
+    return next;
+  });
+  const [addonOptOff, setAddonOptOff] = React.useState<Record<string, boolean>>(() =>
+    initialSelection?.addonOptionalOff ? { ...initialSelection.addonOptionalOff } : {},
+  );
+
   React.useEffect(() => {
     if (initialSelection?.tierId) setSelectedTierId(initialSelection.tierId);
     if (initialSelection?.term) setTerm(initialSelection.term);
   }, [initialSelection?.tierId, initialSelection?.term]);
+
+  React.useEffect(() => {
+    const lines = block.addonLineItems ?? [];
+    const next: Record<string, number> = {};
+    for (const li of lines) {
+      const s = initialSelection?.addonQuantities?.[li.id];
+      next[li.id] =
+        typeof s === "number" && Number.isFinite(s) && s >= 0
+          ? Math.floor(s)
+          : effectivePricingLineQuantity(li);
+    }
+    setAddonQty(next);
+    setAddonOptOff(
+      initialSelection?.addonOptionalOff ? { ...initialSelection.addonOptionalOff } : {},
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only rehydrate after server refresh (`updatedAtMs`) or add-on line set changes
+  }, [addonIdsKey, initialSelection?.updatedAtMs]);
 
   const label12 = block.plan12Label ?? "12 months";
   const label24 = block.plan24Label ?? "24 months";
@@ -55,6 +92,44 @@ export function PackagesBlockPublic({
   const recommendedFaintBorder =
     recommendedFg === "#ffffff" ? "rgba(255,255,255,0.32)" : "rgba(15,23,42,0.22)";
   const activeTermFg = readableForeground(style.primaryColor);
+  const totalBarFg = readableForeground(style.primaryColor);
+  const addonsTitle = block.addonsTitle ?? "Add-ons";
+  const totalSectionLabel = block.totalSectionLabel ?? "Total";
+  const qtyUnit = (block.addonQuantityUnitLabel ?? "Unit").trim() || "Unit";
+  const allowAddonEdit = block.allowAddonQuantityEdit !== false;
+
+  const selectionDraft: PackagesPublicSelection | undefined = selectedTierId
+    ? {
+        kind: "packages",
+        tierId: selectedTierId,
+        term,
+        updatedAtMs: initialSelection?.updatedAtMs ?? 0,
+        addonQuantities: addonQty,
+        addonOptionalOff: addonOptOff,
+      }
+    : undefined;
+
+  const planSubtotalMinor = selectionDraft ? packagePlanContractMinor(block, selectionDraft) : 0;
+  const addonsSubtotalMinor =
+    selectionDraft != null
+      ? packageAddonsTotalMinor(block, selectionDraft)
+      : packageAddonsTotalMinor(block, undefined, addonQty, addonOptOff);
+  const grandTotalMinor = planSubtotalMinor + addonsSubtotalMinor;
+
+  async function flushAddonsToServer(nextQty?: Record<string, number>, nextOpt?: Record<string, boolean>) {
+    if (!interactive || !shareToken || !selectedTierId) return;
+    const q = nextQty ?? addonQty;
+    const o = nextOpt ?? addonOptOff;
+    const res = await saveProposalPackageSelectionAction({
+      shareToken,
+      blockId: block.id,
+      tierId: selectedTierId,
+      term,
+      addonQuantities: q,
+      addonOptionalOff: o,
+    });
+    if (res.ok) router.refresh();
+  }
 
   function monthlyMinor(tier: (typeof tiers)[number]): number {
     const m12 = tier.monthlyCost12Minor ?? 0;
@@ -74,6 +149,8 @@ export function PackagesBlockPublic({
       blockId: block.id,
       tierId,
       term,
+      addonQuantities: addonQty,
+      addonOptionalOff: addonOptOff,
     });
     setPendingTierId(null);
     if (!res.ok) {
@@ -333,6 +410,138 @@ export function PackagesBlockPublic({
             </div>
           );
         })}
+      </div>
+
+      {addonLines.length > 0 ? (
+        <div className={cn("mt-8", isVisual ? "text-center" : "text-left")}>
+          <div className="overflow-hidden rounded-xl border border-border/70 bg-card shadow-sm">
+            <div
+              className="flex flex-wrap items-center justify-between gap-3 border-b border-dashed px-4 py-3"
+              style={{
+                backgroundColor: style.primaryColor,
+                color: totalBarFg,
+                borderBottomColor: totalBarFg === "#ffffff" ? "rgba(255,255,255,0.28)" : "rgba(15,23,42,0.18)",
+              }}
+            >
+              <p className="text-sm font-semibold">{addonsTitle}</p>
+              <p className="text-[11px] font-semibold uppercase tracking-wide opacity-90">
+                Subtotal{" "}
+                <span className="text-base tabular-nums">{formatCurrencyAmount(addonsSubtotalMinor, currency)}</span>
+              </p>
+            </div>
+            <div className="overflow-x-auto bg-card">
+              <table className="w-full min-w-[320px] text-sm">
+                <thead>
+                  <tr className="border-b border-dashed border-border/50 bg-card text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                    <th className="px-4 py-2.5">Description</th>
+                    <th className="px-4 py-2.5 text-right">Item</th>
+                    {allowAddonEdit ? <th className="px-4 py-2.5 text-right">Quantity</th> : null}
+                    <th className="px-4 py-2.5 text-right">Price</th>
+                  </tr>
+                </thead>
+                <tbody className="[&_tr]:border-b [&_tr]:border-dashed [&_tr]:border-border/40">
+                  {addonLines.map((li) => {
+                    const qRaw = addonQty[li.id] ?? effectivePricingLineQuantity(li);
+                    const hidden = Boolean(li.optional && addonOptOff[li.id]);
+                    const lineTotal = Math.round(li.unitAmountMinor * qRaw);
+                    return (
+                      <tr key={li.id} className={cn("transition-opacity", hidden && "opacity-40")}>
+                        <td className="px-4 py-3 align-middle">
+                          <div className="flex flex-col gap-1">
+                            <span className="font-medium text-foreground">{li.label}</span>
+                            {li.optional ? (
+                              <label className="flex cursor-pointer items-center gap-2 text-[12px] text-muted-foreground">
+                                <input
+                                  type="checkbox"
+                                  className="h-3.5 w-3.5 rounded border-border accent-primary"
+                                  checked={!addonOptOff[li.id]}
+                                  disabled={!interactive || !selectedTierId}
+                                  onChange={(e) => {
+                                    const on = e.target.checked;
+                                    setAddonOptOff((prev) => ({ ...prev, [li.id]: !on }));
+                                    if (interactive && shareToken && selectedTierId) {
+                                      void flushAddonsToServer(
+                                        addonQty,
+                                        { ...addonOptOff, [li.id]: !on },
+                                      );
+                                    }
+                                  }}
+                                />
+                                Include add-on
+                              </label>
+                            ) : null}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-right align-middle tabular-nums text-muted-foreground">
+                          {formatCurrencyAmount(li.unitAmountMinor, currency)}
+                        </td>
+                        {allowAddonEdit ? (
+                          <td className="px-4 py-3 text-right align-middle">
+                            <span className="inline-flex items-center justify-end gap-1.5 tabular-nums">
+                              <input
+                                type="number"
+                                min={0}
+                                step={1}
+                                disabled={hidden || !interactive || !selectedTierId}
+                                className="w-14 rounded-md border border-border/60 bg-background px-2 py-1 text-right text-foreground outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/25"
+                                value={qRaw}
+                                onChange={(e) => {
+                                  const n = Number(e.target.value);
+                                  if (!Number.isFinite(n) || n < 0) return;
+                                  setAddonQty((prev) => ({ ...prev, [li.id]: Math.floor(n) }));
+                                }}
+                                onBlur={() => {
+                                  void flushAddonsToServer();
+                                }}
+                              />
+                              <span className="text-xs text-muted-foreground">{qtyUnit}</span>
+                            </span>
+                          </td>
+                        ) : null}
+                        <td className="px-4 py-3 text-right align-middle tabular-nums font-medium text-foreground">
+                          {hidden ? "—" : formatCurrencyAmount(lineTotal, currency)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          {!selectedTierId && interactive ? (
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              Select a plan above to configure add-ons and save your choices.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      <div
+        className={cn(
+          "mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 px-4 py-3 shadow-sm",
+          isVisual ? "mx-auto max-w-md" : "",
+        )}
+        style={{ backgroundColor: style.primaryColor, color: totalBarFg }}
+      >
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-wide opacity-90">{totalSectionLabel}</p>
+          {selectedTierId ? (
+            <p className="mt-0.5 text-xs opacity-85">
+              Plan ({term === "24_months" ? "24" : "12"} mo): {formatCurrencyAmount(planSubtotalMinor, currency)}
+              {addonLines.length > 0 ? (
+                <>
+                  {" "}
+                  · Add-ons: {formatCurrencyAmount(addonsSubtotalMinor, currency)}
+                </>
+              ) : null}
+            </p>
+          ) : (
+            <p className="mt-0.5 text-xs opacity-85">Choose a plan to include subscription pricing in this total.</p>
+          )}
+        </div>
+        <p className="text-xl font-semibold tabular-nums sm:text-2xl">
+          {formatCurrencyAmount(grandTotalMinor, currency)}
+        </p>
       </div>
     </div>
   );

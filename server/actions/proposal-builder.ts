@@ -8,6 +8,7 @@ import { requireStaffSession } from "@/lib/auth/server-session";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { parseProposalDocument } from "@/lib/schemas/proposal-document";
+import { effectivePricingLineQuantity } from "@/lib/pricing-line-quantity";
 import { findProposalBlockById } from "@/lib/proposal-blocks";
 import { hashSharePassword, sealProposalAccess, verifySharePassword } from "@/lib/proposal-share-crypto";
 import { getAdminProposalRecord } from "@/server/firestore/portal-data";
@@ -35,8 +36,10 @@ const acceptSchema = z.object({
 const packageSelectionSchema = z.object({
   shareToken: z.string().min(8),
   blockId: z.string().min(4),
-  tierId: z.string().min(4),
-  term: z.enum(["12_months", "24_months"]),
+  tierId: z.string().min(4).optional(),
+  term: z.enum(["12_months", "24_months"]).optional(),
+  addonQuantities: z.record(z.string(), z.number().finite().min(0)).optional(),
+  addonOptionalOff: z.record(z.string(), z.boolean()).optional(),
 });
 
 export async function saveProposalDocumentAction(
@@ -318,11 +321,6 @@ export async function saveProposalPackageSelectionAction(
     return { ok: false, message: "Package block not found." };
   }
 
-  const tier = block.tiers.find((t) => t.id === parsed.data.tierId);
-  if (!tier) {
-    return { ok: false, message: "That package tier no longer exists." };
-  }
-
   const db = getFirebaseAdminFirestore();
   if (!db) return { ok: false, message: "Database unavailable." };
 
@@ -334,21 +332,73 @@ export async function saveProposalPackageSelectionAction(
       ? { ...(prevRaw as Record<string, unknown>) }
       : {};
 
+  const prevEntry = prev[parsed.data.blockId] as
+    | { tierId?: string; term?: string; addonQuantities?: Record<string, number>; addonOptionalOff?: Record<string, boolean> }
+    | undefined;
+
+  const nextTierId = parsed.data.tierId ?? prevEntry?.tierId;
+  if (!nextTierId || typeof nextTierId !== "string") {
+    return { ok: false, message: "Select a package tier first." };
+  }
+
+  const tier = block.tiers.find((t) => t.id === nextTierId);
+  if (!tier) {
+    return { ok: false, message: "That package tier no longer exists." };
+  }
+
+  const nextTerm =
+    parsed.data.term === "12_months" || parsed.data.term === "24_months"
+      ? parsed.data.term
+      : prevEntry?.term === "12_months" || prevEntry?.term === "24_months"
+        ? prevEntry.term
+        : "24_months";
+
+  const addonLines = block.addonLineItems ?? [];
+  const mergedQty: Record<string, number> = {};
+  for (const li of addonLines) {
+    const incoming = parsed.data.addonQuantities?.[li.id];
+    const fromPrev = prevEntry?.addonQuantities?.[li.id];
+    if (typeof incoming === "number" && Number.isFinite(incoming)) {
+      mergedQty[li.id] = Math.max(0, Math.floor(incoming));
+    } else if (typeof fromPrev === "number" && Number.isFinite(fromPrev)) {
+      mergedQty[li.id] = Math.max(0, Math.floor(fromPrev));
+    } else {
+      mergedQty[li.id] = effectivePricingLineQuantity(li);
+    }
+  }
+
+  const mergedOpt: Record<string, boolean> = {};
+  for (const li of addonLines) {
+    if (!li.optional) continue;
+    const incoming = parsed.data.addonOptionalOff?.[li.id];
+    const fromPrev = prevEntry?.addonOptionalOff?.[li.id];
+    const off = incoming === true || fromPrev === true;
+    if (off) mergedOpt[li.id] = true;
+  }
+
   const now = Date.now();
+  const selectionPayload: Record<string, unknown> = {
+    kind: "packages",
+    tierId: nextTierId,
+    term: nextTerm,
+    updatedAtMs: now,
+  };
+  if (addonLines.length > 0 && Object.keys(mergedQty).length > 0) {
+    selectionPayload.addonQuantities = mergedQty;
+  }
+  if (Object.keys(mergedOpt).length > 0) {
+    selectionPayload.addonOptionalOff = mergedOpt;
+  }
+
   const write = await runAdminWrite(
     "proposal_package_selection_failed",
-    { proposalId: proposal.id, blockId: parsed.data.blockId, tierId: parsed.data.tierId },
+    { proposalId: proposal.id, blockId: parsed.data.blockId, tierId: nextTierId },
     "Could not save your selection.",
     () =>
       ref.update({
         publicSelections: {
           ...prev,
-          [parsed.data.blockId]: {
-            kind: "packages",
-            tierId: parsed.data.tierId,
-            term: parsed.data.term,
-            updatedAtMs: now,
-          },
+          [parsed.data.blockId]: selectionPayload,
         },
         updatedAtMs: now,
         updatedAt: FieldValue.serverTimestamp(),
