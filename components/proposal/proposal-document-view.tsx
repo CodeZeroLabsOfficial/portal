@@ -14,9 +14,6 @@ import {
   PROPOSAL_DOCUMENT_BLOCK_INNER_PAD_CLASSES,
   PROPOSAL_DOCUMENT_COLUMNS_ROW_GAP_CLASSES,
   PROPOSAL_DOCUMENT_ROOT_STACK_GAP_CLASSES,
-  proposalDocumentRootBlockGapBefore,
-  proposalDocumentRootInnerColumnVerticalPad,
-  proposalSectionChildGapBefore,
   PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES,
   PROPOSAL_PUBLIC_VIEWPORT_BREAKOUT_CLASSES,
 } from "@/lib/proposal-public-layout";
@@ -60,21 +57,17 @@ function BlockView({
     /** Grouped layouts render children sequentially with generous vertical rhythm. */
     case "section": {
       const sb = block as SectionBlock;
-      const stack = sb.children.map((c, i) => (
-        <div
+      const stack = sb.children.map((c) => (
+        <BlockView
           key={c.id}
-          className={cn(i > 0 && proposalSectionChildGapBefore(sb.children[i - 1]!, c))}
-        >
-          <BlockView
-            block={c}
-            shareToken={shareToken}
-            publicSelections={publicSelections}
-            viewportSectionBleed={viewportSectionBleed}
-            splashPublicPresentation={
-              viewportSectionBleed && c.type === "splash" ? "nestedColumn" : splashPublicPresentation
-            }
-          />
-        </div>
+          block={c}
+          shareToken={shareToken}
+          publicSelections={publicSelections}
+          viewportSectionBleed={viewportSectionBleed}
+          splashPublicPresentation={
+            viewportSectionBleed && c.type === "splash" ? "nestedColumn" : splashPublicPresentation
+          }
+        />
       ));
       const body = viewportSectionBleed ? (
         <div className={cn(PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES, PROPOSAL_DOCUMENT_BLOCK_INNER_PAD_CLASSES)}>
@@ -289,29 +282,27 @@ function BlockView({
       return (
         <div className={cn("grid gap-x-10 md:grid-cols-2", PROPOSAL_DOCUMENT_COLUMNS_ROW_GAP_CLASSES)}>
           <div className="flex flex-col">
-            {left.map((c, i) => (
-              <div key={c.id} className={cn(i > 0 && proposalSectionChildGapBefore(left[i - 1]!, c))}>
-                <BlockView
-                  block={c}
-                  shareToken={shareToken}
-                  publicSelections={publicSelections}
-                  viewportSectionBleed={viewportSectionBleed}
-                  splashPublicPresentation={splashPublicPresentation}
-                />
-              </div>
+            {left.map((c) => (
+              <BlockView
+                key={c.id}
+                block={c}
+                shareToken={shareToken}
+                publicSelections={publicSelections}
+                viewportSectionBleed={viewportSectionBleed}
+                splashPublicPresentation={splashPublicPresentation}
+              />
             ))}
           </div>
           <div className="flex flex-col">
-            {right.map((c, i) => (
-              <div key={c.id} className={cn(i > 0 && proposalSectionChildGapBefore(right[i - 1]!, c))}>
-                <BlockView
-                  block={c}
-                  shareToken={shareToken}
-                  publicSelections={publicSelections}
-                  viewportSectionBleed={viewportSectionBleed}
-                  splashPublicPresentation={splashPublicPresentation}
-                />
-              </div>
+            {right.map((c) => (
+              <BlockView
+                key={c.id}
+                block={c}
+                shareToken={shareToken}
+                publicSelections={publicSelections}
+                viewportSectionBleed={viewportSectionBleed}
+                splashPublicPresentation={splashPublicPresentation}
+              />
             ))}
           </div>
         </div>
@@ -397,11 +388,7 @@ export function ProposalDocumentView({
       ) : null}
       {viewportSectionBleed ? (
         <div className={cn("w-full", PROPOSAL_DOCUMENT_ROOT_STACK_GAP_CLASSES)}>
-          {document.blocks.map((block, idx) => {
-            const prevRoot = idx > 0 ? document.blocks[idx - 1] : undefined;
-            const nextRoot = idx < document.blocks.length - 1 ? document.blocks[idx + 1] : undefined;
-            const gapBefore =
-              idx > 0 ? proposalDocumentRootBlockGapBefore(document.blocks[idx - 1]!, block) : undefined;
+          {document.blocks.map((block) => {
             const splashRootBand = Boolean(viewportSectionBleed && block.type === "splash");
             const child = (
               <BlockView
@@ -420,7 +407,7 @@ export function ProposalDocumentView({
             );
             if (block.type === "section" || splashRootBand) {
               return (
-                <section key={block.id} className={cn("w-full shrink-0", gapBefore)}>
+                <section key={block.id} className="w-full shrink-0">
                   {child}
                 </section>
               );
@@ -430,9 +417,8 @@ export function ProposalDocumentView({
                 key={block.id}
                 className={cn(
                   PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES,
-                  proposalDocumentRootInnerColumnVerticalPad(block, prevRoot, nextRoot),
+                  PROPOSAL_DOCUMENT_BLOCK_INNER_PAD_CLASSES,
                   "shrink-0",
-                  gapBefore,
                 )}
               >
                 {child}
@@ -442,29 +428,23 @@ export function ProposalDocumentView({
         </div>
       ) : (
         <div className={cn(PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES, PROPOSAL_DOCUMENT_ROOT_STACK_GAP_CLASSES)}>
-          {document.blocks.map((block, idx) => {
-            const prevRoot = idx > 0 ? document.blocks[idx - 1] : undefined;
-            const nextRoot = idx < document.blocks.length - 1 ? document.blocks[idx + 1] : undefined;
-            return (
-              <section
-                key={block.id}
-                className={cn(
-                  "space-y-0",
-                  block.type !== "section" &&
-                    proposalDocumentRootInnerColumnVerticalPad(block, prevRoot, nextRoot),
-                  idx > 0 ? proposalDocumentRootBlockGapBefore(document.blocks[idx - 1]!, block) : undefined,
-                )}
-              >
-                <BlockView
-                  block={block}
-                  shareToken={shareToken}
-                  publicSelections={publicSelections}
-                  viewportSectionBleed={false}
-                  splashPublicPresentation={block.type === "splash" ? "nestedColumn" : undefined}
-                />
-              </section>
-            );
-          })}
+          {document.blocks.map((block) => (
+            <section
+              key={block.id}
+              className={cn(
+                "space-y-0",
+                block.type !== "section" && PROPOSAL_DOCUMENT_BLOCK_INNER_PAD_CLASSES,
+              )}
+            >
+              <BlockView
+                block={block}
+                shareToken={shareToken}
+                publicSelections={publicSelections}
+                viewportSectionBleed={false}
+                splashPublicPresentation={block.type === "splash" ? "nestedColumn" : undefined}
+              />
+            </section>
+          ))}
         </div>
       )}
     </article>

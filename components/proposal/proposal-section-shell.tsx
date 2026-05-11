@@ -50,7 +50,7 @@ export function ProposalSectionShell({
     editorCanvas
       ? cn("py-8 sm:py-10 md:py-12")
       : viewerEdge
-        ? /* Vertical rhythm: root flex gap/padding + inner pad in `ProposalDocumentView`. */
+        ? /* Vertical rhythm: section inner column padding in `ProposalDocumentView` (no inter-block margins). */
           "px-0 py-0"
         : cn("px-6 py-10 sm:px-10 sm:py-14 md:px-14 md:py-16");
   const surfaceChrome = editorCanvas
