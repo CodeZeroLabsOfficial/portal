@@ -404,18 +404,22 @@ export function ProposalRichText({
   // so the override silently never matched. Pick the right base here instead.
   const minHeightClass = headerVariant ? "min-h-[3.5rem]" : "min-h-[140px]";
 
+  // No focus ring/border on the editable surface itself — block-level chrome
+  // (toolbar + outline) already conveys selection. Browser-default outline is
+  // suppressed via `focus-within:outline-none` so removing the ring doesn't
+  // expose it.
   const editorRootClass = cn(
     TIPTAP_PROSE_TYPOGRAPHY,
     seamless
       ? cn(
-          "proposal-rich-text max-w-none rounded-none border-0 bg-transparent px-3 py-2 text-sm leading-relaxed shadow-none focus-within:outline-none focus-within:ring-2 hover:!bg-transparent dark:hover:!bg-transparent",
+          "proposal-rich-text max-w-none rounded-none border-0 bg-transparent px-3 py-2 text-sm leading-relaxed shadow-none outline-none focus-within:outline-none hover:!bg-transparent dark:hover:!bg-transparent",
           minHeightClass,
           prefersLight
-            ? "text-white/[0.92] focus-within:ring-white/25 [&_a]:text-sky-200 [&_a]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-white/25 [&_blockquote]:pl-4 [&_blockquote]:italic"
-            : "text-foreground focus-within:ring-primary/30 [&_a]:text-primary [&_a]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-border [&_blockquote]:pl-4 [&_blockquote]:italic",
+            ? "text-white/[0.92] [&_a]:text-sky-200 [&_a]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-white/25 [&_blockquote]:pl-4 [&_blockquote]:italic"
+            : "text-foreground [&_a]:text-primary [&_a]:underline [&_blockquote]:border-l-4 [&_blockquote]:border-border [&_blockquote]:pl-4 [&_blockquote]:italic",
         )
       : cn(
-          "proposal-rich-text max-w-none rounded-lg border border-border/60 bg-background px-3 py-2 text-sm leading-relaxed text-foreground focus-within:ring-2 focus-within:ring-ring/40",
+          "proposal-rich-text max-w-none rounded-lg border-0 bg-background px-3 py-2 text-sm leading-relaxed text-foreground outline-none focus-within:outline-none",
           minHeightClass,
           "[&_blockquote]:border-l-4 [&_blockquote]:border-border [&_blockquote]:pl-4 [&_blockquote]:italic [&_a]:text-primary [&_a]:underline",
         ),
