@@ -40,6 +40,7 @@ export async function createProposalTemplateAction(): Promise<
         createdByUid: user.uid,
         name: "New template",
         description: "",
+        stage: "draft",
         document: {
           title: "Untitled proposal",
           blocks: [],
@@ -52,7 +53,7 @@ export async function createProposalTemplateAction(): Promise<
   );
   if (!write.ok) return write;
 
-  revalidatePath("/admin/proposals");
+  revalidatePath("/admin/proposals/templates");
   return { ok: true, templateId: ref.id };
 }
 
@@ -85,6 +86,7 @@ export async function cloneProposalTemplateAction(
     createdByUid: user.uid,
     name,
     description: source.description?.trim() ? source.description.trim() : "",
+    stage: "draft",
     document: encodeProposalDocumentForFirestore(source.document),
     createdAtMs: now,
     updatedAtMs: now,
@@ -103,7 +105,7 @@ export async function cloneProposalTemplateAction(
   );
   if (!write.ok) return write;
 
-  revalidatePath("/admin/proposals");
+  revalidatePath("/admin/proposals/templates");
   return { ok: true, templateId: ref.id };
 }
 
@@ -151,8 +153,45 @@ export async function saveProposalTemplateAction(
   );
   if (!write.ok) return write;
 
-  revalidatePath("/admin/proposals");
+  revalidatePath("/admin/proposals/templates");
   revalidatePath(`/admin/proposals/templates/${parsed.data.templateId}`);
+  return { ok: true };
+}
+
+const templateStageSchema = z.enum(["draft", "published"]);
+
+export async function setProposalTemplateStageAction(
+  templateId: string,
+  stage: z.infer<typeof templateStageSchema>,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const user = await requireStaffSession();
+  if (!user) return { ok: false, message: "Unauthorized." };
+
+  const parsedStage = templateStageSchema.safeParse(stage);
+  if (!parsedStage.success) return { ok: false, message: "Invalid stage." };
+
+  if (!(await getProposalTemplateForStaff(user, templateId))) {
+    return { ok: false, message: "Template not found." };
+  }
+
+  const db = getFirebaseAdminFirestore();
+  if (!db) return { ok: false, message: "Database unavailable." };
+
+  const write = await runAdminWrite(
+    "proposal_template_stage_failed",
+    { templateId, stage: parsedStage.data },
+    "Could not update template stage.",
+    () =>
+      db.collection(COLLECTIONS.proposalTemplates).doc(templateId).update({
+        stage: parsedStage.data,
+        updatedAtMs: Date.now(),
+        updatedAt: FieldValue.serverTimestamp(),
+      }),
+  );
+  if (!write.ok) return write;
+
+  revalidatePath("/admin/proposals/templates");
+  revalidatePath(`/admin/proposals/templates/${templateId}`);
   return { ok: true };
 }
 
@@ -176,6 +215,6 @@ export async function deleteProposalTemplateAction(
   );
   if (!write.ok) return write;
 
-  revalidatePath("/admin/proposals");
+  revalidatePath("/admin/proposals/templates");
   return { ok: true };
 }

@@ -175,7 +175,7 @@ export function ProposalsListPanel({ proposals }: ProposalsListPanelProps) {
   return (
     <section className="overflow-hidden rounded-xl border border-border/80 bg-card/80 shadow-sm backdrop-blur-sm">
       <div className="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-        <h2 className="shrink-0 text-sm font-semibold text-foreground">Proposals</h2>
+        <h2 className="shrink-0 text-sm font-semibold text-foreground">Customer proposals</h2>
         <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-2">
           <div className="relative min-w-0 flex-1 sm:max-w-xs md:max-w-md">
             <Search

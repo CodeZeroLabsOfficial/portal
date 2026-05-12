@@ -2145,7 +2145,7 @@ export function ProposalDocumentEditor({
               className="-ml-2 gap-1.5 text-muted-foreground hover:text-foreground"
               asChild
             >
-              <Link href="/admin/proposals">
+              <Link href="/admin/proposals/templates">
                 <ArrowLeft className="h-4 w-4" aria-hidden />
                 All templates
               </Link>

@@ -4,7 +4,7 @@ import { COLLECTIONS } from "@/server/firestore/collections";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import { parseProposalDocument } from "@/lib/schemas/proposal-document";
 import { parseBranding } from "@/server/firestore/parse-proposal";
-import type { ProposalTemplateRecord } from "@/types/proposal-template";
+import type { ProposalTemplateRecord, ProposalTemplateStage } from "@/types/proposal-template";
 import type { PortalUser } from "@/types/user";
 
 export function parseProposalTemplateRecord(id: string, data: Record<string, unknown>): ProposalTemplateRecord {
@@ -18,12 +18,17 @@ export function parseProposalTemplateRecord(id: string, data: Record<string, unk
     title: docTitle,
   });
 
+  const stageRaw = asString(data.stage);
+  const stage: ProposalTemplateStage =
+    stageRaw === "draft" || stageRaw === "published" ? stageRaw : "published";
+
   return {
     id,
     organizationId: asString(data.organizationId) ?? "",
     createdByUid: asString(data.createdByUid) ?? "",
     name: asString(data.name) ?? "Untitled template",
     description: asString(data.description),
+    stage,
     document,
     branding: parseBranding(data.branding),
     createdAtMs: asNumber(data.createdAtMs) ?? 0,

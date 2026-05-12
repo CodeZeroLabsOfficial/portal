@@ -8,6 +8,7 @@ import {
   Building2,
   Columns3,
   FileText,
+  LayoutTemplate,
   Repeat,
   LayoutDashboard,
   LifeBuoy,
@@ -37,6 +38,7 @@ const adminNavIcons: Record<(typeof ADMIN_PORTAL_NAV)[number]["id"], LucideIcon>
   customers: Users,
   opportunities: Columns3,
   proposals: FileText,
+  proposalTemplates: LayoutTemplate,
   accounts: Building2,
   subscriptions: Repeat,
   tasks: ListTodo,
@@ -78,10 +80,10 @@ export function WorkspaceNav({ collapsed = false, userRole }: WorkspaceNavProps)
         <div className="min-h-0 flex-1 space-y-0.5 overflow-y-auto">
           {ADMIN_PORTAL_NAV.map((item) => {
             const Icon = adminNavIcons[item.id] ?? LayoutDashboard;
-            const isActive = isAdminNavActive(item.href, pathname);
+            const isActive = isAdminNavActive(item, pathname);
             return (
               <NavRow
-                key={item.href}
+                key={item.id}
                 href={item.href}
                 label={item.label}
                 collapsed={collapsed}

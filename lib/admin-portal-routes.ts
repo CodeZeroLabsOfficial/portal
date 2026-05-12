@@ -1,5 +1,14 @@
 export interface AdminPortalNavItem {
-  id: "dashboard" | "customers" | "opportunities" | "accounts" | "subscriptions" | "tasks" | "reports" | "proposals";
+  id:
+    | "dashboard"
+    | "customers"
+    | "opportunities"
+    | "accounts"
+    | "subscriptions"
+    | "tasks"
+    | "reports"
+    | "proposals"
+    | "proposalTemplates";
   href:
     | "/admin"
     | "/admin/customers"
@@ -8,7 +17,8 @@ export interface AdminPortalNavItem {
     | "/admin/subscriptions"
     | "/admin/tasks"
     | "/admin/reports"
-    | "/admin/proposals";
+    | "/admin/proposals"
+    | "/admin/proposals/templates";
   label: string;
 }
 
@@ -23,6 +33,7 @@ export const ADMIN_PORTAL_NAV: AdminPortalNavItem[] = [
   { id: "customers", href: "/admin/customers", label: "Customers" },
   { id: "opportunities", href: "/admin/opportunities", label: "Pipeline" },
   { id: "proposals", href: "/admin/proposals", label: "Proposals" },
+  { id: "proposalTemplates", href: "/admin/proposals/templates", label: "Proposal templates" },
   { id: "accounts", href: "/admin/accounts", label: "Accounts" },
   { id: "subscriptions", href: "/admin/subscriptions", label: "Subscriptions" },
   { id: "tasks", href: "/admin/tasks", label: "Tasks" },
@@ -33,10 +44,17 @@ export const ADMIN_PORTAL_NAV_FOOTER: AdminPortalNavFooterItem[] = [
   { id: "settings", href: "/admin/settings", label: "Settings" },
 ];
 
-export function isAdminNavActive(href: AdminPortalNavItem["href"], pathname: string): boolean {
+export function isAdminNavActive(item: AdminPortalNavItem, pathname: string): boolean {
   const normalized = pathname.endsWith("/") && pathname !== "/" ? pathname.slice(0, -1) : pathname;
+  const { href, id } = item;
   if (href === "/admin") {
     return normalized === "/admin";
+  }
+  if (id === "proposals") {
+    if (normalized === "/admin/proposals") return true;
+    if (!normalized.startsWith("/admin/proposals/")) return false;
+    if (normalized.startsWith("/admin/proposals/templates")) return false;
+    return true;
   }
   return normalized === href || normalized.startsWith(`${href}/`);
 }

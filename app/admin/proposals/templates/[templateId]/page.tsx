@@ -11,7 +11,7 @@ interface PageProps {
 export default async function EditProposalTemplatePage({ params }: PageProps) {
   const user = await getCurrentSessionUser();
   if (!user) {
-    redirect("/login?next=/admin/proposals");
+    redirect("/login?next=/admin/proposals/templates");
   }
   if (!isStaff(user)) {
     redirect("/dashboard");

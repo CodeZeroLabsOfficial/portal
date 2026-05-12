@@ -95,10 +95,10 @@ function DefaultWorkspaceRightAside() {
                 Browse proposal templates aligned with your pricing tiers.
               </p>
               <Link
-                href="/dashboard"
+                href="/admin/proposals/templates"
                 className="mt-2 inline-block text-xs font-medium text-primary hover:underline"
               >
-                Learn more
+                Open templates
               </Link>
             </div>
           </li>

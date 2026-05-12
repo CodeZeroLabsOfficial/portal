@@ -4,12 +4,23 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { ExternalLink, Loader2, Pencil, Search, SquareArrowOutUpRight, Trash2 } from "lucide-react";
-import type { ProposalTemplateRecord } from "@/types/proposal-template";
-import { deleteProposalTemplateAction } from "@/server/actions/proposal-templates";
+import {
+  CheckCircle2,
+  ExternalLink,
+  Loader2,
+  Pencil,
+  RotateCcw,
+  Search,
+  SquareArrowOutUpRight,
+  Trash2,
+} from "lucide-react";
+import type { ProposalTemplateRecord, ProposalTemplateStage } from "@/types/proposal-template";
+import { deleteProposalTemplateAction, setProposalTemplateStageAction } from "@/server/actions/proposal-templates";
 import { CloneProposalTemplateButton } from "@/components/proposal/clone-proposal-template-button";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 export interface ProposalTemplatesListPanelProps {
   templates: ProposalTemplateRecord[];
@@ -31,6 +42,32 @@ function formatLastEdited(ms: number): string {
   }
 }
 
+const TEMPLATE_STAGE_BADGE: Record<ProposalTemplateStage, string> = {
+  draft:
+    "border-slate-500/45 bg-slate-500/10 text-slate-800 dark:border-slate-500/35 dark:bg-slate-500/15 dark:text-slate-200",
+  published:
+    "border-sky-500/45 bg-sky-500/10 text-sky-900 dark:border-sky-500/35 dark:bg-sky-500/15 dark:text-sky-200",
+};
+
+function templateStageDisplay(stage: ProposalTemplateStage): {
+  label: string;
+  title: string;
+  badgeClass: string;
+} {
+  if (stage === "published") {
+    return {
+      label: "Published",
+      title: "Marked ready for CRM and customer proposals.",
+      badgeClass: TEMPLATE_STAGE_BADGE.published,
+    };
+  }
+  return {
+    label: "Draft",
+    title: "Still in progress — publish when the template is ready to use.",
+    badgeClass: TEMPLATE_STAGE_BADGE.draft,
+  };
+}
+
 export function ProposalTemplatesListPanel({ templates }: ProposalTemplatesListPanelProps) {
   const router = useRouter();
 
@@ -40,6 +77,7 @@ export function ProposalTemplatesListPanel({ templates }: ProposalTemplatesListP
 
   const [query, setQuery] = React.useState("");
   const [deletingTemplateId, setDeletingTemplateId] = React.useState<string | null>(null);
+  const [stageUpdatingId, setStageUpdatingId] = React.useState<string | null>(null);
 
   async function deleteTemplate(templateId: string, name: string) {
     if (!window.confirm(`Delete template “${name}”? This cannot be undone.`)) return;
@@ -56,6 +94,20 @@ export function ProposalTemplatesListPanel({ templates }: ProposalTemplatesListP
     }
   }
 
+  async function updateStage(templateId: string, stage: ProposalTemplateStage) {
+    setStageUpdatingId(templateId);
+    try {
+      const res = await setProposalTemplateStageAction(templateId, stage);
+      if (!res.ok) {
+        window.alert(res.message);
+        return;
+      }
+      router.refresh();
+    } finally {
+      setStageUpdatingId(null);
+    }
+  }
+
   const sorted = React.useMemo(
     () => [...templates].sort((a, b) => lastEditedMs(b) - lastEditedMs(a)),
     [templates],
@@ -66,7 +118,8 @@ export function ProposalTemplatesListPanel({ templates }: ProposalTemplatesListP
     if (!q) return sorted;
     return sorted.filter((t) => {
       const desc = (t.description ?? "").trim();
-      const hay = [t.name, desc, formatLastEdited(lastEditedMs(t))].join(" ").toLowerCase();
+      const stageLabel = templateStageDisplay(t.stage).label;
+      const hay = [t.name, desc, stageLabel, formatLastEdited(lastEditedMs(t))].join(" ").toLowerCase();
       return hay.includes(q);
     });
   }, [sorted, query]);
@@ -84,7 +137,7 @@ export function ProposalTemplatesListPanel({ templates }: ProposalTemplatesListP
               <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search name, description, or date…"
+                placeholder="Search name, stage, or date…"
                 className="h-9 rounded-full border-border/80 bg-background/60 pl-9 text-[14px] text-foreground placeholder:text-muted-foreground"
                 aria-label="Search templates"
               />
@@ -104,13 +157,13 @@ export function ProposalTemplatesListPanel({ templates }: ProposalTemplatesListP
         </div>
 
       <div className="overflow-x-auto">
-          <table className="w-full min-w-[800px] text-left text-[13px]">
+          <table className="w-full min-w-[640px] text-left text-[13px]">
             <thead>
               <tr className="border-b border-border text-muted-foreground">
                 <th className="px-4 py-2.5 font-medium">Template name</th>
-                <th className="min-w-[200px] px-4 py-2.5 font-medium">Description</th>
-                <th className="min-w-[180px] px-4 py-2.5 font-medium">Last edited</th>
-                <th className="w-[168px] px-2 py-2.5 text-center font-medium">Actions</th>
+                <th className="min-w-[120px] px-4 py-2.5 font-medium">Stage</th>
+                <th className="min-w-[180px] px-4 py-2.5 font-medium">Last edited date</th>
+                <th className="min-w-[220px] px-2 py-2.5 text-center font-medium">Action buttons</th>
               </tr>
             </thead>
             <tbody className="text-foreground">
@@ -133,7 +186,8 @@ export function ProposalTemplatesListPanel({ templates }: ProposalTemplatesListP
                 <AnimatePresence initial={false}>
                   {filtered.map((t, index) => {
                     const edited = lastEditedMs(t);
-                    const desc = (t.description ?? "").trim();
+                    const stageInfo = templateStageDisplay(t.stage);
+                    const stageBusy = stageUpdatingId === t.id;
                     return (
                       <motion.tr
                         key={t.id}
@@ -152,12 +206,14 @@ export function ProposalTemplatesListPanel({ templates }: ProposalTemplatesListP
                             {t.name}
                           </Link>
                         </td>
-                        <td className="max-w-[320px] px-4 py-3 align-middle text-muted-foreground">
-                          {desc ? (
-                            <span className="line-clamp-2">{desc}</span>
-                          ) : (
-                            <span className="italic text-muted-foreground/80">No description</span>
-                          )}
+                        <td className="px-4 py-3 align-middle">
+                          <Badge
+                            variant="outline"
+                            title={stageInfo.title}
+                            className={cn("text-xs font-medium capitalize", stageInfo.badgeClass)}
+                          >
+                            {stageInfo.label}
+                          </Badge>
                         </td>
                         <td className="whitespace-nowrap px-4 py-3 align-middle text-muted-foreground tabular-nums">
                           <time dateTime={edited > 0 ? new Date(edited).toISOString() : undefined}>
@@ -165,13 +221,48 @@ export function ProposalTemplatesListPanel({ templates }: ProposalTemplatesListP
                           </time>
                         </td>
                         <td className="px-2 py-3 align-middle">
-                          <div className="flex items-center justify-center gap-1">
+                          <div className="flex flex-wrap items-center justify-center gap-1">
+                            {t.stage === "draft" ? (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8"
+                                disabled={stageBusy || deletingTemplateId === t.id}
+                                aria-label={`Publish template “${t.name}”`}
+                                title="Publish"
+                                onClick={() => void updateStage(t.id, "published")}
+                              >
+                                {stageBusy ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                                ) : (
+                                  <CheckCircle2 className="h-4 w-4" aria-hidden />
+                                )}
+                              </Button>
+                            ) : (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8"
+                                disabled={stageBusy || deletingTemplateId === t.id}
+                                aria-label={`Mark template “${t.name}” as draft`}
+                                title="Mark as draft"
+                                onClick={() => void updateStage(t.id, "draft")}
+                              >
+                                {stageBusy ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                                ) : (
+                                  <RotateCcw className="h-4 w-4" aria-hidden />
+                                )}
+                              </Button>
+                            )}
                             <Button
                               type="button"
                               variant="outline"
                               size="icon"
                               className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                              disabled={deletingTemplateId === t.id}
+                              disabled={deletingTemplateId === t.id || stageBusy}
                               aria-label={`Delete template “${t.name}”`}
                               onClick={() => void deleteTemplate(t.id, t.name)}
                             >

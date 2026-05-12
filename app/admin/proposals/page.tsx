@@ -1,12 +1,11 @@
 import { connection } from "next/server";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentSessionUser, isStaff } from "@/lib/auth/server-session";
 import { listProposalsForStaffOrg } from "@/server/firestore/portal-data";
-import { listProposalTemplatesForOrg } from "@/server/firestore/proposal-templates";
 import { WorkspaceShell } from "@/components/portal/workspace-shell";
 import { ProposalsListPanel } from "@/components/portal/proposals-list-panel";
-import { ProposalTemplatesListPanel } from "@/components/portal/proposal-templates-list-panel";
-import { NewProposalTemplateButton } from "@/components/proposal/new-proposal-template-button";
+import { Button } from "@/components/ui/button";
 import {
   WORKSPACE_HUB_PAGE_TITLE_CLASS,
   WORKSPACE_PAGE_DESCRIPTION_CLASS,
@@ -24,15 +23,12 @@ export default async function AdminProposalsHubPage() {
     redirect("/dashboard");
   }
 
-  const [proposals, templates] = await Promise.all([
-    listProposalsForStaffOrg(user),
-    listProposalTemplatesForOrg(user),
-  ]);
+  const proposals = await listProposalsForStaffOrg(user);
 
   return (
     <WorkspaceShell
       title="Proposals"
-      description="Create, send, and track dynamic digital proposals."
+      description="Create, send, and track proposals assigned to customers."
       roleLabel={user.role}
       displayName={user.displayName ?? ""}
       userLabel={user.email || user.uid}
@@ -44,14 +40,15 @@ export default async function AdminProposalsHubPage() {
           <div>
             <h1 className={WORKSPACE_HUB_PAGE_TITLE_CLASS}>Proposals</h1>
             <p className={WORKSPACE_PAGE_DESCRIPTION_CLASS}>
-              Create, send, and track dynamic digital proposals.
+              Proposals linked to CRM customers — publish, track opens, and collect acceptance.
             </p>
           </div>
-          <NewProposalTemplateButton />
+          <Button variant="outline" size="sm" className="shrink-0" asChild>
+            <Link href="/admin/proposals/templates">Proposal templates</Link>
+          </Button>
         </div>
 
         <ProposalsListPanel proposals={proposals} />
-        <ProposalTemplatesListPanel templates={templates} />
       </div>
     </WorkspaceShell>
   );
