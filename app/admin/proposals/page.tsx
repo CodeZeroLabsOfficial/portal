@@ -44,7 +44,7 @@ export default async function AdminProposalsHubPage() {
           <div>
             <h1 className={WORKSPACE_HUB_PAGE_TITLE_CLASS}>Proposals</h1>
             <p className={WORKSPACE_PAGE_DESCRIPTION_CLASS}>
-              Create, send, and track dynamic digital proposals. Reusable templates speed up new proposals from the CRM.
+              Create, send, and track dynamic digital proposals.
             </p>
           </div>
           <NewProposalTemplateButton />

@@ -33,6 +33,7 @@ import { AddCustomerModal } from "@/components/portal/add-customer-modal";
 import { AddTaskDialog } from "@/components/portal/add-task-dialog";
 import { useAdminWorkspace } from "@/components/portal/admin-workspace-provider";
 import { WorkspaceNav } from "@/components/portal/workspace-nav";
+import { createProposalTemplateAction } from "@/server/actions/proposal-templates";
 import {
   WORKSPACE_MAIN_COLUMN_DESCRIPTION_CLASS,
   WORKSPACE_MAIN_COLUMN_TITLE_CLASS,
@@ -144,6 +145,23 @@ export function WorkspaceShellLayout({
   const [collapsed, setCollapsed] = React.useState(false);
   const [addCustomerOpen, setAddCustomerOpen] = React.useState(false);
   const [addTaskOpen, setAddTaskOpen] = React.useState(false);
+  const [creatingTemplate, setCreatingTemplate] = React.useState(false);
+
+  async function handleNewTemplateFromCreateMenu() {
+    if (creatingTemplate) return;
+    setCreatingTemplate(true);
+    try {
+      const res = await createProposalTemplateAction();
+      if (!res.ok) {
+        window.alert(res.message);
+        return;
+      }
+      router.push(`/admin/proposals/templates/${res.templateId}`);
+      router.refresh();
+    } finally {
+      setCreatingTemplate(false);
+    }
+  }
 
   async function handleSignOut() {
     await signOutFromPortal();
@@ -338,9 +356,12 @@ export function WorkspaceShellLayout({
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="cursor-pointer text-zinc-200 focus:bg-white/[0.08] focus:text-white"
-                        asChild
+                        disabled={creatingTemplate}
+                        onSelect={() => {
+                          void handleNewTemplateFromCreateMenu();
+                        }}
                       >
-                        <Link href="/admin/opportunities">New proposal</Link>
+                        New template
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="cursor-pointer text-zinc-200 focus:bg-white/[0.08] focus:text-white"
