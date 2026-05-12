@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { applicationDefault, cert, getApps, initializeApp, type App } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
+import { getStorage, type Storage } from "firebase-admin/storage";
 import { getServerEnv } from "@/lib/env/server";
 import { logError } from "@/lib/logging";
 
@@ -92,6 +93,11 @@ const FIRESTORE_CONFIGURED = Symbol.for("__codezero.firebaseAdmin.firestoreConfi
 type GlobalWithFirestoreFlag = typeof globalThis & {
   [FIRESTORE_CONFIGURED]?: WeakSet<App>;
 };
+
+export function getFirebaseAdminStorage(): Storage | null {
+  const app = getFirebaseAdminApp();
+  return app ? getStorage(app) : null;
+}
 
 export function getFirebaseAdminFirestore(): Firestore | null {
   const app = getFirebaseAdminApp();

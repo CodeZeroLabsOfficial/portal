@@ -19,6 +19,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useProposalMediaLibraryOptional } from "@/components/proposal/proposal-media-library";
 
 function normalizeHex(raw: unknown): string | undefined {
   if (typeof raw !== "string") return undefined;
@@ -245,6 +246,7 @@ export function ProposalSplashBackgroundPicker({
   block: SplashBlock;
   onChange: (next: SplashBlock) => void;
 }) {
+  const mediaLibrary = useProposalMediaLibraryOptional();
   const [open, setOpen] = React.useState(false);
   const [customLayoutOpen, setCustomLayoutOpen] = React.useState(false);
   React.useEffect(() => {
@@ -344,7 +346,22 @@ export function ProposalSplashBackgroundPicker({
                 <button
                   type="button"
                   className="flex w-full items-center gap-3 rounded-lg border border-border/80 bg-muted/20 px-3 py-2.5 text-left transition-colors hover:bg-muted/40"
-                  onClick={() => document.getElementById(`splash-img-url-${block.id}`)?.focus()}
+                  onClick={() => {
+                    if (mediaLibrary) {
+                      setOpen(false);
+                      window.setTimeout(() => {
+                        mediaLibrary.openSelection({
+                          allowedKinds: ["image"],
+                          onSelect: (asset) => {
+                            if (asset.kind !== "image") return;
+                            patchBg({ type: "image", url: asset.downloadUrl });
+                          },
+                        });
+                      }, 0);
+                      return;
+                    }
+                    document.getElementById(`splash-img-url-${block.id}`)?.focus();
+                  }}
                 >
                   <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-background shadow-inner">
                     {model.url?.trim() ? (
@@ -357,7 +374,7 @@ export function ProposalSplashBackgroundPicker({
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm font-medium text-foreground">Background image</span>
                     <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
-                      {model.url?.trim() || "Paste a HTTPS URL"}
+                      {model.url?.trim() || (mediaLibrary ? "Library or paste a HTTPS URL" : "Paste a HTTPS URL")}
                     </span>
                   </span>
                 </button>
@@ -374,7 +391,22 @@ export function ProposalSplashBackgroundPicker({
                 <button
                   type="button"
                   className="flex w-full items-center gap-3 rounded-lg border border-border/80 bg-muted/20 px-3 py-2.5 text-left transition-colors hover:bg-muted/40"
-                  onClick={() => document.getElementById(`splash-video-url-${block.id}`)?.focus()}
+                  onClick={() => {
+                    if (mediaLibrary) {
+                      setOpen(false);
+                      window.setTimeout(() => {
+                        mediaLibrary.openSelection({
+                          allowedKinds: ["video"],
+                          onSelect: (asset) => {
+                            if (asset.kind !== "video") return;
+                            patchBg({ type: "video", videoUrl: asset.downloadUrl });
+                          },
+                        });
+                      }, 0);
+                      return;
+                    }
+                    document.getElementById(`splash-video-url-${block.id}`)?.focus();
+                  }}
                 >
                   <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-background shadow-inner">
                     {model.videoUrl?.trim() ? (
@@ -386,7 +418,8 @@ export function ProposalSplashBackgroundPicker({
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm font-medium text-foreground">Background video</span>
                     <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
-                      {model.videoUrl?.trim() || "YouTube, Vimeo, or direct file"}
+                      {model.videoUrl?.trim() ||
+                        (mediaLibrary ? "Library, YouTube, Vimeo, or direct file" : "YouTube, Vimeo, or direct file")}
                     </span>
                   </span>
                 </button>

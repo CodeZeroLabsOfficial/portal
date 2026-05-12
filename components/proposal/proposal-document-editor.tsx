@@ -82,6 +82,7 @@ import type {
 import { ProposalRichText } from "@/components/proposal/proposal-rich-text";
 import { ProposalDocumentView } from "@/components/proposal/proposal-document-view";
 import { ProposalSectionShell } from "@/components/proposal/proposal-section-shell";
+import { ProposalMediaLibraryProvider } from "@/components/proposal/proposal-media-library";
 import { ProposalSectionBackgroundPicker } from "@/components/proposal/proposal-section-background-picker";
 import { useProposalSectionEditorChrome } from "@/components/proposal/proposal-section-editor-chrome";
 import {
@@ -2193,6 +2194,7 @@ export function ProposalDocumentEditor({
   }
 
   return (
+    <ProposalMediaLibraryProvider>
     <div className="space-y-6">
       {isTemplate && templateId ? (
         <>
@@ -2550,5 +2552,6 @@ export function ProposalDocumentEditor({
         </TabsContent>
       </Tabs>
     </div>
+    </ProposalMediaLibraryProvider>
   );
 }

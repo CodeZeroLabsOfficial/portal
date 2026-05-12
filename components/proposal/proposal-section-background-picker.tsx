@@ -20,6 +20,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useProposalMediaLibraryOptional } from "@/components/proposal/proposal-media-library";
 
 export interface ProposalSectionBackgroundPickerProps {
   background?: SectionBackground;
@@ -32,6 +33,7 @@ export function ProposalSectionBackgroundPicker({
   onChange,
   elevated = false,
 }: ProposalSectionBackgroundPickerProps) {
+  const mediaLibrary = useProposalMediaLibraryOptional();
   const [menuOpen, setMenuOpen] = React.useState(false);
   const model = mergeSectionBackground(background, {});
   const resolvedPreview = resolveSectionBackground(model);
@@ -135,7 +137,27 @@ export function ProposalSectionBackgroundPicker({
               />
             </TabsContent>
             <TabsContent value="image" className="mt-3 space-y-2 outline-none">
-              <MiniAssetRow elevated={elevated} kind="image" url={model.mediaUrl} />
+              <MiniAssetRow
+                elevated={elevated}
+                kind="image"
+                url={model.mediaUrl}
+                onPickFromLibrary={
+                  mediaLibrary
+                    ? () => {
+                        setMenuOpen(false);
+                        window.setTimeout(() => {
+                          mediaLibrary.openSelection({
+                            allowedKinds: ["image"],
+                            onSelect: (asset) => {
+                              if (asset.kind !== "image") return;
+                              patch({ kind: "image", mediaUrl: asset.downloadUrl });
+                            },
+                          });
+                        }, 0);
+                      }
+                    : undefined
+                }
+              />
               <div className="space-y-1.5 pt-2">
                 <Label className={cn("text-[11px] font-semibold uppercase tracking-wide", labelMuted)}>
                   Image URL
@@ -150,7 +172,27 @@ export function ProposalSectionBackgroundPicker({
               </div>
             </TabsContent>
             <TabsContent value="video" className="mt-3 space-y-2 outline-none">
-              <MiniAssetRow elevated={elevated} kind="video" url={model.mediaUrl} />
+              <MiniAssetRow
+                elevated={elevated}
+                kind="video"
+                url={model.mediaUrl}
+                onPickFromLibrary={
+                  mediaLibrary
+                    ? () => {
+                        setMenuOpen(false);
+                        window.setTimeout(() => {
+                          mediaLibrary.openSelection({
+                            allowedKinds: ["video"],
+                            onSelect: (asset) => {
+                              if (asset.kind !== "video") return;
+                              patch({ kind: "video", mediaUrl: asset.downloadUrl });
+                            },
+                          });
+                        }, 0);
+                      }
+                    : undefined
+                }
+              />
               <div className="space-y-1.5 pt-2">
                 <Label className={cn("text-[11px] font-semibold uppercase tracking-wide", labelMuted)}>
                   Video URL (.mp4, WebM, etc.)
@@ -320,16 +362,22 @@ function MiniAssetRow({
   elevated,
   kind,
   url,
+  onPickFromLibrary,
 }: {
   elevated?: boolean;
   kind: "image" | "video";
   url?: string;
   label?: string;
+  onPickFromLibrary?: () => void;
 }) {
   const labelMuted = elevated ? "text-zinc-400" : "text-muted-foreground";
   const trimmed = (url ?? "").trim();
-  return (
-    <div className="flex items-center gap-3 rounded-xl px-3 py-2 ring-1 ring-border/70 dark:ring-white/15">
+  const rowClass = cn(
+    "flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left ring-1 ring-border/70 transition-colors dark:ring-white/15",
+    onPickFromLibrary && "cursor-pointer hover:bg-muted/50",
+  );
+  const inner = (
+    <>
       <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/40 bg-muted/40 shadow-inner ring-2 ring-muted/40">
         {kind === "image" ? (
           trimmed ? (
@@ -349,11 +397,19 @@ function MiniAssetRow({
           Background {kind === "image" ? "image" : "video"}
         </p>
         <p className={cn("truncate text-[11px]", labelMuted)}>
-          {trimmed || "Paste a HTTPS URL"}
+          {trimmed || (onPickFromLibrary ? "Library or paste a HTTPS URL" : "Paste a HTTPS URL")}
         </p>
       </div>
-    </div>
+    </>
   );
+  if (onPickFromLibrary) {
+    return (
+      <button type="button" className={rowClass} onClick={() => onPickFromLibrary()}>
+        {inner}
+      </button>
+    );
+  }
+  return <div className={rowClass}>{inner}</div>;
 }
 
 function TintSwatchPicker({
