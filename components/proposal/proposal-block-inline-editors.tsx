@@ -9,7 +9,6 @@ import type {
   PricingBlock,
   PricingLineItem,
 } from "@/types/proposal";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatCurrencyAmount } from "@/lib/format";
 import { readableForeground, resolveBlockStyle, withAlpha } from "@/lib/block-style";
@@ -1023,20 +1022,25 @@ function TierCard({
         </div>
 
         <div className="mt-auto pt-3">
-          <Button
-            type="button"
-            disabled
-            variant="outline"
-            size="sm"
-            className={cn("w-full rounded-full font-semibold")}
-            style={
-              isRecommended
-                ? { backgroundColor: "#ffffff", color: "#0f172a", borderColor: "#ffffff" }
-                : undefined
-            }
+          <div
+            className="inline-flex w-full rounded-full p-0.5"
+            style={{
+              background: "rgba(15,23,42,0.04)",
+              boxShadow: "inset 0 0 0 1px rgba(15,23,42,0.08)",
+            }}
           >
-            Select
-          </Button>
+            <button
+              type="button"
+              disabled
+              className={cn(
+                "inline-flex w-full min-h-[36px] cursor-not-allowed items-center justify-center rounded-full px-3.5 py-1.5 text-xs font-medium opacity-90 md:min-h-[38px] md:px-4 md:text-sm",
+                isRecommended ? "" : "text-muted-foreground",
+              )}
+              style={isRecommended ? { color: recommendedDimText } : undefined}
+            >
+              Select
+            </button>
+          </div>
         </div>
       </div>
 

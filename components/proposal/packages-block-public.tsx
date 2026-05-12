@@ -16,9 +16,8 @@ import {
   resolvePackagesTotalSectionLabel,
 } from "@/lib/proposal-packages-totals";
 import { cn } from "@/lib/utils";
-import { readableForeground, resolveBlockStyle, withAlpha } from "@/lib/block-style";
+import { readableForeground, resolveBlockStyle } from "@/lib/block-style";
 import { saveProposalPackageSelectionAction } from "@/server/actions/proposal-builder";
-import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ProposalAccordionExpandSurface } from "@/components/proposal/proposal-accordion-expand-surface";
 
@@ -266,15 +265,6 @@ export function PackagesBlockPublic({
                 borderColor: style.highlightColor,
               }
             : undefined;
-          const selectedRingStyle: React.CSSProperties | undefined = isSelected
-            ? {
-                boxShadow: `0 0 0 2px ${style.highlightColor}, 0 0 0 4px ${withAlpha(
-                  style.highlightColor,
-                  0.25,
-                )}`,
-              }
-            : undefined;
-
           return (
             <div key={tier.id} className="flex flex-col">
               <div
@@ -377,23 +367,37 @@ export function PackagesBlockPublic({
                 </div>
 
                 <div className="mt-auto pt-3">
-                  <Button
-                    type="button"
-                    disabled={!interactive || busy}
-                    onClick={() => void selectTier(tier.id)}
-                    variant="outline"
-                    size="sm"
-                    className={cn("w-full rounded-full font-semibold")}
+                  <div
+                    className="inline-flex w-full rounded-full p-0.5"
                     style={{
-                      ...(isRecommended
-                        ? { backgroundColor: "#ffffff", color: "#0f172a", borderColor: "#ffffff" }
-                        : {}),
-                      ...(selectedRingStyle ?? {}),
+                      background: "rgba(15,23,42,0.04)",
+                      boxShadow: "inset 0 0 0 1px rgba(15,23,42,0.08)",
                     }}
                   >
-                    {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                    {isSelected ? "Selected" : "Select"}
-                  </Button>
+                    <button
+                      type="button"
+                      disabled={!interactive || busy}
+                      onClick={() => void selectTier(tier.id)}
+                      className={cn(
+                        "inline-flex w-full min-h-[36px] items-center justify-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors md:min-h-[38px] md:px-4 md:text-sm",
+                        isSelected
+                          ? "shadow-sm"
+                          : isRecommended
+                            ? ""
+                            : "text-muted-foreground hover:text-foreground",
+                      )}
+                      style={
+                        isSelected
+                          ? { backgroundColor: style.primaryColor, color: activeTermFg }
+                          : isRecommended
+                            ? { color: dimRecommendedFg }
+                            : undefined
+                      }
+                    >
+                      {busy ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden /> : null}
+                      <span>{isSelected ? "Selected" : "Select"}</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 
