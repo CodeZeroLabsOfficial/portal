@@ -407,7 +407,7 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
         <div
           className={cn(
             "flex max-w-sm",
-            isVisual ? "mx-auto mt-4 justify-center" : "mt-4",
+            isVisual ? "mx-auto mt-8 justify-center" : "mt-8",
           )}
         >
           <div

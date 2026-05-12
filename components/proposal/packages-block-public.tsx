@@ -189,7 +189,7 @@ export function PackagesBlockPublic({
         <div
           className={cn(
             "flex max-w-sm",
-            isVisual ? "mx-auto mt-4 justify-center" : "mt-4",
+            isVisual ? "mx-auto mt-8 justify-center" : "mt-8",
           )}
         >
           <div
@@ -237,13 +237,6 @@ export function PackagesBlockPublic({
       ) : null}
 
       {error ? <p className="mt-2 text-center text-sm text-destructive">{error}</p> : null}
-
-      {selectedTierId && interactive ? (
-        <p className="mt-2 text-center text-[11px] text-muted-foreground">
-          If you switch term, click <strong className="text-foreground">Select</strong> again on your tier to save the
-          update.
-        </p>
-      ) : null}
 
       <div
         className={cn(
