@@ -17,7 +17,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getFirebasePublicConfig } from "@/lib/env/client-public";
-import { PROPOSAL_MEDIA_LIBRARY_DIRECT_UPLOAD_MAX_BYTES } from "@/lib/proposal-media-library-direct-upload-limit";
+import {
+  PROPOSAL_MEDIA_LIBRARY_DIRECT_UPLOAD_MAX_BYTES,
+  formatDirectUploadMaxMbOneDecimal,
+} from "@/lib/proposal-media-library-direct-upload-limit";
 import { cn } from "@/lib/utils";
 import type { ProposalLibraryAsset, ProposalLibraryAssetKind } from "@/lib/proposal-media-library-types";
 
@@ -88,10 +91,6 @@ function categoryLabel(cat: LibraryCategory): string {
 
 const CATEGORIES: LibraryCategory[] = ["all", "blocks", "snippets", "images", "videos"];
 
-function mbFloor(bytes: number): number {
-  return Math.max(1, Math.floor(bytes / (1024 * 1024)));
-}
-
 /** Wraps fetch so "Failed to fetch" becomes actionable copy (CORS vs same-origin). */
 async function fetchWithUploadHints(
   url: string,
@@ -107,8 +106,9 @@ async function fetchWithUploadHints(
   } catch (e) {
     if (e instanceof TypeError || (e instanceof Error && e.message === "Failed to fetch")) {
       if (kind === "storage") {
+        const portalMb = formatDirectUploadMaxMbOneDecimal(PROPOSAL_MEDIA_LIBRARY_DIRECT_UPLOAD_MAX_BYTES);
         throw new Error(
-          `Could not upload to Cloud Storage (usually missing CORS on the bucket). Use files up to about ${mbFloor(PROPOSAL_MEDIA_LIBRARY_DIRECT_UPLOAD_MAX_BYTES)} MB so uploads go through the portal instead, or add CORS for this site’s origin on your Google Cloud Storage bucket.`,
+          `Could not upload to Cloud Storage (often missing CORS on the bucket for browser PUT). Files over about ${portalMb} MB on this deployment use that path; use a smaller image, set PROPOSAL_MEDIA_LIBRARY_MAX_DIRECT_UPLOAD_BYTES and NEXT_PUBLIC_PROPOSAL_MEDIA_LIBRARY_MAX_DIRECT_UPLOAD_BYTES together (within your host’s body limit), or add CORS for this site’s origin on the bucket.`,
         );
       }
       throw new Error(

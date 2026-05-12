@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { getFirebaseAdminStorage } from "@/lib/firebase/admin-app";
+import { getProposalMediaLibraryDirectUploadMaxBytes } from "@/lib/proposal-media-library-direct-upload-limit";
 
 const ALLOWED_EXT = new Set([
   "jpg",
@@ -94,15 +95,8 @@ export function buildLibraryUploadObjectPath(safeFilename: string): string {
   return `${prefix}uploads/${Date.now()}-${randomUUID().slice(0, 8)}-${safeFilename}`;
 }
 
-const DEFAULT_MAX_DIRECT_BYTES = 4 * 1024 * 1024;
-
 export function getMaxDirectLibraryUploadBytes(): number {
-  const raw = process.env.PROPOSAL_MEDIA_LIBRARY_MAX_DIRECT_UPLOAD_BYTES;
-  const n = raw ? Number(raw) : NaN;
-  if (Number.isFinite(n) && n >= 256 * 1024) {
-    return Math.min(50 * 1024 * 1024, Math.floor(n));
-  }
-  return DEFAULT_MAX_DIRECT_BYTES;
+  return getProposalMediaLibraryDirectUploadMaxBytes();
 }
 
 export async function saveLibraryUploadFromWebFile(file: File): Promise<{ objectPath: string }> {
