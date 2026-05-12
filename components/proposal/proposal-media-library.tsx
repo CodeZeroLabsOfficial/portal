@@ -2,9 +2,21 @@
 
 import * as React from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Braces, ChevronLeft, FileText, ImageIcon, Loader2, MonitorPlay, Play, Search } from "lucide-react";
+import {
+  Braces,
+  ChevronLeft,
+  ExternalLink,
+  FileText,
+  ImageIcon,
+  Loader2,
+  MonitorPlay,
+  Play,
+  Search,
+  Upload,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getFirebasePublicConfig } from "@/lib/env/client-public";
 import { cn } from "@/lib/utils";
 import type { ProposalLibraryAsset, ProposalLibraryAssetKind } from "@/lib/proposal-media-library-types";
 
@@ -73,6 +85,40 @@ function categoryLabel(cat: LibraryCategory): string {
 
 const CATEGORIES: LibraryCategory[] = ["all", "blocks", "snippets", "images", "videos"];
 
+function inferLocalKind(file: File): ProposalLibraryAssetKind | null {
+  const n = file.name.toLowerCase();
+  if (/\.(jpe?g|png|gif|webp|avif|svg)$/.test(n)) return "image";
+  if (/\.(mp4|webm|mov|m4v|ogv)$/.test(n)) return "video";
+  if (/\.(html?)$/.test(n)) return "snippet";
+  if (/\.json$/.test(n)) return "block";
+  return null;
+}
+
+function acceptForKinds(kinds: ProposalLibraryAssetKind[]): string {
+  const parts: string[] = [];
+  if (kinds.includes("image")) {
+    parts.push("image/jpeg", "image/png", "image/webp", "image/gif", "image/avif", "image/svg+xml");
+  }
+  if (kinds.includes("video")) {
+    parts.push("video/mp4", "video/webm", "video/quicktime");
+  }
+  if (kinds.includes("snippet")) {
+    parts.push(".html", ".htm", "text/html");
+  }
+  if (kinds.includes("block")) {
+    parts.push(".json", "application/json");
+  }
+  return parts.length > 0 ? parts.join(",") : "*/*";
+}
+
+function uploadButtonLabel(kinds: ProposalLibraryAssetKind[]): string {
+  if (kinds.length === 1 && kinds[0] === "image") return "Upload image";
+  if (kinds.length === 1 && kinds[0] === "video") return "Upload video";
+  if (kinds.length === 1 && kinds[0] === "snippet") return "Upload snippet";
+  if (kinds.length === 1 && kinds[0] === "block") return "Upload block";
+  return "Upload file";
+}
+
 function ProposalMediaLibrarySidebar() {
   const ctx = React.useContext(ProposalMediaLibraryContext);
   const isOpen = Boolean(ctx?.isOpen && ctx.activeParams);
@@ -85,6 +131,17 @@ function ProposalMediaLibrarySidebar() {
   const [assets, setAssets] = React.useState<ProposalLibraryAsset[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [uploading, setUploading] = React.useState(false);
+  const [uploadMessage, setUploadMessage] = React.useState<string | null>(null);
+  const [draggingOver, setDraggingOver] = React.useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const dragDepthRef = React.useRef(0);
+
+  const storageConsoleHref = React.useMemo(() => {
+    const cfg = getFirebasePublicConfig();
+    if (!cfg?.projectId) return "https://console.firebase.google.com/";
+    return `https://console.firebase.google.com/project/${encodeURIComponent(cfg.projectId)}/storage`;
+  }, []);
 
   const prevOpen = React.useRef(false);
   React.useEffect(() => {
@@ -92,9 +149,23 @@ function ProposalMediaLibrarySidebar() {
       setMainTab("library");
       setCategory(defaultCategoryForKinds(activeParams.allowedKinds));
       setQuery("");
+      setUploadMessage(null);
+    }
+    if (!isOpen) {
+      dragDepthRef.current = 0;
+      setDraggingOver(false);
+      setUploadMessage(null);
     }
     prevOpen.current = isOpen;
   }, [isOpen, activeParams]);
+
+  const refetchAssets = React.useCallback(async () => {
+    const list = await fetch("/api/proposal-media-library");
+    const data = (await list.json()) as { assets?: ProposalLibraryAsset[] };
+    if (list.ok) {
+      setAssets(Array.isArray(data.assets) ? data.assets : []);
+    }
+  }, []);
 
   React.useEffect(() => {
     if (!isOpen) return;
@@ -142,6 +213,106 @@ function ProposalMediaLibrarySidebar() {
     };
   }, [isOpen]);
 
+  const performLibraryUploads = React.useCallback(
+    async (files: File[]) => {
+      if (!activeParams || files.length === 0) return;
+      const allowed = new Set(activeParams.allowedKinds);
+      const usable = files.filter((f) => {
+        const k = inferLocalKind(f);
+        return k && allowed.has(k);
+      });
+      if (usable.length === 0) {
+        setUploadMessage("No supported files for this picker (check type and extension).");
+        return;
+      }
+      setUploading(true);
+      setUploadMessage(null);
+      try {
+        for (const file of usable) {
+          const init = await fetch("/api/proposal-media-library/signed-upload", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              filename: file.name,
+              contentType: file.type || "application/octet-stream",
+            }),
+          });
+          const payload = (await init.json().catch(() => ({}))) as {
+            error?: string;
+            uploadUrl?: string;
+            contentType?: string;
+          };
+          if (!init.ok) {
+            throw new Error(typeof payload.error === "string" ? payload.error : init.statusText);
+          }
+          const { uploadUrl, contentType } = payload;
+          if (!uploadUrl || !contentType) {
+            throw new Error("Invalid upload response from server.");
+          }
+          const put = await fetch(uploadUrl, {
+            method: "PUT",
+            body: file,
+            headers: { "Content-Type": contentType },
+          });
+          if (!put.ok) {
+            throw new Error(
+              put.status === 0
+                ? "Upload was blocked. Add CORS on your GCS bucket for this site origin, or upload from Firebase console."
+                : `Upload failed (${put.status}).`,
+            );
+          }
+        }
+        setUploadMessage(`Uploaded ${usable.length} file${usable.length === 1 ? "" : "s"}.`);
+        await refetchAssets();
+      } catch (e: unknown) {
+        setUploadMessage(e instanceof Error ? e.message : "Upload failed.");
+      } finally {
+        setUploading(false);
+      }
+    },
+    [activeParams, refetchAssets],
+  );
+
+  const onLibraryDragEnter = React.useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (mainTab !== "library") return;
+      if (!e.dataTransfer?.types?.includes("Files")) return;
+      dragDepthRef.current += 1;
+      setDraggingOver(true);
+    },
+    [mainTab],
+  );
+
+  const onLibraryDragLeave = React.useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragDepthRef.current -= 1;
+    if (dragDepthRef.current <= 0) {
+      dragDepthRef.current = 0;
+      setDraggingOver(false);
+    }
+  }, []);
+
+  const onLibraryDragOver = React.useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+  }, []);
+
+  const onLibraryDrop = React.useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dragDepthRef.current = 0;
+      setDraggingOver(false);
+      if (mainTab !== "library") return;
+      void performLibraryUploads(Array.from(e.dataTransfer?.files ?? []));
+    },
+    [mainTab, performLibraryUploads],
+  );
+
   const visible = React.useMemo(() => {
     if (!activeParams) return [];
     const q = query.trim().toLowerCase();
@@ -161,6 +332,9 @@ function ProposalMediaLibrarySidebar() {
           : category === "blocks"
             ? "Search blocks"
             : "Search library";
+
+  const acceptAttr = activeParams ? acceptForKinds(activeParams.allowedKinds) : "*/*";
+  const primaryUploadLabel = activeParams ? uploadButtonLabel(activeParams.allowedKinds) : "Upload";
 
   return (
     <AnimatePresence>
@@ -197,7 +371,7 @@ function ProposalMediaLibrarySidebar() {
               <ChevronLeft className="h-4 w-4" aria-hidden />
             </button>
 
-            <div className="flex min-h-0 flex-1 flex-col px-4 pb-4 pt-5">
+            <div className="flex min-h-0 flex-1 flex-col px-4 pt-5">
               <h2 id="proposal-media-library-title" className="sr-only">
                 Media library
               </h2>
@@ -211,7 +385,10 @@ function ProposalMediaLibrarySidebar() {
                   </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="library" className="mt-0 flex min-h-0 flex-1 flex-col overflow-hidden outline-none data-[state=inactive]:hidden">
+                <TabsContent
+                  value="library"
+                  className="mt-0 flex min-h-0 flex-1 flex-col overflow-hidden outline-none data-[state=inactive]:hidden"
+                >
                   <div className="relative mb-3">
                     <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
                     <Input
@@ -244,7 +421,24 @@ function ProposalMediaLibrarySidebar() {
                     })}
                   </nav>
 
-                  <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pr-1">
+                  <div
+                    className="relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden pr-1"
+                    onDragEnter={onLibraryDragEnter}
+                    onDragLeave={onLibraryDragLeave}
+                    onDragOver={onLibraryDragOver}
+                    onDrop={onLibraryDrop}
+                  >
+                    {draggingOver ? (
+                      <div
+                        className="pointer-events-none absolute inset-0 z-[5] flex items-center justify-center rounded-xl border-2 border-dashed border-violet-600 bg-violet-500/[0.12] backdrop-blur-[2px] dark:border-violet-400 dark:bg-violet-500/15"
+                        aria-hidden
+                      >
+                        <p className="px-4 text-center text-sm font-semibold text-violet-950 dark:text-violet-100">
+                          Drop files to upload
+                        </p>
+                      </div>
+                    ) : null}
+
                     {loading ? (
                       <div className="flex flex-col items-center justify-center gap-3 py-16 text-muted-foreground">
                         <Loader2 className="h-8 w-8 animate-spin" aria-hidden />
@@ -281,12 +475,12 @@ function ProposalMediaLibrarySidebar() {
                       <div className="space-y-2 py-12 text-center text-sm text-muted-foreground">
                         <p>No matching files in Storage.</p>
                         <p className="text-xs leading-relaxed">
-                          Upload images, videos, HTML snippets, or JSON blocks under your configured library prefix. Staff-only
-                          listing uses Firebase Admin.
+                          Drag files here or use Upload below. New files are stored under your library prefix in the{" "}
+                          <span className="font-mono text-[11px]">uploads/</span> subfolder.
                         </p>
                       </div>
                     ) : (
-                      <ul className="grid grid-cols-2 gap-2 pb-6">
+                      <ul className="grid grid-cols-2 gap-2 pb-4">
                         {visible.map((asset) => (
                           <li key={asset.id}>
                             <button
@@ -368,6 +562,66 @@ function ProposalMediaLibrarySidebar() {
                   </div>
                 </TabsContent>
               </Tabs>
+
+              {mainTab === "library" ? (
+                <div className="shrink-0 space-y-2 border-t border-border pb-4 pt-3">
+                  {uploadMessage ? (
+                    <p
+                      className={cn(
+                        "text-center text-xs",
+                        uploadMessage.startsWith("Uploaded") ? "text-emerald-600 dark:text-emerald-400" : "text-destructive",
+                      )}
+                    >
+                      {uploadMessage}
+                    </p>
+                  ) : null}
+                  <div className="flex items-stretch gap-2">
+                    <button
+                      type="button"
+                      disabled={uploading}
+                      className={cn(
+                        "inline-flex h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold text-white shadow-sm transition-colors",
+                        "bg-violet-900 hover:bg-violet-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                        "disabled:pointer-events-none disabled:opacity-60 dark:bg-violet-800 dark:hover:bg-violet-900",
+                      )}
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      {uploading ? (
+                        <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                      ) : (
+                        <Upload className="h-4 w-4 shrink-0" aria-hidden />
+                      )}
+                      <span className="truncate">{uploading ? "Uploading…" : primaryUploadLabel}</span>
+                    </button>
+                    <a
+                      href={storageConsoleHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={cn(
+                        "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground transition-colors",
+                        "hover:border-violet-500/40 hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                      )}
+                      aria-label="Open Firebase Storage in console"
+                      title="Firebase console · Storage"
+                    >
+                      <ExternalLink className="h-4 w-4" aria-hidden />
+                    </a>
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    className="sr-only"
+                    multiple
+                    accept={acceptAttr}
+                    aria-hidden
+                    tabIndex={-1}
+                    onChange={(e) => {
+                      void performLibraryUploads(Array.from(e.target.files ?? []));
+                      e.target.value = "";
+                    }}
+                  />
+                </div>
+              ) : null}
             </div>
           </motion.aside>
         </>
