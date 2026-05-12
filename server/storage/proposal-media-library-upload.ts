@@ -9,11 +9,19 @@ const ALLOWED_EXT = new Set([
   "webp",
   "avif",
   "svg",
+  "bmp",
+  "tif",
+  "tiff",
+  "heic",
+  "heif",
   "mp4",
   "webm",
   "mov",
   "m4v",
   "ogv",
+  "mpeg",
+  "mpg",
+  "mkv",
   "html",
   "htm",
   "json",
@@ -27,20 +35,23 @@ const EXT_TO_CONTENT_TYPE: Record<string, string> = {
   webp: "image/webp",
   avif: "image/avif",
   svg: "image/svg+xml",
+  bmp: "image/bmp",
+  tif: "image/tiff",
+  tiff: "image/tiff",
+  heic: "image/heic",
+  heif: "image/heif",
   mp4: "video/mp4",
   webm: "video/webm",
   mov: "video/quicktime",
   m4v: "video/x-m4v",
   ogv: "video/ogg",
+  mpeg: "video/mpeg",
+  mpg: "video/mpeg",
+  mkv: "video/x-matroska",
   html: "text/html",
   htm: "text/html",
   json: "application/json",
 };
-
-export function getProposalMediaLibraryPrefix(): string {
-  const raw = process.env.PROPOSAL_MEDIA_LIBRARY_PREFIX ?? "proposal-media-library/";
-  return raw.replace(/\/?$/, "/");
-}
 
 export function sanitizeLibraryUploadFilename(name: string): string {
   const base = name.replace(/^.*[/\\]/, "").trim();
@@ -71,6 +82,70 @@ export function assertAllowedLibraryExtension(filename: string): void {
   }
 }
 
+export function getProposalMediaLibraryPrefix(): string {
+  const raw = process.env.PROPOSAL_MEDIA_LIBRARY_PREFIX ?? "proposal-media-library/";
+  return raw.replace(/\/?$/, "/");
+}
+
+export function buildLibraryUploadObjectPath(safeFilename: string): string {
+  const prefix = getProposalMediaLibraryPrefix();
+  return `${prefix}uploads/${Date.now()}-${randomUUID().slice(0, 8)}-${safeFilename}`;
+}
+
+const DEFAULT_MAX_DIRECT_BYTES = 4 * 1024 * 1024;
+
+export function getMaxDirectLibraryUploadBytes(): number {
+  const raw = process.env.PROPOSAL_MEDIA_LIBRARY_MAX_DIRECT_UPLOAD_BYTES;
+  const n = raw ? Number(raw) : NaN;
+  if (Number.isFinite(n) && n >= 256 * 1024) {
+    return Math.min(50 * 1024 * 1024, Math.floor(n));
+  }
+  return DEFAULT_MAX_DIRECT_BYTES;
+}
+
+export async function saveLibraryUploadFromBuffer(
+  filename: string,
+  reportedContentType: string,
+  buffer: Buffer,
+): Promise<{ objectPath: string }> {
+  const maxBytes = getMaxDirectLibraryUploadBytes();
+  if (buffer.length > maxBytes) {
+    throw new Error(
+      `This file is larger than the direct upload limit (${Math.floor(maxBytes / (1024 * 1024))} MB). Increase PROPOSAL_MEDIA_LIBRARY_MAX_DIRECT_UPLOAD_BYTES or configure Storage CORS and use larger files via signed URL.`,
+    );
+  }
+
+  const storage = getFirebaseAdminStorage();
+  if (!storage) {
+    throw new Error("Firebase Storage is not configured on the server.");
+  }
+
+  const bucketName =
+    (typeof process.env.FIREBASE_STORAGE_BUCKET === "string" && process.env.FIREBASE_STORAGE_BUCKET.trim()) ||
+    (typeof process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET === "string" &&
+      process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET.trim()) ||
+    "";
+  if (!bucketName) {
+    throw new Error("Storage bucket is not configured (FIREBASE_STORAGE_BUCKET).");
+  }
+
+  const safe = sanitizeLibraryUploadFilename(filename);
+  assertAllowedLibraryExtension(safe);
+  const resolvedType = inferLibraryContentType(safe, reportedContentType);
+  if (resolvedType === "application/octet-stream") {
+    throw new Error("Could not determine content type; use a file with a known extension.");
+  }
+
+  const objectPath = buildLibraryUploadObjectPath(safe);
+  const bucket = storage.bucket(bucketName);
+  await bucket.file(objectPath).save(buffer, {
+    metadata: { contentType: resolvedType },
+    resumable: false,
+  });
+
+  return { objectPath };
+}
+
 export async function createProposalMediaLibrarySignedPutUrl(filename: string, contentType: string) {
   const storage = getFirebaseAdminStorage();
   if (!storage) {
@@ -94,8 +169,7 @@ export async function createProposalMediaLibrarySignedPutUrl(filename: string, c
     throw new Error("Could not determine content type; use a file with a known extension.");
   }
 
-  const prefix = getProposalMediaLibraryPrefix();
-  const objectPath = `${prefix}uploads/${Date.now()}-${randomUUID().slice(0, 8)}-${safe}`;
+  const objectPath = buildLibraryUploadObjectPath(safe);
 
   const bucket = storage.bucket(bucketName);
   const file = bucket.file(objectPath);

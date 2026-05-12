@@ -17,6 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getFirebasePublicConfig } from "@/lib/env/client-public";
+import { PROPOSAL_MEDIA_LIBRARY_DIRECT_UPLOAD_MAX_BYTES } from "@/lib/proposal-media-library-direct-upload-limit";
 import { cn } from "@/lib/utils";
 import type { ProposalLibraryAsset, ProposalLibraryAssetKind } from "@/lib/proposal-media-library-types";
 
@@ -43,6 +44,8 @@ export function useProposalMediaLibraryOptional(): ProposalMediaLibraryContextVa
 }
 
 function defaultCategoryForKinds(kinds: ProposalLibraryAssetKind[]): LibraryCategory {
+  const set = new Set(kinds);
+  if (set.size === 2 && set.has("image") && set.has("video")) return "all";
   if (kinds.length === 1 && kinds[0] === "video") return "videos";
   if (kinds.length === 1 && kinds[0] === "image") return "images";
   if (kinds.length === 1 && kinds[0] === "snippet") return "snippets";
@@ -85,22 +88,89 @@ function categoryLabel(cat: LibraryCategory): string {
 
 const CATEGORIES: LibraryCategory[] = ["all", "blocks", "snippets", "images", "videos"];
 
+/** Collect dropped files — `items` is more reliable than `files` in some browsers (Safari, Photos). */
+function filesFromDataTransfer(dataTransfer: DataTransfer | null): File[] {
+  if (!dataTransfer) return [];
+  const fromItems: File[] = [];
+  try {
+    if (dataTransfer.items?.length) {
+      for (let i = 0; i < dataTransfer.items.length; i++) {
+        const item = dataTransfer.items[i];
+        if (item?.kind === "file") {
+          const f = item.getAsFile();
+          if (f) fromItems.push(f);
+        }
+      }
+    }
+  } catch {
+    // ignore
+  }
+  if (fromItems.length > 0) return fromItems;
+  return Array.from(dataTransfer.files ?? []);
+}
+
 function inferLocalKind(file: File): ProposalLibraryAssetKind | null {
-  const n = file.name.toLowerCase();
-  if (/\.(jpe?g|png|gif|webp|avif|svg)$/.test(n)) return "image";
-  if (/\.(mp4|webm|mov|m4v|ogv)$/.test(n)) return "video";
+  const n = (file.name || "").toLowerCase();
+  if (/\.(jpe?g|png|gif|webp|avif|svg|bmp|tif|tiff|heic|heif)$/.test(n)) return "image";
+  if (/\.(mp4|webm|mov|m4v|ogv|mpeg|mpg|mkv)$/.test(n)) return "video";
   if (/\.(html?)$/.test(n)) return "snippet";
   if (/\.json$/.test(n)) return "block";
+
+  const t = (file.type || "").toLowerCase();
+  if (t.startsWith("image/") && t !== "image/octet-stream") return "image";
+  if (t.startsWith("video/") && t !== "video/octet-stream") return "video";
+  if (t === "text/html" || t === "application/xhtml+xml") return "snippet";
+  if (t === "application/json" || t.endsWith("+json")) return "block";
+
   return null;
+}
+
+/** Drag/drop sometimes yields no extension; server requires one — append a sensible default. */
+function withSyntheticExtensionIfNeeded(file: File, kind: ProposalLibraryAssetKind): File {
+  const raw = (file.name || "").trim();
+  if (/\.[a-z0-9]{2,8}$/i.test(raw)) return file;
+  const extByKind: Record<ProposalLibraryAssetKind, string> = {
+    image: "jpg",
+    video: "mp4",
+    snippet: "html",
+    block: "json",
+  };
+  const ext = extByKind[kind];
+  const base = raw.replace(/[/\\]+/g, "_").replace(/\0/g, "") || "upload";
+  const nextName = `${base}.${ext}`;
+  return new File([file], nextName, { type: file.type || undefined });
 }
 
 function acceptForKinds(kinds: ProposalLibraryAssetKind[]): string {
   const parts: string[] = [];
   if (kinds.includes("image")) {
-    parts.push("image/jpeg", "image/png", "image/webp", "image/gif", "image/avif", "image/svg+xml");
+    parts.push(
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/gif",
+      "image/avif",
+      "image/svg+xml",
+      "image/bmp",
+      "image/tiff",
+      "image/heic",
+      "image/heif",
+      ".jpg",
+      ".jpeg",
+      ".png",
+      ".gif",
+      ".webp",
+      ".avif",
+      ".svg",
+      ".bmp",
+      ".tif",
+      ".tiff",
+      ".heic",
+      ".heif",
+    );
   }
   if (kinds.includes("video")) {
-    parts.push("video/mp4", "video/webm", "video/quicktime");
+    parts.push("video/mp4", "video/webm", "video/quicktime", "video/x-matroska", ".mp4", ".webm", ".mov", ".mkv", ".m4v", ".mpeg", ".mpg");
   }
   if (kinds.includes("snippet")) {
     parts.push(".html", ".htm", "text/html");
@@ -111,11 +181,51 @@ function acceptForKinds(kinds: ProposalLibraryAssetKind[]): string {
   return parts.length > 0 ? parts.join(",") : "*/*";
 }
 
-function uploadButtonLabel(kinds: ProposalLibraryAssetKind[]): string {
-  if (kinds.length === 1 && kinds[0] === "image") return "Upload image";
-  if (kinds.length === 1 && kinds[0] === "video") return "Upload video";
-  if (kinds.length === 1 && kinds[0] === "snippet") return "Upload snippet";
-  if (kinds.length === 1 && kinds[0] === "block") return "Upload block";
+function uploadTargetsForCategory(
+  cat: LibraryCategory,
+  pickerAllowed: ProposalLibraryAssetKind[],
+): ProposalLibraryAssetKind[] {
+  const pick = new Set(pickerAllowed);
+  const take = (...cands: ProposalLibraryAssetKind[]) => cands.filter((k) => pick.has(k));
+  switch (cat) {
+    case "all":
+      return take("image", "video", "snippet", "block");
+    case "images":
+      return take("image");
+    case "videos":
+      return take("video");
+    case "snippets":
+      return take("snippet");
+    case "blocks":
+      return take("block");
+    default:
+      return [];
+  }
+}
+
+function uploadFooterLabel(cat: LibraryCategory, targets: ProposalLibraryAssetKind[]): string {
+  if (targets.length === 0) return "Upload";
+  if (cat === "images" && targets.includes("image")) return "Upload image";
+  if (cat === "videos" && targets.includes("video")) return "Upload video";
+  if (cat === "snippets" && targets.includes("snippet")) return "Upload snippet";
+  if (cat === "blocks" && targets.includes("block")) return "Upload block";
+  if (cat === "all") {
+    if (targets.length === 1) {
+      const k = targets[0];
+      if (k === "image") return "Upload image";
+      if (k === "video") return "Upload video";
+      if (k === "snippet") return "Upload snippet";
+      if (k === "block") return "Upload block";
+    }
+    return "Upload file";
+  }
+  if (targets.length === 1) {
+    const k = targets[0];
+    if (k === "image") return "Upload image";
+    if (k === "video") return "Upload video";
+    if (k === "snippet") return "Upload snippet";
+    if (k === "block") return "Upload block";
+  }
   return "Upload file";
 }
 
@@ -216,25 +326,47 @@ function ProposalMediaLibrarySidebar() {
   const performLibraryUploads = React.useCallback(
     async (files: File[]) => {
       if (!activeParams || files.length === 0) return;
-      const allowed = new Set(activeParams.allowedKinds);
+      const targets = uploadTargetsForCategory(category, activeParams.allowedKinds);
       const usable = files.filter((f) => {
         const k = inferLocalKind(f);
-        return k && allowed.has(k);
+        return k && targets.includes(k);
       });
       if (usable.length === 0) {
-        setUploadMessage("No supported files for this picker (check type and extension).");
+        const hint = files
+          .slice(0, 3)
+          .map((f) => `"${f.name || "(no name)"}" (${f.type || "no type"})`)
+          .join(", ");
+        setUploadMessage(
+          files.length === 0
+            ? "Drop did not include any files. Try again or use the Upload button."
+            : `No files match this tab and allowed types. ${hint}${files.length > 3 ? " …" : ""}`,
+        );
         return;
       }
       setUploading(true);
       setUploadMessage(null);
       try {
         for (const file of usable) {
+          const kind = inferLocalKind(file);
+          if (!kind) continue;
+          const fileToSend = withSyntheticExtensionIfNeeded(file, kind);
+          if (fileToSend.size <= PROPOSAL_MEDIA_LIBRARY_DIRECT_UPLOAD_MAX_BYTES) {
+            const fd = new FormData();
+            fd.append("file", fileToSend);
+            const res = await fetch("/api/proposal-media-library/upload", { method: "POST", body: fd });
+            const payload = (await res.json().catch(() => ({}))) as { error?: string };
+            if (!res.ok) {
+              throw new Error(typeof payload.error === "string" ? payload.error : res.statusText);
+            }
+            continue;
+          }
+
           const init = await fetch("/api/proposal-media-library/signed-upload", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              filename: file.name,
-              contentType: file.type || "application/octet-stream",
+              filename: fileToSend.name,
+              contentType: fileToSend.type || "application/octet-stream",
             }),
           });
           const payload = (await init.json().catch(() => ({}))) as {
@@ -251,13 +383,13 @@ function ProposalMediaLibrarySidebar() {
           }
           const put = await fetch(uploadUrl, {
             method: "PUT",
-            body: file,
+            body: fileToSend,
             headers: { "Content-Type": contentType },
           });
           if (!put.ok) {
             throw new Error(
               put.status === 0
-                ? "Upload was blocked. Add CORS on your GCS bucket for this site origin, or upload from Firebase console."
+                ? "Large file upload failed (CORS). Add CORS on the Storage bucket, raise PROPOSAL_MEDIA_LIBRARY_MAX_DIRECT_UPLOAD_BYTES, or upload from Firebase console."
                 : `Upload failed (${put.status}).`,
             );
           }
@@ -270,7 +402,7 @@ function ProposalMediaLibrarySidebar() {
         setUploading(false);
       }
     },
-    [activeParams, refetchAssets],
+    [activeParams, category, refetchAssets],
   );
 
   const onLibraryDragEnter = React.useCallback(
@@ -308,7 +440,7 @@ function ProposalMediaLibrarySidebar() {
       dragDepthRef.current = 0;
       setDraggingOver(false);
       if (mainTab !== "library") return;
-      void performLibraryUploads(Array.from(e.dataTransfer?.files ?? []));
+      void performLibraryUploads(filesFromDataTransfer(e.dataTransfer));
     },
     [mainTab, performLibraryUploads],
   );
@@ -333,8 +465,12 @@ function ProposalMediaLibrarySidebar() {
             ? "Search blocks"
             : "Search library";
 
-  const acceptAttr = activeParams ? acceptForKinds(activeParams.allowedKinds) : "*/*";
-  const primaryUploadLabel = activeParams ? uploadButtonLabel(activeParams.allowedKinds) : "Upload";
+  const uploadTargets = React.useMemo(
+    () => (activeParams ? uploadTargetsForCategory(category, activeParams.allowedKinds) : []),
+    [category, activeParams],
+  );
+  const acceptAttr = acceptForKinds(uploadTargets);
+  const primaryUploadLabel = uploadFooterLabel(category, uploadTargets);
 
   return (
     <AnimatePresence>
@@ -578,7 +714,8 @@ function ProposalMediaLibrarySidebar() {
                   <div className="flex items-stretch gap-2">
                     <button
                       type="button"
-                      disabled={uploading}
+                      disabled={uploading || uploadTargets.length === 0}
+                      title={uploadTargets.length === 0 ? "Nothing uploadable for this tab with the current picker." : undefined}
                       className={cn(
                         "inline-flex h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold text-white shadow-sm transition-colors",
                         "bg-violet-900 hover:bg-violet-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background",

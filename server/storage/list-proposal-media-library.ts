@@ -5,8 +5,8 @@ import type { ProposalLibraryAsset, ProposalLibraryAssetKind } from "@/lib/propo
 
 function inferKind(objectPath: string): ProposalLibraryAssetKind | null {
   const base = objectPath.split("/").pop()?.toLowerCase() ?? "";
-  if (/\.(jpe?g|png|gif|webp|avif|svg)$/.test(base)) return "image";
-  if (/\.(mp4|webm|mov|m4v|ogv)$/.test(base)) return "video";
+  if (/\.(jpe?g|png|gif|webp|avif|svg|bmp|tif|tiff|heic|heif)$/.test(base)) return "image";
+  if (/\.(mp4|webm|mov|m4v|ogv|mpeg|mpg|mkv)$/.test(base)) return "video";
   if (/\.(html?)$/.test(base)) return "snippet";
   if (/\.(json)$/.test(base)) return "block";
   return null;

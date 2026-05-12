@@ -351,10 +351,13 @@ export function ProposalSplashBackgroundPicker({
                       setOpen(false);
                       window.setTimeout(() => {
                         mediaLibrary.openSelection({
-                          allowedKinds: ["image"],
+                          allowedKinds: ["image", "video"],
                           onSelect: (asset) => {
-                            if (asset.kind !== "image") return;
-                            patchBg({ type: "image", url: asset.downloadUrl });
+                            if (asset.kind === "image") {
+                              patchBg({ type: "image", url: asset.downloadUrl, videoUrl: undefined });
+                            } else if (asset.kind === "video") {
+                              patchBg({ type: "video", videoUrl: asset.downloadUrl, url: undefined });
+                            }
                           },
                         });
                       }, 0);
@@ -396,10 +399,13 @@ export function ProposalSplashBackgroundPicker({
                       setOpen(false);
                       window.setTimeout(() => {
                         mediaLibrary.openSelection({
-                          allowedKinds: ["video"],
+                          allowedKinds: ["image", "video"],
                           onSelect: (asset) => {
-                            if (asset.kind !== "video") return;
-                            patchBg({ type: "video", videoUrl: asset.downloadUrl });
+                            if (asset.kind === "image") {
+                              patchBg({ type: "image", url: asset.downloadUrl, videoUrl: undefined });
+                            } else if (asset.kind === "video") {
+                              patchBg({ type: "video", videoUrl: asset.downloadUrl, url: undefined });
+                            }
                           },
                         });
                       }, 0);

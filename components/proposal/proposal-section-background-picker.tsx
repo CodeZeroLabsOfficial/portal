@@ -147,10 +147,13 @@ export function ProposalSectionBackgroundPicker({
                         setMenuOpen(false);
                         window.setTimeout(() => {
                           mediaLibrary.openSelection({
-                            allowedKinds: ["image"],
+                            allowedKinds: ["image", "video"],
                             onSelect: (asset) => {
-                              if (asset.kind !== "image") return;
-                              patch({ kind: "image", mediaUrl: asset.downloadUrl });
+                              if (asset.kind === "image") {
+                                patch({ kind: "image", mediaUrl: asset.downloadUrl });
+                              } else if (asset.kind === "video") {
+                                patch({ kind: "video", mediaUrl: asset.downloadUrl });
+                              }
                             },
                           });
                         }, 0);
@@ -182,10 +185,13 @@ export function ProposalSectionBackgroundPicker({
                         setMenuOpen(false);
                         window.setTimeout(() => {
                           mediaLibrary.openSelection({
-                            allowedKinds: ["video"],
+                            allowedKinds: ["image", "video"],
                             onSelect: (asset) => {
-                              if (asset.kind !== "video") return;
-                              patch({ kind: "video", mediaUrl: asset.downloadUrl });
+                              if (asset.kind === "image") {
+                                patch({ kind: "image", mediaUrl: asset.downloadUrl });
+                              } else if (asset.kind === "video") {
+                                patch({ kind: "video", mediaUrl: asset.downloadUrl });
+                              }
                             },
                           });
                         }, 0);
