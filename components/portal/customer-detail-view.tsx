@@ -39,7 +39,7 @@ import {
 } from "@/server/actions/customers-crm";
 import { deleteProposalAction } from "@/server/actions/proposal-builder";
 import { createDraftProposalFromCustomerAction } from "@/server/actions/proposals-crm";
-import { ConvertLeadPanel } from "@/components/portal/convert-lead-panel";
+import { convertLeadToContactAction } from "@/server/actions/opportunities-crm";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -220,6 +220,30 @@ export function CustomerDetailView({
     }
   }
 
+  async function convertLead() {
+    const opportunityName = customer.company?.trim();
+    if (!opportunityName) {
+      window.alert("Set a company name on this profile before converting the lead.");
+      return;
+    }
+    setBusy("convert-lead");
+    try {
+      const res = await convertLeadToContactAction({
+        customerId: customer.id,
+        opportunityName,
+        initialStage: "discovery",
+      });
+      if (!res.ok) {
+        window.alert(res.message);
+        return;
+      }
+      router.push(`/admin/opportunities/${res.opportunityId}`);
+      router.refresh();
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function deleteProposal(proposalId: string, title: string) {
     if (!window.confirm(`Delete proposal “${title}”? This cannot be undone.`)) return;
     setDeletingProposalId(proposalId);
@@ -273,12 +297,31 @@ export function CustomerDetailView({
             Customers
           </Link>
         </Button>
-        <Button variant="ghost" size="sm" className="-mr-2 gap-1.5 text-muted-foreground hover:text-foreground" asChild>
-          <Link href={`/admin/customers/${customer.id}/edit`}>
-            <Pencil className="h-4 w-4" aria-hidden />
-            Edit
-          </Link>
-        </Button>
+        <div className="-mr-2 flex flex-wrap items-center justify-end gap-1">
+          {customer.crmType === "lead" ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 text-muted-foreground hover:text-foreground"
+              disabled={busy === "convert-lead"}
+              onClick={() => void convertLead()}
+            >
+              {busy === "convert-lead" ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              ) : (
+                <Sparkles className="h-4 w-4" aria-hidden />
+              )}
+              Convert lead
+            </Button>
+          ) : null}
+          <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground hover:text-foreground" asChild>
+            <Link href={`/admin/customers/${customer.id}/edit`}>
+              <Pencil className="h-4 w-4" aria-hidden />
+              Edit
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <motion.header initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="border-b border-border/80 pb-6">
@@ -404,13 +447,6 @@ export function CustomerDetailView({
           </CardContent>
         </Card>
       </div>
-
-      {customer.crmType === "lead" ? (
-        <ConvertLeadPanel
-          customerId={customer.id}
-          defaultOpportunityName={customer.company?.trim() || `${customer.name || "Opportunity"}`.trim()}
-        />
-      ) : null}
 
       <Tabs value={tab} onValueChange={setTab} className="w-full">
         <TabsList className="no-scrollbar h-auto w-full flex-wrap justify-start gap-1 overflow-x-auto bg-muted/30 p-1">

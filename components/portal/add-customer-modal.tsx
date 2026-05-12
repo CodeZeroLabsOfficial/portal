@@ -231,20 +231,6 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
               ) : null}
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="crm-company-phone" className="text-zinc-300">
-                Company phone
-              </Label>
-              <Input
-                id="crm-company-phone"
-                type="tel"
-                autoComplete="off"
-                className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
-                placeholder="+61 400 000 000"
-                {...form.register("companyPhone")}
-              />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
               <Label htmlFor="crm-phone" className="text-zinc-300">
                 Phone
               </Label>
@@ -255,6 +241,20 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
                 className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
                 placeholder="+61 400 000 000"
                 {...form.register("phone")}
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="crm-company-phone" className="text-zinc-300">
+                Company phone
+              </Label>
+              <Input
+                id="crm-company-phone"
+                type="tel"
+                autoComplete="off"
+                className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+                placeholder="+61 400 000 000"
+                {...form.register("companyPhone")}
               />
             </div>
             <div className="flex flex-col gap-1.5">
