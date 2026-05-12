@@ -4,7 +4,7 @@ import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Activity, EllipsisVertical, StickyNote } from "lucide-react";
+import { Activity, EllipsisVertical, FileText } from "lucide-react";
 import { OPPORTUNITY_STAGES, opportunityStageLabel } from "@/lib/crm/opportunity-stages";
 import type { OpportunityBoardCard, OpportunityStage } from "@/types/opportunity";
 import { useOpportunityStageMutation } from "@/hooks/use-opportunity-stage-mutation";
@@ -156,7 +156,7 @@ export function OpportunitiesList({ opportunities }: OpportunitiesListProps) {
                     </td>
                     <td className="px-4 py-3 text-center align-middle tabular-nums text-muted-foreground">
                       <span className="inline-flex items-center justify-center gap-1">
-                        <StickyNote className="h-3.5 w-3.5" aria-hidden />
+                        <FileText className="h-3.5 w-3.5" aria-hidden />
                         {opp.opportunityNoteCount ?? 0}
                       </span>
                     </td>

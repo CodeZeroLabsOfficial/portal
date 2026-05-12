@@ -15,7 +15,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { Activity, EllipsisVertical, StickyNote } from "lucide-react";
+import { Activity, EllipsisVertical, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   OPPORTUNITY_STAGES,
@@ -205,7 +205,7 @@ function OpportunityCard({
           </div>
           <div className="flex items-center gap-3 text-[11px] tabular-nums text-muted-foreground">
             <span className="inline-flex items-center gap-1" title="Notes on this deal">
-              <StickyNote className="h-3.5 w-3.5" aria-hidden />
+              <FileText className="h-3.5 w-3.5" aria-hidden />
               {notes}
             </span>
             <span className="inline-flex items-center gap-1" title="Activities on this deal">
