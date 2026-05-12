@@ -3,7 +3,7 @@
 import * as React from "react";
 import { motion } from "framer-motion";
 import { LayoutGrid, List } from "lucide-react";
-import type { OpportunityRecord } from "@/types/opportunity";
+import type { OpportunityBoardCard } from "@/types/opportunity";
 import { OpportunitiesBoard } from "@/components/portal/opportunities-board";
 import { OpportunitiesList } from "@/components/portal/opportunities-list";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import {
 import { cn } from "@/lib/utils";
 
 export interface OpportunitiesPanelProps {
-  opportunities: OpportunityRecord[];
+  opportunities: OpportunityBoardCard[];
 }
 
 export function OpportunitiesPanel({ opportunities }: OpportunitiesPanelProps) {

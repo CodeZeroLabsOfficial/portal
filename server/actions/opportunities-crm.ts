@@ -14,6 +14,7 @@ import {
   appendOpportunityActivity,
   appendOpportunityNote,
   convertLeadToContactWithOpportunity,
+  deleteOpportunityForStaff,
   updateOpportunityStage,
 } from "@/server/firestore/crm-opportunities";
 
@@ -88,6 +89,30 @@ export async function updateOpportunityStageAction(
   return { ok: true };
 }
 
+const deleteOpportunitySchema = z.object({
+  opportunityId: z.string().min(1),
+});
+
+export async function deleteOpportunityAction(
+  raw: unknown,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const user = await requireStaffSession();
+  if (!user) return { ok: false, message: "Unauthorized." };
+
+  const parsed = deleteOpportunitySchema.safeParse(raw);
+  if (!parsed.success) {
+    const first = parsed.error.errors[0];
+    return { ok: false, message: first ? first.message : "Invalid input" };
+  }
+
+  const result = await deleteOpportunityForStaff(user, parsed.data.opportunityId);
+  if (!result.ok) return result;
+
+  revalidatePath("/admin/opportunities");
+  revalidatePath(`/admin/customers/${result.customerId}`);
+  return { ok: true };
+}
+
 export async function addOpportunityNoteAction(
   raw: unknown,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
@@ -102,6 +127,7 @@ export async function addOpportunityNoteAction(
   const result = await appendOpportunityNote(user, parsed.data.opportunityId, parsed.data.body);
   if (!result.ok) return { ok: false, message: result.message };
 
+  revalidatePath("/admin/opportunities");
   revalidatePath(`/admin/opportunities/${parsed.data.opportunityId}`);
   return { ok: true };
 }
@@ -125,6 +151,7 @@ export async function addOpportunityActivityAction(
   });
   if (!result.ok) return { ok: false, message: result.message };
 
+  revalidatePath("/admin/opportunities");
   revalidatePath(`/admin/opportunities/${parsed.data.opportunityId}`);
   return { ok: true };
 }

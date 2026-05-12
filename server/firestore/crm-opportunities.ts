@@ -5,11 +5,13 @@ import { logError } from "@/lib/logging";
 import { coerceTimestampToMillis } from "@/lib/firestore/timestamp";
 import { normalizeOpportunityStage } from "@/lib/crm/opportunity-stages";
 import { COLLECTIONS } from "@/server/firestore/collections";
+import { batchGetCustomerRecordsForStaff } from "@/server/firestore/crm-customers";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import type { CustomerRecord } from "@/types/customer";
 import type {
   OpportunityActivityKind,
   OpportunityActivityRecord,
+  OpportunityBoardCard,
   OpportunityNoteRecord,
   OpportunityRecord,
 } from "@/types/opportunity";
@@ -50,6 +52,128 @@ export async function listOpportunitiesForStaff(user: PortalUser): Promise<Oppor
       message: error instanceof Error ? error.message : "unknown",
     });
     return [];
+  }
+}
+
+async function aggregateCountForOpportunity(
+  db: AdminDb,
+  collection: string,
+  opportunityId: string,
+): Promise<number> {
+  const snap = await db.collection(collection).where("opportunityId", "==", opportunityId).count().get();
+  const raw = snap.data().count;
+  return typeof raw === "number" && Number.isFinite(raw) ? raw : 0;
+}
+
+async function mapParallelChunks<T, R>(
+  items: T[],
+  chunkSize: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const out: R[] = [];
+  for (let i = 0; i < items.length; i += chunkSize) {
+    const chunk = items.slice(i, i + chunkSize);
+    const part = await Promise.all(chunk.map(fn));
+    out.push(...part);
+  }
+  return out;
+}
+
+function userSummaryFromDoc(
+  id: string,
+  data: Record<string, unknown>,
+): { displayName: string; photoURL?: string } {
+  const email = asString(data.email) ?? "";
+  const dn = asString(data.displayName)?.trim();
+  const displayName = dn || email || id;
+  const photoURL = asString(data.photoURL);
+  return { displayName, ...(photoURL ? { photoURL } : {}) };
+}
+
+/** Opportunities with customer labels, note/activity counts, and assignee snapshot for the pipeline UI. */
+export async function listOpportunityBoardCardsForStaff(user: PortalUser): Promise<OpportunityBoardCard[]> {
+  const db = getFirebaseAdminFirestore();
+  if (!db || !isStaff(user)) return [];
+
+  const opportunities = await listOpportunitiesForStaff(user);
+  if (opportunities.length === 0) return [];
+
+  const customerIds = [...new Set(opportunities.map((o) => o.customerId))];
+  const customers = await batchGetCustomerRecordsForStaff(user, customerIds);
+
+  const assigneeUids = new Set<string>();
+  for (const o of opportunities) {
+    const c = customers.get(o.customerId);
+    const uid = o.createdByUid?.trim() || c?.createdByUid?.trim();
+    if (uid) assigneeUids.add(uid);
+  }
+
+  const userSummaries = new Map<string, { displayName: string; photoURL?: string }>();
+  const uidList = [...assigneeUids];
+  const chunkSize = 10;
+  for (let i = 0; i < uidList.length; i += chunkSize) {
+    const chunk = uidList.slice(i, i + chunkSize);
+    const refs = chunk.map((uid) => db.collection(COLLECTIONS.users).doc(uid));
+    const snaps = await db.getAll(...refs);
+    for (const s of snaps) {
+      if (!s.exists) continue;
+      userSummaries.set(s.id, userSummaryFromDoc(s.id, s.data() as Record<string, unknown>));
+    }
+  }
+
+  const noteCountsList = await mapParallelChunks(opportunities, 24, async (o) => {
+    const c = await aggregateCountForOpportunity(db, COLLECTIONS.opportunityNotes, o.id);
+    return [o.id, c] as const;
+  });
+  const activityCountsList = await mapParallelChunks(opportunities, 24, async (o) => {
+    const c = await aggregateCountForOpportunity(db, COLLECTIONS.opportunityActivities, o.id);
+    return [o.id, c] as const;
+  });
+  const noteCounts = new Map(noteCountsList);
+  const activityCounts = new Map(activityCountsList);
+
+  return opportunities.map((o): OpportunityBoardCard => {
+    const customer: CustomerRecord | undefined = customers.get(o.customerId);
+    const company = customer?.company?.trim();
+    const person = customer?.name?.trim() ?? "";
+    const accountCompanyName = company || person || "—";
+    const leadContactName = person || customer?.email?.trim() || "—";
+
+    const assigneeUid = o.createdByUid?.trim() || customer?.createdByUid?.trim();
+    const su = assigneeUid ? userSummaries.get(assigneeUid) : undefined;
+
+    return {
+      ...o,
+      accountCompanyName,
+      leadContactName,
+      opportunityNoteCount: noteCounts.get(o.id) ?? 0,
+      opportunityActivityCount: activityCounts.get(o.id) ?? 0,
+      ...(assigneeUid ? { assigneeUid } : {}),
+      ...(su?.displayName ? { assigneeDisplayName: su.displayName } : {}),
+      ...(su?.photoURL ? { assigneePhotoUrl: su.photoURL } : {}),
+    };
+  });
+}
+
+export async function deleteOpportunityForStaff(
+  user: PortalUser,
+  opportunityId: string,
+): Promise<{ ok: true; customerId: string } | { ok: false; message: string }> {
+  const db = getFirebaseAdminFirestore();
+  if (!db || !isStaff(user)) return { ok: false, message: "Not allowed." };
+  const existing = await getOpportunityForStaff(user, opportunityId);
+  if (!existing) return { ok: false, message: "Opportunity not found." };
+  const customerId = existing.customerId;
+
+  try {
+    await deleteSubcollectionForOpportunity(db, COLLECTIONS.opportunityNotes, opportunityId);
+    await deleteSubcollectionForOpportunity(db, COLLECTIONS.opportunityActivities, opportunityId);
+    await db.collection(COLLECTIONS.opportunities).doc(opportunityId).delete();
+    return { ok: true, customerId };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Delete failed.";
+    logError("crm_delete_opportunity_failed", { opportunityId, message });
+    return { ok: false, message };
   }
 }
 

@@ -560,6 +560,29 @@ export async function getCustomerRecordForOrg(
   return parsed;
 }
 
+/** Batch-load CRM customers by id (Firestore `getAll`, chunks of 10). */
+export async function batchGetCustomerRecordsForStaff(
+  user: PortalUser,
+  customerIds: string[],
+): Promise<Map<string, CustomerRecord>> {
+  const db = getFirebaseAdminFirestore();
+  const out = new Map<string, CustomerRecord>();
+  if (!db || !isStaff(user) || customerIds.length === 0) return out;
+  const unique = [...new Set(customerIds.map((id) => id.trim()).filter(Boolean))];
+  const chunkSize = 10;
+  for (let i = 0; i < unique.length; i += chunkSize) {
+    const chunk = unique.slice(i, i + chunkSize);
+    const refs = chunk.map((id) => db.collection(COLLECTIONS.customers).doc(id));
+    const snaps = await db.getAll(...refs);
+    for (const snap of snaps) {
+      if (!snap.exists) continue;
+      const row = parseCustomerRecord(snap.id, snap.data() as Record<string, unknown>);
+      if (row) out.set(row.id, row);
+    }
+  }
+  return out;
+}
+
 function parseNote(id: string, data: Record<string, unknown>): CustomerNoteRecord | null {
   const customerId = asString(data.customerId);
   if (!customerId) return null;

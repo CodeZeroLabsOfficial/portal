@@ -6,6 +6,20 @@ export type OpportunityStage =
   | "won"
   | "lost";
 
+/** Enriched row for pipeline board/list (customer labels, counts, assignee snapshot). */
+export type OpportunityBoardCard = OpportunityRecord & {
+  /** Company / account label from the linked customer. */
+  accountCompanyName: string;
+  /** Primary contact name on the customer profile. */
+  leadContactName: string;
+  opportunityNoteCount: number;
+  opportunityActivityCount: number;
+  /** Avatar subject: opportunity creator, else customer creator. */
+  assigneeUid?: string;
+  assigneeDisplayName?: string;
+  assigneePhotoUrl?: string;
+};
+
 /** `opportunities/{id}` — deal linked to a unified CRM customer (`customers/{customerId}`). */
 export interface OpportunityRecord {
   id: string;

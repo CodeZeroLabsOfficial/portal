@@ -1,7 +1,7 @@
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { getCurrentSessionUser } from "@/lib/auth/server-session";
-import { listOpportunitiesForStaff } from "@/server/firestore/crm-opportunities";
+import { listOpportunityBoardCardsForStaff } from "@/server/firestore/crm-opportunities";
 import { OpportunitiesPanel } from "@/components/portal/opportunities-panel";
 import { WorkspaceShell } from "@/components/portal/workspace-shell";
 
@@ -14,7 +14,7 @@ export default async function AdminOpportunitiesPage() {
     redirect("/login?next=/admin/opportunities");
   }
 
-  const opportunities = await listOpportunitiesForStaff(user);
+  const opportunities = await listOpportunityBoardCardsForStaff(user);
 
   return (
     <WorkspaceShell
