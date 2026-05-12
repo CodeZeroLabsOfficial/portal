@@ -24,7 +24,7 @@ export function DeleteProposalTemplateButton({ templateId, templateName }: Delet
       window.alert(res.message);
       return;
     }
-    router.push("/admin/proposals/templates");
+    router.push("/admin/templates");
     router.refresh();
   }
 

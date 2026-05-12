@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Copy, ExternalLink, Loader2, Pencil, Search, SquareArrowOutUpRight, Trash2 } from "lucide-react";
-import type { ProposalRecord } from "@/types/proposal";
+import type { ProposalHubListRow, ProposalRecord } from "@/types/proposal";
 import { cloneProposalAction, deleteProposalAction } from "@/server/actions/proposal-builder";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 export interface ProposalsListPanelProps {
-  proposals: ProposalRecord[];
+  proposals: ProposalHubListRow[];
 }
 
 type ProposalLifecyclePhase = "saved" | "sent" | "viewed";
@@ -134,12 +134,14 @@ export function ProposalsListPanel({ proposals }: ProposalsListPanelProps) {
     if (!q) return sorted;
     return sorted.filter((p) => {
       const stage = proposalHubStageDisplay(p);
-      const hay = [p.title, stage.label, formatLastEdited(lastEditedMs(p))].join(" ").toLowerCase();
+      const hay = [p.accountCompanyName, p.title, stage.label, formatLastEdited(lastEditedMs(p))]
+        .join(" ")
+        .toLowerCase();
       return hay.includes(q);
     });
   }, [sorted, query]);
 
-  async function onDelete(p: ProposalRecord) {
+  async function onDelete(p: ProposalHubListRow) {
     if (!window.confirm(`Delete proposal “${p.title}”? This cannot be undone.`)) return;
     setDeletingId(p.id);
     try {
@@ -154,7 +156,7 @@ export function ProposalsListPanel({ proposals }: ProposalsListPanelProps) {
     }
   }
 
-  async function onClone(p: ProposalRecord) {
+  async function onClone(p: ProposalHubListRow) {
     setCloningId(p.id);
     try {
       const res = await cloneProposalAction(p.id);
@@ -185,9 +187,9 @@ export function ProposalsListPanel({ proposals }: ProposalsListPanelProps) {
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search title, stage, or date…"
+              placeholder="Search account, title, status, or date…"
               className="h-9 rounded-full border-border/80 bg-background/60 pl-9 text-[14px] text-foreground placeholder:text-muted-foreground"
-              aria-label="Search proposals"
+              aria-label="Search proposals by account, title, status, or date"
             />
           </div>
           <Button
@@ -208,8 +210,8 @@ export function ProposalsListPanel({ proposals }: ProposalsListPanelProps) {
         <table className="w-full min-w-[800px] text-left text-[13px]">
           <thead>
             <tr className="border-b border-border text-muted-foreground">
-              <th className="px-4 py-2.5 font-medium">Proposal title</th>
-              <th className="px-4 py-2.5 font-medium">Stage</th>
+              <th className="px-4 py-2.5 font-medium">Account name</th>
+              <th className="px-4 py-2.5 font-medium">Status</th>
               <th className="min-w-[180px] px-4 py-2.5 font-medium">Last edited</th>
               <th className="w-[168px] px-2 py-2.5 text-center font-medium">Actions</th>
             </tr>
@@ -249,7 +251,7 @@ export function ProposalsListPanel({ proposals }: ProposalsListPanelProps) {
                           href={editHref(p)}
                           className="line-clamp-2 font-medium text-foreground underline-offset-4 hover:underline"
                         >
-                          {p.title}
+                          {p.accountCompanyName}
                         </Link>
                       </td>
                       <td className="px-4 py-3 align-middle">

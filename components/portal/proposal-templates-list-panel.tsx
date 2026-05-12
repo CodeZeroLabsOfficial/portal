@@ -200,7 +200,7 @@ export function ProposalTemplatesListPanel({ templates }: ProposalTemplatesListP
                       >
                         <td className="max-w-[280px] px-4 py-3 align-middle">
                           <Link
-                            href={`/admin/proposals/templates/${t.id}`}
+                            href={`/admin/templates/${t.id}`}
                             className="line-clamp-2 font-medium text-foreground underline-offset-4 hover:underline"
                           >
                             {t.name}
@@ -275,7 +275,7 @@ export function ProposalTemplatesListPanel({ templates }: ProposalTemplatesListP
                             <CloneProposalTemplateButton templateId={t.id} iconOnly />
                             <Button variant="outline" size="icon" className="h-8 w-8" asChild>
                               <Link
-                                href={`/admin/proposals/templates/${t.id}`}
+                                href={`/admin/templates/${t.id}`}
                                 aria-label={`Edit template “${t.name}”`}
                               >
                                 <Pencil className="h-4 w-4" aria-hidden />
@@ -283,7 +283,7 @@ export function ProposalTemplatesListPanel({ templates }: ProposalTemplatesListP
                             </Button>
                             <Button variant="outline" size="icon" className="h-8 w-8" asChild>
                               <Link
-                                href={`/admin/proposals/templates/${t.id}/preview`}
+                                href={`/admin/templates/${t.id}/preview`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 aria-label={`Open public preview for template “${t.name}”`}

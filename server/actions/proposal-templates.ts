@@ -53,7 +53,7 @@ export async function createProposalTemplateAction(): Promise<
   );
   if (!write.ok) return write;
 
-  revalidatePath("/admin/proposals/templates");
+  revalidatePath("/admin/templates");
   return { ok: true, templateId: ref.id };
 }
 
@@ -105,7 +105,7 @@ export async function cloneProposalTemplateAction(
   );
   if (!write.ok) return write;
 
-  revalidatePath("/admin/proposals/templates");
+  revalidatePath("/admin/templates");
   return { ok: true, templateId: ref.id };
 }
 
@@ -153,8 +153,8 @@ export async function saveProposalTemplateAction(
   );
   if (!write.ok) return write;
 
-  revalidatePath("/admin/proposals/templates");
-  revalidatePath(`/admin/proposals/templates/${parsed.data.templateId}`);
+  revalidatePath("/admin/templates");
+  revalidatePath(`/admin/templates/${parsed.data.templateId}`);
   return { ok: true };
 }
 
@@ -190,8 +190,8 @@ export async function setProposalTemplateStageAction(
   );
   if (!write.ok) return write;
 
-  revalidatePath("/admin/proposals/templates");
-  revalidatePath(`/admin/proposals/templates/${templateId}`);
+  revalidatePath("/admin/templates");
+  revalidatePath(`/admin/templates/${templateId}`);
   return { ok: true };
 }
 
@@ -215,6 +215,6 @@ export async function deleteProposalTemplateAction(
   );
   if (!write.ok) return write;
 
-  revalidatePath("/admin/proposals/templates");
+  revalidatePath("/admin/templates");
   return { ok: true };
 }

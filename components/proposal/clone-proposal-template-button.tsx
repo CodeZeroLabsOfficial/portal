@@ -25,7 +25,7 @@ export function CloneProposalTemplateButton({
       window.alert(res.message);
       return;
     }
-    router.push(`/admin/proposals/templates/${res.templateId}`);
+    router.push(`/admin/templates/${res.templateId}`);
     router.refresh();
   }
 

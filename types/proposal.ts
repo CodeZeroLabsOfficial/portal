@@ -420,8 +420,13 @@ export interface ProposalRecord {
   stripePaymentIntentId?: string;
   /** Customer choices from public viewer (e.g. selected package tier). Keyed by block id. */
   publicSelections?: ProposalPublicSelections;
-  /** When created from a proposal template (audit). */
+  /** When created from a template (audit). */
   sourceTemplateId?: string;
   createdAtMs: number;
   updatedAtMs: number;
 }
+
+/** Staff proposals hub row — account label from linked CRM customer (see pipeline `accountCompanyName`). */
+export type ProposalHubListRow = ProposalRecord & {
+  accountCompanyName: string;
+};

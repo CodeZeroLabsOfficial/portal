@@ -160,7 +160,7 @@ export default async function AdminProposalDetailPage({ params, searchParams }: 
                   <li>
                     <span className="text-muted-foreground">Template · </span>
                     <Link
-                      href={`/admin/proposals/templates/${proposal.sourceTemplateId}`}
+                      href={`/admin/templates/${proposal.sourceTemplateId}`}
                       className="text-primary hover:underline"
                     >
                       Open template

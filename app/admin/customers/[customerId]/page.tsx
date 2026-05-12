@@ -30,7 +30,7 @@ export default async function AdminCustomerDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const [notes, activities, subscriptions, invoices, proposalsMatched, tasks, opportunities, proposalTemplates] =
+  const [notes, activities, subscriptions, invoices, proposalsMatched, tasks, opportunities, templates] =
     await Promise.all([
       listCustomerNotes(user, customerId),
       listCustomerActivities(user, customerId),
@@ -61,7 +61,7 @@ export default async function AdminCustomerDetailPage({ params }: PageProps) {
         notes={notes}
         activities={activities}
         tasks={tasks}
-        proposalTemplates={proposalTemplates}
+        templates={templates}
       />
     </WorkspaceShell>
   );

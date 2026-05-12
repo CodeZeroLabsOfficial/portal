@@ -92,10 +92,10 @@ function DefaultWorkspaceRightAside() {
             <div>
               <p className="text-sm font-medium text-white">Explore new templates</p>
               <p className="mt-1 text-xs text-zinc-500">
-                Browse proposal templates aligned with your pricing tiers.
+                Browse templates aligned with your pricing tiers.
               </p>
               <Link
-                href="/admin/proposals/templates"
+                href="/admin/templates"
                 className="mt-2 inline-block text-xs font-medium text-primary hover:underline"
               >
                 Open templates
@@ -156,7 +156,7 @@ export function WorkspaceShellLayout({
         window.alert(res.message);
         return;
       }
-      router.push(`/admin/proposals/templates/${res.templateId}`);
+      router.push(`/admin/templates/${res.templateId}`);
       router.refresh();
     } finally {
       setCreatingTemplate(false);

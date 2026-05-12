@@ -5,18 +5,20 @@ import { COLLECTIONS } from "@/server/firestore/collections";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import type { InvoiceRecord } from "@/types/invoice";
 import type { PaymentRecord } from "@/types/payment";
-import type { ProposalRecord } from "@/types/proposal";
+import type { ProposalHubListRow, ProposalRecord } from "@/types/proposal";
 import { parseProposalRecord } from "@/server/firestore/parse-proposal";
 import type { SubscriptionRecord } from "@/types/subscription";
 import type { SupportTicketRecord, SupportTicketUrgency } from "@/types/support-ticket";
 import { parseTaskRecord } from "@/server/firestore/parse-task";
 import type { TaskRecord } from "@/types/task";
 import type { PortalUser } from "@/types/user";
+import type { CustomerRecord } from "@/types/customer";
 import type { CustomerListRow } from "@/lib/customer-list";
 import {
   getAccountDetailForKey,
   getAdminAccountListRows as loadCrmAccountListRows,
   getAdminCustomerListRows as loadCrmCustomerListRows,
+  batchGetCustomerRecordsForStaff,
 } from "@/server/firestore/crm-customers";
 
 export interface ActivityItem {
@@ -258,6 +260,28 @@ async function listProposalsForUser(user: PortalUser): Promise<ProposalRecord[]>
 /** Proposals visible to the current staff user (org-scoped, or author-scoped when no org id). */
 export async function listProposalsForStaffOrg(user: PortalUser): Promise<ProposalRecord[]> {
   return listProposalsForUser(user);
+}
+
+function accountCompanyNameFromCustomer(customer: CustomerRecord | undefined): string {
+  if (!customer) return "—";
+  const company = customer.company?.trim();
+  const person = customer.name?.trim() ?? "";
+  return company || person || "—";
+}
+
+/** Same proposals as {@link listProposalsForStaffOrg}, with CRM account label for hub tables. */
+export async function listProposalsHubRowsForStaffOrg(user: PortalUser): Promise<ProposalHubListRow[]> {
+  const proposals = await listProposalsForStaffOrg(user);
+  const customerIds = proposals
+    .map((p) => p.customerId)
+    .filter((id): id is string => typeof id === "string" && id.trim().length > 0);
+  const customers = await batchGetCustomerRecordsForStaff(user, customerIds);
+  return proposals.map((p) => ({
+    ...p,
+    accountCompanyName: p.customerId?.trim()
+      ? accountCompanyNameFromCustomer(customers.get(p.customerId.trim()))
+      : "—",
+  }));
 }
 
 function parseSupportTicket(id: string, data: Record<string, unknown>): SupportTicketRecord {

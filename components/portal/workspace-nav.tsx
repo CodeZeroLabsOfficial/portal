@@ -38,7 +38,7 @@ const adminNavIcons: Record<(typeof ADMIN_PORTAL_NAV)[number]["id"], LucideIcon>
   customers: Users,
   opportunities: Columns3,
   proposals: FileText,
-  proposalTemplates: LayoutTemplate,
+  Templates: LayoutTemplate,
   accounts: Building2,
   subscriptions: Repeat,
   tasks: ListTodo,

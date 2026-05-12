@@ -100,13 +100,13 @@ const PROPOSAL_PHASE_TITLE: Record<ProposalLifecyclePhase, string> = {
 };
 
 function ProposalCreateControls({
-  proposalTemplates,
+  templates,
   proposalTemplateId,
   onTemplateChange,
   busy,
   onCreate,
 }: {
-  proposalTemplates: ProposalTemplateRecord[];
+  templates: ProposalTemplateRecord[];
   proposalTemplateId: string;
   onTemplateChange: (id: string) => void;
   busy: boolean;
@@ -114,15 +114,15 @@ function ProposalCreateControls({
 }) {
   return (
     <div className="flex w-full flex-wrap items-center justify-between gap-2">
-      {proposalTemplates.length > 0 ? (
+      {templates.length > 0 ? (
         <select
           className="min-w-[220px] rounded-md border border-input bg-background px-2 py-1.5 text-xs text-foreground"
           value={proposalTemplateId}
           onChange={(e) => onTemplateChange(e.target.value)}
           disabled={busy}
-          aria-label="Proposal template"
+          aria-label="Template"
         >
-          {proposalTemplates.map((t) => (
+          {templates.map((t) => (
             <option key={t.id} value={t.id}>
               {t.name}
             </option>
@@ -146,7 +146,7 @@ export interface CustomerDetailViewProps {
   notes: CustomerNoteRecord[];
   activities: CustomerActivityRecord[];
   tasks: TaskRecord[];
-  proposalTemplates: ProposalTemplateRecord[];
+  templates: ProposalTemplateRecord[];
 }
 
 export function CustomerDetailView({
@@ -158,18 +158,18 @@ export function CustomerDetailView({
   notes,
   activities,
   tasks,
-  proposalTemplates,
+  templates,
 }: CustomerDetailViewProps) {
   const router = useRouter();
   const [tab, setTab] = React.useState("overview");
   const [busy, setBusy] = React.useState<string | null>(null);
   const [proposalTemplateId, setProposalTemplateId] = React.useState(
-    () => proposalTemplates[0]?.id ?? "",
+    () => templates[0]?.id ?? "",
   );
-  const proposalTemplateIdsKey = proposalTemplates.map((t) => t.id).join(",");
+  const proposalTemplateIdsKey = templates.map((t) => t.id).join(",");
 
   React.useEffect(() => {
-    const list = proposalTemplates;
+    const list = templates;
     if (list.length === 0) {
       setProposalTemplateId("");
       return;
@@ -606,8 +606,8 @@ export function CustomerDetailView({
               <CardTitle className="text-base">Add proposal</CardTitle>
             </CardHeader>
             <CardContent className="flex justify-end">
-              <ProposalCreateControls
-                proposalTemplates={proposalTemplates}
+                <ProposalCreateControls
+                templates={templates}
                 proposalTemplateId={proposalTemplateId}
                 onTemplateChange={setProposalTemplateId}
                 busy={busy === "proposal"}
