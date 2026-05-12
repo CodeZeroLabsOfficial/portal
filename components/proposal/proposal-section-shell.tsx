@@ -56,7 +56,7 @@ export function ProposalSectionShell({
   const surfaceChrome = editorCanvas
     ? "rounded-none shadow-none ring-0"
     : viewerEdge
-      ? "shadow-none ring-0 border-y border-black/[0.07] dark:border-white/[0.08]"
+      ? "shadow-none ring-0"
       : prefersLight
         ? "shadow-lg ring-1 ring-black/[0.08] dark:ring-white/10"
         : "shadow-[0_2px_32px_-10px_rgba(15,23,42,0.12)] ring-1 ring-zinc-950/[0.06]";
