@@ -928,7 +928,7 @@ export async function createCustomerDocument(
   await db.collection(COLLECTIONS.customerActivities).add({
     customerId: docRef.id,
     type: "created",
-    title: "Customer created",
+    title: crmType === "lead" ? "Lead created" : "Customer created",
     detail: input.name.trim(),
     actorUid: user.uid,
     createdAt: firstActivityAt,
@@ -949,7 +949,7 @@ export async function createCustomerDocument(
     await db.collection(COLLECTIONS.customerActivities).add({
       customerId: docRef.id,
       type: "opportunity_created",
-      title: "Lead added to pipeline",
+      title: "Opportunity created",
       detail: payload.name || payload.email,
       actorUid: user.uid,
       createdAt: Timestamp.fromMillis(firstActivityAt.toMillis() + 2),
