@@ -166,9 +166,20 @@ function OpportunityCard({
           </DropdownMenu>
         </div>
 
-        <p className="mt-2 text-[13px] font-semibold leading-snug text-foreground">{opp.name}</p>
-        <p className="mt-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{opp.accountCompanyName}</p>
-        <p className="mt-0.5 text-[12px] text-muted-foreground">{opp.leadContactName}</p>
+        <Link
+          href={`/admin/opportunities/${opp.id}`}
+          onPointerDown={(e) => e.stopPropagation()}
+          className="mt-2 block text-[13px] font-semibold leading-snug text-foreground underline-offset-4 hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          {opp.name}
+        </Link>
+        <Link
+          href={`/admin/customers/${opp.customerId}`}
+          onPointerDown={(e) => e.stopPropagation()}
+          className="mt-1.5 block truncate text-[12px] text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          {opp.leadContactName}
+        </Link>
 
         {typeof opp.amountMinor === "number" ? (
           <p className="mt-2 text-[12px] tabular-nums text-muted-foreground">
@@ -274,8 +285,8 @@ export function OpportunitiesBoard({ opportunities }: OpportunitiesBoardProps) {
       <DragOverlay dropAnimation={null}>
         {activeOpp ? (
           <div className="pointer-events-none min-w-[240px] max-w-[280px] rounded-xl border border-border bg-card p-3 shadow-lg">
-            <p className="text-[11px] font-medium text-muted-foreground">{activeOpp.accountCompanyName}</p>
-            <p className="mt-1 text-[13px] font-semibold text-foreground">{activeOpp.name}</p>
+            <p className="text-[13px] font-semibold text-foreground">{activeOpp.name}</p>
+            <p className="mt-1 text-[11px] text-muted-foreground">{activeOpp.leadContactName}</p>
           </div>
         ) : null}
       </DragOverlay>

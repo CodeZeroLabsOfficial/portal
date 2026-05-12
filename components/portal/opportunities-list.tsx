@@ -102,10 +102,20 @@ export function OpportunitiesList({ opportunities }: OpportunitiesListProps) {
                       </div>
                     </td>
                     <td className="max-w-[200px] px-4 py-3 align-middle">
-                      <div className="truncate">{opp.accountCompanyName}</div>
+                      <Link
+                        href={`/admin/customers/${opp.customerId}`}
+                        className="block max-w-full truncate font-medium text-foreground underline-offset-4 hover:text-primary hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      >
+                        {opp.accountCompanyName}
+                      </Link>
                     </td>
                     <td className="max-w-[200px] px-4 py-3 align-middle">
-                      <div className="truncate text-muted-foreground">{opp.leadContactName}</div>
+                      <Link
+                        href={`/admin/customers/${opp.customerId}`}
+                        className="block max-w-full truncate text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      >
+                        {opp.leadContactName}
+                      </Link>
                     </td>
                     <td className="px-4 py-3 align-middle">
                       <select
