@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 import { getFirebaseAdminStorage } from "@/lib/firebase/admin-app";
 
 const ALLOWED_EXT = new Set([
@@ -103,15 +105,15 @@ export function getMaxDirectLibraryUploadBytes(): number {
   return DEFAULT_MAX_DIRECT_BYTES;
 }
 
-export async function saveLibraryUploadFromBuffer(
-  filename: string,
-  reportedContentType: string,
-  buffer: Buffer,
-): Promise<{ objectPath: string }> {
+export async function saveLibraryUploadFromWebFile(file: File): Promise<{ objectPath: string }> {
   const maxBytes = getMaxDirectLibraryUploadBytes();
-  if (buffer.length > maxBytes) {
+  const size = typeof file.size === "number" ? file.size : Number.NaN;
+  if (!Number.isFinite(size) || size <= 0) {
+    throw new Error("The file is empty.");
+  }
+  if (size > maxBytes) {
     throw new Error(
-      `This file is larger than the direct upload limit (${Math.floor(maxBytes / (1024 * 1024))} MB). Increase PROPOSAL_MEDIA_LIBRARY_MAX_DIRECT_UPLOAD_BYTES or configure Storage CORS and use larger files via signed URL.`,
+      `This file is larger than the direct upload limit (${Math.max(1, Math.floor(maxBytes / (1024 * 1024)))} MB). Increase PROPOSAL_MEDIA_LIBRARY_MAX_DIRECT_UPLOAD_BYTES, or configure Storage CORS and upload larger files via signed URL.`,
     );
   }
 
@@ -129,19 +131,23 @@ export async function saveLibraryUploadFromBuffer(
     throw new Error("Storage bucket is not configured (FIREBASE_STORAGE_BUCKET).");
   }
 
-  const safe = sanitizeLibraryUploadFilename(filename);
+  const safe = sanitizeLibraryUploadFilename(file.name);
   assertAllowedLibraryExtension(safe);
-  const resolvedType = inferLibraryContentType(safe, reportedContentType);
+  const resolvedType = inferLibraryContentType(safe, file.type || "application/octet-stream");
   if (resolvedType === "application/octet-stream") {
     throw new Error("Could not determine content type; use a file with a known extension.");
   }
 
   const objectPath = buildLibraryUploadObjectPath(safe);
   const bucket = storage.bucket(bucketName);
-  await bucket.file(objectPath).save(buffer, {
+  const writeStream = bucket.file(objectPath).createWriteStream({
     metadata: { contentType: resolvedType },
     resumable: false,
   });
+
+  const webStream = file.stream();
+  const nodeReadable = Readable.fromWeb(webStream as import("stream/web").ReadableStream<Uint8Array>);
+  await pipeline(nodeReadable, writeStream);
 
   return { objectPath };
 }

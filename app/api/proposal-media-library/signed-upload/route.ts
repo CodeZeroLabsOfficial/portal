@@ -3,6 +3,9 @@ import { z } from "zod";
 import { requireStaffSession } from "@/lib/auth/server-session";
 import { createProposalMediaLibrarySignedPutUrl } from "@/server/storage/proposal-media-library-upload";
 
+export const runtime = "nodejs";
+export const maxDuration = 120;
+
 const bodySchema = z.object({
   filename: z.string().min(1).max(260),
   contentType: z.string().min(1).max(200).optional().default("application/octet-stream"),

@@ -88,6 +88,37 @@ function categoryLabel(cat: LibraryCategory): string {
 
 const CATEGORIES: LibraryCategory[] = ["all", "blocks", "snippets", "images", "videos"];
 
+function mbFloor(bytes: number): number {
+  return Math.max(1, Math.floor(bytes / (1024 * 1024)));
+}
+
+/** Wraps fetch so "Failed to fetch" becomes actionable copy (CORS vs same-origin). */
+async function fetchWithUploadHints(
+  url: string,
+  init: RequestInit,
+  kind: "portal" | "storage",
+): Promise<Response> {
+  try {
+    return await fetch(url, {
+      ...init,
+      credentials: kind === "storage" ? "omit" : "include",
+      ...(kind === "storage" ? { mode: "cors" as const } : {}),
+    });
+  } catch (e) {
+    if (e instanceof TypeError || (e instanceof Error && e.message === "Failed to fetch")) {
+      if (kind === "storage") {
+        throw new Error(
+          `Could not upload to Cloud Storage (usually missing CORS on the bucket). Use files up to about ${mbFloor(PROPOSAL_MEDIA_LIBRARY_DIRECT_UPLOAD_MAX_BYTES)} MB so uploads go through the portal instead, or add CORS for this site’s origin on your Google Cloud Storage bucket.`,
+        );
+      }
+      throw new Error(
+        "Could not reach the portal upload API (network error or connection reset). Try again, use a smaller file, or check deployment / server logs.",
+      );
+    }
+    throw e;
+  }
+}
+
 /** Collect dropped files — `items` is more reliable than `files` in some browsers (Safari, Photos). */
 function filesFromDataTransfer(dataTransfer: DataTransfer | null): File[] {
   if (!dataTransfer) return [];
@@ -353,7 +384,11 @@ function ProposalMediaLibrarySidebar() {
           if (fileToSend.size <= PROPOSAL_MEDIA_LIBRARY_DIRECT_UPLOAD_MAX_BYTES) {
             const fd = new FormData();
             fd.append("file", fileToSend);
-            const res = await fetch("/api/proposal-media-library/upload", { method: "POST", body: fd });
+            const res = await fetchWithUploadHints(
+              "/api/proposal-media-library/upload",
+              { method: "POST", body: fd },
+              "portal",
+            );
             const payload = (await res.json().catch(() => ({}))) as { error?: string };
             if (!res.ok) {
               throw new Error(typeof payload.error === "string" ? payload.error : res.statusText);
@@ -361,14 +396,18 @@ function ProposalMediaLibrarySidebar() {
             continue;
           }
 
-          const init = await fetch("/api/proposal-media-library/signed-upload", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              filename: fileToSend.name,
-              contentType: fileToSend.type || "application/octet-stream",
-            }),
-          });
+          const init = await fetchWithUploadHints(
+            "/api/proposal-media-library/signed-upload",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                filename: fileToSend.name,
+                contentType: fileToSend.type || "application/octet-stream",
+              }),
+            },
+            "portal",
+          );
           const payload = (await init.json().catch(() => ({}))) as {
             error?: string;
             uploadUrl?: string;
@@ -381,11 +420,15 @@ function ProposalMediaLibrarySidebar() {
           if (!uploadUrl || !contentType) {
             throw new Error("Invalid upload response from server.");
           }
-          const put = await fetch(uploadUrl, {
-            method: "PUT",
-            body: fileToSend,
-            headers: { "Content-Type": contentType },
-          });
+          const put = await fetchWithUploadHints(
+            uploadUrl,
+            {
+              method: "PUT",
+              body: fileToSend,
+              headers: { "Content-Type": contentType },
+            },
+            "storage",
+          );
           if (!put.ok) {
             throw new Error(
               put.status === 0
