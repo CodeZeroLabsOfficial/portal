@@ -1,12 +1,10 @@
 import { connection } from "next/server";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentSessionUser, isStaff } from "@/lib/auth/server-session";
 import { listProposalTemplatesForOrg } from "@/server/firestore/proposal-templates";
 import { WorkspaceShell } from "@/components/portal/workspace-shell";
 import { ProposalTemplatesListPanel } from "@/components/portal/proposal-templates-list-panel";
 import { NewProposalTemplateButton } from "@/components/proposal/new-proposal-template-button";
-import { Button } from "@/components/ui/button";
 import {
   WORKSPACE_HUB_PAGE_TITLE_CLASS,
   WORKSPACE_PAGE_DESCRIPTION_CLASS,
@@ -45,9 +43,6 @@ export default async function AdminTemplatesHubPage() {
             </p>
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/admin/proposals">Customer proposals</Link>
-            </Button>
             <NewProposalTemplateButton />
           </div>
         </div>
