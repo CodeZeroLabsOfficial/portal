@@ -185,27 +185,18 @@ export function CustomerDetailView({
   const [deletingProposalId, setDeletingProposalId] = React.useState<string | null>(null);
 
   const timeline = React.useMemo(() => {
-    const merged: { id: string; at: number; label: string; sub: string; kind: "activity" | "note" }[] = [];
-    for (const a of activities) {
-      merged.push({
+    // Notes are also written to `customer_activities` (e.g. "Note added"); merging both sources
+    // duplicated every note/call/email on this timeline.
+    return activities
+      .map((a) => ({
         id: `a-${a.id}`,
         at: a.createdAtMs,
         label: a.title,
         sub: a.detail ?? a.type,
-        kind: "activity",
-      });
-    }
-    for (const n of notes) {
-      merged.push({
-        id: `n-${n.id}`,
-        at: n.createdAtMs,
-        label: n.kind === "call" ? "Call" : n.kind === "email" ? "Email" : "Note",
-        sub: n.body.slice(0, 200) + (n.body.length > 200 ? "…" : ""),
-        kind: "note",
-      });
-    }
-    return merged.sort((x, y) => y.at - x.at).slice(0, 24);
-  }, [activities, notes]);
+      }))
+      .sort((x, y) => y.at - x.at)
+      .slice(0, 24);
+  }, [activities]);
 
   async function createProposalFromCustomer() {
     setBusy("proposal");

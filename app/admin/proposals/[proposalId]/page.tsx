@@ -16,10 +16,31 @@ import type { ProposalStatus } from "@/types/proposal";
 const PROPOSAL_STATUS_BADGE_CLASS: Partial<Record<ProposalStatus, string>> = {
   draft: "border-amber-500/40 text-amber-600 dark:text-amber-400",
   sent: "border-sky-500/40 text-sky-600 dark:text-sky-400",
+  viewed: "border-emerald-500/40 text-emerald-600 dark:text-emerald-400",
   accepted: "border-emerald-500/40 text-emerald-600 dark:text-emerald-400",
   declined: "border-red-500/40 text-red-600 dark:text-red-400",
   expired: "border-red-500/40 text-red-600 dark:text-red-400",
 };
+
+/** CRM-facing labels — aligned with customer profile proposal rows (`customer-detail-view`). */
+function proposalDetailsStatusLabel(status: ProposalStatus): string {
+  switch (status) {
+    case "draft":
+      return "Saved";
+    case "sent":
+      return "Live";
+    case "viewed":
+      return "Viewed";
+    case "accepted":
+      return "Accepted";
+    case "declined":
+      return "Declined";
+    case "expired":
+      return "Expired";
+    default:
+      return status;
+  }
+}
 
 interface PageProps {
   params: Promise<{ proposalId: string }>;
@@ -70,9 +91,16 @@ export default async function AdminProposalDetailPage({ params, searchParams }: 
               <dd>
                 <Badge
                   variant="outline"
-                  className={cn("capitalize", PROPOSAL_STATUS_BADGE_CLASS[proposal.status])}
+                  title={
+                    proposal.status === "sent"
+                      ? "Live — public proposal is ready to view; no recorded opens yet."
+                      : proposal.status === "draft"
+                        ? "Draft — saved to CRM, not published yet."
+                        : undefined
+                  }
+                  className={cn(PROPOSAL_STATUS_BADGE_CLASS[proposal.status])}
                 >
-                  {proposal.status}
+                  {proposalDetailsStatusLabel(proposal.status)}
                 </Badge>
               </dd>
             </div>
