@@ -94,9 +94,10 @@ function stageVariantClasses(
 
 interface OpportunityStageProgressProps {
   opportunity: OpportunityRecord;
+  customer: CustomerRecord;
 }
 
-function OpportunityStageProgress({ opportunity }: OpportunityStageProgressProps) {
+function OpportunityStageProgress({ opportunity, customer }: OpportunityStageProgressProps) {
   const { moveStage, pendingId } = useOpportunityStageMutation();
   const busy = pendingId === opportunity.id;
   const currentIndex = OPPORTUNITY_STAGES.indexOf(opportunity.stage);
@@ -110,62 +111,118 @@ function OpportunityStageProgress({ opportunity }: OpportunityStageProgressProps
     : null;
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-border/70 bg-card/60 px-4 py-4 shadow-sm sm:px-6">
-      <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            Start
-          </p>
-          {startDate ? (
-            <p className="text-[13px] tabular-nums text-foreground">{startDate}</p>
-          ) : (
-            <p className="text-[13px] text-muted-foreground">—</p>
-          )}
-        </div>
-        <div className="text-right">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            Current stage
-          </p>
-          <p className="text-[13px] font-medium text-foreground">
-            {opportunityStageLabel(opportunity.stage)}
-          </p>
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="overflow-hidden rounded-2xl border border-border/70 bg-card/60 shadow-sm backdrop-blur-sm"
+    >
+      <div className="border-b border-border/60 bg-gradient-to-br from-card via-card to-muted/20 px-4 py-5 sm:px-6 md:px-8 md:py-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div className="min-w-0 space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className={WORKSPACE_DETAIL_PAGE_TITLE_CLASS}>{opportunity.name}</h1>
+              <Badge variant="outline" className="font-normal">
+                {opportunityStageLabel(opportunity.stage)}
+              </Badge>
+            </div>
+            <div
+              className={cn(
+                WORKSPACE_PAGE_DESCRIPTION_STACK_CLASS,
+                "flex flex-wrap items-center gap-x-3 gap-y-1",
+              )}
+            >
+              <Link href={`/admin/customers/${customer.id}`} className="font-medium text-primary hover:underline">
+                {customer.name || customer.email}
+              </Link>
+              {customer.phone ? (
+                <>
+                  <span aria-hidden className="text-muted-foreground/60">
+                    ·
+                  </span>
+                  <a href={`tel:${customer.phone}`} className="hover:text-foreground hover:underline">
+                    {customer.phone}
+                  </a>
+                </>
+              ) : null}
+              {customer.email ? (
+                <>
+                  <span aria-hidden className="text-muted-foreground/60">
+                    ·
+                  </span>
+                  <a href={`mailto:${customer.email}`} className="hover:text-foreground hover:underline">
+                    {customer.email}
+                  </a>
+                </>
+              ) : null}
+            </div>
+            {typeof opportunity.amountMinor === "number" ? (
+              <p className="text-lg tabular-nums text-foreground">
+                {(opportunity.amountMinor / 100).toLocaleString(undefined, {
+                  style: "currency",
+                  currency: opportunity.currency.toUpperCase(),
+                })}
+              </p>
+            ) : null}
+          </div>
         </div>
       </div>
 
-      <div className="-mx-4 flex items-stretch overflow-x-auto px-4 pb-1 pt-1 sm:-mx-6 sm:px-6">
-        {OPPORTUNITY_STAGES.map((stage, i) => {
-          const active = stage === opportunity.stage;
-          const completed = i < currentIndex;
-          const variant: "active" | "completed" | "upcoming" = active
-            ? "active"
-            : completed
-              ? "completed"
-              : "upcoming";
-          return (
-            <button
-              key={stage}
-              type="button"
-              disabled={busy || active}
-              onClick={() => {
-                if (stage !== opportunity.stage) void moveStage(opportunity.id, stage);
-              }}
-              aria-current={active ? "step" : undefined}
-              aria-label={`Move stage to ${opportunityStageLabel(stage)}`}
-              className={cn(
-                "relative h-10 shrink-0 whitespace-nowrap px-6 text-[12px] font-semibold transition-colors",
-                "min-w-[140px] sm:min-w-[160px]",
-                i === 0 ? CHEVRON_CLIP_FIRST : cn("-ml-[14px]", CHEVRON_CLIP),
-                stageVariantClasses(stage, variant),
-                !active && !busy && "hover:brightness-110",
-                busy && "opacity-60",
-              )}
-            >
-              {opportunityStageLabel(stage)}
-            </button>
-          );
-        })}
+      <div className="px-4 py-4 sm:px-6 md:px-8">
+        <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Start
+            </p>
+            {startDate ? (
+              <p className="text-[13px] tabular-nums text-foreground">{startDate}</p>
+            ) : (
+              <p className="text-[13px] text-muted-foreground">—</p>
+            )}
+          </div>
+          <div className="text-right">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Current stage
+            </p>
+            <p className="text-[13px] font-medium text-foreground">
+              {opportunityStageLabel(opportunity.stage)}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex w-full min-w-0 items-stretch pb-1 pt-1">
+          {OPPORTUNITY_STAGES.map((stage, i) => {
+            const active = stage === opportunity.stage;
+            const completed = i < currentIndex;
+            const variant: "active" | "completed" | "upcoming" = active
+              ? "active"
+              : completed
+                ? "completed"
+                : "upcoming";
+            return (
+              <button
+                key={stage}
+                type="button"
+                disabled={busy || active}
+                onClick={() => {
+                  if (stage !== opportunity.stage) void moveStage(opportunity.id, stage);
+                }}
+                aria-current={active ? "step" : undefined}
+                aria-label={`Move stage to ${opportunityStageLabel(stage)}`}
+                className={cn(
+                  "relative flex min-h-10 min-w-0 flex-1 items-center justify-center px-1 text-center text-[11px] font-semibold leading-tight transition-colors sm:px-2 sm:text-[12px] md:px-4",
+                  i === 0 ? CHEVRON_CLIP_FIRST : cn("-ml-[14px]", CHEVRON_CLIP),
+                  stageVariantClasses(stage, variant),
+                  !active && !busy && "hover:brightness-110",
+                  busy && "opacity-60",
+                )}
+              >
+                {opportunityStageLabel(stage)}
+              </button>
+            );
+          })}
+        </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -473,53 +530,7 @@ export function OpportunityDetailView({
         </Button>
       </div>
 
-      <OpportunityStageProgress opportunity={opportunity} />
-
-      <motion.header
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="overflow-hidden rounded-2xl border border-border/80 bg-gradient-to-br from-card via-card to-muted/20 p-6 shadow-sm backdrop-blur-sm md:p-8"
-      >
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div className="min-w-0 space-y-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className={WORKSPACE_DETAIL_PAGE_TITLE_CLASS}>{opportunity.name}</h1>
-              <Badge variant="outline" className="font-normal">
-                {opportunityStageLabel(opportunity.stage)}
-              </Badge>
-            </div>
-            <div className={cn(WORKSPACE_PAGE_DESCRIPTION_STACK_CLASS, "flex flex-wrap items-center gap-x-3 gap-y-1")}>
-              <Link href={`/admin/customers/${customer.id}`} className="font-medium text-primary hover:underline">
-                {customer.name || customer.email}
-              </Link>
-              {customer.phone ? (
-                <>
-                  <span aria-hidden className="text-muted-foreground/60">·</span>
-                  <a href={`tel:${customer.phone}`} className="hover:text-foreground hover:underline">
-                    {customer.phone}
-                  </a>
-                </>
-              ) : null}
-              {customer.email ? (
-                <>
-                  <span aria-hidden className="text-muted-foreground/60">·</span>
-                  <a href={`mailto:${customer.email}`} className="hover:text-foreground hover:underline">
-                    {customer.email}
-                  </a>
-                </>
-              ) : null}
-            </div>
-            {typeof opportunity.amountMinor === "number" ? (
-              <p className="text-lg tabular-nums text-foreground">
-                {(opportunity.amountMinor / 100).toLocaleString(undefined, {
-                  style: "currency",
-                  currency: opportunity.currency.toUpperCase(),
-                })}
-              </p>
-            ) : null}
-          </div>
-        </div>
-      </motion.header>
+      <OpportunityStageProgress opportunity={opportunity} customer={customer} />
 
       {opportunity.notes?.trim() ? (
         <Card className="border-border/80 bg-card/60">
