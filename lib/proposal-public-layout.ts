@@ -8,6 +8,13 @@
 export const PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES =
   "mx-auto w-full max-w-5xl px-6 sm:px-12 lg:px-20 xl:px-28";
 
+/**
+ * Proposal *editor* section/packages backdrop canvas — matches the width of other blocks in the
+ * builder (no `max-w-5xl` cap; light horizontal padding only).
+ */
+export const PROPOSAL_EDITOR_BLOCK_CANVAS_INNER_CLASSES =
+  "mx-auto w-full min-w-0 max-w-none px-3 sm:px-4 md:px-6";
+
 export const PROPOSAL_PUBLIC_SHELL_CLASSES =
   "proposal-print-root w-full py-12 sm:py-14 print:py-8";
 

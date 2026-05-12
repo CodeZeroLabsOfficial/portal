@@ -103,6 +103,7 @@ import {
 } from "@/lib/proposal-columns";
 import {
   PROPOSAL_DOCUMENT_COLUMNS_ROW_GAP_CLASSES,
+  PROPOSAL_EDITOR_BLOCK_CANVAS_INNER_CLASSES,
   PROPOSAL_PUBLIC_DOCUMENT_OUTER_CLASSES,
   PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES,
 } from "@/lib/proposal-public-layout";
@@ -1488,7 +1489,7 @@ function BlockFields({
       const resolvedBg = resolveSectionBackground(b.background);
       const backdropOn = resolvedBg.active;
       const inner = (
-        <div className={cn(!seamlessSection && PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES)}>
+        <div className={cn(!seamlessSection && PROPOSAL_EDITOR_BLOCK_CANVAS_INNER_CLASSES)}>
           <PackagesInlineEditor block={b} onChange={patch} />
         </div>
       );

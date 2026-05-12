@@ -8,7 +8,7 @@ import {
   type ResolvedSectionBackground,
 } from "@/lib/section-background";
 import type { SectionBackground } from "@/types/proposal";
-import { PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES } from "@/lib/proposal-public-layout";
+import { PROPOSAL_EDITOR_BLOCK_CANVAS_INNER_CLASSES } from "@/lib/proposal-public-layout";
 import { ProposalSectionEditorChromeContext } from "@/components/proposal/proposal-section-editor-chrome";
 
 /**
@@ -84,7 +84,7 @@ export function ProposalSectionShell({
 
       <div className={cn("relative z-10", gutter)}>
         {editorCanvas ? (
-          <div className={PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES}>{inner}</div>
+          <div className={PROPOSAL_EDITOR_BLOCK_CANVAS_INNER_CLASSES}>{inner}</div>
         ) : (
           inner
         )}
