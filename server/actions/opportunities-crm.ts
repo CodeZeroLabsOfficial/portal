@@ -13,7 +13,7 @@ import type { OpportunityStage } from "@/types/opportunity";
 import {
   appendOpportunityActivity,
   appendOpportunityNote,
-  convertLeadToContactWithOpportunity,
+  convertLeadToContact,
   deleteOpportunityForStaff,
   updateOpportunityStage,
 } from "@/server/firestore/crm-opportunities";
@@ -25,16 +25,11 @@ const opportunityStageZodEnum = OPPORTUNITY_STAGES as unknown as [
 
 const convertLeadSchema = z.object({
   customerId: z.string().min(1),
-  opportunityName: z.string().trim().min(1).max(240),
-  initialStage: z.enum(opportunityStageZodEnum).optional(),
-  amountMinor: z.number().finite().nonnegative().optional(),
-  currency: z.string().trim().length(3).optional(),
-  notes: z.string().trim().max(4000).optional(),
 });
 
 export async function convertLeadToContactAction(
   raw: unknown,
-): Promise<{ ok: true; customerId: string; opportunityId: string } | { ok: false; message: string }> {
+): Promise<{ ok: true; customerId: string } | { ok: false; message: string }> {
   const user = await requireStaffSession();
   if (!user) {
     return { ok: false, message: "You need an admin or team session to convert leads." };
@@ -45,13 +40,7 @@ export async function convertLeadToContactAction(
     return { ok: false, message: first ? `${first.path.join(".")}: ${first.message}` : "Invalid input" };
   }
 
-  const result = await convertLeadToContactWithOpportunity(user, parsed.data.customerId, {
-    opportunityName: parsed.data.opportunityName,
-    initialStage: parsed.data.initialStage,
-    amountMinor: parsed.data.amountMinor,
-    currency: parsed.data.currency,
-    notes: parsed.data.notes,
-  });
+  const result = await convertLeadToContact(user, parsed.data.customerId);
 
   if (!result.ok) return result;
 
@@ -59,7 +48,6 @@ export async function convertLeadToContactAction(
   revalidatePath(`/admin/customers/${result.customerId}`);
   revalidatePath("/admin/accounts", "layout");
   revalidatePath("/admin/opportunities");
-  revalidatePath(`/admin/opportunities/${result.opportunityId}`);
   return result;
 }
 

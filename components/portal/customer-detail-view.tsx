@@ -221,23 +221,13 @@ export function CustomerDetailView({
   }
 
   async function convertLead() {
-    const opportunityName = customer.company?.trim();
-    if (!opportunityName) {
-      window.alert("Set a company name on this profile before converting the lead.");
-      return;
-    }
     setBusy("convert-lead");
     try {
-      const res = await convertLeadToContactAction({
-        customerId: customer.id,
-        opportunityName,
-        initialStage: "discovery",
-      });
+      const res = await convertLeadToContactAction({ customerId: customer.id });
       if (!res.ok) {
         window.alert(res.message);
         return;
       }
-      router.push(`/admin/opportunities/${res.opportunityId}`);
       router.refresh();
     } finally {
       setBusy(null);

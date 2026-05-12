@@ -209,35 +209,16 @@ export async function getOpportunityForStaff(
   return parseOpportunity(snap.id, snap.data() as Record<string, unknown>);
 }
 
-export interface ConvertLeadInput {
-  opportunityName: string;
-  /** Initial pipeline stage for the new opportunity (default `discovery`). */
-  initialStage?: import("@/types/opportunity").OpportunityStage;
-  amountMinor?: number;
-  currency?: string;
-  notes?: string;
-}
-
-export type ConvertLeadResult =
-  | { ok: true; customerId: string; opportunityId: string }
-  | { ok: false; message: string };
+export type ConvertLeadResult = { ok: true; customerId: string } | { ok: false; message: string };
 
 /**
- * Promotes `crmType` from lead → contact and creates a linked opportunity (single Firestore transaction).
+ * Promotes `crmType` from lead → contact and deletes every pipeline opportunity linked to this customer
+ * (including the auto-created `lead_in` card from lead intake).
  */
-export async function convertLeadToContactWithOpportunity(
-  user: PortalUser,
-  customerId: string,
-  input: ConvertLeadInput,
-): Promise<ConvertLeadResult> {
+export async function convertLeadToContact(user: PortalUser, customerId: string): Promise<ConvertLeadResult> {
   const db = getFirebaseAdminFirestore();
   if (!db || !isStaff(user)) {
     return { ok: false, message: "CRM is only available to admin or team members." };
-  }
-
-  const name = input.opportunityName.trim();
-  if (!name) {
-    return { ok: false, message: "Opportunity name is required." };
   }
 
   const customerRef = db.collection(COLLECTIONS.customers).doc(customerId);
@@ -246,17 +227,17 @@ export async function convertLeadToContactWithOpportunity(
     return { ok: false, message: "Customer not found." };
   }
   const customerData = customerSnap.data() as Record<string, unknown>;
-  const crmType = customerData.crmType === "lead" ? "lead" : "contact";
-  if (crmType !== "lead") {
+  if (customerData.crmType !== "lead") {
     return { ok: false, message: "This profile is already a contact." };
   }
 
-  const customFieldsSnapshot = asStringStringMap(customerData.customFields);
+  const detailLabel =
+    asString(customerData.company)?.trim() ||
+    asString(customerData.name)?.trim() ||
+    asString(customerData.email)?.trim() ||
+    "Lead";
 
-  const orgId = asString(customerData.organizationId) ?? user.organizationId ?? undefined;
-  const initialStage = input.initialStage ?? "discovery";
-
-  let opportunityIdResult = "";
+  let opportunityDocIds: string[] = [];
 
   try {
     await db.runTransaction(async (tx) => {
@@ -269,57 +250,46 @@ export async function convertLeadToContactWithOpportunity(
         throw new Error("Already converted.");
       }
 
+      const oppsQuery = db.collection(COLLECTIONS.opportunities).where("customerId", "==", customerId).limit(500);
+      const oppsSnap = await tx.get(oppsQuery);
+      if (oppsSnap.size >= 500) {
+        throw new Error("Too many linked opportunities to convert automatically. Delete some first.");
+      }
+
+      opportunityDocIds = oppsSnap.docs.map((d) => d.id);
+
       tx.update(customerRef, {
         crmType: "contact",
         updatedAt: FieldValue.serverTimestamp(),
       });
 
-      const oppRef = db.collection(COLLECTIONS.opportunities).doc();
-      opportunityIdResult = oppRef.id;
-
-      const now = Timestamp.now();
-      const payload: Record<string, unknown> = {
-        customerId,
-        name,
-        stage: initialStage,
-        customFieldsSnapshot,
-        currency: (input.currency ?? "aud").toLowerCase(),
-        createdAt: now,
-        updatedAt: now,
-        createdByUid: user.uid,
-      };
-      if (typeof input.amountMinor === "number" && Number.isFinite(input.amountMinor)) {
-        payload.amountMinor = Math.round(input.amountMinor);
+      for (const doc of oppsSnap.docs) {
+        tx.delete(doc.ref);
       }
-      if (input.notes?.trim()) payload.notes = input.notes.trim();
-      if (orgId) payload.organizationId = orgId;
-
-      tx.set(oppRef, payload);
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Conversion failed.";
     return { ok: false, message };
   }
 
+  await Promise.all(
+    opportunityDocIds.flatMap((id) => [
+      deleteSubcollectionForOpportunity(db, COLLECTIONS.opportunityNotes, id),
+      deleteSubcollectionForOpportunity(db, COLLECTIONS.opportunityActivities, id),
+    ]),
+  );
+
   const activityAt = Timestamp.now();
   await db.collection(COLLECTIONS.customerActivities).add({
     customerId,
     type: "lead_converted",
     title: "Lead converted to contact",
-    detail: name,
+    detail: `${detailLabel} — removed from pipeline`,
     actorUid: user.uid,
     createdAt: activityAt,
   });
-  await db.collection(COLLECTIONS.customerActivities).add({
-    customerId,
-    type: "opportunity_created",
-    title: "Opportunity created",
-    detail: name,
-    actorUid: user.uid,
-    createdAt: Timestamp.fromMillis(activityAt.toMillis() + 1),
-  });
 
-  return { ok: true, customerId, opportunityId: opportunityIdResult };
+  return { ok: true, customerId };
 }
 
 export async function updateOpportunityStage(
