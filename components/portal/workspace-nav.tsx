@@ -39,9 +39,9 @@ const adminNavIcons: Record<(typeof ADMIN_PORTAL_NAV)[number]["id"], LucideIcon>
   customers: Users,
   opportunities: Columns3,
   proposals: FileText,
-  Templates: LayoutTemplate,
   subscriptions: Repeat,
   tasks: ListTodo,
+  Templates: LayoutTemplate,
   reports: BarChart3,
 };
 
