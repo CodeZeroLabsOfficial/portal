@@ -249,7 +249,7 @@ export function ProposalSplashBlockCanvas({
         editorChrome
           ? "rounded-xl shadow-md ring-1 ring-black/[0.08] dark:ring-white/10"
           : publicEdge
-            ? "rounded-none border-y border-black/[0.07] shadow-none ring-0 dark:border-white/[0.08]"
+            ? "rounded-none border-t border-black/[0.07] shadow-none ring-0 dark:border-white/[0.08]"
             : "rounded-xl ring-1 ring-black/[0.08] dark:ring-white/10",
         className,
       )}
