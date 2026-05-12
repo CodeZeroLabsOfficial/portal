@@ -1,0 +1,194 @@
+"use client";
+
+import * as React from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { AnimatePresence, motion } from "framer-motion";
+import { Pencil, Search, SquareArrowOutUpRight } from "lucide-react";
+import type { ProposalTemplateRecord } from "@/types/proposal-template";
+import { CloneProposalTemplateButton } from "@/components/proposal/clone-proposal-template-button";
+import { NewProposalTemplateButton } from "@/components/proposal/new-proposal-template-button";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  WORKSPACE_HUB_PAGE_TITLE_CLASS,
+  WORKSPACE_PAGE_DESCRIPTION_CLASS,
+} from "@/lib/workspace-page-typography";
+
+export interface ProposalTemplatesListPanelProps {
+  templates: ProposalTemplateRecord[];
+}
+
+function lastEditedMs(t: ProposalTemplateRecord): number {
+  return (typeof t.updatedAtMs === "number" && t.updatedAtMs > 0 ? t.updatedAtMs : t.createdAtMs) || 0;
+}
+
+function formatLastEdited(ms: number): string {
+  if (!ms) return "—";
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(ms));
+  } catch {
+    return new Date(ms).toLocaleString();
+  }
+}
+
+export function ProposalTemplatesListPanel({ templates }: ProposalTemplatesListPanelProps) {
+  const router = useRouter();
+
+  React.useEffect(() => {
+    router.refresh();
+  }, [router]);
+
+  const [query, setQuery] = React.useState("");
+
+  const sorted = React.useMemo(
+    () => [...templates].sort((a, b) => lastEditedMs(b) - lastEditedMs(a)),
+    [templates],
+  );
+
+  const filtered = React.useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return sorted;
+    return sorted.filter((t) => {
+      const desc = (t.description ?? "").trim();
+      const hay = [t.name, desc, formatLastEdited(lastEditedMs(t))].join(" ").toLowerCase();
+      return hay.includes(q);
+    });
+  }, [sorted, query]);
+
+  return (
+    <div className="space-y-8">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25 }}
+        >
+          <h1 className={WORKSPACE_HUB_PAGE_TITLE_CLASS}>Proposals</h1>
+          <p className={WORKSPACE_PAGE_DESCRIPTION_CLASS}>
+            Create, send, and track dynamic digital proposals. Reusable templates speed up new proposals from the CRM.
+          </p>
+        </motion.div>
+        <NewProposalTemplateButton />
+      </div>
+
+      <section className="overflow-hidden rounded-xl border border-border/80 bg-card/80 shadow-sm backdrop-blur-sm">
+        <div className="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <h2 className="shrink-0 text-sm font-semibold text-foreground">Templates</h2>
+          <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-2">
+            <div className="relative min-w-0 flex-1 sm:max-w-xs md:max-w-md">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden
+              />
+              <Input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search name, description, or date…"
+                className="h-9 rounded-full border-border/80 bg-background/60 pl-9 text-[14px] text-foreground placeholder:text-muted-foreground"
+                aria-label="Search templates"
+              />
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-9 w-9 shrink-0 border-border/80 bg-card/80 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+              aria-label="Export (soon)"
+              disabled
+              title="Export coming soon"
+            >
+              <SquareArrowOutUpRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[720px] text-left text-[13px]">
+            <thead>
+              <tr className="border-b border-border text-muted-foreground">
+                <th className="px-4 py-2.5 font-medium">Template name</th>
+                <th className="min-w-[200px] px-4 py-2.5 font-medium">Description</th>
+                <th className="min-w-[180px] px-4 py-2.5 font-medium">Last edited</th>
+                <th className="w-[88px] px-2 py-2.5 text-center font-medium">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="text-foreground">
+              {sorted.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-4 py-10 text-center text-sm text-muted-foreground">
+                    <p className="mx-auto max-w-md leading-relaxed">
+                      No templates yet. Use <span className="font-medium text-foreground">New template</span> to create
+                      one for proposals from the CRM.
+                    </p>
+                  </td>
+                </tr>
+              ) : filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-4 py-10 text-center text-sm text-muted-foreground">
+                    No templates match your search.
+                  </td>
+                </tr>
+              ) : (
+                <AnimatePresence initial={false}>
+                  {filtered.map((t, index) => {
+                    const edited = lastEditedMs(t);
+                    const desc = (t.description ?? "").trim();
+                    return (
+                      <motion.tr
+                        key={t.id}
+                        layout
+                        initial={{ opacity: 0, y: 4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.18, delay: index * 0.012 }}
+                        className="border-b border-border/60 last:border-0"
+                      >
+                        <td className="max-w-[280px] px-4 py-3 align-middle">
+                          <Link
+                            href={`/admin/proposals/templates/${t.id}`}
+                            className="line-clamp-2 font-medium text-foreground underline-offset-4 hover:underline"
+                          >
+                            {t.name}
+                          </Link>
+                        </td>
+                        <td className="max-w-[320px] px-4 py-3 align-middle text-muted-foreground">
+                          {desc ? (
+                            <span className="line-clamp-2">{desc}</span>
+                          ) : (
+                            <span className="italic text-muted-foreground/80">No description</span>
+                          )}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 align-middle text-muted-foreground tabular-nums">
+                          <time dateTime={edited > 0 ? new Date(edited).toISOString() : undefined}>
+                            {formatLastEdited(edited)}
+                          </time>
+                        </td>
+                        <td className="px-2 py-3 align-middle">
+                          <div className="flex items-center justify-center gap-1">
+                            <Button variant="outline" size="icon" className="h-8 w-8" asChild>
+                              <Link
+                                href={`/admin/proposals/templates/${t.id}`}
+                                aria-label={`Edit template “${t.name}”`}
+                              >
+                                <Pencil className="h-4 w-4" aria-hidden />
+                              </Link>
+                            </Button>
+                            <CloneProposalTemplateButton templateId={t.id} iconOnly />
+                          </div>
+                        </td>
+                      </motion.tr>
+                    );
+                  })}
+                </AnimatePresence>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  );
+}
