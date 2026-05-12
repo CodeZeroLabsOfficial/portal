@@ -3,6 +3,7 @@
 import * as React from "react";
 import type {
   AccordionBlock,
+  PackagesBlock,
   ProposalBlock,
   ProposalBranding,
   ProposalContentBlock,
@@ -37,6 +38,7 @@ import { PackagesBlockPublic } from "@/components/proposal/packages-block-public
 import { ProposalAccordionExpandSurface } from "@/components/proposal/proposal-accordion-expand-surface";
 import { ProposalSectionShell } from "@/components/proposal/proposal-section-shell";
 import { ProposalSplashBlockCanvas } from "@/components/proposal/proposal-splash-block";
+import { isSectionBackgroundActive } from "@/lib/section-background";
 
 export interface ProposalDocumentViewProps {
   document: ProposalDocument;
@@ -286,15 +288,32 @@ function BlockView({
     }
     case "pricing":
       return <PricingBlockPublic block={block} />;
-    case "packages":
-      return (
+    case "packages": {
+      const pb = block as PackagesBlock;
+      const packagesInner = (
         <PackagesBlockPublic
-          block={block}
+          block={pb}
           shareToken={shareToken ?? ""}
-          initialSelection={publicSelections?.[block.id]}
+          initialSelection={publicSelections?.[pb.id]}
           interactive={Boolean(shareToken)}
         />
       );
+      const backdropActive = isSectionBackgroundActive(pb.background);
+      const body = (
+        <div className={cn(PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES, PROPOSAL_DOCUMENT_BLOCK_INNER_PAD_CLASSES)}>
+          {packagesInner}
+        </div>
+      );
+      return (
+        <ProposalSectionShell
+          background={pb.background}
+          variant="viewer"
+          viewportBleed={Boolean(viewportSectionBleed)}
+        >
+          {backdropActive ? body : packagesInner}
+        </ProposalSectionShell>
+      );
+    }
     case "form":
       return (
         <div className="rounded-xl border border-border/70 bg-card p-4 shadow-sm">
@@ -461,6 +480,11 @@ export function ProposalDocumentView({
         <div className={cn("w-full", PROPOSAL_DOCUMENT_ROOT_STACK_GAP_CLASSES)}>
           {document.blocks.map((block) => {
             const splashRootBand = Boolean(viewportSectionBleed && block.type === "splash");
+            const packagesRootBand = Boolean(
+              viewportSectionBleed &&
+                block.type === "packages" &&
+                isSectionBackgroundActive((block as PackagesBlock).background),
+            );
             const child = (
               <BlockView
                 block={block}
@@ -476,7 +500,7 @@ export function ProposalDocumentView({
                 }
               />
             );
-            if (block.type === "section" || splashRootBand) {
+            if (block.type === "section" || splashRootBand || packagesRootBand) {
               return (
                 <section key={block.id} className="w-full shrink-0">
                   {child}

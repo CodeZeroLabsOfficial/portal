@@ -245,6 +245,17 @@ function normalizePackagesBlockInput(raw: unknown): unknown {
   if (o.addonsSectionEnabled === true) block.addonsSectionEnabled = true;
   if (o.addonsSectionEnabled === false) block.addonsSectionEnabled = false;
 
+  if (o.background && typeof o.background === "object") {
+    const bgSafe = sectionBackgroundSchema.safeParse(o.background);
+    if (bgSafe.success) {
+      block.background = bgSafe.data;
+    } else {
+      delete block.background;
+    }
+  } else {
+    delete block.background;
+  }
+
   return block;
 }
 
@@ -276,6 +287,7 @@ const packagesBlockSchema = z.object({
   addonQuantityUnitLabel: z.string().min(1).max(40).optional(),
   totalSectionLabel: z.string().max(120).optional(),
   addonsSectionEnabled: z.boolean().optional(),
+  background: sectionBackgroundSchema.optional(),
 });
 
 const formFieldSchema = z.object({

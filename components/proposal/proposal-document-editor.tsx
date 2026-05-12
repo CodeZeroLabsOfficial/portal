@@ -842,6 +842,24 @@ function ColumnsBlockFields({
                   Remove
                 </Button>
               </div>
+              {child.type === "packages" ? (
+                <div className="flex flex-wrap items-center gap-2 border-b border-border/30 pb-2">
+                  <span className="text-[11px] font-medium text-muted-foreground">Plans background</span>
+                  <ProposalSectionBackgroundPicker
+                    background={(child as PackagesBlock).background}
+                    onChange={(next) => {
+                      const p = child as PackagesBlock;
+                      if (!next) {
+                        const { background: _b, ...rest } = p;
+                        void _b;
+                        updateChild(child.id, rest as ProposalColumnChildBlock);
+                      } else {
+                        updateChild(child.id, { ...p, background: next } as ProposalColumnChildBlock);
+                      }
+                    }}
+                  />
+                </div>
+              ) : null}
               <NestedColumnBlockFields block={child} onChange={(n) => updateChild(child.id, n)} />
             </div>
           ))
@@ -1178,6 +1196,20 @@ function SectionBlockFields({
                                 updateChild(child.id, next as ProposalContentBlock)
                               }
                             />
+                          ) : child.type === "packages" ? (
+                            <ProposalSectionBackgroundPicker
+                              background={(child as PackagesBlock).background}
+                              onChange={(next) => {
+                                const p = child as PackagesBlock;
+                                if (!next) {
+                                  const { background: _b, ...rest } = p;
+                                  void _b;
+                                  updateChild(child.id, rest as ProposalContentBlock);
+                                } else {
+                                  updateChild(child.id, { ...p, background: next } as ProposalContentBlock);
+                                }
+                              }}
+                            />
                           ) : undefined
                         }
                         leadingSlot={dragHandle}
@@ -1453,10 +1485,21 @@ function BlockFields({
     }
     case "packages": {
       const b = block as PackagesBlock;
-      return (
+      const resolvedBg = resolveSectionBackground(b.background);
+      const backdropOn = resolvedBg.active;
+      const inner = (
         <div className={cn(!seamlessSection && PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES)}>
           <PackagesInlineEditor block={b} onChange={patch} />
         </div>
+      );
+      return (
+        <ProposalSectionShell background={b.background} variant="editor">
+          {backdropOn ? inner : (
+            <div className="rounded-xl border border-dashed border-border/65 bg-muted/15 px-1 py-1 sm:bg-muted/[0.35]">
+              {inner}
+            </div>
+          )}
+        </ProposalSectionShell>
       );
     }
     case "form": {
@@ -2020,6 +2063,20 @@ export function ProposalDocumentEditor({
     );
   }
 
+  function patchPackagesBackdrop(id: string, nextBackdrop: SectionBackground | undefined) {
+    setBlocks((prev) =>
+      prev.map((b) => {
+        if (b.id !== id || b.type !== "packages") return b;
+        if (!nextBackdrop) {
+          const { background: _drop, ...rest } = b;
+          void _drop;
+          return rest as ProposalBlock;
+        }
+        return { ...b, background: nextBackdrop } as ProposalBlock;
+      }),
+    );
+  }
+
   function removeBlock(id: string) {
     setBlocks((prev) => prev.filter((b) => b.id !== id));
     setSelectedBlockId((current) => (current === id ? null : current));
@@ -2438,6 +2495,11 @@ export function ProposalDocumentEditor({
                                   <ProposalSectionBackgroundPicker
                                     background={block.background}
                                     onChange={(next) => patchSectionBackdrop(block.id, next)}
+                                  />
+                                ) : block.type === "packages" ? (
+                                  <ProposalSectionBackgroundPicker
+                                    background={(block as PackagesBlock).background}
+                                    onChange={(next) => patchPackagesBackdrop(block.id, next)}
                                   />
                                 ) : block.type === "splash" ? (
                                   <ProposalSplashBackgroundPicker

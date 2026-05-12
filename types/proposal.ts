@@ -176,6 +176,8 @@ export interface PackageTier {
 
 export interface PackagesBlock extends ProposalBlockBase {
   type: "packages";
+  /** Optional full-bleed backdrop (same options as Section blocks). */
+  background?: SectionBackground;
   currency: string;
   title?: string;
   /** Toggle label for the 12-month term (default in UI: “12 months”). */

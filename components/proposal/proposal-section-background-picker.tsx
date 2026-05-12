@@ -65,8 +65,8 @@ export function ProposalSectionBackgroundPicker({
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          title="Section background"
-          aria-label="Section background"
+          title="Background"
+          aria-label="Background"
           className={cn(
             "relative inline-flex h-8 w-8 items-center justify-center rounded-full ring-2 transition-colors focus:outline-none focus-visible:ring-2",
             elevated
