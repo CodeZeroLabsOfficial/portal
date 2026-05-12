@@ -8,6 +8,7 @@ import {
   WORKSPACE_HUB_PAGE_TITLE_CLASS,
   WORKSPACE_PAGE_DESCRIPTION_CLASS,
 } from "@/lib/workspace-page-typography";
+import { CloneProposalTemplateButton } from "@/components/proposal/clone-proposal-template-button";
 import { NewProposalTemplateButton } from "@/components/proposal/new-proposal-template-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -80,6 +81,7 @@ export default async function AdminProposalsHubPage() {
                         Edit
                       </Link>
                     </Button>
+                    <CloneProposalTemplateButton templateId={t.id} />
                   </CardContent>
                 </Card>
               </li>

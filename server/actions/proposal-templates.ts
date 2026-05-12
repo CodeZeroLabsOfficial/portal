@@ -56,6 +56,57 @@ export async function createProposalTemplateAction(): Promise<
   return { ok: true, templateId: ref.id };
 }
 
+const TEMPLATE_NAME_MAX = 200;
+const CLONE_NAME_SUFFIX = " (copy)";
+
+export async function cloneProposalTemplateAction(
+  sourceTemplateId: string,
+): Promise<{ ok: true; templateId: string } | { ok: false; message: string }> {
+  const user = await requireStaffSession();
+  if (!user) return { ok: false, message: "Unauthorized." };
+
+  const source = await getProposalTemplateForStaff(user, sourceTemplateId);
+  if (!source) return { ok: false, message: "Template not found." };
+
+  const db = getFirebaseAdminFirestore();
+  if (!db) return { ok: false, message: "Database unavailable." };
+
+  const baseName = (source.name || "Untitled template").trim() || "Untitled template";
+  const maxBaseLen = Math.max(1, TEMPLATE_NAME_MAX - CLONE_NAME_SUFFIX.length);
+  const name =
+    baseName.length + CLONE_NAME_SUFFIX.length <= TEMPLATE_NAME_MAX
+      ? `${baseName}${CLONE_NAME_SUFFIX}`
+      : `${baseName.slice(0, maxBaseLen)}${CLONE_NAME_SUFFIX}`;
+
+  const now = Date.now();
+  const ref = db.collection(COLLECTIONS.proposalTemplates).doc();
+  const payload: Record<string, unknown> = {
+    organizationId: user.organizationId ?? "default",
+    createdByUid: user.uid,
+    name,
+    description: source.description?.trim() ? source.description.trim() : "",
+    document: encodeProposalDocumentForFirestore(source.document),
+    createdAtMs: now,
+    updatedAtMs: now,
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+  if (source.branding && Object.keys(source.branding).length > 0) {
+    payload.branding = source.branding;
+  }
+
+  const write = await runAdminWrite(
+    "proposal_template_clone_failed",
+    { sourceTemplateId, templateId: ref.id, uid: user.uid },
+    "Could not clone the template.",
+    () => ref.set(payload),
+  );
+  if (!write.ok) return write;
+
+  revalidatePath("/admin/proposals");
+  return { ok: true, templateId: ref.id };
+}
+
 export async function saveProposalTemplateAction(
   raw: unknown,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
