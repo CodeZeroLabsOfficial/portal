@@ -92,6 +92,7 @@ export async function saveProposalDocumentAction(
   if (!write.ok) return write;
 
   revalidatePath("/admin");
+  revalidatePath("/admin/proposals");
   revalidatePath(`/admin/proposals/${parsed.data.proposalId}`);
   return { ok: true };
 }
@@ -136,6 +137,7 @@ export async function sendProposalAction(
   }
 
   revalidatePath("/admin");
+  revalidatePath("/admin/proposals");
   revalidatePath(`/admin/proposals/${proposalId}`);
   if (existing.opportunityId) {
     revalidatePath(`/admin/opportunities/${existing.opportunityId}`);

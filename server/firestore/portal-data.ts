@@ -255,6 +255,11 @@ async function listProposalsForUser(user: PortalUser): Promise<ProposalRecord[]>
   return snap.docs.map((doc) => parseProposalRecord(doc.id, doc.data() as Record<string, unknown>));
 }
 
+/** Proposals visible to the current staff user (org-scoped, or author-scoped when no org id). */
+export async function listProposalsForStaffOrg(user: PortalUser): Promise<ProposalRecord[]> {
+  return listProposalsForUser(user);
+}
+
 function parseSupportTicket(id: string, data: Record<string, unknown>): SupportTicketRecord {
   const raw = (asString(data.urgency) ?? asString(data.priority) ?? "medium").toLowerCase();
   let urgency: SupportTicketUrgency = "medium";

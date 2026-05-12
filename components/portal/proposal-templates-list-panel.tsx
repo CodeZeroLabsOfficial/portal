@@ -4,16 +4,12 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Pencil, Search, SquareArrowOutUpRight } from "lucide-react";
+import { ExternalLink, Loader2, Pencil, Search, SquareArrowOutUpRight, Trash2 } from "lucide-react";
 import type { ProposalTemplateRecord } from "@/types/proposal-template";
+import { deleteProposalTemplateAction } from "@/server/actions/proposal-templates";
 import { CloneProposalTemplateButton } from "@/components/proposal/clone-proposal-template-button";
-import { NewProposalTemplateButton } from "@/components/proposal/new-proposal-template-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  WORKSPACE_HUB_PAGE_TITLE_CLASS,
-  WORKSPACE_PAGE_DESCRIPTION_CLASS,
-} from "@/lib/workspace-page-typography";
 
 export interface ProposalTemplatesListPanelProps {
   templates: ProposalTemplateRecord[];
@@ -43,6 +39,22 @@ export function ProposalTemplatesListPanel({ templates }: ProposalTemplatesListP
   }, [router]);
 
   const [query, setQuery] = React.useState("");
+  const [deletingTemplateId, setDeletingTemplateId] = React.useState<string | null>(null);
+
+  async function deleteTemplate(templateId: string, name: string) {
+    if (!window.confirm(`Delete template “${name}”? This cannot be undone.`)) return;
+    setDeletingTemplateId(templateId);
+    try {
+      const res = await deleteProposalTemplateAction(templateId);
+      if (!res.ok) {
+        window.alert(res.message);
+        return;
+      }
+      router.refresh();
+    } finally {
+      setDeletingTemplateId(null);
+    }
+  }
 
   const sorted = React.useMemo(
     () => [...templates].sort((a, b) => lastEditedMs(b) - lastEditedMs(a)),
@@ -60,23 +72,8 @@ export function ProposalTemplatesListPanel({ templates }: ProposalTemplatesListP
   }, [sorted, query]);
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <motion.div
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25 }}
-        >
-          <h1 className={WORKSPACE_HUB_PAGE_TITLE_CLASS}>Proposals</h1>
-          <p className={WORKSPACE_PAGE_DESCRIPTION_CLASS}>
-            Create, send, and track dynamic digital proposals. Reusable templates speed up new proposals from the CRM.
-          </p>
-        </motion.div>
-        <NewProposalTemplateButton />
-      </div>
-
-      <section className="overflow-hidden rounded-xl border border-border/80 bg-card/80 shadow-sm backdrop-blur-sm">
-        <div className="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+    <section className="overflow-hidden rounded-xl border border-border/80 bg-card/80 shadow-sm backdrop-blur-sm">
+      <div className="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <h2 className="shrink-0 text-sm font-semibold text-foreground">Templates</h2>
           <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-2">
             <div className="relative min-w-0 flex-1 sm:max-w-xs md:max-w-md">
@@ -106,14 +103,14 @@ export function ProposalTemplatesListPanel({ templates }: ProposalTemplatesListP
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] text-left text-[13px]">
+      <div className="overflow-x-auto">
+          <table className="w-full min-w-[800px] text-left text-[13px]">
             <thead>
               <tr className="border-b border-border text-muted-foreground">
                 <th className="px-4 py-2.5 font-medium">Template name</th>
                 <th className="min-w-[200px] px-4 py-2.5 font-medium">Description</th>
                 <th className="min-w-[180px] px-4 py-2.5 font-medium">Last edited</th>
-                <th className="w-[88px] px-2 py-2.5 text-center font-medium">Actions</th>
+                <th className="w-[168px] px-2 py-2.5 text-center font-medium">Actions</th>
               </tr>
             </thead>
             <tbody className="text-foreground">
@@ -169,6 +166,22 @@ export function ProposalTemplatesListPanel({ templates }: ProposalTemplatesListP
                         </td>
                         <td className="px-2 py-3 align-middle">
                           <div className="flex items-center justify-center gap-1">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                              disabled={deletingTemplateId === t.id}
+                              aria-label={`Delete template “${t.name}”`}
+                              onClick={() => void deleteTemplate(t.id, t.name)}
+                            >
+                              {deletingTemplateId === t.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                              ) : (
+                                <Trash2 className="h-4 w-4" aria-hidden />
+                              )}
+                            </Button>
+                            <CloneProposalTemplateButton templateId={t.id} iconOnly />
                             <Button variant="outline" size="icon" className="h-8 w-8" asChild>
                               <Link
                                 href={`/admin/proposals/templates/${t.id}`}
@@ -177,7 +190,16 @@ export function ProposalTemplatesListPanel({ templates }: ProposalTemplatesListP
                                 <Pencil className="h-4 w-4" aria-hidden />
                               </Link>
                             </Button>
-                            <CloneProposalTemplateButton templateId={t.id} iconOnly />
+                            <Button variant="outline" size="icon" className="h-8 w-8" asChild>
+                              <Link
+                                href={`/admin/proposals/templates/${t.id}/preview`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                aria-label={`Open public preview for template “${t.name}”`}
+                              >
+                                <ExternalLink className="h-4 w-4" aria-hidden />
+                              </Link>
+                            </Button>
                           </div>
                         </td>
                       </motion.tr>
@@ -187,8 +209,7 @@ export function ProposalTemplatesListPanel({ templates }: ProposalTemplatesListP
               )}
             </tbody>
           </table>
-        </div>
-      </section>
-    </div>
+      </div>
+    </section>
   );
 }

@@ -1,9 +1,16 @@
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { getCurrentSessionUser, isStaff } from "@/lib/auth/server-session";
+import { listProposalsForStaffOrg } from "@/server/firestore/portal-data";
 import { listProposalTemplatesForOrg } from "@/server/firestore/proposal-templates";
 import { WorkspaceShell } from "@/components/portal/workspace-shell";
+import { ProposalsListPanel } from "@/components/portal/proposals-list-panel";
 import { ProposalTemplatesListPanel } from "@/components/portal/proposal-templates-list-panel";
+import { NewProposalTemplateButton } from "@/components/proposal/new-proposal-template-button";
+import {
+  WORKSPACE_HUB_PAGE_TITLE_CLASS,
+  WORKSPACE_PAGE_DESCRIPTION_CLASS,
+} from "@/lib/workspace-page-typography";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +24,10 @@ export default async function AdminProposalsHubPage() {
     redirect("/dashboard");
   }
 
-  const templates = await listProposalTemplatesForOrg(user);
+  const [proposals, templates] = await Promise.all([
+    listProposalsForStaffOrg(user),
+    listProposalTemplatesForOrg(user),
+  ]);
 
   return (
     <WorkspaceShell
@@ -29,7 +39,20 @@ export default async function AdminProposalsHubPage() {
       showMainHeader={false}
       showRightAside={false}
     >
-      <ProposalTemplatesListPanel templates={templates} />
+      <div className="space-y-10">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className={WORKSPACE_HUB_PAGE_TITLE_CLASS}>Proposals</h1>
+            <p className={WORKSPACE_PAGE_DESCRIPTION_CLASS}>
+              Create, send, and track dynamic digital proposals. Reusable templates speed up new proposals from the CRM.
+            </p>
+          </div>
+          <NewProposalTemplateButton />
+        </div>
+
+        <ProposalsListPanel proposals={proposals} />
+        <ProposalTemplatesListPanel templates={templates} />
+      </div>
     </WorkspaceShell>
   );
 }
