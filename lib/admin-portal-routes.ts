@@ -30,11 +30,11 @@ export interface AdminPortalNavFooterItem {
 
 export const ADMIN_PORTAL_NAV: AdminPortalNavItem[] = [
   { id: "dashboard", href: "/admin", label: "Dashboard" },
+  { id: "accounts", href: "/admin/accounts", label: "Accounts" },
   { id: "customers", href: "/admin/customers", label: "Customers" },
   { id: "opportunities", href: "/admin/opportunities", label: "Pipeline" },
   { id: "proposals", href: "/admin/proposals", label: "Proposals" },
   { id: "Templates", href: "/admin/templates", label: "Templates" },
-  { id: "accounts", href: "/admin/accounts", label: "Accounts" },
   { id: "subscriptions", href: "/admin/subscriptions", label: "Subscriptions" },
   { id: "tasks", href: "/admin/tasks", label: "Tasks" },
   { id: "reports", href: "/admin/reports", label: "Reports" },

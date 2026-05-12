@@ -35,11 +35,11 @@ const routeIcons: Record<PortalRouteDefinition["id"], LucideIcon> = {
 
 const adminNavIcons: Record<(typeof ADMIN_PORTAL_NAV)[number]["id"], LucideIcon> = {
   dashboard: LayoutDashboard,
+  accounts: Building2,
   customers: Users,
   opportunities: Columns3,
   proposals: FileText,
   Templates: LayoutTemplate,
-  accounts: Building2,
   subscriptions: Repeat,
   tasks: ListTodo,
   reports: BarChart3,
