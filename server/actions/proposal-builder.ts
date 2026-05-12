@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
@@ -16,7 +17,10 @@ import { getAdminProposalRecord } from "@/server/firestore/portal-data";
 import { getProposalRecordByShareToken } from "@/server/firestore/parse-proposal";
 import { updateOpportunityStage } from "@/server/firestore/crm-opportunities";
 import { PROPOSAL_UNLOCK_COOKIE } from "@/lib/proposal-public-session";
+import { cloneProposalDocument } from "@/lib/proposal-clone-document";
 import { runAdminWrite } from "@/lib/firebase/admin-write";
+import type { ProposalRecord } from "@/types/proposal";
+import type { PortalUser } from "@/types/user";
 
 const saveDocSchema = z.object({
   proposalId: z.string().min(1),
@@ -412,6 +416,32 @@ export async function saveProposalPackageSelectionAction(
   return { ok: true };
 }
 
+/** Firestore rejects `undefined` under a document — strip before `set`. */
+function omitUndefinedDeep(value: unknown): unknown {
+  if (value === null || typeof value !== "object") {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => omitUndefinedDeep(item));
+  }
+  const obj = value as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  for (const key of Object.keys(obj)) {
+    const v = obj[key];
+    if (v === undefined) continue;
+    out[key] = omitUndefinedDeep(v);
+  }
+  return out;
+}
+
+function staffCanAccessProposal(user: PortalUser, p: ProposalRecord): boolean {
+  if (user.organizationId) return p.organizationId === user.organizationId;
+  return p.createdByUid === user.uid;
+}
+
+const PROPOSAL_TITLE_MAX = 500;
+const PROPOSAL_CLONE_TITLE_SUFFIX = " (copy)";
+
 export async function deleteProposalAction(
   proposalId: string,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
@@ -422,7 +452,9 @@ export async function deleteProposalAction(
   if (!trimmed) return { ok: false, message: "Invalid proposal." };
 
   const existing = await getAdminProposalRecord(user, trimmed);
-  if (!existing) return { ok: false, message: "Proposal not found." };
+  if (!existing || !staffCanAccessProposal(user, existing)) {
+    return { ok: false, message: "Proposal not found." };
+  }
 
   const db = getFirebaseAdminFirestore();
   if (!db) return { ok: false, message: "Database unavailable." };
@@ -445,4 +477,77 @@ export async function deleteProposalAction(
     revalidatePath(`/admin/opportunities/${existing.opportunityId}`);
   }
   return { ok: true };
+}
+
+export async function cloneProposalAction(
+  proposalId: string,
+): Promise<{ ok: true; proposalId: string } | { ok: false; message: string }> {
+  const user = await requireStaffSession();
+  if (!user) return { ok: false, message: "Unauthorized." };
+
+  const trimmed = proposalId?.trim();
+  if (!trimmed) return { ok: false, message: "Invalid proposal." };
+
+  const existing = await getAdminProposalRecord(user, trimmed);
+  if (!existing || !staffCanAccessProposal(user, existing)) {
+    return { ok: false, message: "Proposal not found." };
+  }
+
+  const db = getFirebaseAdminFirestore();
+  if (!db) return { ok: false, message: "Database unavailable." };
+
+  const baseTitle =
+    (existing.title || existing.document.title || "Untitled proposal").trim() || "Untitled proposal";
+  const maxBase = Math.max(1, PROPOSAL_TITLE_MAX - PROPOSAL_CLONE_TITLE_SUFFIX.length);
+  const newTitle =
+    baseTitle.length + PROPOSAL_CLONE_TITLE_SUFFIX.length <= PROPOSAL_TITLE_MAX
+      ? `${baseTitle}${PROPOSAL_CLONE_TITLE_SUFFIX}`
+      : `${baseTitle.slice(0, maxBase)}${PROPOSAL_CLONE_TITLE_SUFFIX}`;
+
+  const clonedDoc = cloneProposalDocument(existing.document);
+  clonedDoc.title = newTitle;
+
+  const now = Date.now();
+  const shareToken = randomUUID().replace(/-/g, "");
+  const ref = db.collection(COLLECTIONS.proposals).doc();
+
+  const payload: Record<string, unknown> = {
+    organizationId: existing.organizationId,
+    createdByUid: user.uid,
+    title: newTitle,
+    status: "draft",
+    shareToken,
+    document: omitUndefinedDeep(encodeProposalDocumentForFirestore(clonedDoc)),
+    createdAtMs: now,
+    updatedAtMs: now,
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+  if (existing.customerId) payload.customerId = existing.customerId;
+  if (existing.opportunityId) payload.opportunityId = existing.opportunityId;
+  if (existing.recipientEmail?.trim()) payload.recipientEmail = existing.recipientEmail.trim().toLowerCase();
+  if (existing.branding) {
+    const b = omitUndefinedDeep(existing.branding) as Record<string, unknown>;
+    if (Object.keys(b).length > 0) payload.branding = b;
+  }
+  if (existing.sourceTemplateId) payload.sourceTemplateId = existing.sourceTemplateId;
+
+  const write = await runAdminWrite(
+    "proposal_clone_failed",
+    { sourceProposalId: trimmed, proposalId: ref.id },
+    "Could not clone the proposal.",
+    () => ref.set(payload),
+  );
+  if (!write.ok) return write;
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/proposals");
+  revalidatePath(`/admin/proposals/${ref.id}`);
+  if (existing.customerId) {
+    revalidatePath(`/admin/customers/${existing.customerId}`);
+  }
+  if (existing.opportunityId) {
+    revalidatePath(`/admin/opportunities/${existing.opportunityId}`);
+  }
+  return { ok: true, proposalId: ref.id };
 }
