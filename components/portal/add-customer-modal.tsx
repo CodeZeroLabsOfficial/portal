@@ -170,19 +170,6 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="crm-company" className="text-zinc-300">
-                Company name
-              </Label>
-              <Input
-                id="crm-company"
-                autoComplete="organization"
-                className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
-                placeholder="Company Name Pty Ltd"
-                {...form.register("company")}
-              />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
               <Label htmlFor="crm-last-name" className="text-zinc-300">
                 Last name
               </Label>
@@ -193,6 +180,19 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
                 placeholder="Smith"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="crm-company" className="text-zinc-300">
+                Company name
+              </Label>
+              <Input
+                id="crm-company"
+                autoComplete="organization"
+                className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+                placeholder="Company Name Pty Ltd"
+                {...form.register("company")}
               />
             </div>
             <div className="flex flex-col gap-1.5">
