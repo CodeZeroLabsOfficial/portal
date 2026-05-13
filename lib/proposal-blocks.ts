@@ -57,8 +57,10 @@ export function findProposalBlockById(blocks: ProposalBlock[], id: string): Prop
       }
     }
     if (b.type === "columns") {
-      const inner = findInsideColumnStack(b.stacks.flat(), id);
-      if (inner) return inner;
+      for (const stack of b.stacks) {
+        const inner = findInsideColumnStack(stack, id);
+        if (inner) return inner;
+      }
     }
   }
   return undefined;

@@ -384,10 +384,14 @@ function normalizeFontFamily(s: string | null | undefined): string {
     .trim();
 }
 
+const FONT_OPTIONS_BY_NORMALIZED: Map<string, FontOption> = new Map(
+  FONT_OPTIONS.filter((o) => o.value).map((o) => [normalizeFontFamily(o.value), o] as const),
+);
+
 function resolveActiveFontOption(raw: string | undefined): FontOption {
   const n = normalizeFontFamily(raw);
   if (!n) return FONT_OPTIONS[0];
-  const hit = FONT_OPTIONS.find((o) => o.value && normalizeFontFamily(o.value) === n);
+  const hit = FONT_OPTIONS_BY_NORMALIZED.get(n);
   if (hit) return hit;
   return { label: "Custom", value: (raw ?? "").trim() };
 }
@@ -468,8 +472,13 @@ function FontFamilyPicker({ editor }: { editor: Editor }) {
 }
 
 function FontSizeControl({ editor }: { editor: Editor }) {
-  const current = editor.getAttributes("textStyle").fontSize as string | undefined;
-  const value = Number(current ?? 16);
+  const { fontSizeRaw } = useEditorState({
+    editor,
+    selector: (snap) => ({
+      fontSizeRaw: snap.editor.getAttributes("textStyle").fontSize as string | undefined,
+    }),
+  });
+  const value = Number(fontSizeRaw ?? 16);
   function clamp(n: number) {
     return Math.max(8, Math.min(120, Math.round(n)));
   }
@@ -516,7 +525,13 @@ function FontSizeControl({ editor }: { editor: Editor }) {
 }
 
 function ColorControl({ editor }: { editor: Editor }) {
-  const current = (editor.getAttributes("textStyle").color as string | undefined) ?? "#ffffff";
+  const { colorRaw } = useEditorState({
+    editor,
+    selector: (snap) => ({
+      colorRaw: snap.editor.getAttributes("textStyle").color as string | undefined,
+    }),
+  });
+  const current = colorRaw ?? "#ffffff";
   return (
     <label
       className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded text-zinc-200 transition-colors hover:bg-white/10"
@@ -813,9 +828,8 @@ export function ProposalRichText({
     className,
   );
 
-  const editor = useEditor({
-    immediatelyRender: false,
-    extensions: [
+  const extensions = React.useMemo(
+    () => [
       StarterKit.configure({
         heading: { levels: [1, 2, 3, 4] },
         bulletList: { keepMarks: true },
@@ -834,6 +848,12 @@ export function ProposalRichText({
       }),
       Placeholder.configure({ placeholder: placeholder ?? "Write your section…" }),
     ],
+    [placeholder],
+  );
+
+  const editor = useEditor({
+    immediatelyRender: false,
+    extensions,
     content: html?.trim() ? html : "<p></p>",
     editorProps: {
       attributes: {

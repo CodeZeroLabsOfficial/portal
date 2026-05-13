@@ -703,6 +703,23 @@ function findColumnCellMeta(
   return null;
 }
 
+/** True when `applyStyleToStacks`-style mapping replaced at least one cell reference. */
+function columnStacksHaveCellUpdates(
+  prevStacks: ProposalColumnChildBlock[][],
+  nextStacks: ProposalColumnChildBlock[][],
+): boolean {
+  if (prevStacks.length !== nextStacks.length) return true;
+  for (let i = 0; i < nextStacks.length; i++) {
+    const row = nextStacks[i];
+    const prevRow = prevStacks[i];
+    if (row.length !== prevRow.length) return true;
+    for (let j = 0; j < row.length; j++) {
+      if (row[j] !== prevRow[j]) return true;
+    }
+  }
+  return false;
+}
+
 function ColumnResizeGrip({
   gripped,
   onPointerDown,
@@ -1171,6 +1188,7 @@ function SectionBlockFields({
   );
 
   const children = block.children;
+  const sortableChildIds = React.useMemo(() => children.map((c) => c.id), [children]);
   const [columnsLayoutEditingId, setColumnsLayoutEditingId] = React.useState<string | null>(null);
 
   React.useEffect(() => {
@@ -1258,7 +1276,7 @@ function SectionBlockFields({
       </div>
     ) : (
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onChildDragEnd}>
-        <SortableContext items={children.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+        <SortableContext items={sortableChildIds} strategy={verticalListSortingStrategy}>
           <InsertBlockSlot context="section" variant="between" onAdd={(b) => addChildAt(b, 0)} />
           {children.map((child, idx) => {
             const isSelected = selectedBlockId === child.id;
@@ -1343,11 +1361,10 @@ function SectionBlockFields({
                                   Done
                                 </button>
                                 <ColumnsBlockLayoutControls
-                                  block={children.find((c) => c.id === child.id) as ColumnsBlock}
+                                  block={child as ColumnsBlock}
                                   onPatch={(patch) => {
-                                    const cur = children.find((c) => c.id === child.id);
-                                    if (!cur || cur.type !== "columns") return;
-                                    updateChild(child.id, { ...cur, ...patch } as ProposalContentBlock);
+                                    if (child.type !== "columns") return;
+                                    updateChild(child.id, { ...child, ...patch } as ProposalContentBlock);
                                   }}
                                 />
                               </>
@@ -2171,6 +2188,8 @@ export function ProposalDocumentEditor({
   const [sending, setSending] = React.useState(false);
   const [message, setMessage] = React.useState<string | null>(null);
 
+  const sortableBlockIds = React.useMemo(() => blocks.map((b) => b.id), [blocks]);
+
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -2365,7 +2384,7 @@ export function ProposalDocumentEditor({
         }
         if (c.type === "columns") {
           const nextStacks = c.stacks.map((stack) => applyStyleToStacks(stack));
-          if (nextStacks.some((s, i) => s !== c.stacks[i])) {
+          if (columnStacksHaveCellUpdates(c.stacks, nextStacks)) {
             changed = true;
             return { ...c, stacks: nextStacks };
           }
@@ -2395,7 +2414,7 @@ export function ProposalDocumentEditor({
         }
         if (b.type === "columns") {
           const nextStacks = b.stacks.map((stack) => applyStyleToStacks(stack));
-          if (nextStacks.some((s, i) => s !== b.stacks[i])) {
+          if (columnStacksHaveCellUpdates(b.stacks, nextStacks)) {
             return { ...b, stacks: nextStacks };
           }
           return b;
@@ -2598,7 +2617,7 @@ export function ProposalDocumentEditor({
               }}
             >
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-                <SortableContext items={blocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
+                <SortableContext items={sortableBlockIds} strategy={verticalListSortingStrategy}>
                   <InsertBlockSlot onAdd={(b) => addBlockAt(b, 0)} />
                   {blocks.map((block, idx) => {
                     const isSelected = selectedBlockId === block.id;
@@ -2688,11 +2707,10 @@ export function ProposalDocumentEditor({
                                         Done
                                       </button>
                                       <ColumnsBlockLayoutControls
-                                        block={blocks.find((b) => b.id === block.id) as ColumnsBlock}
+                                        block={block as ColumnsBlock}
                                         onPatch={(patch) => {
-                                          const cur = blocks.find((b) => b.id === block.id);
-                                          if (!cur || cur.type !== "columns") return;
-                                          updateBlock(block.id, { ...cur, ...patch });
+                                          if (block.type !== "columns") return;
+                                          updateBlock(block.id, { ...block, ...patch });
                                         }}
                                       />
                                     </>
