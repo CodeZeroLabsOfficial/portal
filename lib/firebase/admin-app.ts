@@ -11,6 +11,43 @@ function getExplicitProjectId(): string | undefined {
 }
 
 /**
+ * Resolves the Firebase Storage bucket name for Admin SDK uploads.
+ *
+ * **Where to set it**
+ * - Prefer server env `FIREBASE_STORAGE_BUCKET` (e.g. `my-project.firebasestorage.app`).
+ * - Or `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` if you already expose it for the client SDK.
+ * - If neither is set, falls back to `{projectId}.firebasestorage.app` using
+ *   `FIREBASE_PROJECT_ID` / `NEXT_PUBLIC_FIREBASE_PROJECT_ID`, or `projectIdOverride`
+ *   (e.g. service account `project_id`) when the env project id is missing.
+ *
+ * Older projects sometimes use `{projectId}.appspot.com` — set `FIREBASE_STORAGE_BUCKET` explicitly in that case.
+ */
+export function getFirebaseStorageBucketName(projectIdOverride?: string | null): string | null {
+  const fromServerEnv = getServerEnv().FIREBASE_STORAGE_BUCKET?.trim();
+  const fromProcess =
+    (typeof process.env.FIREBASE_STORAGE_BUCKET === "string" && process.env.FIREBASE_STORAGE_BUCKET.trim()) ||
+    (typeof process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET === "string" &&
+      process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET.trim());
+  const explicit = fromServerEnv || fromProcess;
+  if (explicit) return explicit;
+  const projectId =
+    (typeof projectIdOverride === "string" && projectIdOverride.trim()) || getExplicitProjectId();
+  if (!projectId?.trim()) return null;
+  return `${projectId.trim()}.firebasestorage.app`;
+}
+
+function firebaseAppOptions(projectId: string | undefined): {
+  projectId?: string;
+  storageBucket?: string;
+} {
+  const bucketName = getFirebaseStorageBucketName(projectId);
+  return {
+    ...(projectId ? { projectId } : {}),
+    ...(bucketName ? { storageBucket: bucketName } : {}),
+  };
+}
+
+/**
  * Firebase Admin for server routes, Server Actions, and middleware session verification.
  * Returns `null` when credentials are not configured (local dev without service account).
  *
@@ -32,9 +69,11 @@ export function getFirebaseAdminApp(): App | null {
         string,
         unknown
       >;
+      const resolvedProjectId =
+        projectId ?? (typeof serviceAccount.project_id === "string" ? serviceAccount.project_id : undefined);
       return initializeApp({
         credential: cert(serviceAccount),
-        projectId,
+        ...firebaseAppOptions(resolvedProjectId),
       });
     } catch (error) {
       logError("firebase_admin_init_json_failed", {
@@ -48,9 +87,11 @@ export function getFirebaseAdminApp(): App | null {
     try {
       const fileContents = readFileSync(env.GOOGLE_APPLICATION_CREDENTIALS, "utf8");
       const serviceAccount = JSON.parse(fileContents) as Record<string, unknown>;
+      const resolvedProjectId =
+        projectId ?? (typeof serviceAccount.project_id === "string" ? serviceAccount.project_id : undefined);
       return initializeApp({
         credential: cert(serviceAccount),
-        projectId: projectId ?? (serviceAccount.project_id as string | undefined),
+        ...firebaseAppOptions(resolvedProjectId),
       });
     } catch (error) {
       logError("firebase_admin_init_file_failed", {
@@ -64,7 +105,7 @@ export function getFirebaseAdminApp(): App | null {
   try {
     return initializeApp({
       credential: applicationDefault(),
-      projectId,
+      ...firebaseAppOptions(projectId),
     });
   } catch (error) {
     logError("firebase_admin_init_default_failed", {

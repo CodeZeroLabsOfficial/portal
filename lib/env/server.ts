@@ -13,6 +13,12 @@ const serverSchema = z.object({
   FIREBASE_SERVICE_ACCOUNT_JSON: z.string().optional(),
   /** Path to service account file for local development (optional). */
   GOOGLE_APPLICATION_CREDENTIALS: z.string().optional(),
+  /**
+   * Firebase Storage default bucket for Admin uploads (e.g. signed agreement PNGs).
+   * Example: `code-zero-labs.firebasestorage.app` (Firebase console → Project settings → Your apps).
+   * If unset, the app falls back to `{projectId}.firebasestorage.app` when project id env is set.
+   */
+  FIREBASE_STORAGE_BUCKET: z.string().min(3).optional(),
 });
 
 export type ServerEnv = z.infer<typeof serverSchema>;
