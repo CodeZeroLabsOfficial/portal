@@ -14,13 +14,15 @@ import {
   Search,
   Upload,
 } from "lucide-react";
+import { upload as vercelBlobUpload } from "@vercel/blob/client";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getFirebasePublicConfig } from "@/lib/env/client-public";
 import {
-  PROPOSAL_MEDIA_LIBRARY_DIRECT_UPLOAD_MAX_BYTES,
-  formatDirectUploadMaxMbOneDecimal,
-} from "@/lib/proposal-media-library-direct-upload-limit";
+  buildProposalMediaLibraryUploadPathname,
+  inferLibraryContentType,
+  sanitizeLibraryUploadFilename,
+} from "@/lib/proposal-media-library-blob";
+import { PROPOSAL_MEDIA_LIBRARY_DIRECT_UPLOAD_MAX_BYTES } from "@/lib/proposal-media-library-direct-upload-limit";
 import { cn } from "@/lib/utils";
 import type { ProposalLibraryAsset, ProposalLibraryAssetKind } from "@/lib/proposal-media-library-types";
 
@@ -91,30 +93,15 @@ function categoryLabel(cat: LibraryCategory): string {
 
 const CATEGORIES: LibraryCategory[] = ["all", "blocks", "snippets", "images", "videos"];
 
-/** Wraps fetch so "Failed to fetch" becomes actionable copy (CORS vs same-origin). */
-async function fetchWithUploadHints(
-  url: string,
-  init: RequestInit,
-  kind: "portal" | "storage",
-): Promise<Response> {
+/** Wraps fetch so "Failed to fetch" becomes clearer for same-origin API calls. */
+async function fetchWithUploadHints(url: string, init: RequestInit): Promise<Response> {
   try {
     return await fetch(url, {
       ...init,
-      credentials: kind === "storage" ? "omit" : "include",
-      ...(kind === "storage" ? { mode: "cors" as const } : {}),
+      credentials: "include",
     });
   } catch (e) {
     if (e instanceof TypeError || (e instanceof Error && e.message === "Failed to fetch")) {
-      if (kind === "storage") {
-        const portalMb = formatDirectUploadMaxMbOneDecimal(PROPOSAL_MEDIA_LIBRARY_DIRECT_UPLOAD_MAX_BYTES);
-        const originHint =
-          typeof window !== "undefined" && window.location?.origin
-            ? ` This page’s origin is ${window.location.origin} — that exact string must be allowed on the Storage bucket CORS (along with http://127.0.0.1:PORT if you use 127.0.0.1 instead of localhost).`
-            : "";
-        throw new Error(
-          `Could not upload to Cloud Storage (browser PUT blocked: usually wrong or missing CORS on the bucket). Files over about ${portalMb} MB use this path.${originHint} Run npm run storage:cors:show to verify CORS on your bucket, then npm run storage:cors:apply after setting NEXT_PUBLIC_APP_URL and GCS_CORS_EXTRA_ORIGINS, or use a smaller file so upload goes through the portal API.`,
-        );
-      }
       throw new Error(
         "Could not reach the portal upload API (network error or connection reset). Try again, use a smaller file, or check deployment / server logs.",
       );
@@ -282,11 +269,7 @@ function ProposalMediaLibrarySidebar() {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const dragDepthRef = React.useRef(0);
 
-  const storageConsoleHref = React.useMemo(() => {
-    const cfg = getFirebasePublicConfig();
-    if (!cfg?.projectId) return "https://console.firebase.google.com/";
-    return `https://console.firebase.google.com/project/${encodeURIComponent(cfg.projectId)}/storage`;
-  }, []);
+  const blobStoresHref = "https://vercel.com/dashboard/stores";
 
   const prevOpen = React.useRef(false);
   React.useEffect(() => {
@@ -388,11 +371,10 @@ function ProposalMediaLibrarySidebar() {
           if (fileToSend.size <= PROPOSAL_MEDIA_LIBRARY_DIRECT_UPLOAD_MAX_BYTES) {
             const fd = new FormData();
             fd.append("file", fileToSend);
-            const res = await fetchWithUploadHints(
-              "/api/proposal-media-library/upload",
-              { method: "POST", body: fd },
-              "portal",
-            );
+            const res = await fetchWithUploadHints("/api/proposal-media-library/upload", {
+              method: "POST",
+              body: fd,
+            });
             const payload = (await res.json().catch(() => ({}))) as { error?: string };
             if (!res.ok) {
               throw new Error(typeof payload.error === "string" ? payload.error : res.statusText);
@@ -400,46 +382,15 @@ function ProposalMediaLibrarySidebar() {
             continue;
           }
 
-          const init = await fetchWithUploadHints(
-            "/api/proposal-media-library/signed-upload",
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                filename: fileToSend.name,
-                contentType: fileToSend.type || "application/octet-stream",
-              }),
-            },
-            "portal",
-          );
-          const payload = (await init.json().catch(() => ({}))) as {
-            error?: string;
-            uploadUrl?: string;
-            contentType?: string;
-          };
-          if (!init.ok) {
-            throw new Error(typeof payload.error === "string" ? payload.error : init.statusText);
-          }
-          const { uploadUrl, contentType } = payload;
-          if (!uploadUrl || !contentType) {
-            throw new Error("Invalid upload response from server.");
-          }
-          const put = await fetchWithUploadHints(
-            uploadUrl,
-            {
-              method: "PUT",
-              body: fileToSend,
-              headers: { "Content-Type": contentType },
-            },
-            "storage",
-          );
-          if (!put.ok) {
-            throw new Error(
-              put.status === 0
-                ? "Large file upload failed (CORS). Add CORS on the Storage bucket, raise PROPOSAL_MEDIA_LIBRARY_MAX_DIRECT_UPLOAD_BYTES, or upload from Firebase console."
-                : `Upload failed (${put.status}).`,
-            );
-          }
+          const safe = sanitizeLibraryUploadFilename(fileToSend.name);
+          const pathname = buildProposalMediaLibraryUploadPathname(safe);
+          const contentType = inferLibraryContentType(safe, fileToSend.type || "application/octet-stream");
+          await vercelBlobUpload(pathname, fileToSend, {
+            access: "public",
+            handleUploadUrl: "/api/proposal-media-library/client-upload",
+            multipart: fileToSend.size > PROPOSAL_MEDIA_LIBRARY_DIRECT_UPLOAD_MAX_BYTES,
+            contentType: contentType === "application/octet-stream" ? undefined : contentType,
+          });
         }
         setUploadMessage(`Uploaded ${usable.length} file${usable.length === 1 ? "" : "s"}.`);
         await refetchAssets();
@@ -778,15 +729,15 @@ function ProposalMediaLibrarySidebar() {
                       <span className="truncate">{uploading ? "Uploading…" : primaryUploadLabel}</span>
                     </button>
                     <a
-                      href={storageConsoleHref}
+                      href={blobStoresHref}
                       target="_blank"
                       rel="noopener noreferrer"
                       className={cn(
                         "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground transition-colors",
                         "hover:border-violet-500/40 hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                       )}
-                      aria-label="Open Firebase Storage in console"
-                      title="Firebase console · Storage"
+                      aria-label="Open Vercel dashboard (Blob stores)"
+                      title="Vercel dashboard · Blob stores"
                     >
                       <ExternalLink className="h-4 w-4" aria-hidden />
                     </a>

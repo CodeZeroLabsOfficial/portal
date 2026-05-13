@@ -30,6 +30,3 @@ yarn-error.log*
 
 # TypeScript
 *.tsbuildinfo
-
-# Generated GCS CORS (from scripts/gcs-cors.mjs)
-storage/gcs-cors.generated.json
