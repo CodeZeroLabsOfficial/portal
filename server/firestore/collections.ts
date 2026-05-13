@@ -7,6 +7,7 @@
  * - `opportunities`: staff-only reads/writes (Admin SDK in this app); add rules matching `customers` if exposed to clients.
  * - `proposals`, `proposal_templates`: org-scoped; public reads only via dedicated share token rules or Cloud Function proxy.
  * - `analytics_events`: insert from authenticated viewer session or validated public token; reads restricted to proposal owners.
+ * - `signedAgreements`: append-only snapshots when a proposal is accepted with a signature (Admin SDK).
  */
 export const COLLECTIONS = {
   users: "users",
@@ -31,6 +32,8 @@ export const COLLECTIONS = {
   /** Processed Stripe event ids — webhook idempotency (`evt_…`). */
   stripeWebhookEvents: "stripe_webhook_events",
   proposals: "proposals",
+  /** Immutable snapshots when a proposal is accepted with signature metadata (Admin SDK writes). */
+  signedAgreements: "signedAgreements",
   proposalTemplates: "proposal_templates",
   analyticsEvents: "analytics_events",
   /** Optional — admin dashboard aggregates when present. */

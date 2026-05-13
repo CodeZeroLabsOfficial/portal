@@ -19,6 +19,11 @@ import { updateOpportunityStage } from "@/server/firestore/crm-opportunities";
 import { PROPOSAL_UNLOCK_COOKIE } from "@/lib/proposal-public-session";
 import { cloneProposalDocument } from "@/lib/proposal-clone-document";
 import { runAdminWrite } from "@/lib/firebase/admin-write";
+import { uploadSignedAgreementSignaturePng } from "@/lib/firebase/admin-storage";
+import {
+  buildFullAgreementTextSnapshot,
+  buildSignedAgreementCommerceSnapshot,
+} from "@/lib/signed-agreement-build";
 import type { ProposalRecord } from "@/types/proposal";
 import type { PortalUser } from "@/types/user";
 
@@ -301,6 +306,68 @@ export async function acceptProposalPublicAction(
         }),
   );
   if (!write.ok) return write;
+
+  if (hasSignaturePayload && sigUrl) {
+    const commerce = buildSignedAgreementCommerceSnapshot(proposal);
+    const fullAgreementText = buildFullAgreementTextSnapshot(proposal);
+
+    let customerName: string | undefined;
+    if (proposal.customerId) {
+      try {
+        const csnap = await db.collection(COLLECTIONS.customers).doc(proposal.customerId).get();
+        if (csnap.exists) {
+          const c = csnap.data() as Record<string, unknown>;
+          const company = typeof c.company === "string" ? c.company.trim() : "";
+          const name = typeof c.name === "string" ? c.name.trim() : "";
+          customerName = company || name || undefined;
+        }
+      } catch {
+        /* best-effort */
+      }
+    }
+
+    const INLINE_SIGNATURE_MAX = 480_000;
+    let signatureImage: string | null = null;
+    let signatureImageStoragePath: string | null = null;
+
+    const uploaded = await uploadSignedAgreementSignaturePng({
+      proposalId: proposal.id,
+      dataUrlPng: sigUrl,
+    });
+    if (uploaded?.storagePath) {
+      signatureImageStoragePath = uploaded.storagePath;
+    } else if (sigUrl.length <= INLINE_SIGNATURE_MAX) {
+      signatureImage = sigUrl;
+    }
+
+    const signedAgreementPayload: Record<string, unknown> = {
+      organizationId: proposal.organizationId,
+      proposalId: proposal.id,
+      shareToken: proposal.shareToken,
+      proposalTitle: proposal.title,
+      customerId: proposal.customerId ?? null,
+      customerEmail: proposal.recipientEmail?.trim().toLowerCase() ?? null,
+      customerName: customerName ?? null,
+      selectedPlan: commerce.selectedPlan,
+      addons: commerce.addons,
+      totalAmount: commerce.totalAmount,
+      signerName: parsed.data.signerName,
+      signatureMethod: sigMethod ?? null,
+      signedAt: FieldValue.serverTimestamp(),
+      signedAtMs: now,
+      clientSignedAtMs: typeof clientSignedAtMs === "number" ? clientSignedAtMs : null,
+      fullAgreementText: fullAgreementText ?? null,
+      signatureImage,
+      signatureImageStoragePath,
+    };
+
+    await runAdminWrite(
+      "signed_agreement_write_failed",
+      { proposalId: proposal.id },
+      "Could not store signed agreement record.",
+      () => db.collection(COLLECTIONS.signedAgreements).add(signedAgreementPayload),
+    );
+  }
 
   if (proposal.customerId) {
     /** Activity entry is best-effort — failure here must not roll back the

@@ -355,21 +355,24 @@ export function AgreementBlockPublic({
     if (!shareToken || !interactive) return;
     setBusy(true);
     setError(null);
-    const res = await acceptProposalPublicAction({
-      shareToken,
-      signerName: payload.signerName,
-      signatureDataUrl: payload.signatureDataUrl,
-      signatureMethod: payload.signatureMethod,
-      clientSignedAtMs: payload.clientSignedAtMs,
-    });
-    setBusy(false);
-    if (!res.ok) {
-      setError(res.message);
-      return;
+    try {
+      const res = await acceptProposalPublicAction({
+        shareToken,
+        signerName: payload.signerName,
+        signatureDataUrl: payload.signatureDataUrl,
+        signatureMethod: payload.signatureMethod,
+        clientSignedAtMs: payload.clientSignedAtMs,
+      });
+      if (!res.ok) {
+        setError(res.message);
+        return;
+      }
+      setLocalAcceptedName(payload.signerName);
+      setLocalDone(true);
+      router.refresh();
+    } finally {
+      setBusy(false);
     }
-    setLocalAcceptedName(payload.signerName);
-    setLocalDone(true);
-    router.refresh();
   }
 
   const sectionAnchors: Array<{ id: string; label: string }> = [
@@ -543,19 +546,44 @@ export function AgreementBlockPublic({
                 className="mt-16 scroll-mt-24"
               >
                 {accepted ? (
-                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-6 py-6 text-center">
+                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-6 py-8 text-center sm:px-8">
                     <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-700">
                       <CheckCircle2 className="h-6 w-6" aria-hidden />
                     </span>
-                    <p className="mt-3 text-base font-semibold text-emerald-900">
-                      Signed{displayName ? ` by ${displayName}` : ""}
+                    <p className="mt-4 text-xl font-semibold tracking-tight text-emerald-950">
+                      Agreement Signed
                     </p>
-                    <p className="mt-1 text-sm text-emerald-900/80">
-                      Thanks — we&apos;ll follow up with next steps shortly.
+                    <p className="mt-2 text-sm text-emerald-900/85">
+                      {displayName ? (
+                        <>
+                          Thank you, <span className="font-semibold text-emerald-950">{displayName}</span>.
+                          Your signature has been recorded.
+                        </>
+                      ) : (
+                        <>Thank you — your signature has been recorded.</>
+                      )}
                     </p>
-                    <div className="mt-5">
+                    <p className="mt-2 text-sm text-emerald-900/75">
+                      We&apos;ll follow up with next steps shortly.
+                    </p>
+                    <div className="mt-6 flex flex-col items-stretch gap-3 sm:flex-row sm:justify-center">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="gap-2 border-emerald-300/80 bg-white text-emerald-950 hover:bg-emerald-100/50"
+                        onClick={() => {
+                          window.alert("PDF download is not available yet. This button will export your signed agreement soon.");
+                        }}
+                      >
+                        <Download className="h-4 w-4" aria-hidden />
+                        Download PDF
+                      </Button>
                       <DialogClose asChild>
-                        <Button type="button" variant="outline" className="gap-2">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          className="bg-emerald-900/10 text-emerald-950 hover:bg-emerald-900/15"
+                        >
                           Close
                         </Button>
                       </DialogClose>

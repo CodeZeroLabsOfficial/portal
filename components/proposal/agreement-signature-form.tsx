@@ -216,12 +216,20 @@ export function AgreementSignatureForm({
     }
 
     const clientSignedAtMs = Date.now();
-    await onSubmit({
-      signerName: name,
-      signatureDataUrl,
-      signatureMethod: tab,
-      clientSignedAtMs,
-    });
+    if (!signatureDataUrl.startsWith("data:image/png;base64,")) {
+      setLocalError("Could not capture your signature. Please try again.");
+      return;
+    }
+    try {
+      await onSubmit({
+        signerName: name,
+        signatureDataUrl,
+        signatureMethod: tab,
+        clientSignedAtMs,
+      });
+    } catch {
+      setLocalError("We could not complete signing. Please try again.");
+    }
   }
 
   const showError = localError || error;
@@ -234,8 +242,21 @@ export function AgreementSignatureForm({
     (tab === "draw" ? hasInk : /^\d{4}-\d{2}-\d{2}$/.test(signedDate));
 
   return (
-    <form className="space-y-5" onSubmit={handleSubmit} noValidate>
-      <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6">
+    <form className="space-y-5" onSubmit={handleSubmit} noValidate aria-busy={busy}>
+      <div className="relative rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6">
+        {busy ? (
+          <div
+            className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-2xl bg-white/85 backdrop-blur-[1px]"
+            aria-live="polite"
+          >
+            <Loader2 className="h-8 w-8 animate-spin text-[#1a1a5e]" aria-hidden />
+            <p className="mt-3 text-sm font-semibold text-zinc-800">Signing agreement…</p>
+            <p className="mt-1 max-w-[14rem] text-center text-xs text-zinc-500">
+              Please wait while we record your acceptance.
+            </p>
+          </div>
+        ) : null}
+        <div className={cn(busy && "pointer-events-none opacity-60")}>
         <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
@@ -437,6 +458,7 @@ export function AgreementSignatureForm({
             {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
             Sign Agreement
           </Button>
+        </div>
         </div>
       </div>
     </form>
