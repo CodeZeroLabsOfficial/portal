@@ -818,6 +818,7 @@ function ColumnPane({
   selectedCellId,
   setSelectedCellId,
   setActiveColumnIndex,
+  reserveInsertGutter,
 }: {
   label: string;
   columnIndex: number;
@@ -826,6 +827,8 @@ function ColumnPane({
   selectedCellId: string | null;
   setSelectedCellId: React.Dispatch<React.SetStateAction<string | null>>;
   setActiveColumnIndex: React.Dispatch<React.SetStateAction<number>>;
+  /** Space for the in-column + control when this column is the add target. */
+  reserveInsertGutter?: boolean;
 }) {
   function setStack(next: ProposalColumnChildBlock[]) {
     onPatchColumnStack(columnIndex, next);
@@ -850,7 +853,7 @@ function ColumnPane({
       }}
     >
       <span className="sr-only">{label}</span>
-      <div className="min-w-0 space-y-4">
+      <div className={cn("min-w-0 space-y-4", reserveInsertGutter && "pl-10 sm:pl-11")}>
         {stack.length === 0 ? (
           <ColumnGhostText
             placeholder="Type / to add content"
@@ -1022,14 +1025,22 @@ function ColumnsBlockFields({
                 "rounded-xl border-2 border-dashed border-sky-500/55 bg-sky-500/[0.03] py-1 dark:border-sky-400/50 dark:bg-sky-950/15",
             )}
           >
-            {block.stacks.map((stack, i) => (
+            {block.stacks.map((stack, i) => {
+              const showInsertHere = !resizeMode && activeColumnIndex === i;
+              const showPlansHere =
+                !resizeMode &&
+                selectedCellMeta?.child.type === "packages" &&
+                selectedCellMeta.ci === i;
+              const showColumnLeftRail = showInsertHere || showPlansHere;
+              return (
               <React.Fragment key={`${block.id}-col-${i}`}>
                 <div
                   ref={(el) => {
                     columnWidthRefs.current[i] = el;
                   }}
+                  onPointerDownCapture={() => setActiveColumnIndex(i)}
                   className={cn(
-                    "min-w-0 md:min-w-[3.5rem]",
+                    "relative min-w-0 md:min-w-[3.5rem]",
                     !resizeMode &&
                       cn(
                         "group/colcell rounded-md border border-transparent p-1 md:p-2",
@@ -1043,6 +1054,66 @@ function ColumnsBlockFields({
                   )}
                   style={{ flex: `${flexRow[i]} 1 0%` } as React.CSSProperties}
                 >
+                  {showColumnLeftRail ? (
+                    <div className="pointer-events-none absolute left-1 top-1/2 z-20 flex -translate-y-1/2 flex-col items-center gap-2 sm:left-1.5">
+                      <div className="pointer-events-auto flex flex-col items-center gap-2">
+                        {showInsertHere ? (
+                          <ColumnInsertMenu
+                            onAdd={(insert) => {
+                              const st = block.stacks[i];
+                              if (!st) return;
+                              onChange(
+                                patchColumnStackAtIndex(block, i, [
+                                  ...st,
+                                  insert as ProposalColumnChildBlock,
+                                ]),
+                              );
+                            }}
+                            align="start"
+                            trigger={
+                              <button
+                                type="button"
+                                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border/80 bg-muted/50 text-muted-foreground shadow-sm transition-colors hover:border-sky-500/50 hover:bg-background hover:text-foreground data-[state=open]:border-primary data-[state=open]:bg-primary data-[state=open]:text-primary-foreground"
+                                aria-label="Add content"
+                                title={`Add block to column ${i + 1}`}
+                              >
+                                <Plus className="h-4 w-4" aria-hidden />
+                              </button>
+                            }
+                          />
+                        ) : null}
+                        {showPlansHere ? (
+                          <div
+                            className="w-[min(14rem,calc(100vw-3rem))] space-y-1.5 rounded-xl border border-border/70 bg-muted/95 p-2.5 shadow-sm ring-1 ring-black/[0.04] backdrop-blur-sm dark:bg-zinc-800/95 dark:ring-white/10"
+                            onPointerDown={(e) => e.stopPropagation()}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                              Plans background
+                            </span>
+                            <ProposalSectionBackgroundPicker
+                              background={(selectedCellMeta.child as PackagesBlock).background}
+                              onChange={(next) => {
+                                const { ci, child } = selectedCellMeta;
+                                const st = block.stacks[ci];
+                                const nextSt = st.map((c) => {
+                                  if (c.id !== child.id) return c;
+                                  const p = c as PackagesBlock;
+                                  if (!next) {
+                                    const { background: _b, ...rest } = p;
+                                    void _b;
+                                    return rest as ProposalColumnChildBlock;
+                                  }
+                                  return { ...p, background: next } as ProposalColumnChildBlock;
+                                });
+                                onChange(patchColumnStackAtIndex(block, ci, nextSt));
+                              }}
+                            />
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : null}
                   <ColumnPane
                     label={`Column ${i + 1}`}
                     columnIndex={i}
@@ -1051,6 +1122,7 @@ function ColumnsBlockFields({
                     selectedCellId={selectedCellId}
                     setSelectedCellId={setSelectedCellId}
                     setActiveColumnIndex={setActiveColumnIndex}
+                    reserveInsertGutter={showInsertHere}
                   />
                 </div>
                 {resizeMode && i < block.stacks.length - 1 ? (
@@ -1064,70 +1136,11 @@ function ColumnsBlockFields({
                   />
                 ) : null}
               </React.Fragment>
-            ))}
+              );
+            })}
           </div>
         );
-        const floatRail =
-          !resizeMode ? (
-            <div className="flex shrink-0 flex-col items-center justify-center gap-2 self-center">
-              <ColumnInsertMenu
-                onAdd={(insert) => {
-                  const ci = activeColumnIndex;
-                  const st = block.stacks[ci];
-                  if (!st) return;
-                  onChange(
-                    patchColumnStackAtIndex(block, ci, [...st, insert as ProposalColumnChildBlock]),
-                  );
-                }}
-                align="start"
-                trigger={
-                  <button
-                    type="button"
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border/80 bg-muted/50 text-muted-foreground shadow-sm transition-colors hover:border-sky-500/50 hover:bg-background hover:text-foreground data-[state=open]:border-primary data-[state=open]:bg-primary data-[state=open]:text-primary-foreground"
-                    aria-label="Add content"
-                    title={`Add block to column ${activeColumnIndex + 1}`}
-                  >
-                    <Plus className="h-4 w-4" aria-hidden />
-                  </button>
-                }
-              />
-              {selectedCellMeta?.child.type === "packages" ? (
-                <div
-                  className="w-[min(15rem,calc(100vw-2rem))] space-y-1.5 rounded-xl border border-border/70 bg-muted/95 p-2.5 shadow-sm ring-1 ring-black/[0.04] backdrop-blur-sm dark:bg-zinc-800/95 dark:ring-white/10"
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    Plans background
-                  </span>
-                  <ProposalSectionBackgroundPicker
-                    background={(selectedCellMeta.child as PackagesBlock).background}
-                    onChange={(next) => {
-                      const { ci, child } = selectedCellMeta;
-                      const st = block.stacks[ci];
-                      const nextSt = st.map((c) => {
-                        if (c.id !== child.id) return c;
-                        const p = c as PackagesBlock;
-                        if (!next) {
-                          const { background: _b, ...rest } = p;
-                          void _b;
-                          return rest as ProposalColumnChildBlock;
-                        }
-                        return { ...p, background: next } as ProposalColumnChildBlock;
-                      });
-                      onChange(patchColumnStackAtIndex(block, ci, nextSt));
-                    }}
-                  />
-                </div>
-              ) : null}
-            </div>
-          ) : null;
-        const chromedColumns = (
-          <div className="flex items-center gap-2 sm:gap-2.5">
-            {floatRail}
-            <div className="min-w-0 flex-1">{columnRow}</div>
-          </div>
-        );
+        const chromedColumns = <div className="min-w-0">{columnRow}</div>;
         if (pad <= 0) return chromedColumns;
         return (
           <div className="rounded-lg" style={{ padding: pad }}>
