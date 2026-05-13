@@ -2,14 +2,29 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, FileSignature, Loader2 } from "lucide-react";
+import {
+  ArrowRight,
+  CheckCircle2,
+  Download,
+  FileSignature,
+  Loader2,
+  Menu,
+  X,
+} from "lucide-react";
 import {
   Dialog,
   DialogClose,
   DialogContent,
-  DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -174,62 +189,62 @@ function buildPackageSelectionSummary(
 
 function PackageSummaryCard({ summary }: { summary: PackageSelectionSummary }) {
   return (
-    <div className="rounded-2xl border border-border/70 bg-card p-5 shadow-sm">
+    <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
             {summary.blockTitle}
           </p>
-          <p className="mt-1 text-xl font-semibold tracking-tight text-foreground">
+          <p className="mt-1 text-xl font-semibold tracking-tight text-zinc-900">
             {summary.tierName}
           </p>
-          <p className="text-sm text-muted-foreground">Term: {summary.termLabel}</p>
+          <p className="text-sm text-zinc-500">Term: {summary.termLabel}</p>
         </div>
         <div className="text-right">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
             Monthly subscription
           </p>
-          <p className="mt-1 text-xl font-semibold tabular-nums text-foreground">
+          <p className="mt-1 text-xl font-semibold tabular-nums text-zinc-900">
             {formatCurrencyAmount(summary.monthlyMinor, summary.currency)}
           </p>
         </div>
       </div>
 
       {summary.addonLines.length > 0 ? (
-        <div className="mt-5 border-t border-border/60 pt-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+        <div className="mt-5 border-t border-zinc-200 pt-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
             Add-ons
           </p>
           <ul className="mt-2 space-y-2">
             {summary.addonLines.map((line) => (
               <li
                 key={line.id}
-                className="flex items-baseline justify-between gap-3 text-sm text-foreground"
+                className="flex items-baseline justify-between gap-3 text-sm text-zinc-900"
               >
                 <span>
                   {line.label}
                   {line.quantity > 1 ? (
-                    <span className="text-muted-foreground"> × {line.quantity}</span>
+                    <span className="text-zinc-500"> × {line.quantity}</span>
                   ) : null}
                 </span>
-                <span className="tabular-nums text-foreground">
+                <span className="tabular-nums text-zinc-900">
                   {formatCurrencyAmount(line.lineTotalMinor, summary.currency)}
                 </span>
               </li>
             ))}
           </ul>
           <div className="mt-3 flex items-baseline justify-between text-sm">
-            <span className="text-muted-foreground">Add-ons subtotal</span>
-            <span className="tabular-nums text-foreground">
+            <span className="text-zinc-500">Add-ons subtotal</span>
+            <span className="tabular-nums text-zinc-900">
               {formatCurrencyAmount(summary.addonsTotalMinor, summary.currency)}
             </span>
           </div>
         </div>
       ) : null}
 
-      <div className="mt-5 flex items-baseline justify-between rounded-xl bg-muted/50 px-4 py-3">
-        <span className="text-sm font-semibold text-foreground">Monthly total</span>
-        <span className="text-lg font-semibold tabular-nums text-foreground">
+      <div className="mt-5 flex items-baseline justify-between rounded-xl bg-zinc-100 px-4 py-3">
+        <span className="text-sm font-semibold text-zinc-900">Monthly total</span>
+        <span className="text-lg font-semibold tabular-nums text-zinc-900">
           {formatCurrencyAmount(summary.monthlyTotalMinor, summary.currency)}
         </span>
       </div>
@@ -239,7 +254,7 @@ function PackageSummaryCard({ summary }: { summary: PackageSelectionSummary }) {
 
 function NoPackageSelectionCard() {
   return (
-    <div className="rounded-2xl border border-dashed border-border/70 bg-muted/20 p-5 text-sm text-muted-foreground">
+    <div className="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 p-5 text-sm text-zinc-500">
       No plan selected yet. Choose a plan in the proposal above before signing —
       your selection will appear here automatically.
     </div>
@@ -251,27 +266,31 @@ function LegalSections({ legalHtml }: { legalHtml?: string }) {
     return (
       <div
         className={cn(
-          "proposal-rich-text max-w-none text-[15px] leading-relaxed text-foreground",
-          "[&_h1]:mt-8 [&_h1]:text-xl [&_h1]:font-semibold",
-          "[&_h2]:mt-7 [&_h2]:text-lg [&_h2]:font-semibold",
-          "[&_h3]:mt-5 [&_h3]:text-base [&_h3]:font-semibold",
+          "proposal-rich-text max-w-none text-[15px] leading-relaxed text-zinc-700",
+          "[&_h1]:mt-10 [&_h1]:text-2xl [&_h1]:font-semibold [&_h1]:text-zinc-900",
+          "[&_h2]:mt-8 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:text-zinc-900",
+          "[&_h3]:mt-6 [&_h3]:text-base [&_h3]:font-semibold [&_h3]:text-zinc-900",
           "[&_p]:mb-4 [&_p:last-child]:mb-0",
           "[&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5",
           "[&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5",
-          "[&_a]:text-primary [&_a]:underline",
+          "[&_a]:text-zinc-900 [&_a]:underline",
         )}
         dangerouslySetInnerHTML={{ __html: sanitizeProposalHtml(legalHtml) }}
       />
     );
   }
   return (
-    <div className="space-y-6">
-      {DEFAULT_LEGAL_SECTIONS.map((s) => (
-        <section key={s.heading} className="space-y-2">
-          <h3 className="text-base font-semibold tracking-tight text-foreground">
+    <div className="space-y-8">
+      {DEFAULT_LEGAL_SECTIONS.map((s, i) => (
+        <section
+          key={s.heading}
+          id={`agreement-section-${i}`}
+          className="scroll-mt-24 space-y-2"
+        >
+          <h3 className="text-base font-semibold tracking-tight text-zinc-900">
             {s.heading}
           </h3>
-          <p className="text-[15px] leading-relaxed text-muted-foreground">{s.body}</p>
+          <p className="text-[15px] leading-relaxed text-zinc-700">{s.body}</p>
         </section>
       ))}
     </div>
@@ -329,6 +348,19 @@ export function AgreementBlockPublic({
     name.trim().length >= 2 &&
     (!requireAcceptTerms || agreed);
 
+  const scrollRef = React.useRef<HTMLDivElement | null>(null);
+  const signRef = React.useRef<HTMLDivElement | null>(null);
+
+  function scrollToRef(ref: React.RefObject<HTMLDivElement | null>) {
+    ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function onDownload() {
+    if (typeof window !== "undefined") {
+      window.print();
+    }
+  }
+
   async function onSign(e: React.FormEvent) {
     e.preventDefault();
     if (!shareToken || !interactive) return;
@@ -347,6 +379,17 @@ export function AgreementBlockPublic({
     setLocalDone(true);
     router.refresh();
   }
+
+  const sectionAnchors: Array<{ id: string; label: string }> = [
+    { id: "agreement-top", label: "Top of agreement" },
+    ...(packageSummaries.length > 0
+      ? [{ id: "agreement-plan", label: "Selected plan & add-ons" }]
+      : []),
+    ...(!block.legalHtml?.trim()
+      ? DEFAULT_LEGAL_SECTIONS.map((s, i) => ({ id: `agreement-section-${i}`, label: s.heading }))
+      : []),
+    { id: "agreement-sign", label: accepted ? "Signature" : "Sign agreement" },
+  ];
 
   return (
     <div className="w-full">
@@ -369,183 +412,247 @@ export function AgreementBlockPublic({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
           className={cn(
-            "z-50 grid gap-0 overflow-hidden border-border/80 bg-card p-0 text-foreground shadow-2xl",
-            "h-[100dvh] w-screen max-w-none translate-x-0 translate-y-0 left-0 top-0 rounded-none",
-            "sm:left-1/2 sm:top-1/2 sm:h-[92vh] sm:max-h-[92vh] sm:w-[min(1080px,calc(100vw-3rem))] sm:max-w-[min(1080px,calc(100vw-3rem))] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl",
-            "grid-rows-[auto,1fr,auto]",
-            // Hide the shadcn DialogContent default close (a direct-child button with aria-label=\"Close\"). Our header renders its own.
+            "z-50 grid gap-0 overflow-hidden border-0 bg-white p-0 text-zinc-900 shadow-2xl",
+            // Mobile: fills viewport, no rounding.
+            "h-[100dvh] w-screen max-w-none left-0 top-0 translate-x-0 translate-y-0 rounded-none",
+            // Desktop: near-full-screen with subtle rounding to match Qwilr's modal proportions.
+            "sm:left-1/2 sm:top-1/2 sm:h-[min(96dvh,960px)] sm:max-h-[96dvh]",
+            "sm:w-[min(1280px,calc(100vw-2rem))] sm:max-w-[min(1280px,calc(100vw-2rem))]",
+            "sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl",
+            "grid-rows-[auto,1fr]",
+            // Hide the shadcn auto-render close X — our top bar renders its own.
             "[&>button[aria-label='Close']]:hidden",
           )}
         >
-          <div className="flex items-start justify-between gap-4 border-b border-border/60 px-6 py-5 sm:px-10 sm:py-6">
-            <div className="min-w-0">
-              <DialogTitle className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+          <div className="flex items-center justify-between gap-3 border-b border-zinc-200 bg-white px-4 py-3 sm:px-6">
+            <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="Open sections menu"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
+                  >
+                    <Menu className="h-5 w-5" aria-hidden />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" sideOffset={6} className="min-w-[16rem]">
+                  <DropdownMenuLabel className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                    Jump to
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {sectionAnchors.map((s) => (
+                    <DropdownMenuItem
+                      key={s.id}
+                      className="cursor-pointer"
+                      onSelect={() => {
+                        const el = scrollRef.current?.querySelector(`#${CSS.escape(s.id)}`);
+                        if (el instanceof HTMLElement) {
+                          el.scrollIntoView({ behavior: "smooth", block: "start" });
+                        }
+                      }}
+                    >
+                      {s.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <DialogTitle className="truncate text-sm font-semibold tracking-tight text-zinc-900 sm:text-base">
                 {agreementTitle}
               </DialogTitle>
-              <DialogDescription className="mt-1 text-sm text-muted-foreground">
-                {proposalTitle ? (
-                  <>
-                    Re: <span className="font-medium text-foreground">{proposalTitle}</span>
-                  </>
-                ) : (
-                  <>Review the terms below, then sign at the bottom of this modal.</>
-                )}
-              </DialogDescription>
             </div>
-            <DialogClose
-              className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              aria-label="Close agreement"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-5 w-5"
-                aria-hidden
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onDownload}
+                className="hidden h-9 gap-1.5 border-zinc-200 bg-white px-3 text-zinc-900 hover:bg-zinc-50 sm:inline-flex"
               >
-                <path d="M18 6 6 18" />
-                <path d="m6 6 12 12" />
-              </svg>
-            </DialogClose>
+                <Download className="h-4 w-4" aria-hidden />
+                Download
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => scrollToRef(signRef)}
+                className="h-9 gap-1.5 rounded-md px-3 font-semibold text-white shadow-sm transition-opacity hover:opacity-90"
+                style={{ backgroundColor: ctaColor, color: ctaForeground }}
+                disabled={accepted}
+              >
+                {accepted ? "Signed" : "Next"}
+                {!accepted ? <ArrowRight className="h-4 w-4" aria-hidden /> : null}
+              </Button>
+              <DialogClose
+                aria-label="Close agreement"
+                className="ml-1 inline-flex h-9 w-9 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
+              >
+                <X className="h-5 w-5" aria-hidden />
+              </DialogClose>
+            </div>
           </div>
 
-          <div className="min-h-0 overflow-y-auto">
-            <div className="mx-auto max-w-3xl space-y-10 px-6 py-8 sm:px-10 sm:py-10">
-              <section className="space-y-4">
-                <header>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                    Your Selection
+          <div ref={scrollRef} className="min-h-0 overflow-y-auto bg-white">
+            <div className="mx-auto w-full max-w-3xl px-5 py-12 sm:px-10 sm:py-16">
+              <div id="agreement-top" aria-hidden />
+
+              <header className="text-center">
+                <h1 className="font-serif text-4xl font-semibold leading-tight tracking-tight text-zinc-900 sm:text-5xl">
+                  {agreementTitle}
+                </h1>
+                {proposalTitle ? (
+                  <p className="mt-3 text-sm font-medium text-zinc-500">
+                    Re: <span className="text-zinc-900">{proposalTitle}</span>
                   </p>
-                  <h3 className="mt-1 text-xl font-semibold tracking-tight text-foreground">
-                    Selected plan &amp; add-ons
-                  </h3>
-                </header>
-                {packageSummaries.length === 0 ? (
-                  <NoPackageSelectionCard />
-                ) : (
-                  <div className="space-y-4">
-                    {packageSummaries.map((summary) => (
-                      <PackageSummaryCard key={summary.blockId} summary={summary} />
-                    ))}
-                  </div>
-                )}
-              </section>
+                ) : null}
+              </header>
 
               {block.introHtml && block.introHtml.trim() ? (
-                <section>
+                <section className="mx-auto mt-10 max-w-2xl">
                   <div
                     className={cn(
-                      "proposal-rich-text max-w-none text-[15px] leading-relaxed text-muted-foreground",
-                      "[&_a]:text-primary [&_a]:underline",
+                      "proposal-rich-text max-w-none text-[15px] leading-relaxed text-zinc-600",
+                      "[&_a]:text-zinc-900 [&_a]:underline",
                       "[&_p]:mb-4 [&_p:last-child]:mb-0",
+                      "[&_em]:italic",
                     )}
                     dangerouslySetInnerHTML={{ __html: sanitizeProposalHtml(block.introHtml) }}
                   />
                 </section>
               ) : null}
 
-              <section className="space-y-5">
-                <header>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                    The Agreement
-                  </p>
-                  <h3 className="mt-1 text-xl font-semibold tracking-tight text-foreground">
-                    Terms &amp; conditions
-                  </h3>
-                </header>
-                <LegalSections legalHtml={block.legalHtml} />
-              </section>
-            </div>
-          </div>
+              {packageSummaries.length > 0 ? (
+                <section id="agreement-plan" className="mt-12 scroll-mt-24 space-y-4">
+                  <SectionLabel>Your selection</SectionLabel>
+                  <div className="space-y-4">
+                    {packageSummaries.map((summary) => (
+                      <PackageSummaryCard key={summary.blockId} summary={summary} />
+                    ))}
+                  </div>
+                </section>
+              ) : null}
 
-          <div className="border-t border-border/60 bg-muted/30 px-6 py-5 sm:px-10 sm:py-6">
-            {accepted ? (
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-300">
-                    <CheckCircle2 className="h-5 w-5" aria-hidden />
-                  </span>
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">
+              <section className="mt-12 space-y-2">
+                {!packageSummaries.length && !block.legalHtml?.trim() ? (
+                  <NoPackageSelectionCard />
+                ) : null}
+              </section>
+
+              <section className="mt-12">
+                <SectionLabel>The agreement</SectionLabel>
+                <div className="mt-6">
+                  <LegalSections legalHtml={block.legalHtml} />
+                </div>
+              </section>
+
+              <section
+                ref={signRef}
+                id="agreement-sign"
+                className="mt-16 scroll-mt-24"
+              >
+                {accepted ? (
+                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-6 py-6 text-center">
+                    <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-700">
+                      <CheckCircle2 className="h-6 w-6" aria-hidden />
+                    </span>
+                    <p className="mt-3 text-base font-semibold text-emerald-900">
                       Signed{displayName ? ` by ${displayName}` : ""}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="mt-1 text-sm text-emerald-900/80">
                       Thanks — we&apos;ll follow up with next steps shortly.
                     </p>
+                    <div className="mt-5">
+                      <DialogClose asChild>
+                        <Button type="button" variant="outline" className="gap-2">
+                          Close
+                        </Button>
+                      </DialogClose>
+                    </div>
                   </div>
-                </div>
-                <DialogClose asChild>
-                  <Button type="button" variant="outline" className="gap-2">
-                    Close
-                  </Button>
-                </DialogClose>
-              </div>
-            ) : (
-              <form className="grid gap-4 sm:grid-cols-[1fr,auto] sm:items-end" onSubmit={onSign}>
-                <div className="space-y-2">
-                  <Label htmlFor="agreement-sign-name" className="text-foreground">
-                    Sign here — full name
-                  </Label>
-                  <Input
-                    id="agreement-sign-name"
-                    autoComplete="name"
-                    placeholder="Jane Doe"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    disabled={!interactive || busy}
-                    minLength={2}
-                    className="h-11 bg-card text-base"
-                  />
-                  {requireAcceptTerms ? (
-                    <label className="mt-1 flex items-start gap-2 text-xs text-muted-foreground">
-                      <input
-                        type="checkbox"
-                        className="mt-0.5 h-4 w-4 rounded border-input"
-                        checked={agreed}
-                        onChange={(e) => setAgreed(e.target.checked)}
-                        disabled={!interactive || busy}
-                      />
-                      <span>
-                        I have read and agree to the terms of this {agreementTitle.toLowerCase()}
-                        {proposalTitle ? <> for <span className="font-medium text-foreground">{proposalTitle}</span></> : null}.
-                      </span>
-                    </label>
-                  ) : null}
-                  {error ? (
-                    <p className="text-sm text-destructive" role="alert">
-                      {error}
+                ) : (
+                  <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-6 sm:p-8">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                      Signature
                     </p>
-                  ) : null}
-                  {!interactive ? (
-                    <p className="text-xs text-muted-foreground">
-                      Signing is disabled in preview — the live proposal will accept your customer&apos;s signature here.
+                    <h3 className="mt-1 text-xl font-semibold tracking-tight text-zinc-900">
+                      Sign &amp; accept this agreement
+                    </h3>
+                    <p className="mt-2 text-sm text-zinc-600">
+                      Type your full legal name below. Your signature is recorded against this
+                      proposal{proposalTitle ? <> (<span className="font-medium text-zinc-900">{proposalTitle}</span>)</> : null}.
                     </p>
-                  ) : null}
-                </div>
-                <Button
-                  type="submit"
-                  size="lg"
-                  className="h-11 gap-2 rounded-xl text-base font-semibold shadow-md hover:opacity-95"
-                  style={{ backgroundColor: ctaColor, color: ctaForeground }}
-                  disabled={!canSign || busy}
-                >
-                  {busy ? (
-                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                  ) : (
-                    <FileSignature className="h-4 w-4" aria-hidden />
-                  )}
-                  Sign &amp; accept
-                </Button>
-              </form>
-            )}
+                    <form className="mt-5 grid gap-4 sm:grid-cols-[1fr,auto] sm:items-end" onSubmit={onSign}>
+                      <div className="space-y-2">
+                        <Label htmlFor="agreement-sign-name" className="text-zinc-900">
+                          Full name
+                        </Label>
+                        <Input
+                          id="agreement-sign-name"
+                          autoComplete="name"
+                          placeholder="Jane Doe"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          disabled={!interactive || busy}
+                          minLength={2}
+                          className="h-11 border-zinc-200 bg-white text-base text-zinc-900"
+                        />
+                        {requireAcceptTerms ? (
+                          <label className="mt-1 flex items-start gap-2 text-xs text-zinc-600">
+                            <input
+                              type="checkbox"
+                              className="mt-0.5 h-4 w-4 rounded border-zinc-300"
+                              checked={agreed}
+                              onChange={(e) => setAgreed(e.target.checked)}
+                              disabled={!interactive || busy}
+                            />
+                            <span>
+                              I have read and agree to the terms of this {agreementTitle.toLowerCase()}
+                              {proposalTitle ? <> for <span className="font-medium text-zinc-900">{proposalTitle}</span></> : null}.
+                            </span>
+                          </label>
+                        ) : null}
+                        {error ? (
+                          <p className="text-sm text-destructive" role="alert">
+                            {error}
+                          </p>
+                        ) : null}
+                        {!interactive ? (
+                          <p className="text-xs text-zinc-500">
+                            Signing is disabled in preview — the live proposal will accept your customer&apos;s signature here.
+                          </p>
+                        ) : null}
+                      </div>
+                      <Button
+                        type="submit"
+                        size="lg"
+                        className="h-11 gap-2 rounded-xl text-base font-semibold shadow-md hover:opacity-95"
+                        style={{ backgroundColor: ctaColor, color: ctaForeground }}
+                        disabled={!canSign || busy}
+                      >
+                        {busy ? (
+                          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                        ) : (
+                          <FileSignature className="h-4 w-4" aria-hidden />
+                        )}
+                        Sign &amp; accept
+                      </Button>
+                    </form>
+                  </div>
+                )}
+              </section>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
+      {children}
+    </p>
   );
 }
 
