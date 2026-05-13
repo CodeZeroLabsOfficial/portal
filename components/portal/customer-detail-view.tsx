@@ -7,9 +7,11 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
+  ArrowRight,
   Building2,
   Clock,
   CreditCard,
+  Download,
   ExternalLink,
   Eye,
   FileText,
@@ -26,16 +28,19 @@ import {
   Sparkles,
   Trash2,
   Users,
+  X,
 } from "lucide-react";
 import type { CustomerActivityRecord, CustomerNoteRecord, CustomerRecord } from "@/types/customer";
 import type { OpportunityRecord } from "@/types/opportunity";
 import type { InvoiceRecord } from "@/types/invoice";
 import type { ProposalRecord } from "@/types/proposal";
 import type { ProposalTemplateRecord } from "@/types/proposal-template";
+import type { SignedAgreementRecord } from "@/types/signed-agreement";
 import type { SubscriptionRecord } from "@/types/subscription";
 import type { TaskRecord } from "@/types/task";
 import {
   addCustomerNoteAction,
+  getSignedAgreementModalPayloadAction,
 } from "@/server/actions/customers-crm";
 import { deleteProposalAction } from "@/server/actions/proposal-builder";
 import { createDraftProposalFromCustomerAction } from "@/server/actions/proposals-crm";
@@ -43,9 +48,16 @@ import { convertLeadToContactAction } from "@/server/actions/opportunities-crm";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { formatAddressLines, initialsFromName } from "@/lib/format";
+import { sanitizeProposalHtml } from "@/lib/sanitize-proposal-html";
 import { WORKSPACE_DETAIL_PAGE_TITLE_CLASS } from "@/lib/workspace-page-typography";
 import { cn } from "@/lib/utils";
 
@@ -99,6 +111,21 @@ const PROPOSAL_PHASE_TITLE: Record<ProposalLifecyclePhase, string> = {
   viewed: "Opened — recipient has viewed or acted on the public proposal.",
 };
 
+const CUSTOMER_DETAIL_TAB_VALUES = [
+  "overview",
+  "billing",
+  "proposals",
+  "notes",
+  "documents",
+  "tasks",
+  "vault",
+] as const;
+type CustomerDetailTab = (typeof CUSTOMER_DETAIL_TAB_VALUES)[number];
+
+function isCustomerDetailTab(v: string | undefined): v is CustomerDetailTab {
+  return Boolean(v && (CUSTOMER_DETAIL_TAB_VALUES as readonly string[]).includes(v));
+}
+
 function ProposalCreateControls({
   templates,
   proposalTemplateId,
@@ -147,6 +174,9 @@ export interface CustomerDetailViewProps {
   activities: CustomerActivityRecord[];
   tasks: TaskRecord[];
   templates: ProposalTemplateRecord[];
+  signedAgreements: SignedAgreementRecord[];
+  /** When set (e.g. `?tab=documents`), opens that tab on first paint. */
+  initialTab?: string;
 }
 
 export function CustomerDetailView({
@@ -159,9 +189,13 @@ export function CustomerDetailView({
   activities,
   tasks,
   templates,
+  signedAgreements,
+  initialTab,
 }: CustomerDetailViewProps) {
   const router = useRouter();
-  const [tab, setTab] = React.useState("overview");
+  const [tab, setTab] = React.useState<CustomerDetailTab>(() =>
+    isCustomerDetailTab(initialTab) ? initialTab : "overview",
+  );
   const [busy, setBusy] = React.useState<string | null>(null);
   const [proposalTemplateId, setProposalTemplateId] = React.useState(
     () => templates[0]?.id ?? "",
@@ -265,6 +299,47 @@ export function CustomerDetailView({
     router.refresh();
   }
 
+  const [signedAgreementModalOpen, setSignedAgreementModalOpen] = React.useState(false);
+  const [signedAgreementLoadingId, setSignedAgreementLoadingId] = React.useState<string | null>(null);
+  const [signedAgreementModalData, setSignedAgreementModalData] = React.useState<{
+    record: SignedAgreementRecord;
+    signatureSrc: string | null;
+  } | null>(null);
+  const signedAgreementSignRef = React.useRef<HTMLDivElement | null>(null);
+
+  async function openSignedAgreementModal(doc: SignedAgreementRecord) {
+    setSignedAgreementLoadingId(doc.id);
+    setSignedAgreementModalData(null);
+    const res = await getSignedAgreementModalPayloadAction({
+      customerId: customer.id,
+      signedAgreementId: doc.id,
+    });
+    setSignedAgreementLoadingId(null);
+    if (!res.ok) {
+      window.alert(res.message);
+      return;
+    }
+    setSignedAgreementModalData({ record: res.record, signatureSrc: res.signatureSrc });
+    setSignedAgreementModalOpen(true);
+  }
+
+  function onSignedAgreementModalOpenChange(next: boolean) {
+    setSignedAgreementModalOpen(next);
+    if (!next) {
+      setSignedAgreementModalData(null);
+    }
+  }
+
+  function printSignedAgreementModal() {
+    if (typeof window !== "undefined") {
+      window.print();
+    }
+  }
+
+  function scrollSignedAgreementModalToSignature() {
+    signedAgreementSignRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   const url = customer.avatarUrl?.trim();
   const canImg =
     url &&
@@ -279,7 +354,8 @@ export function CustomerDetailView({
   });
 
   return (
-    <div className="space-y-8">
+    <>
+      <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <Button variant="ghost" size="sm" className="-ml-2 gap-1.5 text-muted-foreground hover:text-foreground" asChild>
           <Link href="/admin/customers">
@@ -438,7 +514,7 @@ export function CustomerDetailView({
         </Card>
       </div>
 
-      <Tabs value={tab} onValueChange={setTab} className="w-full">
+      <Tabs value={tab} onValueChange={(v) => setTab(isCustomerDetailTab(v) ? v : "overview")} className="w-full">
         <TabsList className="no-scrollbar h-auto w-full flex-wrap justify-start gap-1 overflow-x-auto bg-muted/30 p-1">
           <TabsTrigger value="overview" className="gap-1.5">
             <Sparkles className="h-3.5 w-3.5" />
@@ -789,16 +865,78 @@ export function CustomerDetailView({
           </Card>
         </TabsContent>
 
-        <TabsContent value="documents">
-          <Card className="border-dashed border-border/80 bg-muted/15">
-            <CardContent className="flex flex-col items-center gap-2 py-16 text-center">
-              <FolderOpen className="h-10 w-10 text-muted-foreground/50" aria-hidden />
-              <p className="max-w-sm text-sm text-muted-foreground">
-                File uploads and generated assets will appear here. For now, open invoices from Subscription & billing or
-                attach PDFs in your storage workflow.
-              </p>
-            </CardContent>
-          </Card>
+        <TabsContent value="documents" className="space-y-4">
+          {signedAgreements.length === 0 ? (
+            <Card className="border-dashed border-border/80 bg-muted/15">
+              <CardContent className="flex flex-col items-center gap-2 py-16 text-center">
+                <FolderOpen className="h-10 w-10 text-muted-foreground/50" aria-hidden />
+                <p className="max-w-sm text-sm text-muted-foreground">
+                  Signed Services Agreements will appear here when a customer completes signing on a linked proposal.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <ul className="space-y-2">
+              {signedAgreements.map((doc) => {
+                const signedLabel =
+                  doc.signedAtMs > 0
+                    ? new Date(doc.signedAtMs).toLocaleString(undefined, {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      })
+                    : "—";
+                return (
+                  <li
+                    key={doc.id}
+                    className="flex flex-col gap-3 rounded-xl border border-border/60 bg-card/50 px-4 py-3"
+                  >
+                    <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                      <p className="min-w-0 flex-1 font-medium text-foreground">{doc.proposalTitle}</p>
+                      <div className="flex shrink-0 flex-wrap items-center justify-end gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                        <span className="inline-flex items-center gap-1.5">
+                          <Clock className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                          <span className="text-foreground/90">{signedLabel}</span>
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                          <Eye className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                          <span className="text-foreground/90">{doc.signerName}</span>
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
+                      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-2">
+                        <Badge
+                          variant="outline"
+                          className="border-emerald-500/45 bg-emerald-500/10 text-xs font-medium text-emerald-900 dark:border-emerald-500/35 dark:bg-emerald-500/15 dark:text-emerald-200"
+                        >
+                          Signed
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {doc.totalAmount.formatted}/mo total · {doc.selectedPlan}
+                        </span>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1.5 sm:ml-auto">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          disabled={signedAgreementLoadingId === doc.id}
+                          aria-label={`View signed agreement “${doc.proposalTitle}”`}
+                          onClick={() => void openSignedAgreementModal(doc)}
+                        >
+                          {signedAgreementLoadingId === doc.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                          ) : (
+                            <ExternalLink className="h-4 w-4" aria-hidden />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </TabsContent>
 
         <TabsContent value="tasks">
@@ -836,6 +974,142 @@ export function CustomerDetailView({
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+      </div>
+
+      <Dialog open={signedAgreementModalOpen} onOpenChange={onSignedAgreementModalOpenChange}>
+        <DialogContent
+          className={cn(
+            "z-50 grid gap-0 overflow-hidden border-0 bg-white p-0 text-zinc-900 shadow-2xl",
+            "h-[100dvh] w-screen max-w-none left-0 top-0 translate-x-0 translate-y-0 rounded-none",
+            "sm:left-1/2 sm:top-1/2 sm:h-[min(96dvh,960px)] sm:max-h-[96dvh]",
+            "sm:w-[min(1280px,calc(100vw-2rem))] sm:max-w-[min(1280px,calc(100vw-2rem))]",
+            "sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl",
+            "grid-rows-[auto,1fr]",
+            "[&>button[aria-label='Close']]:hidden",
+          )}
+        >
+          {signedAgreementModalData ? (
+            <>
+              <div className="flex items-center justify-between gap-3 border-b border-zinc-200 bg-white px-4 py-3 sm:px-6">
+                <DialogTitle className="truncate text-sm font-semibold tracking-tight text-zinc-900 sm:text-base">
+                  {signedAgreementModalData.record.proposalTitle}
+                </DialogTitle>
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={printSignedAgreementModal}
+                    className="hidden h-9 gap-1.5 border-zinc-200 bg-white px-3 text-zinc-900 hover:bg-zinc-50 sm:inline-flex"
+                  >
+                    <Download className="h-4 w-4" aria-hidden />
+                    Download
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="default"
+                    onClick={scrollSignedAgreementModalToSignature}
+                    className="h-9 gap-1.5 rounded-md px-3 font-semibold shadow-sm"
+                  >
+                    Next
+                    <ArrowRight className="h-4 w-4" aria-hidden />
+                  </Button>
+                  <DialogClose
+                    aria-label="Close signed agreement"
+                    className="ml-1 inline-flex h-9 w-9 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
+                  >
+                    <X className="h-5 w-5" aria-hidden />
+                  </DialogClose>
+                </div>
+              </div>
+              <div className="min-h-0 overflow-y-auto bg-white">
+                <div className="mx-auto w-full max-w-3xl px-5 py-10 sm:px-10 sm:py-14">
+                  <header className="text-center">
+                    <h2 className="font-serif text-3xl font-semibold leading-tight tracking-tight text-zinc-900 sm:text-4xl">
+                      Signed agreement
+                    </h2>
+                    <p className="mt-2 text-sm font-medium text-zinc-500">
+                      Re:{" "}
+                      <span className="text-zinc-900">{signedAgreementModalData.record.proposalTitle}</span>
+                    </p>
+                    <p className="mt-3 text-xs text-zinc-500">
+                      Signed{" "}
+                      {signedAgreementModalData.record.signedAtMs > 0
+                        ? new Date(signedAgreementModalData.record.signedAtMs).toLocaleString(undefined, {
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                          })
+                        : "—"}{" "}
+                      · Signer: {signedAgreementModalData.record.signerName} · Monthly total:{" "}
+                      {signedAgreementModalData.record.totalAmount.formatted}
+                    </p>
+                  </header>
+
+                  <section className="mt-10">
+                    <h3 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Agreement</h3>
+                    {(() => {
+                      const rawBody = signedAgreementModalData.record.fullAgreementText?.trim() ?? "";
+                      const bodyIsHtml = rawBody.includes("<");
+                      if (!rawBody) {
+                        return (
+                          <p className="mt-3 text-sm text-zinc-500">No agreement text snapshot for this record.</p>
+                        );
+                      }
+                      if (bodyIsHtml) {
+                        return (
+                          <div
+                            className={cn(
+                              "proposal-rich-text mt-4 max-w-none text-[15px] leading-relaxed text-zinc-700",
+                              "[&_h1]:mt-8 [&_h1]:text-xl [&_h1]:font-semibold [&_h1]:text-zinc-900",
+                              "[&_h2]:mt-6 [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:text-zinc-900",
+                              "[&_h3]:mt-4 [&_h3]:text-base [&_h3]:font-semibold [&_h3]:text-zinc-900",
+                              "[&_p]:mb-3 [&_p:last-child]:mb-0",
+                              "[&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5",
+                              "[&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5",
+                            )}
+                            dangerouslySetInnerHTML={{ __html: sanitizeProposalHtml(rawBody) }}
+                          />
+                        );
+                      }
+                      return (
+                        <div className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-zinc-700">{rawBody}</div>
+                      );
+                    })()}
+                  </section>
+
+                  <section
+                    ref={signedAgreementSignRef}
+                    id="customer-signed-agreement-signature"
+                    className="mt-12 scroll-mt-24"
+                  >
+                    <h3 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Signature</h3>
+                    {signedAgreementModalData.signatureSrc ? (
+                      <div className="mt-4 rounded-xl border border-dashed border-zinc-300 bg-zinc-50/80 p-4">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={signedAgreementModalData.signatureSrc}
+                          alt={`Signature of ${signedAgreementModalData.record.signerName}`}
+                          className="max-h-40 max-w-full object-contain object-left"
+                        />
+                      </div>
+                    ) : (
+                      <p className="mt-4 text-sm text-zinc-500">
+                        No signature image on file (or it could not be loaded from storage).
+                      </p>
+                    )}
+                    {signedAgreementModalData.record.signatureMethod ? (
+                      <p className="mt-2 text-xs capitalize text-zinc-500">
+                        Method: {signedAgreementModalData.record.signatureMethod}
+                      </p>
+                    ) : null}
+                  </section>
+                </div>
+              </div>
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

@@ -24,10 +24,12 @@ import { deleteOpportunitiesForCustomerDb } from "@/server/firestore/crm-opportu
 import { deleteMirroredStripeCustomer } from "@/server/stripe/delete-stripe-customer-for-crm";
 import { ensureStripeCustomer } from "@/server/stripe/proposal-billing";
 import { parseProposalRecord } from "@/server/firestore/parse-proposal";
+import { parseSignedAgreementRecord } from "@/server/firestore/parse-signed-agreement";
 import { parseTaskRecord } from "@/server/firestore/parse-task";
 import type { SubscriptionRecord } from "@/types/subscription";
 import type { TaskRecord } from "@/types/task";
 import type { PortalUser } from "@/types/user";
+import type { SignedAgreementRecord } from "@/types/signed-agreement";
 
 type AdminDb = NonNullable<ReturnType<typeof getFirebaseAdminFirestore>>;
 
@@ -774,6 +776,70 @@ export async function listProposalsLinkedToCustomer(
   } catch (err) {
     logError("listProposalsLinkedToCustomer", { err: err instanceof Error ? err.message : String(err) });
     return [];
+  }
+}
+
+/**
+ * Signed Services Agreements for this CRM customer (`customerId` on the snapshot row).
+ */
+export async function listSignedAgreementsForCustomer(
+  user: PortalUser,
+  customerId: string,
+): Promise<SignedAgreementRecord[]> {
+  const db = getFirebaseAdminFirestore();
+  if (!db || !isStaff(user)) return [];
+  try {
+    const snap = await db
+      .collection(COLLECTIONS.signedAgreements)
+      .where("customerId", "==", customerId)
+      .limit(80)
+      .get();
+    const rows: SignedAgreementRecord[] = [];
+    for (const d of snap.docs) {
+      const parsed = parseSignedAgreementRecord(d.id, d.data() as Record<string, unknown>);
+      if (parsed) rows.push(parsed);
+    }
+    return rows.sort((a, b) => b.signedAtMs - a.signedAtMs);
+  } catch (err) {
+    logError("list_signed_agreements_for_customer_failed", {
+      customerId,
+      message: err instanceof Error ? err.message : String(err),
+    });
+    return [];
+  }
+}
+
+/**
+ * Loads one signed agreement for the customer detail document viewer.
+ * Enforces `customerId` match and staff `organizationId` when present on the user.
+ */
+export async function getSignedAgreementForCustomerContext(
+  user: PortalUser,
+  customerId: string,
+  signedAgreementId: string,
+  customerOrganizationId?: string,
+): Promise<SignedAgreementRecord | null> {
+  const db = getFirebaseAdminFirestore();
+  if (!db || !isStaff(user)) return null;
+  const id = signedAgreementId.trim();
+  if (!id) return null;
+  try {
+    const snap = await db.collection(COLLECTIONS.signedAgreements).doc(id).get();
+    if (!snap.exists) return null;
+    const row = parseSignedAgreementRecord(snap.id, snap.data() as Record<string, unknown>);
+    if (!row) return null;
+    if (row.customerId !== customerId) return null;
+    if (user.organizationId && row.organizationId !== user.organizationId) return null;
+    const custOrg = customerOrganizationId?.trim();
+    if (custOrg && row.organizationId !== custOrg) return null;
+    return row;
+  } catch (err) {
+    logError("get_signed_agreement_for_customer_failed", {
+      customerId,
+      signedAgreementId: id,
+      message: err instanceof Error ? err.message : String(err),
+    });
+    return null;
   }
 }
 

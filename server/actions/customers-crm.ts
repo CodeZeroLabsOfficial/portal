@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { requireStaffSession } from "@/lib/auth/server-session";
 import { addCustomerNoteSchema, createCustomerSchema, updateCustomerFormSchema } from "@/lib/schemas/customer";
 import { zodErrorToMessage } from "@/lib/zod-error";
+import { z } from "zod";
+import { getStorageFileSignedReadUrl } from "@/lib/firebase/admin-storage";
 import { FieldValue } from "firebase-admin/firestore";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import { COLLECTIONS } from "@/server/firestore/collections";
@@ -12,10 +14,12 @@ import {
   createCustomerDocument,
   deleteCustomerDocument,
   getCustomerRecordForOrg,
+  getSignedAgreementForCustomerContext,
   setCustomerArchived,
   syncStripeCustomerBasics,
   updateCustomerDocument,
 } from "@/server/firestore/crm-customers";
+import type { SignedAgreementRecord } from "@/types/signed-agreement";
 import { getStripe } from "@/lib/stripe/server";
 
 function revalidateCrmCustomerPaths(customerId?: string) {
@@ -190,4 +194,53 @@ export async function pullStripeCustomerProfileAction(
     const message = e instanceof Error ? e.message : "Stripe request failed.";
     return { ok: false, message };
   }
+}
+
+const signedAgreementViewSchema = z.object({
+  customerId: z.string().min(1),
+  signedAgreementId: z.string().min(1),
+});
+
+/**
+ * Loads a signed agreement for the staff CRM modal (body + resolved signature image URL).
+ * Omits inline signature data from the returned record to keep the payload small.
+ */
+export async function getSignedAgreementModalPayloadAction(
+  raw: unknown,
+): Promise<
+  | { ok: true; record: SignedAgreementRecord; signatureSrc: string | null }
+  | { ok: false; message: string }
+> {
+  const user = await requireStaffSession();
+  if (!user) {
+    return { ok: false, message: "You need an admin or team session." };
+  }
+  const parsed = signedAgreementViewSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { ok: false, message: "Invalid request." };
+  }
+  const { customerId, signedAgreementId } = parsed.data;
+  const customer = await getCustomerRecordForOrg(user, customerId);
+  if (!customer) {
+    return { ok: false, message: "Customer not found." };
+  }
+  const row = await getSignedAgreementForCustomerContext(
+    user,
+    customerId,
+    signedAgreementId,
+    customer.organizationId,
+  );
+  if (!row) {
+    return { ok: false, message: "Signed agreement not found." };
+  }
+
+  let signatureSrc: string | null = null;
+  if (row.signatureImage?.startsWith("data:image/")) {
+    signatureSrc = row.signatureImage;
+  } else if (row.signatureImageStoragePath) {
+    signatureSrc = await getStorageFileSignedReadUrl(row.signatureImageStoragePath);
+  }
+
+  const { signatureImage: _sig, signatureImageStoragePath: _path, ...rest } = row;
+  return { ok: true, record: rest as SignedAgreementRecord, signatureSrc };
 }

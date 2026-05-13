@@ -57,3 +57,35 @@ export async function uploadSignedAgreementSignaturePng(params: {
     return null;
   }
 }
+
+/**
+ * Short-lived HTTPS URL for a private Storage object (e.g. signature PNG in staff document viewer).
+ */
+export async function getStorageFileSignedReadUrl(
+  storagePath: string,
+  expiresMs = 60 * 60 * 1000,
+): Promise<string | null> {
+  const app = getFirebaseAdminApp();
+  const trimmed = storagePath.trim();
+  if (!app || !trimmed) return null;
+  const projectIdFromApp =
+    typeof app.options.projectId === "string" && app.options.projectId.length > 0
+      ? app.options.projectId
+      : undefined;
+  const bucketName = getFirebaseStorageBucketName(projectIdFromApp);
+  if (!bucketName) return null;
+  try {
+    const bucket = getStorage(app).bucket(bucketName);
+    const [url] = await bucket.file(trimmed).getSignedUrl({
+      action: "read",
+      expires: Date.now() + expiresMs,
+    });
+    return url;
+  } catch (error) {
+    logError("storage_signed_read_url_failed", {
+      storagePath: trimmed,
+      message: error instanceof Error ? error.message : "unknown",
+    });
+    return null;
+  }
+}

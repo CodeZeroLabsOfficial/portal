@@ -8,6 +8,7 @@ import {
   listCustomerNotes,
   listInvoicesForStripeCustomer,
   listProposalsLinkedToCustomer,
+  listSignedAgreementsForCustomer,
   listSubscriptionsForStripeCustomer,
   listTasksForCustomer,
 } from "@/server/firestore/crm-customers";
@@ -16,27 +17,32 @@ import { listProposalTemplatesForOrg } from "@/server/firestore/proposal-templat
 
 interface PageProps {
   params: Promise<{ customerId: string }>;
+  searchParams?: Promise<{ tab?: string }>;
 }
 
-export default async function AdminCustomerDetailPage({ params }: PageProps) {
+export default async function AdminCustomerDetailPage({ params, searchParams }: PageProps) {
   const user = await getCurrentSessionUser();
   if (!user) {
     redirect("/login?next=/admin/customers");
   }
 
   const { customerId } = await params;
+  const sp = searchParams ? await searchParams : {};
+  const initialTab = typeof sp.tab === "string" ? sp.tab : undefined;
+
   const customer = await getCustomerRecordForOrg(user, customerId);
   if (!customer) {
     notFound();
   }
 
-  const [notes, activities, subscriptions, invoices, proposalsMatched, tasks, opportunities, templates] =
+  const [notes, activities, subscriptions, invoices, proposalsMatched, signedAgreements, tasks, opportunities, templates] =
     await Promise.all([
       listCustomerNotes(user, customerId),
       listCustomerActivities(user, customerId),
       listSubscriptionsForStripeCustomer(user, customer.stripeCustomerId),
       listInvoicesForStripeCustomer(user, customer.stripeCustomerId),
       listProposalsLinkedToCustomer(user, customerId, customer.email),
+      listSignedAgreementsForCustomer(user, customerId),
       listTasksForCustomer(user, customerId),
       listOpportunitiesForCustomer(user, customerId),
       listProposalTemplatesForOrg(user),
@@ -62,6 +68,8 @@ export default async function AdminCustomerDetailPage({ params }: PageProps) {
         activities={activities}
         tasks={tasks}
         templates={templates}
+        signedAgreements={signedAgreements}
+        initialTab={initialTab}
       />
     </WorkspaceShell>
   );
