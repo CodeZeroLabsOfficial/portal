@@ -1,4 +1,11 @@
-import type { ProposalBlock, ProposalColumnChildBlock, ProposalContentBlock } from "@/types/proposal";
+import type {
+  AgreementBlock,
+  PackagesBlock,
+  ProposalBlock,
+  ProposalColumnChildBlock,
+  ProposalContentBlock,
+} from "@/types/proposal";
+import { isSectionBackgroundActive } from "@/lib/section-background";
 
 function* walkNestedContent(block: ProposalContentBlock): Generator<ProposalContentBlock> {
   yield block;
@@ -55,6 +62,25 @@ function findNestedContentSubtree(block: ProposalContentBlock, id: string): Prop
 export function hasAgreementBlock(blocks: ProposalBlock[]): boolean {
   for (const b of iterateProposalContentBlocks(blocks)) {
     if (b.type === "agreement") return true;
+  }
+  return false;
+}
+
+/**
+ * True when the last top-level block in the proposal renders as a viewport-bleed
+ * band (section, splash, or packages/agreement with an active backdrop). Used by
+ * the public viewer to drop redundant bottom padding when the band already runs
+ * flush to the viewport edge.
+ */
+export function proposalEndsInFullBleedBand(blocks: ProposalBlock[]): boolean {
+  const last = blocks[blocks.length - 1];
+  if (!last) return false;
+  if (last.type === "section" || last.type === "splash") return true;
+  if (last.type === "packages") {
+    return isSectionBackgroundActive((last as PackagesBlock).background);
+  }
+  if (last.type === "agreement") {
+    return isSectionBackgroundActive((last as AgreementBlock).background);
   }
   return false;
 }

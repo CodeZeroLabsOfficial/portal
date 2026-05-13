@@ -4,7 +4,7 @@ import { ProposalAnalyticsTracker } from "@/components/proposal/proposal-analyti
 import { ProposalDocumentView } from "@/components/proposal/proposal-document-view";
 import { ProposalPasswordGate } from "@/components/proposal/proposal-password-gate";
 import { ProposalPublicFooter } from "@/components/proposal/proposal-public-footer";
-import { hasAgreementBlock } from "@/lib/proposal-blocks";
+import { hasAgreementBlock, proposalEndsInFullBleedBand } from "@/lib/proposal-blocks";
 import { isProposalUnlockedForRequest } from "@/lib/proposal-public-session";
 import {
   PROPOSAL_PUBLIC_CONTENT_CLASSES,
@@ -53,8 +53,20 @@ export default async function PublicProposalPage(props: PublicProposalPageProps)
   const requiresPassword = Boolean(proposal.sharePasswordHash);
   const unlocked = !requiresPassword || (await isProposalUnlockedForRequest(proposal.id));
 
-  const mainUnlockedClasses =
-    "proposal-print-root w-full pb-12 pt-0 print:pb-8 sm:pb-14 min-h-dvh";
+  const agreementPresent = hasAgreementBlock(proposal.document.blocks);
+  /**
+   * Mirror {@link ProposalPublicFooter}'s null-return condition: when an agreement
+   * block drives signing and the proposal hasn't been accepted yet, the footer
+   * renders nothing and we skip its outer wrapper entirely to avoid an empty
+   * spacer band below the last content section.
+   */
+  const showFooter = !agreementPresent || proposal.status === "accepted";
+  /** When the document already ends with a viewport-bleed band, `<main>`'s default bottom padding leaves a stripe of page background below it. */
+  const flushBottom = !showFooter && proposalEndsInFullBleedBand(proposal.document.blocks);
+
+  const mainUnlockedClasses = flushBottom
+    ? "proposal-print-root w-full pb-0 pt-0 print:pb-0 min-h-dvh"
+    : "proposal-print-root w-full pb-12 pt-0 print:pb-8 sm:pb-14 min-h-dvh";
 
   return (
     <main
@@ -77,14 +89,16 @@ export default async function PublicProposalPage(props: PublicProposalPageProps)
               acceptedByName={proposal.acceptedByName}
             />
           </div>
-          <div className={`${PROPOSAL_PUBLIC_CONTENT_CLASSES} mt-10`}>
-            <ProposalPublicFooter
-              shareToken={proposal.shareToken}
-              status={proposal.status}
-              acceptedByName={proposal.acceptedByName}
-              hideAcceptanceForm={hasAgreementBlock(proposal.document.blocks)}
-            />
-          </div>
+          {showFooter ? (
+            <div className={`${PROPOSAL_PUBLIC_CONTENT_CLASSES} mt-10`}>
+              <ProposalPublicFooter
+                shareToken={proposal.shareToken}
+                status={proposal.status}
+                acceptedByName={proposal.acceptedByName}
+                hideAcceptanceForm={agreementPresent}
+              />
+            </div>
+          ) : null}
         </>
       )}
     </main>
