@@ -15,7 +15,6 @@ function createOrGetApp(): FirebaseApp | null {
     apiKey: cfg.apiKey,
     authDomain: cfg.authDomain,
     projectId: cfg.projectId,
-    storageBucket: cfg.storageBucket,
     messagingSenderId: cfg.messagingSenderId,
     appId: cfg.appId,
   };
