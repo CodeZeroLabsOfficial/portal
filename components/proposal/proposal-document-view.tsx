@@ -420,7 +420,7 @@ function BlockView({
       );
     case "agreement": {
       const ab = block as AgreementBlock;
-      return (
+      const agreementInner = (
         <AgreementBlockPublic
           block={ab}
           allBlocks={proposalContext?.allBlocks ?? []}
@@ -431,6 +431,21 @@ function BlockView({
           acceptedByName={proposalContext?.acceptedByName}
           interactive={Boolean(shareToken)}
         />
+      );
+      const backdropActive = isSectionBackgroundActive(ab.background);
+      const body = (
+        <div className={cn(PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES, PROPOSAL_DOCUMENT_BLOCK_INNER_PAD_CLASSES)}>
+          {agreementInner}
+        </div>
+      );
+      return (
+        <ProposalSectionShell
+          background={ab.background}
+          variant="viewer"
+          viewportBleed={Boolean(viewportSectionBleed)}
+        >
+          {backdropActive ? body : agreementInner}
+        </ProposalSectionShell>
       );
     }
     case "payment":
@@ -565,6 +580,11 @@ export function ProposalDocumentView({
                 block.type === "packages" &&
                 isSectionBackgroundActive((block as PackagesBlock).background),
             );
+            const agreementRootBand = Boolean(
+              viewportSectionBleed &&
+                block.type === "agreement" &&
+                isSectionBackgroundActive((block as AgreementBlock).background),
+            );
             const child = (
               <BlockView
                 block={block}
@@ -581,7 +601,7 @@ export function ProposalDocumentView({
                 proposalContext={proposalContext}
               />
             );
-            if (block.type === "section" || splashRootBand || packagesRootBand) {
+            if (block.type === "section" || splashRootBand || packagesRootBand || agreementRootBand) {
               return (
                 <section key={block.id} className="w-full shrink-0">
                   {child}

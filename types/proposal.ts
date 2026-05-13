@@ -283,9 +283,11 @@ export interface AgreementBlock extends ProposalBlockBase {
   /**
    * Visual overrides — only `primaryColor` is honoured today and drives the
    * CTA button background (and matching modal sign button). Defaults to the
-   * Qwilr-style mint when unset.
+   * brand primary when unset.
    */
   style?: BlockStyle;
+  /** Optional full-bleed backdrop behind the CTA (same options as Plans / Section blocks). */
+  background?: SectionBackground;
 }
 
 export interface EmbedBlock extends ProposalBlockBase {

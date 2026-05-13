@@ -1979,7 +1979,11 @@ function BlockFields({
     }
     case "agreement": {
       const b = block as AgreementBlock;
-      return <AgreementBlockEditor block={b} onChange={patch} />;
+      return (
+        <ProposalSectionShell background={b.background} variant="editor">
+          <AgreementBlockEditor block={b} onChange={patch} />
+        </ProposalSectionShell>
+      );
     }
     case "embed":
       return (
@@ -2447,6 +2451,20 @@ export function ProposalDocumentEditor({
     );
   }
 
+  function patchAgreementBackdrop(id: string, nextBackdrop: SectionBackground | undefined) {
+    setBlocks((prev) =>
+      prev.map((b) => {
+        if (b.id !== id || b.type !== "agreement") return b;
+        if (!nextBackdrop) {
+          const { background: _drop, ...rest } = b;
+          void _drop;
+          return rest as ProposalBlock;
+        }
+        return { ...b, background: nextBackdrop } as ProposalBlock;
+      }),
+    );
+  }
+
   function removeBlock(id: string) {
     setBlocks((prev) => prev.filter((b) => b.id !== id));
     setSelectedBlockId((current) => (current === id ? null : current));
@@ -2895,6 +2913,11 @@ export function ProposalDocumentEditor({
                                   <ProposalSectionBackgroundPicker
                                     background={(block as PackagesBlock).background}
                                     onChange={(next) => patchPackagesBackdrop(block.id, next)}
+                                  />
+                                ) : block.type === "agreement" ? (
+                                  <ProposalSectionBackgroundPicker
+                                    background={(block as AgreementBlock).background}
+                                    onChange={(next) => patchAgreementBackdrop(block.id, next)}
                                   />
                                 ) : block.type === "splash" ? (
                                   <ProposalSplashBackgroundPicker

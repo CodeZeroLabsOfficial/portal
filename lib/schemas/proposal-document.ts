@@ -327,6 +327,7 @@ const agreementBlockSchema = z.object({
   legalHtml: z.string().max(120_000).optional(),
   requireAcceptTerms: z.boolean().optional(),
   style: blockStyleSchema.optional(),
+  background: sectionBackgroundSchema.optional(),
 });
 
 const embedBlockSchema = z.object({
