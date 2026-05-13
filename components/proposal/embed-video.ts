@@ -37,3 +37,12 @@ export function embedVideoSrc(url: string): { kind: "youtube" | "vimeo" | "ifram
     return null;
   }
 }
+
+/** Static thumbnail for toolbar / picker previews (no API key). */
+export function youtubeThumbnailFromPageUrl(pageUrl: string): string | null {
+  const emb = embedVideoSrc(pageUrl);
+  if (!emb || emb.kind !== "youtube") return null;
+  const m = emb.src.match(/\/embed\/([^/?]+)/);
+  const id = m?.[1];
+  return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : null;
+}

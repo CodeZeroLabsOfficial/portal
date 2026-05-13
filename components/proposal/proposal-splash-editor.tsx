@@ -5,7 +5,7 @@ import { Check, MonitorPlay, Paintbrush } from "lucide-react";
 import { STYLE_PRESET_COLORS } from "@/lib/block-style";
 import { cn } from "@/lib/utils";
 import type { SplashBlock, SplashBlockBackground } from "@/types/proposal";
-import { mergeSplashBackground, resolveSplashBackdrop } from "@/lib/splash-block";
+import { mergeSplashBackground, resolveSplashBackdrop, type ResolvedSplashBackdrop } from "@/lib/splash-block";
 import { ProposalRichText } from "@/components/proposal/proposal-rich-text";
 import { ProposalSplashBlockCanvas } from "@/components/proposal/proposal-splash-block";
 import { escapeHtml } from "@/lib/escape-html";
@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useProposalMediaLibraryOptional } from "@/components/proposal/proposal-media-library";
 import { SplashBackgroundTintPopover } from "@/components/proposal/proposal-background-tint-popover";
+import { youtubeThumbnailFromPageUrl } from "@/components/proposal/embed-video";
 
 function normalizeHex(raw: unknown): string | undefined {
   if (typeof raw !== "string") return undefined;
@@ -240,6 +241,45 @@ function applyLayoutPreset(block: SplashBlock, presetId: string): SplashBlock {
   };
 }
 
+function SplashBackgroundTriggerMedia(model: SplashBlockBackground, resolved: ResolvedSplashBackdrop) {
+  if (resolved.kind === "image" && resolved.imageUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={resolved.imageUrl} alt="" className="h-full w-full object-cover" draggable={false} />
+    );
+  }
+  if (resolved.kind === "video" && resolved.videoUrl) {
+    const poster = model.posterUrl?.trim();
+    if (poster) {
+      return (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={poster} alt="" className="h-full w-full object-cover" draggable={false} />
+      );
+    }
+    if (resolved.isDirectVideo) {
+      return (
+        <video
+          className="h-full w-full object-cover"
+          muted
+          playsInline
+          preload="metadata"
+          src={resolved.videoUrl}
+          aria-hidden
+        />
+      );
+    }
+    const yt = youtubeThumbnailFromPageUrl(resolved.videoUrl);
+    if (yt) {
+      return (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={yt} alt="" className="h-full w-full object-cover" draggable={false} />
+      );
+    }
+    return <span className="block h-full w-full bg-muted" aria-hidden />;
+  }
+  return null;
+}
+
 export function ProposalSplashBackgroundPicker({
   block,
   onChange,
@@ -264,6 +304,8 @@ export function ProposalSplashBackgroundPicker({
     onChange(patchBackground(block, part));
   }
 
+  const mediaFill = SplashBackgroundTriggerMedia(model, resolved);
+
   return (
     <DropdownMenu open={open} onOpenChange={setOpen} modal={false}>
       <DropdownMenuTrigger asChild>
@@ -272,43 +314,24 @@ export function ProposalSplashBackgroundPicker({
           title="Background"
           aria-label="Background"
           className={cn(
-            "relative inline-flex h-8 w-8 items-center justify-center rounded-full ring-2 ring-offset-2 ring-offset-muted/90 transition-colors hover:bg-background focus:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-background dark:ring-offset-zinc-800",
+            "relative inline-flex h-8 w-8 rounded-full ring-2 ring-offset-2 ring-offset-muted/90 transition-colors hover:bg-background focus:outline-none focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-background dark:ring-offset-zinc-800",
+            mediaFill ? "overflow-hidden p-0 ring-border" : "items-center justify-center",
             resolved.kind !== "color" || model.color ? "ring-border" : "ring-border ring-dashed",
           )}
         >
-          <Paintbrush className="h-4 w-4 text-muted-foreground" />
-          <span className="pointer-events-none absolute inset-0">
-            {resolved.kind === "image" && resolved.imageUrl ? (
-              <span className="absolute bottom-1 right-1 h-4 w-4 overflow-hidden rounded-full ring-[1.5px] ring-border">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={resolved.imageUrl} alt="" className="h-full w-full object-cover" draggable={false} />
-              </span>
-            ) : resolved.kind === "video" && resolved.videoUrl ? (
-              model.posterUrl?.trim() ? (
-                <span className="absolute bottom-1 right-1 h-4 w-4 overflow-hidden rounded-full ring-[1.5px] ring-border">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={model.posterUrl.trim()} alt="" className="h-full w-full object-cover" draggable={false} />
-                </span>
-              ) : resolved.isDirectVideo ? (
-                <video
-                  className="pointer-events-none absolute bottom-1 right-1 h-4 w-4 rounded-full object-cover ring-[1.5px] ring-border"
-                  muted
-                  playsInline
-                  preload="metadata"
-                  src={resolved.videoUrl}
+          {mediaFill ? (
+            mediaFill
+          ) : (
+            <>
+              <Paintbrush className="h-4 w-4 text-muted-foreground" />
+              <span className="pointer-events-none absolute inset-0">
+                <span
+                  className="absolute bottom-1 right-1 h-4 w-4 rounded-full ring-[1.5px] ring-border"
+                  style={{ backgroundColor: resolved.colorHex }}
                 />
-              ) : (
-                <span className="absolute bottom-1 right-1 flex h-4 w-4 items-center justify-center overflow-hidden rounded-full bg-muted ring-[1.5px] ring-border">
-                  <MonitorPlay className="h-2.5 w-2.5 text-muted-foreground" />
-                </span>
-              )
-            ) : (
-              <span
-                className="absolute bottom-1 right-1 h-4 w-4 rounded-full ring-[1.5px] ring-border"
-                style={{ backgroundColor: resolved.colorHex }}
-              />
-            )}
-          </span>
+              </span>
+            </>
+          )}
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { type Editor, EditorContent, useEditor } from "@tiptap/react";
+import { type Editor, EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react";
 import { Extension } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
@@ -37,6 +37,9 @@ declare module "@tiptap/core" {
   interface Commands<ReturnType> {
     fontSize: {
       setFontSize: (size: string | null) => ReturnType;
+    };
+    fontFamily: {
+      setFontFamily: (family: string | null) => ReturnType;
     };
   }
 }
@@ -81,6 +84,46 @@ const FontSize = Extension.create({
               .run();
           }
           return chain().setMark("textStyle", { fontSize: size }).run();
+        },
+    };
+  },
+});
+
+const FontFamily = Extension.create({
+  name: "fontFamily",
+  addOptions() {
+    return { types: ["textStyle"] };
+  },
+  addGlobalAttributes() {
+    return [
+      {
+        types: this.options.types,
+        attributes: {
+          fontFamily: {
+            default: null,
+            parseHTML: (el) => {
+              const raw = (el as HTMLElement).style.fontFamily?.trim();
+              return raw || null;
+            },
+            renderHTML: (attrs) =>
+              attrs.fontFamily ? { style: `font-family: ${attrs.fontFamily as string}` } : {},
+          },
+        },
+      },
+    ];
+  },
+  addCommands() {
+    return {
+      setFontFamily:
+        (family) =>
+        ({ chain }) => {
+          if (family === null || family === "") {
+            return chain()
+              .setMark("textStyle", { fontFamily: null })
+              .removeEmptyTextStyle()
+              .run();
+          }
+          return chain().setMark("textStyle", { fontFamily: family }).run();
         },
     };
   },
@@ -221,7 +264,7 @@ function HeadingPicker({ editor }: { editor: Editor }) {
         <span className="inline-flex h-5 w-7 items-center justify-center rounded bg-white/10 text-[11px] font-semibold tabular-nums text-zinc-100">
           {active.shortLabel}
         </span>
-        <span>{active.label}</span>
+        <span className="whitespace-nowrap">{active.label}</span>
         <ChevronDown className="h-3.5 w-3.5 text-zinc-400" />
       </button>
       {open ? (
@@ -255,7 +298,116 @@ function HeadingPicker({ editor }: { editor: Editor }) {
                 >
                   {opt.shortLabel}
                 </span>
-                <span>{opt.label}</span>
+                <span className="whitespace-nowrap">{opt.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+interface FontOption {
+  label: string;
+  /** Empty = clear custom font (inherit). */
+  value: string;
+}
+
+const FONT_OPTIONS: FontOption[] = [
+  { label: "Default", value: "" },
+  {
+    label: "System UI",
+    value:
+      "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+  },
+  { label: "Serif", value: "ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif" },
+  {
+    label: "Monospace",
+    value: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+  },
+];
+
+function normalizeFontFamily(s: string | null | undefined): string {
+  if (!s || typeof s !== "string") return "";
+  return s
+    .toLowerCase()
+    .replace(/['"]/g, "")
+    .replace(/\s*,\s*/g, ",")
+    .trim();
+}
+
+function resolveActiveFontOption(raw: string | undefined): FontOption {
+  const n = normalizeFontFamily(raw);
+  if (!n) return FONT_OPTIONS[0];
+  const hit = FONT_OPTIONS.find((o) => o.value && normalizeFontFamily(o.value) === n);
+  if (hit) return hit;
+  return { label: "Custom", value: (raw ?? "").trim() };
+}
+
+function FontFamilyPicker({ editor }: { editor: Editor }) {
+  const [open, setOpen] = React.useState(false);
+  const rootRef = React.useRef<HTMLDivElement>(null);
+  useCloseBubbleToolbarMenu(open, setOpen, rootRef);
+
+  const { fontFamilyRaw } = useEditorState({
+    editor,
+    selector: (snap) => ({
+      fontFamilyRaw: snap.editor.getAttributes("textStyle").fontFamily as string | undefined,
+    }),
+  });
+
+  const active = resolveActiveFontOption(fontFamilyRaw);
+
+  return (
+    <div className="relative" ref={rootRef}>
+      <button
+        type="button"
+        onPointerDown={(e) => {
+          e.preventDefault();
+          setOpen((v) => !v);
+        }}
+        aria-label="Font"
+        aria-expanded={open}
+        aria-haspopup="menu"
+        className="inline-flex max-w-[9.5rem] items-center gap-1 rounded px-2 py-1 text-sm text-zinc-100 transition-colors hover:bg-white/10"
+      >
+        <span
+          className="min-w-0 truncate whitespace-nowrap"
+          style={active.value ? { fontFamily: active.value } : undefined}
+        >
+          {active.label}
+        </span>
+        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-zinc-400" />
+      </button>
+      {open ? (
+        <div
+          role="menu"
+          className={cn(BUBBLE_MENU_PANEL_CLASS, "min-w-[11rem] max-w-[min(18rem,calc(100vw-2rem))]")}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          {FONT_OPTIONS.map((opt) => {
+            const isActive =
+              opt.value === ""
+                ? !fontFamilyRaw || normalizeFontFamily(fontFamilyRaw) === ""
+                : normalizeFontFamily(opt.value) === normalizeFontFamily(fontFamilyRaw);
+            return (
+              <button
+                key={opt.label + opt.value}
+                type="button"
+                role="menuitem"
+                className={cn(
+                  "flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-zinc-200 outline-none hover:bg-white/10 hover:text-white focus-visible:bg-white/10 focus-visible:text-white",
+                  isActive && "bg-white/10 text-white",
+                )}
+                style={opt.value ? { fontFamily: opt.value } : undefined}
+                onPointerDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  editor.chain().focus().setFontFamily(opt.value || null).run();
+                  setOpen(false);
+                }}
+              >
+                <span className="whitespace-nowrap">{opt.label}</span>
               </button>
             );
           })}
@@ -623,6 +775,7 @@ export function ProposalRichText({
       TextStyle,
       Color.configure({ types: ["textStyle"] }),
       FontSize,
+      FontFamily,
       TextAlign.configure({ types: ["heading", "paragraph"], alignments: ["left", "center", "right"] }),
       Link.configure({ openOnClick: false, autolink: true, linkOnPaste: true }),
       Image.configure({
@@ -688,6 +841,7 @@ export function ProposalRichText({
       >
         <div className="flex items-center gap-0.5 rounded-lg border border-zinc-800 bg-zinc-950/95 p-1 text-zinc-100 shadow-2xl backdrop-blur">
           <HeadingPicker editor={editor} />
+          <FontFamilyPicker editor={editor} />
           <ToolbarDivider />
           <FontSizeControl editor={editor} />
           <ToolbarDivider />

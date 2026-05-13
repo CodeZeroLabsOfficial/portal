@@ -8,6 +8,7 @@ import {
   isSectionBackgroundActive,
   mergeSectionBackground,
   resolveSectionBackground,
+  type ResolvedSectionBackground,
 } from "@/lib/section-background";
 import { cn } from "@/lib/utils";
 import type { SectionBackground, SectionBackdropKind } from "@/types/proposal";
@@ -22,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useProposalMediaLibraryOptional } from "@/components/proposal/proposal-media-library";
 import { SectionBackgroundTintPopover } from "@/components/proposal/proposal-background-tint-popover";
+import { youtubeThumbnailFromPageUrl } from "@/components/proposal/embed-video";
 
 export interface ProposalSectionBackgroundPickerProps {
   background?: SectionBackground;
@@ -61,6 +63,11 @@ export function ProposalSectionBackgroundPicker({
 
   const labelMuted = elevated ? "text-zinc-400" : "text-muted-foreground";
 
+  const showMediaFill =
+    resolvedPreview.active &&
+    resolvedPreview.mediaUrl &&
+    (resolvedPreview.kind === "image" || resolvedPreview.kind === "video");
+
   return (
     <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen} modal={false}>
       <DropdownMenuTrigger asChild>
@@ -69,15 +76,22 @@ export function ProposalSectionBackgroundPicker({
           title="Background"
           aria-label="Background"
           className={cn(
-            "relative inline-flex h-8 w-8 items-center justify-center rounded-full ring-2 transition-colors focus:outline-none focus-visible:ring-2",
+            "relative inline-flex h-8 w-8 rounded-full ring-2 transition-colors focus:outline-none focus-visible:ring-2",
+            showMediaFill ? "overflow-hidden p-0 ring-border" : "items-center justify-center",
             elevated
               ? "text-zinc-200 hover:bg-white/10 focus-visible:ring-white/35 data-[state=open]:bg-white/15"
               : "text-muted-foreground ring-offset-2 ring-offset-muted/90 hover:bg-background hover:text-foreground focus-visible:ring-ring data-[state=open]:bg-background data-[state=open]:shadow-sm dark:ring-offset-zinc-800",
             hasPersistedBackdrop ? "" : elevated ? "ring-white/35" : "ring-border ring-dashed",
           )}
         >
-          <Layers className={cn("h-4 w-4", elevated && !hasPersistedBackdrop && "opacity-90")} />
-          <PreviewSwatchMini model={model} elevated={elevated} />
+          {showMediaFill ? (
+            <SectionBackgroundTriggerMediaFill model={model} preview={resolvedPreview} />
+          ) : (
+            <>
+              <Layers className={cn("h-4 w-4", elevated && !hasPersistedBackdrop && "opacity-90")} />
+              <PreviewSwatchMini model={model} elevated={elevated} />
+            </>
+          )}
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
@@ -290,6 +304,45 @@ export function ProposalSectionBackgroundPicker({
       </DropdownMenuContent>
     </DropdownMenu>
   );
+}
+
+function SectionBackgroundTriggerMediaFill({
+  model,
+  preview,
+}: {
+  model: SectionBackground;
+  preview: ResolvedSectionBackground;
+}) {
+  const url = preview.mediaUrl;
+  if (!url) return null;
+
+  if (preview.kind === "image") {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- arbitrary author URLs
+      <img src={url} alt="" className="h-full w-full object-cover" draggable={false} />
+    );
+  }
+
+  const poster = model.posterUrl?.trim();
+  if (poster) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={poster} alt="" className="h-full w-full object-cover" draggable={false} />
+    );
+  }
+  if (/\.(mp4|webm|mov|m4v)(\?|$)/i.test(url)) {
+    return (
+      <video className="h-full w-full object-cover" muted playsInline preload="metadata" src={url} aria-hidden />
+    );
+  }
+  const yt = youtubeThumbnailFromPageUrl(url);
+  if (yt) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={yt} alt="" className="h-full w-full object-cover" draggable={false} />
+    );
+  }
+  return <span className="block h-full w-full bg-muted" aria-hidden />;
 }
 
 function PreviewSwatchMini({ model, elevated }: { model: SectionBackground; elevated?: boolean }) {
