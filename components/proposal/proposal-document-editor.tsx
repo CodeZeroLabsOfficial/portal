@@ -1134,8 +1134,8 @@ function ColumnsBlockFields({
         );
         const floatRail =
           !resizeMode ? (
-            <div className="pointer-events-none absolute left-0 top-1/2 z-20 flex -translate-x-full -translate-y-1/2 flex-col items-end gap-2 pr-2 sm:pr-3">
-              <div className="pointer-events-auto flex flex-col items-end gap-2">
+            <div className="pointer-events-none absolute left-2 top-1/2 z-20 flex -translate-y-1/2 flex-col items-start gap-2 sm:left-3">
+              <div className="pointer-events-auto flex flex-col items-start gap-2">
                 <ColumnInsertMenu
                   onAdd={(insert) => {
                     const ci = activeColumnIndex;
@@ -1145,7 +1145,7 @@ function ColumnsBlockFields({
                       patchColumnStackAtIndex(block, ci, [...st, insert as ProposalColumnChildBlock]),
                     );
                   }}
-                  align="end"
+                  align="start"
                   trigger={
                     <button
                       type="button"
@@ -1225,7 +1225,7 @@ function ColumnsBlockFields({
             </div>
           ) : null;
         const chromedColumns = (
-          <div className="relative">
+          <div className={cn("relative", !resizeMode && "pl-11 sm:pl-12")}>
             {floatRail}
             {columnRow}
           </div>
