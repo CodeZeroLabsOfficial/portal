@@ -3,10 +3,20 @@
 import * as React from "react";
 import { upload } from "@vercel/blob/client";
 import { AnimatePresence, motion } from "framer-motion";
-import { Braces, ChevronLeft, FileText, ImageIcon, Loader2, MonitorPlay, Play, Search, Upload } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import {
+  Braces,
+  ChevronLeft,
+  ExternalLink,
+  FileText,
+  ImageIcon,
+  Loader2,
+  MonitorPlay,
+  Play,
+  Search,
+  Upload,
+} from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
 import {
   PROPOSAL_MEDIA_LIBRARY_DEFAULT_PREFIX,
   buildLibraryUploadPathname,
@@ -79,6 +89,77 @@ function categoryLabel(cat: LibraryCategory): string {
 }
 
 const CATEGORIES: LibraryCategory[] = ["all", "blocks", "snippets", "images", "videos"];
+
+const ACCEPT_ALL_LIBRARY =
+  ".jpg,.jpeg,.png,.gif,.webp,.avif,.svg,.mp4,.webm,.mov,.m4v,.ogv,.html,.htm,.json,image/jpeg,image/png,image/gif,image/webp,image/avif,image/svg+xml,video/mp4,video/webm,video/quicktime,text/html,application/json";
+
+const ACCEPT_IMAGES =
+  ".jpg,.jpeg,.png,.gif,.webp,.avif,.svg,image/jpeg,image/png,image/gif,image/webp,image/avif,image/svg+xml";
+
+const ACCEPT_VIDEOS = ".mp4,.webm,.mov,.m4v,.ogv,video/mp4,video/webm,video/quicktime";
+
+const ACCEPT_SNIPPETS = ".html,.htm,text/html";
+
+const ACCEPT_BLOCKS = ".json,application/json";
+
+function uploadLabelForCategory(cat: LibraryCategory): string {
+  switch (cat) {
+    case "images":
+      return "Upload Image";
+    case "videos":
+      return "Upload Video";
+    case "blocks":
+      return "Upload Block";
+    case "snippets":
+      return "Upload Snippet";
+    default:
+      return "Upload File";
+  }
+}
+
+function acceptForCategory(cat: LibraryCategory): string {
+  switch (cat) {
+    case "images":
+      return ACCEPT_IMAGES;
+    case "videos":
+      return ACCEPT_VIDEOS;
+    case "blocks":
+      return ACCEPT_BLOCKS;
+    case "snippets":
+      return ACCEPT_SNIPPETS;
+    default:
+      return ACCEPT_ALL_LIBRARY;
+  }
+}
+
+function fileMatchesLibraryCategory(file: File, cat: LibraryCategory): boolean {
+  const type = file.type.toLowerCase();
+  const name = file.name.toLowerCase();
+  if (cat === "images") {
+    return type.startsWith("image/") || /\.(jpe?g|png|gif|webp|avif|svg)$/.test(name);
+  }
+  if (cat === "videos") {
+    return type.startsWith("video/") || /\.(mp4|webm|mov|m4v|ogv)$/.test(name);
+  }
+  if (cat === "blocks") {
+    return type === "application/json" || name.endsWith(".json");
+  }
+  if (cat === "snippets") {
+    return type === "text/html" || /\.(html?)$/.test(name);
+  }
+  return true;
+}
+
+function categoryAllowsUpload(cat: LibraryCategory, allowedKinds: ProposalLibraryAssetKind[]): boolean {
+  if (cat === "all") {
+    return allowedKinds.length > 0;
+  }
+  if (cat === "images") return allowedKinds.includes("image");
+  if (cat === "videos") return allowedKinds.includes("video");
+  if (cat === "blocks") return allowedKinds.includes("block");
+  if (cat === "snippets") return allowedKinds.includes("snippet");
+  return false;
+}
 
 function ProposalMediaLibrarySidebar() {
   const ctx = React.useContext(ProposalMediaLibraryContext);
@@ -158,6 +239,10 @@ function ProposalMediaLibrarySidebar() {
     };
   }, [isOpen]);
 
+  React.useEffect(() => {
+    setUploadError(null);
+  }, [category]);
+
   const normalizedPrefix = libraryPrefix.replace(/\/?$/, "/");
 
   const onLibraryFilesSelected = React.useCallback(
@@ -165,9 +250,26 @@ function ProposalMediaLibrarySidebar() {
       const files = e.target.files;
       if (!files?.length) return;
       setUploadError(null);
+      const list = Array.from(files);
+      const mismatched = list.filter((f) => !fileMatchesLibraryCategory(f, category));
+      if (mismatched.length > 0) {
+        const hint =
+          category === "images"
+            ? "Choose image files only."
+            : category === "videos"
+              ? "Choose video files only."
+              : category === "blocks"
+                ? "Choose JSON files only."
+                : category === "snippets"
+                  ? "Choose HTML files only."
+                  : "Unsupported file type.";
+        setUploadError(hint);
+        e.target.value = "";
+        return;
+      }
       setUploading(true);
       try {
-        for (const file of Array.from(files)) {
+        for (const file of list) {
           const pathname = buildLibraryUploadPathname(normalizedPrefix, file.name);
           const result = await upload(pathname, file, {
             access: "public",
@@ -186,7 +288,7 @@ function ProposalMediaLibrarySidebar() {
         e.target.value = "";
       }
     },
-    [normalizedPrefix],
+    [normalizedPrefix, category],
   );
 
   const visible = React.useMemo(() => {
@@ -208,6 +310,9 @@ function ProposalMediaLibrarySidebar() {
           : category === "blocks"
             ? "Search blocks"
             : "Search library";
+
+  const uploadDisabled =
+    uploading || !activeParams || !categoryAllowsUpload(category, activeParams.allowedKinds);
 
   return (
     <AnimatePresence>
@@ -258,34 +363,19 @@ function ProposalMediaLibrarySidebar() {
                   </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="library" className="mt-0 flex min-h-0 flex-1 flex-col overflow-hidden outline-none data-[state=inactive]:hidden">
-                  <div className="mb-3 flex flex-col gap-2">
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      className="sr-only"
-                      multiple
-                      accept=".jpg,.jpeg,.png,.gif,.webp,.avif,.svg,.mp4,.webm,.mov,.m4v,.ogv,.html,.htm,.json,image/jpeg,image/png,image/gif,image/webp,image/avif,image/svg+xml,video/mp4,video/webm,video/quicktime,text/html,application/json"
-                      aria-label="Upload library files"
-                      onChange={onLibraryFilesSelected}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-9 w-full justify-center gap-2"
-                      disabled={uploading}
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      {uploading ? (
-                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                      ) : (
-                        <Upload className="h-4 w-4" aria-hidden />
-                      )}
-                      {uploading ? "Uploading…" : "Upload to library"}
-                    </Button>
-                    {uploadError ? <p className="text-center text-xs text-destructive">{uploadError}</p> : null}
-                  </div>
+                <TabsContent
+                  value="library"
+                  className="mt-0 flex min-h-0 flex-1 flex-col overflow-hidden outline-none data-[state=inactive]:hidden"
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    className="sr-only"
+                    multiple
+                    accept={acceptForCategory(category)}
+                    aria-label={uploadLabelForCategory(category)}
+                    onChange={onLibraryFilesSelected}
+                  />
                   <div className="relative mb-3">
                     <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
                     <Input
@@ -318,7 +408,7 @@ function ProposalMediaLibrarySidebar() {
                     })}
                   </nav>
 
-                  <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pr-1">
+                  <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pr-1 pb-2">
                     {loading ? (
                       <div className="flex flex-col items-center justify-center gap-3 py-16 text-muted-foreground">
                         <Loader2 className="h-8 w-8 animate-spin" aria-hidden />
@@ -363,7 +453,7 @@ function ProposalMediaLibrarySidebar() {
                         </p>
                       </div>
                     ) : (
-                      <ul className="grid grid-cols-2 gap-2 pb-6">
+                      <ul className="grid grid-cols-2 gap-2 pb-2">
                         {visible.map((asset) => (
                           <li key={asset.id}>
                             <button
@@ -435,6 +525,40 @@ function ProposalMediaLibrarySidebar() {
                         ))}
                       </ul>
                     )}
+                  </div>
+
+                  <div className="shrink-0 border-t border-border bg-background pt-3">
+                    {uploadError ? (
+                      <p className="mb-2 text-center text-xs text-destructive">{uploadError}</p>
+                    ) : null}
+                    <div className="flex items-stretch gap-2">
+                      <button
+                        type="button"
+                        disabled={uploadDisabled}
+                        className={cn(
+                          "flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold text-white shadow-sm transition-colors",
+                          "bg-violet-950 hover:bg-violet-900 disabled:pointer-events-none disabled:opacity-50",
+                        )}
+                        onClick={() => {
+                          if (!uploadDisabled) fileInputRef.current?.click();
+                        }}
+                      >
+                        {uploading ? (
+                          <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                        ) : (
+                          <Upload className="h-4 w-4 shrink-0" aria-hidden />
+                        )}
+                        {uploading ? "Uploading…" : uploadLabelForCategory(category)}
+                      </button>
+                      <button
+                        type="button"
+                        className="flex h-auto min-w-[44px] shrink-0 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground"
+                        aria-label="Open Explore tab"
+                        onClick={() => setMainTab("explore")}
+                      >
+                        <ExternalLink className="h-4 w-4" aria-hidden />
+                      </button>
+                    </div>
                   </div>
                 </TabsContent>
 
