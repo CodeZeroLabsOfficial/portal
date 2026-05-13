@@ -562,6 +562,25 @@ export async function getCustomerRecordForOrg(
   return parsed;
 }
 
+/** Token-based subscription checkout — verifies org scope vs proposal. */
+export async function getCustomerRecordForPublicProposalCheckout(
+  customerId: string,
+  proposalOrganizationId: string | undefined,
+): Promise<CustomerRecord | null> {
+  const db = getFirebaseAdminFirestore();
+  if (!db) return null;
+  const id = customerId.trim();
+  if (!id) return null;
+  const snap = await db.collection(COLLECTIONS.customers).doc(id).get();
+  if (!snap.exists) return null;
+  const row = parseCustomerRecord(snap.id, snap.data() as Record<string, unknown>);
+  if (!row) return null;
+  const pOrg = proposalOrganizationId?.trim();
+  const cOrg = row.organizationId?.trim();
+  if (pOrg && cOrg && pOrg !== cOrg) return null;
+  return row;
+}
+
 /** Batch-load CRM customers by id (Firestore `getAll`, chunks of 10). */
 export async function batchGetCustomerRecordsForStaff(
   user: PortalUser,

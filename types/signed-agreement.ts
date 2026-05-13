@@ -37,4 +37,6 @@ export interface SignedAgreementRecord {
   signatureImage?: string;
   /** Firebase Storage object path when upload succeeded. */
   signatureImageStoragePath?: string;
+  /** Stripe Price id captured at sign time when configured on the selected tier or payment block. */
+  stripeSubscriptionPriceId?: string | null;
 }

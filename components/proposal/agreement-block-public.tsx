@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, CheckCircle2, Download, Menu, X } from "lucide-react";
+import { ArrowRight, CheckCircle2, CreditCard, Download, Loader2, Menu, X } from "lucide-react";
 import {
   Dialog,
   DialogClose,
@@ -38,7 +38,11 @@ import {
 } from "@/lib/proposal-packages-totals";
 import { sanitizeProposalHtml } from "@/lib/sanitize-proposal-html";
 import { acceptProposalPublicAction } from "@/server/actions/proposal-builder";
+import { isDocumentPackageSelectionComplete } from "@/lib/proposal-package-selection";
+import { resolveSubscriptionStripePriceIdFromBlocks } from "@/lib/proposal-subscription-price";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 export interface AgreementBlockPublicProps {
   block: AgreementBlock;
@@ -113,6 +117,8 @@ interface PackageSelectionSummary {
     unitAmountMinor: number;
     lineTotalMinor: number;
   }>;
+  /** When set, public subscription checkout can use this Stripe Price id. */
+  stripePriceId?: string;
 }
 
 function packagesBlocksFromDocument(blocks: ProposalBlock[]): PackagesBlock[] {
@@ -177,6 +183,7 @@ function buildPackageSelectionSummary(
     monthlyTotalMinor: monthlyTotal,
     addonsTotalMinor: addonsTotal,
     addonLines,
+    stripePriceId: tier.stripePriceId?.trim() || undefined,
   };
 }
 
@@ -304,6 +311,7 @@ export function AgreementBlockPublic({
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
+  const [subCheckoutBusy, setSubCheckoutBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [localAcceptedName, setLocalAcceptedName] = React.useState<string | null>(null);
   const [localDone, setLocalDone] = React.useState(proposalStatus === "accepted");
@@ -331,8 +339,19 @@ export function AgreementBlockPublic({
     return out;
   }, [allBlocks, publicSelections]);
 
+  const planSelectionComplete = React.useMemo(
+    () => isDocumentPackageSelectionComplete(allBlocks, publicSelections),
+    [allBlocks, publicSelections],
+  );
+
+  const subscriptionStripePriceId = React.useMemo(
+    () => resolveSubscriptionStripePriceIdFromBlocks(allBlocks, publicSelections),
+    [allBlocks, publicSelections],
+  );
+
   const accepted = localDone || proposalStatus === "accepted";
   const displayName = localAcceptedName ?? acceptedByName;
+  const blockAgreementUntilPlanPicked = interactive && !accepted && !planSelectionComplete;
   const scrollRef = React.useRef<HTMLDivElement | null>(null);
   const signRef = React.useRef<HTMLDivElement | null>(null);
 
@@ -365,13 +384,41 @@ export function AgreementBlockPublic({
       });
       if (!res.ok) {
         setError(res.message);
+        toast.error(res.message);
         return;
       }
       setLocalAcceptedName(payload.signerName);
       setLocalDone(true);
+      toast.success("Agreement signed. Thank you.");
       router.refresh();
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function startSubscriptionCheckout() {
+    if (!shareToken || !interactive) return;
+    setSubCheckoutBusy(true);
+    try {
+      const r = await fetch("/api/public/proposal-subscription-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ shareToken }),
+      });
+      const data = (await r.json()) as { url?: string; error?: string };
+      if (!r.ok) {
+        toast.error(data.error || "Could not start checkout. Try again or contact us.");
+        return;
+      }
+      if (data.url) {
+        window.location.href = data.url;
+        return;
+      }
+      toast.error("Checkout did not return a link. Please contact support.");
+    } catch {
+      toast.error("Network error. Check your connection and try again.");
+    } finally {
+      setSubCheckoutBusy(false);
     }
   }
 
@@ -392,16 +439,40 @@ export function AgreementBlockPublic({
         <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
           {heading}
         </h2>
-        <Button
-          type="button"
-          size="lg"
-          onClick={() => setOpen(true)}
-          disabled={!interactive}
-          className="h-12 rounded-xl px-8 text-base font-semibold shadow-md transition-colors hover:opacity-95"
-          style={{ backgroundColor: ctaColor, color: ctaForeground }}
-        >
-          {buttonLabel}
-        </Button>
+        {blockAgreementUntilPlanPicked ? (
+          <TooltipProvider delayDuration={200}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="inline-flex max-w-full justify-center">
+                  <Button
+                    type="button"
+                    size="lg"
+                    disabled
+                    className="h-12 max-w-full rounded-xl px-8 text-base font-semibold shadow-md"
+                    style={{ backgroundColor: ctaColor, color: ctaForeground }}
+                  >
+                    {buttonLabel}
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs text-left text-sm leading-snug">
+                Select a plan in the proposal above first. Your choice appears in the agreement
+                automatically.
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : (
+          <Button
+            type="button"
+            size="lg"
+            onClick={() => setOpen(true)}
+            disabled={!interactive}
+            className="h-12 rounded-xl px-8 text-base font-semibold shadow-md transition-colors hover:opacity-95"
+            style={{ backgroundColor: ctaColor, color: ctaForeground }}
+          >
+            {buttonLabel}
+          </Button>
+        )}
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -417,6 +488,7 @@ export function AgreementBlockPublic({
             "grid-rows-[auto,1fr]",
             // Hide the shadcn auto-render close X — our top bar renders its own.
             "[&>button[aria-label='Close']]:hidden",
+            "pt-[max(0px,env(safe-area-inset-top))] sm:pt-0",
           )}
         >
           <div className="flex items-center justify-between gap-3 border-b border-zinc-200 bg-white px-4 py-3 sm:px-6">
@@ -487,7 +559,10 @@ export function AgreementBlockPublic({
             </div>
           </div>
 
-          <div ref={scrollRef} className="min-h-0 overflow-y-auto bg-white">
+          <div
+            ref={scrollRef}
+            className="min-h-0 overflow-y-auto bg-white pb-[max(1rem,env(safe-area-inset-bottom))]"
+          >
             <div className="mx-auto w-full max-w-3xl px-5 py-12 sm:px-10 sm:py-16">
               <div id="agreement-top" aria-hidden />
 
@@ -566,7 +641,22 @@ export function AgreementBlockPublic({
                     <p className="mt-2 text-sm text-emerald-900/75">
                       We&apos;ll follow up with next steps shortly.
                     </p>
-                    <div className="mt-6 flex flex-col items-stretch gap-3 sm:flex-row sm:justify-center">
+                    <div className="mt-6 flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
+                      {subscriptionStripePriceId && shareToken && interactive ? (
+                        <Button
+                          type="button"
+                          className="gap-2 border-emerald-600/30 bg-emerald-700 text-white hover:bg-emerald-800"
+                          disabled={subCheckoutBusy}
+                          onClick={() => void startSubscriptionCheckout()}
+                        >
+                          {subCheckoutBusy ? (
+                            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                          ) : (
+                            <CreditCard className="h-4 w-4" aria-hidden />
+                          )}
+                          Add card &amp; start subscription
+                        </Button>
+                      ) : null}
                       <Button
                         type="button"
                         variant="outline"

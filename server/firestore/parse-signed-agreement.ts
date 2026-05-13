@@ -74,5 +74,6 @@ export function parseSignedAgreementRecord(id: string, data: Record<string, unkn
     fullAgreementText: asString(data.fullAgreementText),
     signatureImage: asString(data.signatureImage),
     signatureImageStoragePath: asString(data.signatureImageStoragePath),
+    stripeSubscriptionPriceId: asString(data.stripeSubscriptionPriceId),
   };
 }

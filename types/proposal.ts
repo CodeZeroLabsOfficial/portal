@@ -180,6 +180,8 @@ export interface PackageTier {
   monthlyCost24Minor: number;
   /** One-time upfront charge for the 12-month term only (minor units). */
   upfrontCost12Minor?: number;
+  /** Optional Stripe Price id for subscription checkout after agreement (e.g. `price_…`). */
+  stripePriceId?: string;
   /** Optional extra bullet points below the tier limits. */
   features: string[];
 }

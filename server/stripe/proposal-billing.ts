@@ -134,14 +134,15 @@ export async function createCheckoutSessionForProposal(
   organizationId: string | undefined,
   mode: "payment" | "subscription",
   subscriptionPriceId: string | undefined,
+  checkoutUrls?: { successUrl: string; cancelUrl: string },
 ): Promise<{ url: string | null; stripeCustomerId: string; createdStripeCustomer: boolean }> {
   const ensured = await ensureStripeCustomer(stripe, crm, organizationId);
   const { stripeCustomerId, created: createdStripeCustomer } = ensured;
   const amount = computeProposalTotalMinor(proposal);
   const currency = resolveProposalCurrency(proposal);
 
-  const successUrl = `${origin}/customer?stripe_session={CHECKOUT_SESSION_ID}`;
-  const cancelUrl = `${origin}/customer?stripe_checkout=cancel`;
+  const successUrl = checkoutUrls?.successUrl ?? `${origin}/customer?stripe_session={CHECKOUT_SESSION_ID}`;
+  const cancelUrl = checkoutUrls?.cancelUrl ?? `${origin}/customer?stripe_checkout=cancel`;
 
   if (mode === "subscription") {
     if (!subscriptionPriceId?.trim()) {

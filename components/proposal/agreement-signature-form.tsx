@@ -301,7 +301,7 @@ export function AgreementSignatureForm({
                   setLocalError(null);
                 }}
                 className={cn(
-                  "flex-1 rounded-md py-2.5 text-sm font-semibold transition-all",
+                  "flex-1 rounded-md py-3 text-sm font-semibold transition-all sm:py-2.5",
                   tab === m
                     ? "bg-white text-[#1a1a5e] shadow-sm"
                     : "text-zinc-600 hover:text-zinc-900",
@@ -326,7 +326,7 @@ export function AgreementSignatureForm({
                 Clear Signature
               </button>
             </div>
-            <div className="overflow-hidden rounded-xl border border-dashed border-zinc-300 bg-zinc-50/80">
+            <div className="min-h-[min(220px,42svh)] overflow-hidden rounded-xl border border-dashed border-zinc-300 bg-zinc-50/80 sm:min-h-0">
               <canvas
                 ref={canvasRef}
                 className="block w-full cursor-crosshair touch-none"

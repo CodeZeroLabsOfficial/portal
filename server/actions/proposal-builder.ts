@@ -7,6 +7,7 @@ import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { z } from "zod";
 import { requireStaffSession } from "@/lib/auth/server-session";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
+import { softenPublicFirestoreErrorMessage } from "@/lib/firebase/public-error-messages";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { encodeProposalDocumentForFirestore } from "@/lib/proposal-firestore-document";
 import { parseProposalDocument } from "@/lib/schemas/proposal-document";
@@ -15,9 +16,15 @@ import { findProposalBlockById } from "@/lib/proposal-blocks";
 import { hashSharePassword, sealProposalAccess, verifySharePassword } from "@/lib/proposal-share-crypto";
 import { getAdminProposalRecord } from "@/server/firestore/portal-data";
 import { getProposalRecordByShareToken } from "@/server/firestore/parse-proposal";
+import {
+  applyProposalAcceptCrmSideEffects,
+  persistCustomerSubscriptionIntentAfterAccept,
+} from "@/server/firestore/proposal-accept-crm";
 import { updateOpportunityStage } from "@/server/firestore/crm-opportunities";
 import { PROPOSAL_UNLOCK_COOKIE } from "@/lib/proposal-public-session";
 import { cloneProposalDocument } from "@/lib/proposal-clone-document";
+import { isProposalPackageSelectionComplete } from "@/lib/proposal-package-selection";
+import { resolveSubscriptionStripePriceIdFromProposal } from "@/lib/proposal-subscription-price";
 import { runAdminWrite } from "@/lib/firebase/admin-write";
 import { uploadSignedAgreementSignaturePng } from "@/lib/firebase/admin-storage";
 import {
@@ -265,6 +272,13 @@ export async function acceptProposalPublicAction(
   if (proposal.status === "draft") return { ok: false, message: "This proposal is not available yet." };
   if (proposal.status === "accepted") return { ok: false, message: "Already accepted." };
 
+  if (!isProposalPackageSelectionComplete(proposal)) {
+    return {
+      ok: false,
+      message: "Please select a plan in the proposal above before signing the agreement.",
+    };
+  }
+
   const db = getFirebaseAdminFirestore();
   if (!db) return { ok: false, message: "Service unavailable." };
 
@@ -305,10 +319,26 @@ export async function acceptProposalPublicAction(
           updatedAt: FieldValue.serverTimestamp(),
         }),
   );
-  if (!write.ok) return write;
+  if (!write.ok) {
+    return { ok: false, message: softenPublicFirestoreErrorMessage(write.message) };
+  }
+
+  await applyProposalAcceptCrmSideEffects(db, proposal, parsed.data.signerName);
+
+  const stripeSubscriptionPriceId = resolveSubscriptionStripePriceIdFromProposal(proposal);
+  const commerceSnapshot = buildSignedAgreementCommerceSnapshot(proposal);
+  if (proposal.customerId && stripeSubscriptionPriceId) {
+    await persistCustomerSubscriptionIntentAfterAccept(
+      db,
+      proposal,
+      stripeSubscriptionPriceId,
+      commerceSnapshot.selectedPlan,
+      now,
+    );
+  }
 
   if (hasSignaturePayload && sigUrl) {
-    const commerce = buildSignedAgreementCommerceSnapshot(proposal);
+    const commerce = commerceSnapshot;
     const fullAgreementText = buildFullAgreementTextSnapshot(proposal);
 
     let customerName: string | undefined;
@@ -359,6 +389,7 @@ export async function acceptProposalPublicAction(
       fullAgreementText: fullAgreementText ?? null,
       signatureImage,
       signatureImageStoragePath,
+      stripeSubscriptionPriceId: stripeSubscriptionPriceId ?? null,
     };
 
     await runAdminWrite(
@@ -414,6 +445,9 @@ export async function acceptProposalPublicAction(
   revalidatePath(`/p/${parsed.data.shareToken}`);
   revalidatePath("/admin");
   revalidatePath(`/admin/proposals/${proposal.id}`);
+  if (proposal.customerId) {
+    revalidatePath(`/admin/customers/${proposal.customerId}`);
+  }
   if (proposal.opportunityId) {
     revalidatePath(`/admin/opportunities/${proposal.opportunityId}`);
   }
