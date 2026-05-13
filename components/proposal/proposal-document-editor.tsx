@@ -810,6 +810,83 @@ function NestedColumnBlockFields({
   }
 }
 
+function ColumnPane({
+  label,
+  columnIndex,
+  stack,
+  onPatchColumnStack,
+  selectedCellId,
+  setSelectedCellId,
+  setActiveColumnIndex,
+}: {
+  label: string;
+  columnIndex: number;
+  stack: ProposalColumnChildBlock[];
+  onPatchColumnStack: (columnIndex: number, nextStack: ProposalColumnChildBlock[]) => void;
+  selectedCellId: string | null;
+  setSelectedCellId: React.Dispatch<React.SetStateAction<string | null>>;
+  setActiveColumnIndex: React.Dispatch<React.SetStateAction<number>>;
+}) {
+  function setStack(next: ProposalColumnChildBlock[]) {
+    onPatchColumnStack(columnIndex, next);
+  }
+  function removeAt(id: string) {
+    setSelectedCellId((cur) => (cur === id ? null : cur));
+    setStack(stack.filter((x) => x.id !== id));
+  }
+  function updateChild(childId: string, nextChild: ProposalColumnChildBlock) {
+    setStack(stack.map((c) => (c.id === childId ? nextChild : c)));
+  }
+  const cellSelection = React.useMemo(
+    () => ({ selectedId: selectedCellId, onSelect: setSelectedCellId }),
+    [selectedCellId, setSelectedCellId],
+  );
+  return (
+    <div
+      className="min-w-0"
+      onPointerDownCapture={() => {
+        setActiveColumnIndex(columnIndex);
+        if (stack.length === 0) setSelectedCellId(null);
+      }}
+    >
+      <span className="sr-only">{label}</span>
+      <div className="min-w-0 space-y-4">
+        {stack.length === 0 ? (
+          <ColumnGhostText
+            placeholder="Type / to add content"
+            onSeed={(tb) => setStack([tb])}
+          />
+        ) : (
+          stack.map((child) => (
+            <div
+              key={child.id}
+              className="space-y-2"
+              onPointerDownCapture={() => {
+                setSelectedCellId(child.id);
+                setActiveColumnIndex(columnIndex);
+              }}
+            >
+              <NestedColumnBlockFields
+                block={child}
+                onChange={(n) => updateChild(child.id, n)}
+                textPlaceholder="Type / to add content"
+                cellSelection={cellSelection}
+                imageColumnToolbar={
+                  child.type === "image"
+                    ? {
+                        onRemove: () => removeAt(child.id),
+                      }
+                    : undefined
+                }
+              />
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ColumnsBlockFields({
   block,
   onChange,
@@ -910,71 +987,6 @@ function ColumnsBlockFields({
     };
   }, [dragDividerIndex]);
 
-  function ColumnPane({
-    label,
-    columnIndex,
-    stack,
-  }: {
-    label: string;
-    columnIndex: number;
-    stack: ProposalColumnChildBlock[];
-  }) {
-    function setStack(next: ProposalColumnChildBlock[]) {
-      onChange(patchColumnStackAtIndex(block, columnIndex, next));
-    }
-    function removeAt(id: string) {
-      setSelectedCellId((cur) => (cur === id ? null : cur));
-      setStack(stack.filter((x) => x.id !== id));
-    }
-    function updateChild(childId: string, nextChild: ProposalColumnChildBlock) {
-      setStack(stack.map((c) => (c.id === childId ? nextChild : c)));
-    }
-    return (
-      <div
-        className="min-w-0"
-        onPointerDownCapture={() => {
-          setActiveColumnIndex(columnIndex);
-          if (stack.length === 0) setSelectedCellId(null);
-        }}
-      >
-        <span className="sr-only">{label}</span>
-        <div className="min-w-0 space-y-4">
-          {stack.length === 0 ? (
-            <ColumnGhostText
-              placeholder="Type / to add content"
-              onSeed={(tb) => setStack([tb])}
-            />
-          ) : (
-            stack.map((child) => (
-              <div
-                key={child.id}
-                className="space-y-2"
-                onPointerDownCapture={() => {
-                  setSelectedCellId(child.id);
-                  setActiveColumnIndex(columnIndex);
-                }}
-              >
-                <NestedColumnBlockFields
-                  block={child}
-                  onChange={(n) => updateChild(child.id, n)}
-                  textPlaceholder="Type / to add content"
-                  cellSelection={{ selectedId: selectedCellId, onSelect: setSelectedCellId }}
-                  imageColumnToolbar={
-                    child.type === "image"
-                      ? {
-                          onRemove: () => removeAt(child.id),
-                        }
-                      : undefined
-                  }
-                />
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-    );
-  }
-
   const flexRow = coerceColumnFlex(columnCount, block.columnFlex);
   const flexPercents = resizeMode ? columnFlexPercents(flexRow) : [];
 
@@ -1018,13 +1030,28 @@ function ColumnsBlockFields({
                   }}
                   className={cn(
                     "min-w-0 md:min-w-[3.5rem]",
-                    !resizeMode && "p-1 md:p-2",
+                    !resizeMode &&
+                      cn(
+                        "group/colcell rounded-md border border-transparent p-1 md:p-2",
+                        "transition-[border-color,box-shadow,background-color] duration-150 ease-out",
+                        "hover:border-border/65 hover:bg-muted/25 hover:shadow-sm",
+                        "focus-within:border-border/80 focus-within:bg-muted/20 focus-within:shadow-sm",
+                        "dark:hover:bg-muted/15 dark:focus-within:bg-muted/15",
+                      ),
                     resizeMode &&
                       "rounded-lg border border-sky-400/40 bg-background/60 py-1 ring-1 ring-sky-500/20 dark:bg-background/40 md:px-0 md:py-1",
                   )}
                   style={{ flex: `${flexRow[i]} 1 0%` } as React.CSSProperties}
                 >
-                  <ColumnPane label={`Column ${i + 1}`} columnIndex={i} stack={stack} />
+                  <ColumnPane
+                    label={`Column ${i + 1}`}
+                    columnIndex={i}
+                    stack={stack}
+                    onPatchColumnStack={(ci, nextStack) => onChange(patchColumnStackAtIndex(block, ci, nextStack))}
+                    selectedCellId={selectedCellId}
+                    setSelectedCellId={setSelectedCellId}
+                    setActiveColumnIndex={setActiveColumnIndex}
+                  />
                 </div>
                 {resizeMode && i < block.stacks.length - 1 ? (
                   <ColumnResizeGrip
