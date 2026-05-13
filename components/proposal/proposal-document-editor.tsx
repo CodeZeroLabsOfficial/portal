@@ -134,7 +134,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { escapeHtml } from "@/lib/escape-html";
-import { DEFAULT_HIGHLIGHT_COLOR, DEFAULT_PRIMARY_COLOR } from "@/lib/block-style";
+import {
+  DEFAULT_HIGHLIGHT_COLOR,
+  DEFAULT_PRIMARY_COLOR,
+  readableForeground,
+  resolveAgreementButtonColor,
+} from "@/lib/block-style";
 import {
   DEFAULT_PACKAGES_UPFRONT_COST_12_MINOR,
   PACKAGE_TIER_UNLIMITED_VALUE,
@@ -1290,7 +1295,7 @@ function SectionBlockFields({
           <InsertBlockSlot context="section" variant="between" onAdd={(b) => addChildAt(b, 0)} />
           {children.map((child, idx) => {
             const isSelected = selectedBlockId === child.id;
-            const supportsStyle = child.type === "packages";
+            const supportsStyle = child.type === "packages" || child.type === "agreement";
             return (
               <div key={child.id}>
                 <SortableShell
@@ -1345,7 +1350,9 @@ function SectionBlockFields({
                             ? "pricing"
                             : child.type === "packages"
                               ? "packages"
-                              : "other"
+                              : child.type === "agreement"
+                                ? "agreement"
+                                : "other"
                         }
                         canMoveUp={idx > 0}
                         canMoveDown={idx < children.length - 1}
@@ -1628,6 +1635,7 @@ function AgreementBlockEditor({
   block: AgreementBlock;
   onChange: (next: AgreementBlock) => void;
 }) {
+  const ctaColor = resolveAgreementButtonColor(block.style);
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-dashed border-border/70 bg-muted/15 px-6 py-8 text-center">
@@ -1637,11 +1645,18 @@ function AgreementBlockEditor({
         <p className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
           {block.heading?.trim() || "Ready to get started?"}
         </p>
-        <div className="mt-4 inline-flex h-10 items-center rounded-lg px-5 text-sm font-semibold text-slate-900 shadow-sm" style={{ backgroundColor: "#5EE3C0" }}>
+        <div
+          className="mt-4 inline-flex h-10 items-center rounded-lg px-5 text-sm font-semibold shadow-sm"
+          style={{
+            backgroundColor: ctaColor,
+            color: readableForeground(ctaColor),
+          }}
+        >
           {block.buttonLabel?.trim() || "View Agreement"}
         </div>
         <p className="mt-3 text-[11px] text-muted-foreground">
           Opens the “{block.agreementTitle?.trim() || "Services Agreement"}” modal for the buyer to review &amp; sign.
+          <span className="block">Use the palette in the block toolbar to change the button color.</span>
         </p>
       </div>
 
@@ -2472,12 +2487,17 @@ export function ProposalDocumentEditor({
   }
 
   function applyBlockStyle(id: string, style: BlockStyle | undefined) {
+    /** True when this block participates in the toolbar style picker (Plans + Accept). */
+    function blockTypeSupportsStyle(type: ProposalBlock["type"]): boolean {
+      return type === "packages" || type === "agreement";
+    }
+
     function applyStyleToStacks(stacks: ProposalColumnChildBlock[]): ProposalColumnChildBlock[] {
       return stacks.map((c) => {
         if (c.id !== id) return c;
-        if (c.type !== "packages") return c;
+        if (!blockTypeSupportsStyle(c.type)) return c;
         if (style === undefined) {
-          const { style: _drop, ...rest } = c;
+          const { style: _drop, ...rest } = c as ProposalColumnChildBlock & { style?: BlockStyle };
           void _drop;
           return rest as ProposalColumnChildBlock;
         }
@@ -2488,10 +2508,10 @@ export function ProposalDocumentEditor({
     function patchNestedContent(children: ProposalContentBlock[]): ProposalContentBlock[] | null {
       let changed = false;
       const next = children.map((c): ProposalContentBlock => {
-        if (c.id === id && c.type === "packages") {
+        if (c.id === id && blockTypeSupportsStyle(c.type)) {
           changed = true;
           if (style === undefined) {
-            const { style: _drop, ...rest } = c;
+            const { style: _drop, ...rest } = c as ProposalContentBlock & { style?: BlockStyle };
             void _drop;
             return rest as ProposalContentBlock;
           }
@@ -2512,9 +2532,9 @@ export function ProposalDocumentEditor({
     setBlocks((prev) =>
       prev.map((b) => {
         if (b.id === id) {
-          if (b.type === "packages") {
+          if (blockTypeSupportsStyle(b.type)) {
             if (style === undefined) {
-              const { style: _drop, ...rest } = b;
+              const { style: _drop, ...rest } = b as ProposalBlock & { style?: BlockStyle };
               void _drop;
               return rest as ProposalBlock;
             }
@@ -2541,6 +2561,9 @@ export function ProposalDocumentEditor({
 
   function getBlockStyle(block: ProposalBlock): BlockStyle | undefined {
     if (block.type === "packages") {
+      return block.style;
+    }
+    if (block.type === "agreement") {
       return block.style;
     }
     return undefined;
@@ -2736,7 +2759,7 @@ export function ProposalDocumentEditor({
                   <InsertBlockSlot onAdd={(b) => addBlockAt(b, 0)} />
                   {blocks.map((block, idx) => {
                     const isSelected = selectedBlockId === block.id;
-                    const supportsStyle = block.type === "packages";
+                    const supportsStyle = block.type === "packages" || block.type === "agreement";
                     return (
                       <div key={block.id}>
                         <SortableShell
@@ -2792,9 +2815,11 @@ export function ProposalDocumentEditor({
                                   ? "pricing"
                                   : block.type === "packages"
                                     ? "packages"
-                                    : block.type === "section"
-                                      ? "section"
-                                      : "other"
+                                    : block.type === "agreement"
+                                      ? "agreement"
+                                      : block.type === "section"
+                                        ? "section"
+                                        : "other"
                               }
                               deleteLabel={
                                 block.type === "section" ? "Remove section" : "Delete block"

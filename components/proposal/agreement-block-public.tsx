@@ -22,6 +22,7 @@ import type {
   ProposalStatus,
 } from "@/types/proposal";
 import { iterateProposalContentBlocks } from "@/lib/proposal-blocks";
+import { readableForeground, resolveAgreementButtonColor } from "@/lib/block-style";
 import { formatCurrencyAmount } from "@/lib/format";
 import { effectivePricingLineQuantity } from "@/lib/pricing-line-quantity";
 import {
@@ -47,8 +48,6 @@ export interface AgreementBlockPublicProps {
   /** When false (editor / preview) the CTA is disabled and the sign form is read-only. */
   interactive?: boolean;
 }
-
-const AGREEMENT_ACCENT = "#5EE3C0";
 
 const DEFAULT_HEADING = "Ready to get started?";
 const DEFAULT_BUTTON_LABEL = "View Agreement";
@@ -306,6 +305,8 @@ export function AgreementBlockPublic({
   const buttonLabel = block.buttonLabel?.trim() || DEFAULT_BUTTON_LABEL;
   const agreementTitle = block.agreementTitle?.trim() || DEFAULT_AGREEMENT_TITLE;
   const requireAcceptTerms = block.requireAcceptTerms !== false;
+  const ctaColor = resolveAgreementButtonColor(block.style);
+  const ctaForeground = readableForeground(ctaColor);
 
   const packageSummaries = React.useMemo(() => {
     const blocks = packagesBlocksFromDocument(allBlocks);
@@ -358,8 +359,8 @@ export function AgreementBlockPublic({
           size="lg"
           onClick={() => setOpen(true)}
           disabled={!interactive}
-          className="h-12 rounded-xl px-8 text-base font-semibold text-slate-900 shadow-md transition-colors hover:opacity-95"
-          style={{ backgroundColor: AGREEMENT_ACCENT, color: "#0f172a" }}
+          className="h-12 rounded-xl px-8 text-base font-semibold shadow-md transition-colors hover:opacity-95"
+          style={{ backgroundColor: ctaColor, color: ctaForeground }}
         >
           {buttonLabel}
         </Button>
@@ -528,8 +529,8 @@ export function AgreementBlockPublic({
                 <Button
                   type="submit"
                   size="lg"
-                  className="h-11 gap-2 rounded-xl text-base font-semibold text-slate-900 shadow-md hover:opacity-95"
-                  style={{ backgroundColor: AGREEMENT_ACCENT, color: "#0f172a" }}
+                  className="h-11 gap-2 rounded-xl text-base font-semibold shadow-md hover:opacity-95"
+                  style={{ backgroundColor: ctaColor, color: ctaForeground }}
                   disabled={!canSign || busy}
                 >
                   {busy ? (

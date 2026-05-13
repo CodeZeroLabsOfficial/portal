@@ -280,6 +280,12 @@ export interface AgreementBlock extends ProposalBlockBase {
   legalHtml?: string;
   /** When true, requires a “I have read and agree” checkbox before signing (default true). */
   requireAcceptTerms?: boolean;
+  /**
+   * Visual overrides — only `primaryColor` is honoured today and drives the
+   * CTA button background (and matching modal sign button). Defaults to the
+   * Qwilr-style mint when unset.
+   */
+  style?: BlockStyle;
 }
 
 export interface EmbedBlock extends ProposalBlockBase {

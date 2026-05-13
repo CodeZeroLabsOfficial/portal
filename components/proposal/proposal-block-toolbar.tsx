@@ -18,14 +18,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { STYLE_PRESET_COLORS, resolveBlockStyle } from "@/lib/block-style";
+import {
+  DEFAULT_AGREEMENT_BUTTON_COLOR,
+  DEFAULT_PRIMARY_COLOR,
+  STYLE_PRESET_COLORS,
+  resolveBlockStyle,
+} from "@/lib/block-style";
 import { cn } from "@/lib/utils";
 import type { BlockStyle } from "@/types/proposal";
 
 export interface BlockToolbarProps {
   /** Controls palette + icon treatments. `elevated` is a dark floating bar; `surface` is a soft light pill aligned with editorial chrome. */
   appearance?: "elevated" | "surface";
-  blockType: "pricing" | "packages" | "section" | "other";
+  blockType: "pricing" | "packages" | "agreement" | "section" | "other";
   deleteLabel?: string;
   canMoveUp: boolean;
   canMoveDown: boolean;
@@ -81,7 +86,10 @@ export function BlockToolbar({
   compactChrome = false,
   compactPrimarySlot,
 }: BlockToolbarProps) {
-  const supportsStyle = blockType === "packages" && typeof onStyleChange === "function";
+  const supportsStyle =
+    (blockType === "packages" || blockType === "agreement") &&
+    typeof onStyleChange === "function";
+  const stylePickerMode: StylePickerMode = blockType === "agreement" ? "agreement" : "packages";
 
   const elevated = appearance === "elevated";
   const shell = elevated
@@ -215,7 +223,12 @@ export function BlockToolbar({
             <Copy className="h-4 w-4" />
           </ToolbarIconButton>
           {supportsStyle ? (
-            <StylePickerTrigger style={style} onStyleChange={onStyleChange!} elevated={elevated} />
+            <StylePickerTrigger
+              style={style}
+              onStyleChange={onStyleChange!}
+              elevated={elevated}
+              mode={stylePickerMode}
+            />
           ) : null}
           {onOpenSettings ? (
             <ToolbarIconButton
@@ -303,16 +316,33 @@ function ToolbarDivider({ elevated }: { elevated: boolean }) {
   );
 }
 
+/**
+ * `packages` exposes the full editor (variant + primary + highlight). `agreement`
+ * exposes a focused picker with a single "Button color" row + reset — same chrome,
+ * different defaults so the mint accent doesn't surface a purple swatch on first
+ * open.
+ */
+type StylePickerMode = "packages" | "agreement";
+
+function pickerDefaultPrimary(mode: StylePickerMode): string {
+  return mode === "agreement" ? DEFAULT_AGREEMENT_BUTTON_COLOR : DEFAULT_PRIMARY_COLOR;
+}
+
 function StylePickerTrigger({
   style,
   onStyleChange,
   elevated,
+  mode = "packages",
 }: {
   style?: BlockStyle;
   onStyleChange: (next: BlockStyle | undefined) => void;
   elevated: boolean;
+  mode?: StylePickerMode;
 }) {
-  const resolved = resolveBlockStyle(style);
+  const triggerColor =
+    mode === "agreement"
+      ? (style?.primaryColor?.trim() || DEFAULT_AGREEMENT_BUTTON_COLOR)
+      : resolveBlockStyle(style).primaryColor;
   const triggerCn = elevated
     ? "text-zinc-300 hover:bg-white/10 hover:text-white focus-visible:ring-white/40 data-[state=open]:bg-white/15"
     : "text-muted-foreground hover:bg-background hover:text-foreground focus-visible:ring-ring data-[state=open]:bg-background";
@@ -321,8 +351,8 @@ function StylePickerTrigger({
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          title="Style"
-          aria-label="Style"
+          title={mode === "agreement" ? "Button color" : "Style"}
+          aria-label={mode === "agreement" ? "Button color" : "Style"}
           className={cn(
             "relative inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2",
             triggerCn,
@@ -334,7 +364,7 @@ function StylePickerTrigger({
               "absolute bottom-1 right-1 h-1.5 w-1.5 rounded-full ring-1",
               elevated ? "ring-zinc-900" : "ring-background",
             )}
-            style={{ backgroundColor: resolved.primaryColor }}
+            style={{ backgroundColor: triggerColor }}
             aria-hidden
           />
         </button>
@@ -348,7 +378,12 @@ function StylePickerTrigger({
         )}
         onCloseAutoFocus={(e) => e.preventDefault()}
       >
-        <StylePickerPanel style={style} onStyleChange={onStyleChange} elevated={elevated} />
+        <StylePickerPanel
+          style={style}
+          onStyleChange={onStyleChange}
+          elevated={elevated}
+          mode={mode}
+        />
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -358,14 +393,45 @@ function StylePickerPanel({
   style,
   onStyleChange,
   elevated,
+  mode = "packages",
 }: {
   style?: BlockStyle;
   onStyleChange: (next: BlockStyle | undefined) => void;
   elevated: boolean;
+  mode?: StylePickerMode;
 }) {
-  const resolved = resolveBlockStyle(style);
   const labelMuted = elevated ? "text-zinc-400" : "text-muted-foreground";
   const frame = elevated ? "bg-zinc-800/80 ring-zinc-700/60" : "bg-muted/60 ring-border";
+
+  const resetButton = (
+    <button
+      type="button"
+      onClick={() => onStyleChange(undefined)}
+      className={cn(
+        "w-full rounded-md border px-2 py-1.5 text-[11px] font-medium transition-colors",
+        elevated ? "border-zinc-700/60 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200" : "border-border text-muted-foreground hover:text-foreground",
+      )}
+    >
+      Reset to default
+    </button>
+  );
+
+  if (mode === "agreement") {
+    const buttonColor = style?.primaryColor?.trim() || pickerDefaultPrimary(mode);
+    return (
+      <div className="space-y-4 p-3">
+        <ColorRow
+          elevated={elevated}
+          label="Button color"
+          value={buttonColor}
+          onChange={(v) => onStyleChange({ ...(style ?? {}), primaryColor: v })}
+        />
+        {resetButton}
+      </div>
+    );
+  }
+
+  const resolved = resolveBlockStyle(style);
 
   function patch(next: Partial<BlockStyle>) {
     const merged: BlockStyle = {
@@ -412,16 +478,7 @@ function StylePickerPanel({
         onChange={(v) => patch({ highlightColor: v })}
       />
 
-      <button
-        type="button"
-        onClick={() => onStyleChange(undefined)}
-        className={cn(
-          "w-full rounded-md border px-2 py-1.5 text-[11px] font-medium transition-colors",
-          elevated ? "border-zinc-700/60 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200" : "border-border text-muted-foreground hover:text-foreground",
-        )}
-      >
-        Reset to default
-      </button>
+      {resetButton}
     </div>
   );
 }
