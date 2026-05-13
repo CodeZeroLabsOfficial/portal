@@ -83,6 +83,10 @@ import { ProposalRichText } from "@/components/proposal/proposal-rich-text";
 import { ProposalDocumentView } from "@/components/proposal/proposal-document-view";
 import { ProposalSectionShell } from "@/components/proposal/proposal-section-shell";
 import { ProposalMediaLibraryProvider } from "@/components/proposal/proposal-media-library";
+import {
+  PROPOSAL_IMAGE_BLOCK_PLACEHOLDER_URL,
+  ProposalImageBlockEditor,
+} from "@/components/proposal/proposal-image-block-editor";
 import { ProposalSectionBackgroundPicker } from "@/components/proposal/proposal-section-background-picker";
 import { useProposalSectionEditorChrome } from "@/components/proposal/proposal-section-editor-chrome";
 import {
@@ -333,7 +337,7 @@ function createBlock(type: ProposalBlock["type"]): ProposalBlock {
     case "text":
       return { id, type: "text", html: "<p></p>" };
     case "image":
-      return { id, type: "image", url: "https://", alt: "" };
+      return { id, type: "image", url: PROPOSAL_IMAGE_BLOCK_PLACEHOLDER_URL, alt: "" };
     case "video":
       return { id, type: "video", url: "" };
     case "pricing":
@@ -1453,22 +1457,7 @@ function BlockFields({
     }
     case "image": {
       const b = block as ImageBlock;
-      return (
-        <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label>Image URL</Label>
-            <Input value={b.url} onChange={(e) => patch({ ...b, url: e.target.value })} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Alt text</Label>
-            <Input value={b.alt ?? ""} onChange={(e) => patch({ ...b, alt: e.target.value })} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Caption</Label>
-            <Input value={b.caption ?? ""} onChange={(e) => patch({ ...b, caption: e.target.value })} />
-          </div>
-        </div>
-      );
+      return <ProposalImageBlockEditor block={b} onChange={patch} />;
     }
     case "video": {
       const b = block as VideoBlock;

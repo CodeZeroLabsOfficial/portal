@@ -30,6 +30,8 @@ const noop = () => {};
 export type ProposalMediaLibraryOpenParams = {
   allowedKinds: ProposalLibraryAssetKind[];
   onSelect: (asset: ProposalLibraryAsset) => void;
+  /** When opening from e.g. image block "Explore", start on this tab. */
+  initialMainTab?: "library" | "explore";
 };
 
 type LibraryCategory = "all" | "blocks" | "snippets" | "images" | "videos";
@@ -181,7 +183,7 @@ function ProposalMediaLibrarySidebar() {
   const prevOpen = React.useRef(false);
   React.useEffect(() => {
     if (isOpen && !prevOpen.current && activeParams) {
-      setMainTab("library");
+      setMainTab(activeParams.initialMainTab ?? "library");
       setCategory(defaultCategoryForKinds(activeParams.allowedKinds));
       setQuery("");
     }
