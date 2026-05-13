@@ -136,6 +136,27 @@ function SectionBackdropLayers({ resolved }: { resolved: ResolvedSectionBackgrou
             className="h-full w-full max-w-none select-none object-cover"
             draggable={false}
           />
+        ) : resolved.posterUrl ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element -- mobile still image */}
+            <img
+              src={resolved.posterUrl}
+              alt=""
+              className="h-full w-full max-w-none select-none object-cover md:hidden"
+              draggable={false}
+            />
+            <video
+              key={resolved.mediaUrl}
+              className="hidden h-full w-full object-cover md:block"
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              poster={resolved.posterUrl}
+              src={resolved.mediaUrl || undefined}
+            />
+          </>
         ) : (
           <video
             key={resolved.mediaUrl}

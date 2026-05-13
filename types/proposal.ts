@@ -46,6 +46,11 @@ export interface SectionBackground {
   color?: string;
   /** Image or looping video asset URL when `kind` is `image` | `video`. */
   mediaUrl?: string;
+  /**
+   * When `kind` is `video`, optional still image used as `<video poster>` and shown
+   * on small viewports instead of motion (mobile fallback).
+   */
+  posterUrl?: string;
   /** Overlay tint. */
   tintColor?: string;
   tintStyle?: "normal" | "blend";

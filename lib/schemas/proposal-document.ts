@@ -62,6 +62,7 @@ const sectionBackgroundSchema = z.object({
   kind: z.enum(["color", "image", "video"]),
   color: colorString.optional(),
   mediaUrl: relaxedUrl,
+  posterUrl: relaxedUrl,
   tintColor: colorString.optional(),
   tintStyle: z.enum(["normal", "blend"]).optional(),
   tintOpacity: z.number().finite().min(0).max(100).optional(),

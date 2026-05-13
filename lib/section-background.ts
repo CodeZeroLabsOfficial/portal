@@ -28,6 +28,8 @@ export interface ResolvedSectionBackground {
   kind: "color" | "image" | "video";
   colorHex: string;
   mediaUrl: string;
+  /** Trimmed poster / mobile fallback image when `kind` is `video`. */
+  posterUrl: string;
   tintColorHex: string;
   tintStyle: "normal" | "blend";
   /** 0–100 */
@@ -72,6 +74,7 @@ export function resolveSectionBackground(bg?: SectionBackground): ResolvedSectio
       kind: "color",
       colorHex: d.color ?? "#0f172a",
       mediaUrl: "",
+      posterUrl: "",
       tintColorHex: normalizeCssHex(d.tintColor) ?? "#000000",
       tintStyle: d.tintStyle ?? "normal",
       tintOpacityPct: clamp(Number(d.tintOpacity ?? 16), 0, 100),
@@ -83,6 +86,7 @@ export function resolveSectionBackground(bg?: SectionBackground): ResolvedSectio
   const kind = bg.kind === "image" || bg.kind === "video" ? bg.kind : "color";
   const colorHex = normalizeCssHex(bg.color) ?? normalizeCssHex(d.color) ?? "#0f172a";
   const mediaUrl = (bg.mediaUrl ?? "").trim();
+  const posterUrl = kind === "video" ? (bg.posterUrl ?? "").trim() : "";
   const tintColorHex = normalizeCssHex(bg.tintColor) ?? "#000000";
   const tintStyle = bg.tintStyle === "blend" ? "blend" : "normal";
   const tintOpacityPct = clamp(Number(bg.tintOpacity ?? d.tintOpacity ?? 16), 0, 100);
@@ -96,6 +100,7 @@ export function resolveSectionBackground(bg?: SectionBackground): ResolvedSectio
     kind,
     colorHex,
     mediaUrl,
+    posterUrl,
     tintColorHex,
     tintStyle,
     tintOpacityPct,

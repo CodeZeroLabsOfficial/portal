@@ -54,6 +54,7 @@ export function ProposalSectionBackgroundPicker({
           : model.mediaUrl && model.kind !== "color"
             ? model.mediaUrl
             : "",
+      posterUrl: next === "video" ? (model.kind === "video" ? model.posterUrl : undefined) : undefined,
     });
   }
 
@@ -141,6 +142,7 @@ export function ProposalSectionBackgroundPicker({
                 elevated={elevated}
                 kind="image"
                 url={model.mediaUrl}
+                rowTitle="Background image"
                 onPickFromLibrary={
                   mediaLibrary
                     ? () => {
@@ -176,6 +178,8 @@ export function ProposalSectionBackgroundPicker({
                 elevated={elevated}
                 kind="video"
                 url={model.mediaUrl}
+                rowTitle="Background video"
+                emptyHint="Choose from library"
                 onPickFromLibrary={
                   mediaLibrary
                     ? () => {
@@ -185,7 +189,7 @@ export function ProposalSectionBackgroundPicker({
                             allowedKinds: ["video"],
                             onSelect: (asset) => {
                               if (asset.kind !== "video") return;
-                              patch({ kind: "video", mediaUrl: asset.downloadUrl });
+                              patch({ kind: "video", mediaUrl: asset.downloadUrl, posterUrl: undefined });
                             },
                           });
                         }, 0);
@@ -193,23 +197,39 @@ export function ProposalSectionBackgroundPicker({
                     : undefined
                 }
               />
-              <div className="space-y-1.5 pt-2">
-                <Label className={cn("text-[11px] font-semibold uppercase tracking-wide", labelMuted)}>
-                  Video URL (.mp4, WebM, etc.)
-                </Label>
-                <Input
-                  value={model.mediaUrl ?? ""}
-                  onChange={(e) => patch({ kind: "video", mediaUrl: e.target.value })}
-                  placeholder="https://…"
-                  className={elevated ? "border-zinc-700 bg-zinc-900 text-zinc-100" : ""}
-                  spellCheck={false}
-                />
-              </div>
+              <BackgroundTintPlaceholderRow
+                elevated={elevated}
+                tintHex={normalizeHex(model.tintColor) ?? "#000000"}
+                labelMuted={labelMuted}
+              />
+              <MiniAssetRow
+                elevated={elevated}
+                kind="image"
+                url={model.posterUrl}
+                rowTitle="Mobile image fallback"
+                emptyHint="Choose from library"
+                onPickFromLibrary={
+                  mediaLibrary
+                    ? () => {
+                        setMenuOpen(false);
+                        window.setTimeout(() => {
+                          mediaLibrary.openSelection({
+                            allowedKinds: ["image"],
+                            onSelect: (asset) => {
+                              if (asset.kind !== "image") return;
+                              patch({ kind: "video", posterUrl: asset.downloadUrl });
+                            },
+                          });
+                        }, 0);
+                      }
+                    : undefined
+                }
+              />
             </TabsContent>
           </Tabs>
         </div>
 
-        <div className="space-y-4 px-4 py-4">
+        <div id="proposal-section-bg-tint-controls" className="space-y-4 px-4 py-4">
           <div>
             <p className={cn("mb-3 text-[10px] font-semibold uppercase tracking-[0.18em]", labelMuted)}>
               Tint &amp; matte
@@ -341,13 +361,23 @@ function PreviewSwatchMini({ model, elevated }: { model: SectionBackground; elev
   } else {
     inner =
       preview.mediaUrl && preview.active ? (
-        <video
-          className="pointer-events-none absolute bottom-1 right-1 h-4 w-4 rounded-full object-cover ring-[1.5px] ring-neutral-950/80"
-          muted
-          playsInline
-          preload="metadata"
-          src={preview.mediaUrl}
-        />
+        model.posterUrl?.trim() ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={model.posterUrl.trim()}
+            alt=""
+            className="pointer-events-none absolute bottom-1 right-1 h-4 w-4 rounded-full object-cover ring-[1.5px] ring-neutral-950/80"
+            draggable={false}
+          />
+        ) : (
+          <video
+            className="pointer-events-none absolute bottom-1 right-1 h-4 w-4 rounded-full object-cover ring-[1.5px] ring-neutral-950/80"
+            muted
+            playsInline
+            preload="metadata"
+            src={preview.mediaUrl}
+          />
+        )
       ) : (
         <span className={cn("absolute bottom-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-muted ring-[1.5px]", ringFg)}>
           <MonitorPlay className="h-2.5 w-2.5 text-muted-foreground" />
@@ -358,20 +388,75 @@ function PreviewSwatchMini({ model, elevated }: { model: SectionBackground; elev
   return <span className="pointer-events-none absolute inset-0">{inner}</span>;
 }
 
+function BackgroundTintPlaceholderRow({
+  elevated,
+  tintHex,
+  labelMuted,
+}: {
+  elevated?: boolean;
+  tintHex: string;
+  labelMuted: string;
+}) {
+  const rowClass = cn(
+    "flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left ring-1 ring-border/70 transition-colors dark:ring-white/15",
+    "cursor-pointer hover:bg-muted/50",
+    elevated && "ring-white/15 hover:bg-white/5",
+  );
+  return (
+    <button
+      type="button"
+      className={rowClass}
+      onClick={() => {
+        document.getElementById("proposal-section-bg-tint-controls")?.scrollIntoView({
+          behavior: "smooth",
+          block: "nearest",
+        });
+      }}
+    >
+      <div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/40 bg-muted/40 shadow-inner ring-2 ring-muted/40">
+        <span
+          className="absolute inset-0 opacity-[0.4]"
+          style={{
+            backgroundImage:
+              "linear-gradient(45deg, #a1a1aa 25%, transparent 25%), linear-gradient(-45deg, #a1a1aa 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #d4d4d8 75%), linear-gradient(-45deg, transparent 75%, #d4d4d8 75%)",
+            backgroundSize: "6px 6px",
+            backgroundPosition: "0 0, 0 3px, 3px -3px, -3px 0px",
+          }}
+          aria-hidden
+        />
+        <span
+          className="relative z-[1] h-7 w-7 rounded-full shadow-sm ring-1 ring-black/15"
+          style={{ backgroundColor: tintHex }}
+        />
+      </div>
+      <div className="min-w-0 flex-1 text-left">
+        <p className="text-[11px] font-semibold text-foreground">Background tint</p>
+        <p className={cn("truncate text-[11px]", labelMuted)}>Adjust tint below</p>
+      </div>
+    </button>
+  );
+}
+
 function MiniAssetRow({
   elevated,
   kind,
   url,
+  rowTitle,
+  emptyHint,
   onPickFromLibrary,
 }: {
   elevated?: boolean;
   kind: "image" | "video";
   url?: string;
-  label?: string;
+  rowTitle?: string;
+  emptyHint?: string;
   onPickFromLibrary?: () => void;
 }) {
   const labelMuted = elevated ? "text-zinc-400" : "text-muted-foreground";
   const trimmed = (url ?? "").trim();
+  const titleText = rowTitle ?? `Background ${kind === "image" ? "image" : "video"}`;
+  const defaultEmptyHint = onPickFromLibrary ? "Library or paste a HTTPS URL" : "Paste a HTTPS URL";
+  const subtitle = trimmed || (emptyHint ?? defaultEmptyHint);
   const rowClass = cn(
     "flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left ring-1 ring-border/70 transition-colors dark:ring-white/15",
     onPickFromLibrary && "cursor-pointer hover:bg-muted/50",
@@ -393,12 +478,8 @@ function MiniAssetRow({
         )}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-semibold text-foreground">
-          Background {kind === "image" ? "image" : "video"}
-        </p>
-        <p className={cn("truncate text-[11px]", labelMuted)}>
-          {trimmed || (onPickFromLibrary ? "Library or paste a HTTPS URL" : "Paste a HTTPS URL")}
-        </p>
+        <p className="text-[11px] font-semibold text-foreground">{titleText}</p>
+        <p className={cn("truncate text-[11px]", labelMuted)}>{subtitle}</p>
       </div>
     </>
   );
