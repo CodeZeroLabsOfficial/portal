@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireStaffSession } from "@/lib/auth/server-session";
+import { getProposalMediaLibraryPrefix } from "@/lib/proposal-media-library-blob";
 import { listProposalMediaLibraryAssets } from "@/server/storage/list-proposal-media-library";
 
 export async function GET() {
@@ -9,5 +10,5 @@ export async function GET() {
   }
 
   const assets = await listProposalMediaLibraryAssets();
-  return NextResponse.json({ assets });
+  return NextResponse.json({ assets, libraryPrefix: getProposalMediaLibraryPrefix() });
 }

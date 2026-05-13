@@ -1,12 +1,19 @@
 "use client";
 
 import * as React from "react";
+import { upload } from "@vercel/blob/client";
 import { AnimatePresence, motion } from "framer-motion";
-import { Braces, ChevronLeft, FileText, ImageIcon, Loader2, MonitorPlay, Play, Search } from "lucide-react";
+import { Braces, ChevronLeft, FileText, ImageIcon, Loader2, MonitorPlay, Play, Search, Upload } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { cn } from "@/lib/utils";
+import {
+  PROPOSAL_MEDIA_LIBRARY_DEFAULT_PREFIX,
+  buildLibraryUploadPathname,
+  proposalLibraryAssetFromBlobListItem,
+} from "@/lib/proposal-media-library-blob";
 import type { ProposalLibraryAsset, ProposalLibraryAssetKind } from "@/lib/proposal-media-library-types";
+import { cn } from "@/lib/utils";
 
 const noop = () => {};
 
@@ -83,8 +90,12 @@ function ProposalMediaLibrarySidebar() {
   const [category, setCategory] = React.useState<LibraryCategory>("all");
   const [query, setQuery] = React.useState("");
   const [assets, setAssets] = React.useState<ProposalLibraryAsset[]>([]);
+  const [libraryPrefix, setLibraryPrefix] = React.useState(PROPOSAL_MEDIA_LIBRARY_DEFAULT_PREFIX);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [uploading, setUploading] = React.useState(false);
+  const [uploadError, setUploadError] = React.useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const prevOpen = React.useRef(false);
   React.useEffect(() => {
@@ -107,11 +118,16 @@ function ProposalMediaLibrarySidebar() {
           const body = (await res.json().catch(() => null)) as { error?: string } | null;
           throw new Error(body?.error ?? res.statusText ?? "Request failed");
         }
-        return res.json() as Promise<{ assets?: ProposalLibraryAsset[] }>;
+        return res.json() as Promise<{ assets?: ProposalLibraryAsset[]; libraryPrefix?: string }>;
       })
       .then((data) => {
         if (cancelled) return;
         setAssets(Array.isArray(data.assets) ? data.assets : []);
+        if (typeof data.libraryPrefix === "string" && data.libraryPrefix.trim()) {
+          setLibraryPrefix(data.libraryPrefix.trim().replace(/\/?$/, "/"));
+        } else {
+          setLibraryPrefix(PROPOSAL_MEDIA_LIBRARY_DEFAULT_PREFIX);
+        }
         setLoading(false);
       })
       .catch((e: unknown) => {
@@ -141,6 +157,37 @@ function ProposalMediaLibrarySidebar() {
       document.body.style.overflow = prev;
     };
   }, [isOpen]);
+
+  const normalizedPrefix = libraryPrefix.replace(/\/?$/, "/");
+
+  const onLibraryFilesSelected = React.useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = e.target.files;
+      if (!files?.length) return;
+      setUploadError(null);
+      setUploading(true);
+      try {
+        for (const file of Array.from(files)) {
+          const pathname = buildLibraryUploadPathname(normalizedPrefix, file.name);
+          const result = await upload(pathname, file, {
+            access: "public",
+            handleUploadUrl: "/api/proposal-media-library/upload",
+            multipart: file.size > 4_500_000,
+          });
+          const asset = proposalLibraryAssetFromBlobListItem(result, normalizedPrefix);
+          if (asset) {
+            setAssets((prev) => [asset, ...prev.filter((a) => a.id !== asset.id)]);
+          }
+        }
+      } catch (err: unknown) {
+        setUploadError(err instanceof Error ? err.message : "Upload failed");
+      } finally {
+        setUploading(false);
+        e.target.value = "";
+      }
+    },
+    [normalizedPrefix],
+  );
 
   const visible = React.useMemo(() => {
     if (!activeParams) return [];
@@ -212,6 +259,33 @@ function ProposalMediaLibrarySidebar() {
                 </TabsList>
 
                 <TabsContent value="library" className="mt-0 flex min-h-0 flex-1 flex-col overflow-hidden outline-none data-[state=inactive]:hidden">
+                  <div className="mb-3 flex flex-col gap-2">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      className="sr-only"
+                      multiple
+                      accept=".jpg,.jpeg,.png,.gif,.webp,.avif,.svg,.mp4,.webm,.mov,.m4v,.ogv,.html,.htm,.json,image/jpeg,image/png,image/gif,image/webp,image/avif,image/svg+xml,video/mp4,video/webm,video/quicktime,text/html,application/json"
+                      aria-label="Upload library files"
+                      onChange={onLibraryFilesSelected}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-9 w-full justify-center gap-2"
+                      disabled={uploading}
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      {uploading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                      ) : (
+                        <Upload className="h-4 w-4" aria-hidden />
+                      )}
+                      {uploading ? "Uploading…" : "Upload to library"}
+                    </Button>
+                    {uploadError ? <p className="text-center text-xs text-destructive">{uploadError}</p> : null}
+                  </div>
                   <div className="relative mb-3">
                     <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
                     <Input
@@ -262,10 +336,13 @@ function ProposalMediaLibrarySidebar() {
                             void fetch("/api/proposal-media-library")
                               .then(async (res) => {
                                 if (!res.ok) throw new Error(res.statusText);
-                                return res.json() as Promise<{ assets?: ProposalLibraryAsset[] }>;
+                                return res.json() as Promise<{ assets?: ProposalLibraryAsset[]; libraryPrefix?: string }>;
                               })
                               .then((data) => {
                                 setAssets(Array.isArray(data.assets) ? data.assets : []);
+                                if (typeof data.libraryPrefix === "string" && data.libraryPrefix.trim()) {
+                                  setLibraryPrefix(data.libraryPrefix.trim().replace(/\/?$/, "/"));
+                                }
                                 setLoading(false);
                               })
                               .catch(() => {
@@ -279,10 +356,10 @@ function ProposalMediaLibrarySidebar() {
                       </div>
                     ) : visible.length === 0 ? (
                       <div className="space-y-2 py-12 text-center text-sm text-muted-foreground">
-                        <p>No matching files in Storage.</p>
+                        <p>No matching files in the library.</p>
                         <p className="text-xs leading-relaxed">
-                          Upload images, videos, HTML snippets, or JSON blocks under your configured library prefix. Staff-only
-                          listing uses Firebase Admin.
+                          Upload images, videos, HTML snippets, or JSON blocks here (admin and team). Files are stored in
+                          Vercel Blob under the library prefix.
                         </p>
                       </div>
                     ) : (
