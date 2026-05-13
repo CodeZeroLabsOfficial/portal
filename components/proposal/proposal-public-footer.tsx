@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Printer } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { acceptProposalPublicAction } from "@/server/actions/proposal-builder";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,8 +16,7 @@ export interface ProposalPublicFooterProps {
   /**
    * When true, suppress the inline acceptance form — used when the proposal
    * contains an `agreement` block that drives signing through its own modal.
-   * The “Accepted” confirmation card is still shown after acceptance, plus the
-   * print / Save as PDF button.
+   * The “Accepted” confirmation card is still shown after acceptance.
    */
   hideAcceptanceForm?: boolean;
 }
@@ -55,17 +54,15 @@ export function ProposalPublicFooter({
   }
 
   const displayName = localAcceptedName ?? acceptedByName;
+  const isAccepted = done || status === "accepted";
+
+  if (!isAccepted && hideAcceptanceForm) {
+    return null;
+  }
 
   return (
     <div className="mt-16 space-y-8 print:hidden">
-      <div className="flex justify-center">
-        <Button type="button" variant="outline" className="gap-2" onClick={() => window.print()}>
-          <Printer className="h-4 w-4" aria-hidden />
-          Print / Save as PDF
-        </Button>
-      </div>
-
-      {done || status === "accepted" ? (
+      {isAccepted ? (
         <Card className="border-emerald-500/35 bg-emerald-500/10">
           <CardHeader>
             <CardTitle className="text-base text-emerald-800 dark:text-emerald-100">Accepted</CardTitle>
@@ -74,7 +71,7 @@ export function ProposalPublicFooter({
             </CardDescription>
           </CardHeader>
         </Card>
-      ) : hideAcceptanceForm ? null : (
+      ) : (
         <Card className="border-border/80">
           <CardHeader>
             <CardTitle className="text-base">Accept proposal</CardTitle>

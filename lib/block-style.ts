@@ -4,12 +4,11 @@ import type { BlockStyle } from "@/types/proposal";
 export const DEFAULT_PRIMARY_COLOR = "#673AB7";
 /** Default Plans / Quote highlight tone — used for the recommended tier and totals row. */
 export const DEFAULT_HIGHLIGHT_COLOR = "#673AB7";
-/** Default mint accent used by the Accept (agreement) block CTA + sign button. */
-export const DEFAULT_AGREEMENT_BUTTON_COLOR = "#5EE3C0";
+/** Default tone for the Accept (agreement) block CTA + sign button — aligned with the brand primary. */
+export const DEFAULT_AGREEMENT_BUTTON_COLOR = DEFAULT_PRIMARY_COLOR;
 
 /** Preset swatches surfaced in the Style popover for the interactive proposal editor. */
 export const STYLE_PRESET_COLORS: ReadonlyArray<{ value: string; label: string }> = [
-  { value: "#5EE3C0", label: "Mint" },
   { value: "#673AB7", label: "Purple" },
   { value: "#4543F7", label: "Indigo" },
   { value: "#0D0D15", label: "Charcoal" },
