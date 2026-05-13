@@ -101,6 +101,31 @@ function parseOrigins() {
   return [...set].sort();
 }
 
+/** `http://localhost:3000` and `http://127.0.0.1:3000` are different origins; allow both in dev. */
+function expandLocalhostVariants(origins) {
+  const out = new Set(origins);
+  for (const o of origins) {
+    try {
+      const u = new URL(o);
+      if (u.hostname === "localhost" && u.port) {
+        out.add(`${u.protocol}//127.0.0.1:${u.port}`);
+      }
+      if (u.hostname === "127.0.0.1" && u.port) {
+        out.add(`${u.protocol}//localhost:${u.port}`);
+      }
+      if (u.hostname === "localhost" && !u.port) {
+        out.add(`${u.protocol}//127.0.0.1`);
+      }
+      if (u.hostname === "127.0.0.1" && !u.port) {
+        out.add(`${u.protocol}//localhost`);
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return [...out].sort();
+}
+
 function bucketName() {
   const b =
     process.env.FIREBASE_STORAGE_BUCKET?.trim() ||
@@ -112,12 +137,13 @@ function bucketName() {
 }
 
 function writeCors() {
-  const origins = parseOrigins();
+  const origins = expandLocalhostVariants(parseOrigins());
   const cors = [
     {
       origin: origins,
       method: ["GET", "HEAD", "PUT", "OPTIONS"],
-      responseHeader: ["Content-Type", "Content-Length"],
+      // Expose headers on the response; "*" avoids subtle mismatches with signed PUT responses.
+      responseHeader: ["*"],
       maxAgeSeconds: 3600,
     },
   ];
@@ -149,23 +175,63 @@ function apply() {
   }
 }
 
+function show() {
+  const bucket = bucketName();
+  const gs = bucket.startsWith("gs://") ? bucket : `gs://${bucket}`;
+  const r = spawnSync("gcloud", ["storage", "buckets", "describe", gs, "--format=json"], { encoding: "utf8" });
+  if (r.error) {
+    const code = "code" in r.error ? /** @type {{ code?: string }} */ (r.error).code : undefined;
+    if (code === "ENOENT") {
+      console.error("gcloud was not found. Install the Google Cloud SDK and authenticate (gcloud auth login).");
+      process.exit(1);
+    }
+    throw r.error;
+  }
+  if (r.status !== 0) {
+    process.stderr.write(r.stderr || "");
+    process.exit(r.status ?? 1);
+  }
+  let data;
+  try {
+    data = JSON.parse(r.stdout || "{}");
+  } catch {
+    console.error("Could not parse gcloud JSON output.");
+    process.exit(1);
+  }
+  const cors = data.cors ?? data.cors_config ?? data.corsConfig;
+  console.log(`Bucket: ${gs}`);
+  if (cors === undefined || cors === null) {
+    console.log("No CORS field on bucket response (treat as unset or inspect full output in Cloud Console).");
+    return;
+  }
+  console.log(JSON.stringify(cors, null, 2));
+}
+
 const cmd = process.argv[2];
 if (cmd === "write") {
   writeCors();
 } else if (cmd === "apply") {
   apply();
+} else if (cmd === "show") {
+  show();
 } else {
   console.log(`Usage:
   npm run storage:cors:write
   npm run storage:cors:apply
+  npm run storage:cors:show
 
   node scripts/gcs-cors.mjs write
   node scripts/gcs-cors.mjs apply
+  node scripts/gcs-cors.mjs show
 
 Environment (in .env or .env.local):
   NEXT_PUBLIC_APP_URL              Production app URL (origin used for CORS)
   GCS_CORS_EXTRA_ORIGINS           Optional comma-separated URLs (e.g. Vercel preview origins)
   FIREBASE_STORAGE_BUCKET          Target bucket (or NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET)
+
+Tips:
+  - The browser origin must match exactly (https://a.com vs https://www.a.com are different).
+  - For Vercel previews, add each preview URL to GCS_CORS_EXTRA_ORIGINS (no wildcards).
 `);
   process.exit(cmd === undefined || cmd === "help" ? 0 : 1);
 }

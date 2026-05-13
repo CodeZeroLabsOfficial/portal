@@ -107,8 +107,12 @@ async function fetchWithUploadHints(
     if (e instanceof TypeError || (e instanceof Error && e.message === "Failed to fetch")) {
       if (kind === "storage") {
         const portalMb = formatDirectUploadMaxMbOneDecimal(PROPOSAL_MEDIA_LIBRARY_DIRECT_UPLOAD_MAX_BYTES);
+        const originHint =
+          typeof window !== "undefined" && window.location?.origin
+            ? ` This page’s origin is ${window.location.origin} — that exact string must be allowed on the Storage bucket CORS (along with http://127.0.0.1:PORT if you use 127.0.0.1 instead of localhost).`
+            : "";
         throw new Error(
-          `Could not upload to Cloud Storage (often missing CORS on the bucket for browser PUT). Files over about ${portalMb} MB on this deployment use that path; use a smaller image, set PROPOSAL_MEDIA_LIBRARY_MAX_DIRECT_UPLOAD_BYTES and NEXT_PUBLIC_PROPOSAL_MEDIA_LIBRARY_MAX_DIRECT_UPLOAD_BYTES together (within your host’s body limit), or add CORS for this site’s origin on the bucket.`,
+          `Could not upload to Cloud Storage (browser PUT blocked: usually wrong or missing CORS on the bucket). Files over about ${portalMb} MB use this path.${originHint} Run npm run storage:cors:show to verify CORS on your bucket, then npm run storage:cors:apply after setting NEXT_PUBLIC_APP_URL and GCS_CORS_EXTRA_ORIGINS, or use a smaller file so upload goes through the portal API.`,
         );
       }
       throw new Error(
