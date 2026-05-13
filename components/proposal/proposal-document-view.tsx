@@ -3,6 +3,7 @@
 import * as React from "react";
 import type {
   AccordionBlock,
+  ImageBlock,
   PackagesBlock,
   ProposalBlock,
   ProposalBranding,
@@ -38,6 +39,7 @@ import { PackagesBlockPublic } from "@/components/proposal/packages-block-public
 import { ProposalAccordionExpandSurface } from "@/components/proposal/proposal-accordion-expand-surface";
 import { ProposalSectionShell } from "@/components/proposal/proposal-section-shell";
 import { ProposalSplashBlockCanvas } from "@/components/proposal/proposal-splash-block";
+import { isProposalImagePlaceholderUrl } from "@/components/proposal/proposal-image-block-editor";
 import { isSectionBackgroundActive } from "@/lib/section-background";
 
 export interface ProposalDocumentViewProps {
@@ -221,22 +223,54 @@ function BlockView({
         </div>
       );
     }
-    case "image":
+    case "image": {
+      const ib = block as ImageBlock;
+      if (isProposalImagePlaceholderUrl(ib.url)) {
+        return null;
+      }
+      const align = ib.align ?? "center";
+      const figAlign = cn(
+        "space-y-2",
+        align === "left" && "mr-auto",
+        align === "center" && "mx-auto",
+        align === "right" && "ml-auto",
+      );
+      const href = ib.href?.trim();
+      const imgEl = (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={ib.url} alt={ib.alt ?? ""} className="max-h-[min(70vh,520px)] w-full object-contain" />
+        </>
+      );
       return (
-        <figure className="space-y-2">
-          <div className="overflow-hidden rounded-xl border border-border/60 bg-muted/20">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={block.url}
-              alt={block.alt ?? ""}
-              className="max-h-[min(70vh,520px)] w-full object-contain"
-            />
-          </div>
-          {block.caption ? (
-            <figcaption className="text-center text-xs text-muted-foreground">{block.caption}</figcaption>
+        <figure className={figAlign}>
+          {href ? (
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block outline-none ring-offset-background transition-opacity hover:opacity-95 focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              {imgEl}
+            </a>
+          ) : (
+            imgEl
+          )}
+          {ib.caption ? (
+            <figcaption
+              className={cn(
+                "text-xs text-muted-foreground",
+                align === "left" && "text-left",
+                align === "center" && "text-center",
+                align === "right" && "text-right",
+              )}
+            >
+              {ib.caption}
+            </figcaption>
           ) : null}
         </figure>
       );
+    }
     case "video": {
       const emb = embedVideoSrc(block.url);
       if (emb) {

@@ -87,6 +87,7 @@ import {
   PROPOSAL_IMAGE_BLOCK_PLACEHOLDER_URL,
   ProposalImageBlockEditor,
 } from "@/components/proposal/proposal-image-block-editor";
+import { ProposalImageBlockToolbar } from "@/components/proposal/proposal-image-block-toolbar";
 import { ProposalSectionBackgroundPicker } from "@/components/proposal/proposal-section-background-picker";
 import { useProposalSectionEditorChrome } from "@/components/proposal/proposal-section-editor-chrome";
 import {
@@ -302,6 +303,26 @@ const SECTION_INSERT_OPTIONS: BlockOption[] = [
     accent: "text-zinc-400",
     accentBg: "bg-zinc-500/10",
   },
+];
+
+/** Insert menu inside columns — Qwilr-style dark popover (Content / Interactive). */
+const COLUMN_MENU_CONTENT: BlockOption[] = [
+  { id: "col-text", type: "text", label: "Text", icon: ScrollText, accent: "text-violet-500", accentBg: "bg-violet-500/10" },
+  { id: "col-heading", type: "header", label: "Heading", icon: Heading, accent: "text-sky-500", accentBg: "bg-sky-500/10" },
+  { id: "col-image", type: "image", label: "Image", icon: ImageIcon, accent: "text-fuchsia-500", accentBg: "bg-fuchsia-500/10" },
+  { id: "col-video", type: "video", label: "Video", icon: MonitorPlay, accent: "text-rose-500", accentBg: "bg-rose-500/10" },
+  { id: "col-icon", type: "icon", label: "Icon", icon: Star, accent: "text-yellow-500", accentBg: "bg-yellow-500/10" },
+  { id: "col-divider", type: "divider", label: "Divider", icon: SeparatorHorizontal, accent: "text-slate-400", accentBg: "bg-slate-500/10" },
+  { id: "col-spacer", type: "spacer", label: "Spacer", icon: MoveVertical, accent: "text-zinc-400", accentBg: "bg-zinc-500/10" },
+  { id: "col-pricing", type: "pricing", label: "Quote", icon: Coins, accent: "text-emerald-500", accentBg: "bg-emerald-500/10" },
+  { id: "col-packages", type: "packages", label: "Plans", icon: Package, accent: "text-amber-500", accentBg: "bg-amber-500/10" },
+];
+
+const COLUMN_MENU_INTERACTIVE: BlockOption[] = [
+  { id: "col-embed", type: "embed", label: "Embed", icon: LayoutTemplate, accent: "text-teal-500", accentBg: "bg-teal-500/10" },
+  { id: "col-form", type: "form", label: "Form", icon: SquarePen, accent: "text-indigo-500", accentBg: "bg-indigo-500/10" },
+  { id: "col-payment", type: "payment", label: "Payment", icon: CreditCard, accent: "text-orange-500", accentBg: "bg-orange-500/10" },
+  { id: "col-signature", type: "signature", label: "Accept", icon: PenLine, accent: "text-cyan-500", accentBg: "bg-cyan-500/10" },
 ];
 
 /** Secondary options revealed via "Add block from library". */
@@ -612,6 +633,50 @@ function SectionInsertMenu({
   );
 }
 
+function ColumnInsertMenu({
+  onAdd,
+  trigger,
+  align = "start",
+}: {
+  onAdd: (block: ProposalBlock) => void;
+  trigger: React.ReactNode;
+  align?: "start" | "center" | "end";
+}) {
+  const [open, setOpen] = React.useState(false);
+
+  function pick(option: BlockOption) {
+    onAdd(option.factory?.() ?? createBlock(option.type));
+    setOpen(false);
+  }
+
+  return (
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
+      <DropdownMenuContent
+        align={align}
+        sideOffset={4}
+        className={cn(
+          "w-[min(220px,calc(100vw-2rem))] overflow-hidden rounded-lg border-zinc-800 bg-zinc-950 p-0 text-zinc-100 shadow-xl",
+        )}
+        onCloseAutoFocus={(event: Event) => event.preventDefault()}
+      >
+        <p className="px-2.5 pb-1 pt-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-zinc-500">Content</p>
+        <div className="pb-1">
+          {COLUMN_MENU_CONTENT.map((opt) => (
+            <DarkInsertRow key={opt.id} icon={opt.icon} label={opt.label} onPick={() => pick(opt)} />
+          ))}
+        </div>
+        <p className="px-2.5 pb-1 pt-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-zinc-500">Interactive</p>
+        <div className="pb-1">
+          {COLUMN_MENU_INTERACTIVE.map((opt) => (
+            <DarkInsertRow key={opt.id} icon={opt.icon} label={opt.label} onPick={() => pick(opt)} />
+          ))}
+        </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 function patchColumnStackAtIndex(
   cols: ColumnsBlock,
   columnIndex: number,
@@ -650,12 +715,30 @@ function ColumnResizeGrip({
   );
 }
 
+function ColumnGhostText({ onSeed, placeholder }: { onSeed: (block: TextBlock) => void; placeholder: string }) {
+  const idRef = React.useRef(newId());
+  const [html, setHtml] = React.useState("<p></p>");
+  return (
+    <ProposalRichText
+      html={html}
+      placeholder={placeholder}
+      onChange={(next) => {
+        setHtml(next);
+        onSeed({ id: idRef.current, type: "text", html: next, body: undefined });
+      }}
+    />
+  );
+}
+
 function NestedColumnBlockFields({
   block,
   onChange,
+  textPlaceholder,
 }: {
   block: ProposalColumnChildBlock;
   onChange: (next: ProposalColumnChildBlock) => void;
+  /** Rich-text placeholder when this block is a column cell (Qwilr-style hint). */
+  textPlaceholder?: string;
 }) {
   const patchNested = (next: ProposalBlock) => onChange(next as ProposalColumnChildBlock);
   switch (block.type) {
@@ -684,6 +767,7 @@ function NestedColumnBlockFields({
           editorMinHeightPx={block.editorMinHeightPx}
           onEditorMinHeightPxChange={(next) => patchNested({ ...block, editorMinHeightPx: next })}
           resizableHeight
+          placeholder={textPlaceholder}
           onChange={(html) => patchNested({ ...block, html, body: undefined })}
         />
       );
@@ -711,7 +795,6 @@ function ColumnsBlockFields({
   onExitResizeLayout?: () => void;
 }) {
   const columnCount = block.stacks.length as ColumnLayoutCount;
-  const allColumnsEmpty = block.stacks.every((s) => s.length === 0);
   const resizeMode = Boolean(resizeLayoutActive);
   const columnWidthRefs = React.useRef<(HTMLDivElement | null)[]>([]);
   const blockRef = React.useRef(block);
@@ -814,62 +897,79 @@ function ColumnsBlockFields({
       setStack(stack.map((c) => (c.id === childId ? nextChild : c)));
     }
     return (
-      <div className="min-w-0 space-y-4">
+      <div className="group/colpane relative flex min-w-0 gap-1.5">
         <span className="sr-only">{label}</span>
-        <div className="flex justify-end">
-          <SectionInsertMenu
-            align="end"
+        <div
+          className={cn(
+            "flex shrink-0 flex-col pt-0.5 opacity-0 pointer-events-none transition-opacity duration-150",
+            "group-hover/colpane:pointer-events-auto group-hover/colpane:opacity-100",
+            "group-focus-within/colpane:pointer-events-auto group-focus-within/colpane:opacity-100",
+          )}
+        >
+          <ColumnInsertMenu
             onAdd={addToEnd}
+            align="start"
             trigger={
-              <Button type="button" variant="ghost" size="sm" className="h-8 gap-1 text-[12px] text-muted-foreground hover:text-foreground">
-                <Plus className="h-3.5 w-3.5" /> Add
-              </Button>
+              <button
+                type="button"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border/80 bg-muted/50 text-muted-foreground shadow-sm transition-colors hover:border-sky-500/50 hover:bg-background hover:text-foreground data-[state=open]:border-primary data-[state=open]:bg-primary data-[state=open]:text-primary-foreground"
+                aria-label="Add content"
+              >
+                <Plus className="h-3.5 w-3.5" aria-hidden />
+              </button>
             }
           />
         </div>
-        {stack.length === 0 ? (
-          <p className="rounded-md border border-dashed border-border/50 px-3 py-8 text-center text-xs text-muted-foreground">
-            Empty column — use Add above or drop from the library.
-          </p>
-        ) : (
-          stack.map((child, idx) => (
-            <div key={child.id} className="group/colitem space-y-2 pb-8 border-b border-border/25 last:border-0 last:pb-0">
-              <div className="flex flex-wrap items-center gap-1 opacity-100 transition-opacity md:opacity-0 md:group-hover/colitem:opacity-100 md:group-focus-within/colitem:opacity-100">
-                <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" disabled={idx === 0} onClick={() => move(child.id, -1)}>
-                  Up
-                </Button>
-                <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" disabled={idx === stack.length - 1} onClick={() => move(child.id, 1)}>
-                  Down
-                </Button>
-                <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => dup(child.id)}>
-                  Duplicate
-                </Button>
-                <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs text-destructive hover:text-destructive" onClick={() => removeAt(child.id)}>
-                  Remove
-                </Button>
-              </div>
-              {child.type === "packages" ? (
-                <div className="flex flex-wrap items-center gap-2 border-b border-border/30 pb-2">
-                  <span className="text-[11px] font-medium text-muted-foreground">Plans background</span>
-                  <ProposalSectionBackgroundPicker
-                    background={(child as PackagesBlock).background}
-                    onChange={(next) => {
-                      const p = child as PackagesBlock;
-                      if (!next) {
-                        const { background: _b, ...rest } = p;
-                        void _b;
-                        updateChild(child.id, rest as ProposalColumnChildBlock);
-                      } else {
-                        updateChild(child.id, { ...p, background: next } as ProposalColumnChildBlock);
-                      }
-                    }}
-                  />
+        <div className="min-w-0 flex-1 space-y-3">
+          {stack.length === 0 ? (
+            <ColumnGhostText
+              placeholder="Type / to add content"
+              onSeed={(tb) => setStack([tb])}
+            />
+          ) : (
+            stack.map((child, idx) => (
+              <div key={child.id} className="group/colitem space-y-2 border-b border-border/15 pb-3 last:border-0 last:pb-0">
+                <div className="flex flex-wrap items-center gap-1 opacity-100 transition-opacity md:opacity-0 md:group-hover/colitem:opacity-100 md:group-focus-within/colitem:opacity-100">
+                  <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" disabled={idx === 0} onClick={() => move(child.id, -1)}>
+                    Up
+                  </Button>
+                  <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" disabled={idx === stack.length - 1} onClick={() => move(child.id, 1)}>
+                    Down
+                  </Button>
+                  <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => dup(child.id)}>
+                    Duplicate
+                  </Button>
+                  <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs text-destructive hover:text-destructive" onClick={() => removeAt(child.id)}>
+                    Remove
+                  </Button>
                 </div>
-              ) : null}
-              <NestedColumnBlockFields block={child} onChange={(n) => updateChild(child.id, n)} />
-            </div>
-          ))
-        )}
+                {child.type === "packages" ? (
+                  <div className="flex flex-wrap items-center gap-2 border-b border-border/30 pb-2">
+                    <span className="text-[11px] font-medium text-muted-foreground">Plans background</span>
+                    <ProposalSectionBackgroundPicker
+                      background={(child as PackagesBlock).background}
+                      onChange={(next) => {
+                        const p = child as PackagesBlock;
+                        if (!next) {
+                          const { background: _b, ...rest } = p;
+                          void _b;
+                          updateChild(child.id, rest as ProposalColumnChildBlock);
+                        } else {
+                          updateChild(child.id, { ...p, background: next } as ProposalColumnChildBlock);
+                        }
+                      }}
+                    />
+                  </div>
+                ) : null}
+                <NestedColumnBlockFields
+                  block={child}
+                  onChange={(n) => updateChild(child.id, n)}
+                  textPlaceholder="Type / to add content"
+                />
+              </div>
+            ))
+          )}
+        </div>
       </div>
     );
   }
@@ -878,13 +978,7 @@ function ColumnsBlockFields({
   const flexPercents = resizeMode ? columnFlexPercents(flexRow) : [];
 
   return (
-    <div className="space-y-8">
-      {allColumnsEmpty ? (
-        <p className="rounded-md border border-dashed border-border/55 bg-muted/20 px-3 py-6 text-center text-xs text-muted-foreground">
-          Use <strong className="font-medium text-foreground">Edit columns</strong> in the toolbar to choose how many columns you need, then add blocks in each column.
-        </p>
-      ) : null}
-
+    <div className="space-y-6">
       {resizeMode ? (
         <div className="space-y-1.5">
           <p className="text-center text-[12px] font-medium text-sky-600 dark:text-sky-300 md:text-left">
@@ -1101,6 +1195,25 @@ function SectionBlockFields({
                       </Tooltip>
                     );
                     const compactColumnsChrome = child.type === "columns";
+                    if (child.type === "image") {
+                      const ib = child as ImageBlock;
+                      return (
+                        <div className="flex w-full items-start gap-1.5">
+                          {dragHandle}
+                          <ProposalImageBlockToolbar
+                            variant="shell"
+                            block={ib}
+                            onChange={(next) => updateChild(child.id, next as ProposalContentBlock)}
+                            canMoveUp={idx > 0}
+                            canMoveDown={idx < children.length - 1}
+                            onMoveUp={() => moveChild(child.id, -1)}
+                            onMoveDown={() => moveChild(child.id, 1)}
+                            onDuplicate={() => duplicateChild(child.id)}
+                            onDelete={() => removeChild(child.id)}
+                          />
+                        </div>
+                      );
+                    }
                     return (
                       <BlockToolbar
                         appearance="surface"
@@ -1457,7 +1570,14 @@ function BlockFields({
     }
     case "image": {
       const b = block as ImageBlock;
-      return <ProposalImageBlockEditor block={b} onChange={patch} />;
+      return (
+        <>
+          {!selection ? (
+            <ProposalImageBlockToolbar variant="embedded" block={b} onChange={patch} className="mb-2" />
+          ) : null}
+          <ProposalImageBlockEditor block={b} onChange={patch} />
+        </>
+      );
     }
     case "video": {
       const b = block as VideoBlock;
@@ -2405,6 +2525,25 @@ export function ProposalDocumentEditor({
                               </Tooltip>
                             );
                             const compactColumnsChrome = block.type === "columns";
+                            if (block.type === "image") {
+                              const ib = block as ImageBlock;
+                              return (
+                                <div className="flex w-full items-start justify-end gap-1.5">
+                                  <ProposalImageBlockToolbar
+                                    variant="shell"
+                                    block={ib}
+                                    onChange={(next) => updateBlock(block.id, next)}
+                                    canMoveUp={idx > 0}
+                                    canMoveDown={idx < blocks.length - 1}
+                                    onMoveUp={() => moveBlock(block.id, -1)}
+                                    onMoveDown={() => moveBlock(block.id, 1)}
+                                    onDuplicate={() => duplicateBlock(block.id)}
+                                    onDelete={() => removeBlock(block.id)}
+                                  />
+                                  {dragHandle}
+                                </div>
+                              );
+                            }
                             return (
                             <BlockToolbar
                               appearance="surface"

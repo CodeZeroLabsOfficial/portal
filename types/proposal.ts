@@ -127,6 +127,10 @@ export interface ImageBlock extends ProposalBlockBase {
   url: string;
   alt?: string;
   caption?: string;
+  /** When set, the public viewer wraps the image in this link. */
+  href?: string;
+  /** Horizontal placement of the figure in the column (editor + public). */
+  align?: "left" | "center" | "right";
 }
 
 export interface VideoBlock extends ProposalBlockBase {

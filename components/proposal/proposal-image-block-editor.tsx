@@ -1,17 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { upload } from "@vercel/blob/client";
 import { ImageIcon, LayoutGrid, Search, Upload } from "lucide-react";
 import type { ImageBlock } from "@/types/proposal";
 import { useProposalMediaLibraryOptional } from "@/components/proposal/proposal-media-library";
+import { PROPOSAL_MEDIA_LIBRARY_DEFAULT_PREFIX } from "@/lib/proposal-media-library-blob";
 import {
-  PROPOSAL_MEDIA_LIBRARY_DEFAULT_PREFIX,
-  buildLibraryUploadPathname,
-  proposalLibraryAssetFromBlobListItem,
-} from "@/lib/proposal-media-library-blob";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+  fetchProposalMediaLibraryPrefix,
+  uploadImageFileToProposalLibrary,
+} from "@/lib/proposal-image-library-upload";
 import { cn } from "@/lib/utils";
 
 /** Matches `createBlock("image")` placeholder so new blocks show the picker surface. */
@@ -25,32 +22,40 @@ export function isProposalImagePlaceholderUrl(url: string): boolean {
 const pickerActionClass =
   "inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-md border border-border bg-background px-3 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-muted/70 disabled:pointer-events-none disabled:opacity-50";
 
+function imageAlignClass(align: ImageBlock["align"]): string {
+  switch (align) {
+    case "right":
+      return "ml-auto mr-0";
+    case "center":
+      return "mx-auto";
+    case "left":
+    default:
+      return "mr-auto ml-0";
+  }
+}
+
 type ProposalImageBlockEditorProps = {
   block: ImageBlock;
   onChange: (next: ImageBlock) => void;
 };
 
+/**
+ * In-canvas image block surface: empty state picker or aligned preview only.
+ * Editing controls live on {@link ProposalImageBlockToolbar}.
+ */
 export function ProposalImageBlockEditor({ block, onChange }: ProposalImageBlockEditorProps) {
   const mediaLibrary = useProposalMediaLibraryOptional();
   const [prefix, setPrefix] = React.useState(PROPOSAL_MEDIA_LIBRARY_DEFAULT_PREFIX);
   const [uploading, setUploading] = React.useState(false);
   const [uploadErr, setUploadErr] = React.useState<string | null>(null);
   const [dragOver, setDragOver] = React.useState(false);
-  const [showUrlField, setShowUrlField] = React.useState(false);
   const fileRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
     let cancelled = false;
-    void fetch("/api/proposal-media-library")
-      .then(async (res) => {
-        if (!res.ok) return null;
-        return res.json() as Promise<{ libraryPrefix?: string }>;
-      })
-      .then((data) => {
-        if (cancelled || !data || typeof data.libraryPrefix !== "string" || !data.libraryPrefix.trim()) return;
-        setPrefix(data.libraryPrefix.trim().replace(/\/?$/, "/"));
-      })
-      .catch(() => {});
+    void fetchProposalMediaLibraryPrefix().then((p) => {
+      if (!cancelled) setPrefix(p);
+    });
     return () => {
       cancelled = true;
     };
@@ -72,18 +77,8 @@ export function ProposalImageBlockEditor({ block, onChange }: ProposalImageBlock
       setUploadErr(null);
       setUploading(true);
       try {
-        const pathname = buildLibraryUploadPathname(prefix, file.name);
-        const result = await upload(pathname, file, {
-          access: "public",
-          handleUploadUrl: "/api/proposal-media-library/upload",
-          multipart: file.size > 4_500_000,
-        });
-        const asset = proposalLibraryAssetFromBlobListItem(result, prefix);
-        if (asset?.kind === "image") {
-          applyUrl(asset.downloadUrl);
-        } else {
-          setUploadErr("Upload did not return an image.");
-        }
+        const url = await uploadImageFileToProposalLibrary(prefix, file);
+        applyUrl(url);
       } catch (e: unknown) {
         setUploadErr(e instanceof Error ? e.message : "Upload failed");
       } finally {
@@ -117,11 +112,13 @@ export function ProposalImageBlockEditor({ block, onChange }: ProposalImageBlock
   }, [mediaLibrary, applyUrl]);
 
   const hasImage = !isProposalImagePlaceholderUrl(block.url);
+  const align = block.align ?? "center";
 
   const dropZone = (
     <div
       className={cn(
-        "rounded-lg border-2 border-sky-500/45 p-2 dark:border-sky-400/40",
+        "w-full max-w-2xl rounded-lg border-2 border-sky-500/45 p-2 dark:border-sky-400/40",
+        imageAlignClass(align),
         dragOver && "border-primary ring-2 ring-primary/20",
       )}
     >
@@ -190,66 +187,14 @@ export function ProposalImageBlockEditor({ block, onChange }: ProposalImageBlock
     </div>
   );
 
+  if (!hasImage) {
+    return <div className="flex w-full flex-col">{dropZone}</div>;
+  }
+
   return (
-    <div className="space-y-4">
-      {!hasImage ? (
-        dropZone
-      ) : (
-        <div className="space-y-3">
-          <div className="overflow-hidden rounded-lg border border-border bg-muted/20">
-            {/* eslint-disable-next-line @next/next/no-img-element -- arbitrary blob / external URLs in staff CMS */}
-            <img src={block.url} alt="" className="max-h-64 w-full object-contain" />
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              className={pickerActionClass}
-              onClick={() => applyUrl(PROPOSAL_IMAGE_BLOCK_PLACEHOLDER_URL)}
-            >
-              Replace image
-            </button>
-          </div>
-        </div>
-      )}
-
-      <div className="space-y-1.5">
-        <Label htmlFor={`img-alt-${block.id}`}>Alt text</Label>
-        <Input
-          id={`img-alt-${block.id}`}
-          value={block.alt ?? ""}
-          onChange={(e) => onChange({ ...block, alt: e.target.value })}
-          placeholder="Describe the image for accessibility"
-        />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor={`img-cap-${block.id}`}>Caption</Label>
-        <Input
-          id={`img-cap-${block.id}`}
-          value={block.caption ?? ""}
-          onChange={(e) => onChange({ ...block, caption: e.target.value })}
-        />
-      </div>
-
-      <div className="border-t border-border pt-3">
-        <button
-          type="button"
-          className="text-xs font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-          onClick={() => setShowUrlField((v) => !v)}
-        >
-          {showUrlField ? "Hide image URL" : "Paste image URL"}
-        </button>
-        {showUrlField ? (
-          <div className="mt-2 space-y-1.5">
-            <Label htmlFor={`img-url-${block.id}`}>Image URL</Label>
-            <Input
-              id={`img-url-${block.id}`}
-              value={block.url}
-              onChange={(e) => onChange({ ...block, url: e.target.value })}
-              placeholder="https://…"
-            />
-          </div>
-        ) : null}
-      </div>
+    <div className={cn("flex w-full max-w-3xl flex-col", imageAlignClass(align))}>
+      {/* eslint-disable-next-line @next/next/no-img-element -- arbitrary blob / external URLs in staff CMS */}
+      <img src={block.url} alt={block.alt ?? ""} className="max-h-[min(70vh,520px)] w-full object-contain" />
     </div>
   );
 }
