@@ -23,8 +23,11 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
+  ArrowDown,
   ArrowLeft,
+  ArrowUp,
   Check,
+  Copy,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -54,6 +57,7 @@ import {
   SeparatorHorizontal,
   SquarePen,
   Star,
+  Trash2,
   type LucideIcon,
 } from "lucide-react";
 import type {
@@ -497,6 +501,8 @@ function SortableShell({
   selected,
   onSelect,
   toolbar,
+  /** When false, the floating toolbar shows only while the block is selected (not on hover). Used for image blocks. */
+  toolbarShowOnHover = true,
 }: {
   id: string;
   children: React.ReactNode;
@@ -506,6 +512,7 @@ function SortableShell({
     dragAttributes: DraggableAttributes;
     dragListeners: DraggableSyntheticListeners;
   }) => React.ReactNode;
+  toolbarShowOnHover?: boolean;
 }) {
   const [hovered, setHovered] = React.useState(false);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
@@ -516,7 +523,7 @@ function SortableShell({
     transform: CSS.Transform.toString(transform),
     transition,
   };
-  const showToolbar = Boolean(toolbar && (selected || hovered));
+  const showToolbar = Boolean(toolbar && (selected || (toolbarShowOnHover && hovered)));
 
   return (
     <div
@@ -730,26 +737,120 @@ function ColumnGhostText({ onSeed, placeholder }: { onSeed: (block: TextBlock) =
   );
 }
 
-type ProposalImageColumnToolbarActions = {
-  onRemove: () => void;
-  onDuplicate: () => void;
+/** Surface pill aligned with {@link ProposalImageBlockToolbar} / {@link BlockToolbar} `appearance="surface"`. */
+const COLUMN_CELL_BUBBLE_SHELL = cn(
+  "inline-flex max-w-[calc(100vw-3rem)] shrink-0 flex-nowrap items-center gap-0.5 overflow-x-auto rounded-full border border-border/70 bg-muted/95 p-1 text-foreground shadow-sm ring-1 ring-black/[0.04] backdrop-blur-sm",
+  "dark:bg-zinc-800/95 dark:ring-white/10",
+  "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+);
+
+function columnCellBubbleBtn() {
+  return cn(
+    "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+    "text-muted-foreground hover:bg-background hover:text-foreground disabled:pointer-events-none disabled:opacity-40",
+  );
+}
+
+function ColumnCellBubbleControls({
+  canMoveUp,
+  canMoveDown,
+  onMoveUp,
+  onMoveDown,
+  showDuplicateRemove,
+  onDuplicate,
+  onRemove,
+}: {
   canMoveUp: boolean;
   canMoveDown: boolean;
   onMoveUp: () => void;
   onMoveDown: () => void;
+  showDuplicateRemove: boolean;
+  onDuplicate: () => void;
+  onRemove: () => void;
+}) {
+  return (
+    <div
+      className={COLUMN_CELL_BUBBLE_SHELL}
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <button
+        type="button"
+        className={columnCellBubbleBtn()}
+        aria-label="Move up"
+        title="Move up"
+        disabled={!canMoveUp}
+        onClick={(e) => {
+          e.stopPropagation();
+          onMoveUp();
+        }}
+      >
+        <ArrowUp className="h-4 w-4" />
+      </button>
+      <button
+        type="button"
+        className={columnCellBubbleBtn()}
+        aria-label="Move down"
+        title="Move down"
+        disabled={!canMoveDown}
+        onClick={(e) => {
+          e.stopPropagation();
+          onMoveDown();
+        }}
+      >
+        <ArrowDown className="h-4 w-4" />
+      </button>
+      {showDuplicateRemove ? (
+        <>
+          <span className="mx-0.5 h-5 w-px shrink-0 bg-border" aria-hidden />
+          <button
+            type="button"
+            className={columnCellBubbleBtn()}
+            aria-label="Duplicate"
+            title="Duplicate"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDuplicate();
+            }}
+          >
+            <Copy className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            className={cn(columnCellBubbleBtn(), "text-destructive hover:bg-red-500/15 hover:text-destructive")}
+            aria-label="Remove block"
+            title="Remove"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove();
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+type ProposalImageColumnToolbarActions = {
+  onRemove: () => void;
 };
 
 function NestedColumnBlockFields({
   block,
   onChange,
   textPlaceholder,
+  cellSelection,
   imageColumnToolbar,
 }: {
   block: ProposalColumnChildBlock;
   onChange: (next: ProposalColumnChildBlock) => void;
   /** Rich-text placeholder when this block is a column cell (Qwilr-style hint). */
   textPlaceholder?: string;
-  /** When this cell is an image: move duplicate/remove into the image toolbar. */
+  /** Which cell in the columns layout is active (for image toolbar visibility). */
+  cellSelection?: { selectedId: string | null; onSelect: (id: string | null) => void };
+  /** When this cell is an image: remove action is shown on the image toolbar. */
   imageColumnToolbar?: ProposalImageColumnToolbarActions;
 }) {
   const patchNested = (next: ProposalBlock) => onChange(next as ProposalColumnChildBlock);
@@ -791,6 +892,7 @@ function NestedColumnBlockFields({
           block={block as ProposalBlock}
           onChange={patchNested}
           imageColumnToolbar={block.type === "image" ? imageColumnToolbar : undefined}
+          selection={cellSelection}
         />
       );
   }
@@ -801,11 +903,14 @@ function ColumnsBlockFields({
   onChange,
   resizeLayoutActive,
   onExitResizeLayout,
+  ancestorSelectedBlockId,
 }: {
   block: ColumnsBlock;
   onChange: (next: ColumnsBlock) => void;
   resizeLayoutActive?: boolean;
   onExitResizeLayout?: () => void;
+  /** Section/root selected block id — used to clear inner column cell selection when focus leaves this columns block. */
+  ancestorSelectedBlockId: string | null;
 }) {
   const columnCount = block.stacks.length as ColumnLayoutCount;
   const resizeMode = Boolean(resizeLayoutActive);
@@ -815,6 +920,32 @@ function ColumnsBlockFields({
   const onChangeRef = React.useRef(onChange);
   onChangeRef.current = onChange;
   const [dragDividerIndex, setDragDividerIndex] = React.useState<number | null>(null);
+  const [selectedCellId, setSelectedCellId] = React.useState<string | null>(null);
+  const [activeColumnIndex, setActiveColumnIndex] = React.useState(0);
+
+  React.useEffect(() => {
+    setActiveColumnIndex((i) =>
+      block.stacks.length <= 0 ? 0 : Math.min(Math.max(0, i), block.stacks.length - 1),
+    );
+  }, [block.stacks.length]);
+
+  const selectedCellMeta = React.useMemo(() => {
+    if (!selectedCellId) return null;
+    for (let ci = 0; ci < block.stacks.length; ci++) {
+      const si = block.stacks[ci].findIndex((c) => c.id === selectedCellId);
+      if (si >= 0) return { ci, si, child: block.stacks[ci][si] as ProposalColumnChildBlock };
+    }
+    return null;
+  }, [block.stacks, selectedCellId]);
+
+  React.useEffect(() => {
+    if (ancestorSelectedBlockId !== block.id) setSelectedCellId(null);
+  }, [ancestorSelectedBlockId, block.id]);
+
+  React.useEffect(() => {
+    const ids = new Set(block.stacks.flatMap((s) => s.map((c) => c.id)));
+    if (selectedCellId && !ids.has(selectedCellId)) setSelectedCellId(null);
+  }, [block.stacks, selectedCellId]);
 
   React.useEffect(() => {
     if (!resizeMode) return;
@@ -883,120 +1014,47 @@ function ColumnsBlockFields({
     function setStack(next: ProposalColumnChildBlock[]) {
       onChange(patchColumnStackAtIndex(block, columnIndex, next));
     }
-    function addToEnd(insert: ProposalBlock) {
-      const n = [...stack];
-      n.push(insert as ProposalColumnChildBlock);
-      setStack(n);
-    }
     function removeAt(id: string) {
+      setSelectedCellId((cur) => (cur === id ? null : cur));
       setStack(stack.filter((x) => x.id !== id));
-    }
-    function move(id: string, dir: -1 | 1) {
-      const i = stack.findIndex((x) => x.id === id);
-      if (i < 0) return;
-      const t = i + dir;
-      if (t < 0 || t >= stack.length) return;
-      setStack(arrayMove(stack, i, t));
-    }
-    function dup(id: string) {
-      const i = stack.findIndex((x) => x.id === id);
-      if (i < 0) return;
-      const cloned = cloneBlockWithFreshIds(stack[i] as ProposalBlock) as ProposalColumnChildBlock;
-      const n = [...stack];
-      n.splice(i + 1, 0, cloned);
-      setStack(n);
     }
     function updateChild(childId: string, nextChild: ProposalColumnChildBlock) {
       setStack(stack.map((c) => (c.id === childId ? nextChild : c)));
     }
     return (
-      <div className="group/colpane relative flex min-w-0 gap-1.5">
+      <div
+        className="min-w-0"
+        onPointerDownCapture={() => {
+          setActiveColumnIndex(columnIndex);
+          if (stack.length === 0) setSelectedCellId(null);
+        }}
+      >
         <span className="sr-only">{label}</span>
-        <div
-          className={cn(
-            "flex shrink-0 flex-col pt-0.5 opacity-0 pointer-events-none transition-opacity duration-150",
-            "group-hover/colpane:pointer-events-auto group-hover/colpane:opacity-100",
-            "group-focus-within/colpane:pointer-events-auto group-focus-within/colpane:opacity-100",
-          )}
-        >
-          <ColumnInsertMenu
-            onAdd={addToEnd}
-            align="start"
-            trigger={
-              <button
-                type="button"
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border/80 bg-muted/50 text-muted-foreground shadow-sm transition-colors hover:border-sky-500/50 hover:bg-background hover:text-foreground data-[state=open]:border-primary data-[state=open]:bg-primary data-[state=open]:text-primary-foreground"
-                aria-label="Add content"
-              >
-                <Plus className="h-3.5 w-3.5" aria-hidden />
-              </button>
-            }
-          />
-        </div>
-        <div className="min-w-0 flex-1 space-y-3">
+        <div className="min-w-0 space-y-4">
           {stack.length === 0 ? (
             <ColumnGhostText
               placeholder="Type / to add content"
               onSeed={(tb) => setStack([tb])}
             />
           ) : (
-            stack.map((child, idx) => (
-              <div key={child.id} className="group/colitem space-y-2 border-b border-border/15 pb-3 last:border-0 last:pb-0">
-                <div className="flex flex-wrap items-center gap-1 opacity-100 transition-opacity md:opacity-0 md:group-hover/colitem:opacity-100 md:group-focus-within/colitem:opacity-100">
-                  <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" disabled={idx === 0} onClick={() => move(child.id, -1)}>
-                    Up
-                  </Button>
-                  <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" disabled={idx === stack.length - 1} onClick={() => move(child.id, 1)}>
-                    Down
-                  </Button>
-                  {child.type !== "image" ? (
-                    <>
-                      <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => dup(child.id)}>
-                        Duplicate
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 px-2 text-xs text-destructive hover:text-destructive"
-                        onClick={() => removeAt(child.id)}
-                      >
-                        Remove
-                      </Button>
-                    </>
-                  ) : null}
-                </div>
-                {child.type === "packages" ? (
-                  <div className="flex flex-wrap items-center gap-2 border-b border-border/30 pb-2">
-                    <span className="text-[11px] font-medium text-muted-foreground">Plans background</span>
-                    <ProposalSectionBackgroundPicker
-                      background={(child as PackagesBlock).background}
-                      onChange={(next) => {
-                        const p = child as PackagesBlock;
-                        if (!next) {
-                          const { background: _b, ...rest } = p;
-                          void _b;
-                          updateChild(child.id, rest as ProposalColumnChildBlock);
-                        } else {
-                          updateChild(child.id, { ...p, background: next } as ProposalColumnChildBlock);
-                        }
-                      }}
-                    />
-                  </div>
-                ) : null}
+            stack.map((child) => (
+              <div
+                key={child.id}
+                className="space-y-2"
+                onPointerDownCapture={() => {
+                  setSelectedCellId(child.id);
+                  setActiveColumnIndex(columnIndex);
+                }}
+              >
                 <NestedColumnBlockFields
                   block={child}
                   onChange={(n) => updateChild(child.id, n)}
                   textPlaceholder="Type / to add content"
+                  cellSelection={{ selectedId: selectedCellId, onSelect: setSelectedCellId }}
                   imageColumnToolbar={
                     child.type === "image"
                       ? {
                           onRemove: () => removeAt(child.id),
-                          onDuplicate: () => dup(child.id),
-                          canMoveUp: idx > 0,
-                          canMoveDown: idx < stack.length - 1,
-                          onMoveUp: () => move(child.id, -1),
-                          onMoveDown: () => move(child.id, 1),
                         }
                       : undefined
                   }
@@ -1052,14 +1110,7 @@ function ColumnsBlockFields({
                   }}
                   className={cn(
                     "min-w-0 md:min-w-[3.5rem]",
-                    !resizeMode &&
-                      cn(
-                        "group/colcell rounded-md border border-transparent p-2",
-                        "transition-[border-color,box-shadow,background-color] duration-150 ease-out",
-                        "hover:border-border/65 hover:bg-muted/25 hover:shadow-sm",
-                        "focus-within:border-border/80 focus-within:bg-muted/20 focus-within:shadow-sm",
-                        "dark:hover:bg-muted/15 dark:focus-within:bg-muted/15",
-                      ),
+                    !resizeMode && "p-1 md:p-2",
                     resizeMode &&
                       "rounded-lg border border-sky-400/40 bg-background/60 py-1 ring-1 ring-sky-500/20 dark:bg-background/40 md:px-0 md:py-1",
                   )}
@@ -1081,10 +1132,108 @@ function ColumnsBlockFields({
             ))}
           </div>
         );
-        if (pad <= 0) return columnRow;
+        const floatRail =
+          !resizeMode ? (
+            <div className="pointer-events-none absolute left-0 top-1/2 z-20 flex -translate-x-full -translate-y-1/2 flex-col items-end gap-2 pr-2 sm:pr-3">
+              <div className="pointer-events-auto flex flex-col items-end gap-2">
+                <ColumnInsertMenu
+                  onAdd={(insert) => {
+                    const ci = activeColumnIndex;
+                    const st = block.stacks[ci];
+                    if (!st) return;
+                    onChange(
+                      patchColumnStackAtIndex(block, ci, [...st, insert as ProposalColumnChildBlock]),
+                    );
+                  }}
+                  align="end"
+                  trigger={
+                    <button
+                      type="button"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border/80 bg-muted/50 text-muted-foreground shadow-sm transition-colors hover:border-sky-500/50 hover:bg-background hover:text-foreground data-[state=open]:border-primary data-[state=open]:bg-primary data-[state=open]:text-primary-foreground"
+                      aria-label="Add content"
+                      title={`Add block to column ${activeColumnIndex + 1}`}
+                    >
+                      <Plus className="h-4 w-4" aria-hidden />
+                    </button>
+                  }
+                />
+                {selectedCellMeta ? (
+                  <ColumnCellBubbleControls
+                    canMoveUp={selectedCellMeta.si > 0}
+                    canMoveDown={selectedCellMeta.si < block.stacks[selectedCellMeta.ci].length - 1}
+                    onMoveUp={() => {
+                      const { ci, si } = selectedCellMeta;
+                      const st = block.stacks[ci];
+                      if (si <= 0) return;
+                      onChange(patchColumnStackAtIndex(block, ci, arrayMove(st, si, si - 1)));
+                    }}
+                    onMoveDown={() => {
+                      const { ci, si } = selectedCellMeta;
+                      const st = block.stacks[ci];
+                      if (si >= st.length - 1) return;
+                      onChange(patchColumnStackAtIndex(block, ci, arrayMove(st, si, si + 1)));
+                    }}
+                    showDuplicateRemove={selectedCellMeta.child.type !== "image"}
+                    onDuplicate={() => {
+                      const { ci, si, child } = selectedCellMeta;
+                      if (child.type === "image") return;
+                      const st = block.stacks[ci];
+                      const cloned = cloneBlockWithFreshIds(child as ProposalBlock) as ProposalColumnChildBlock;
+                      const n = [...st];
+                      n.splice(si + 1, 0, cloned);
+                      onChange(patchColumnStackAtIndex(block, ci, n));
+                    }}
+                    onRemove={() => {
+                      const { ci, child } = selectedCellMeta;
+                      if (child.type === "image") return;
+                      setSelectedCellId((cur) => (cur === child.id ? null : cur));
+                      const st = block.stacks[ci];
+                      onChange(patchColumnStackAtIndex(block, ci, st.filter((x) => x.id !== child.id)));
+                    }}
+                  />
+                ) : null}
+                {selectedCellMeta?.child.type === "packages" ? (
+                  <div
+                    className="pointer-events-auto w-[min(16rem,calc(100vw-2rem))] space-y-1.5 rounded-xl border border-border/70 bg-muted/95 p-2.5 shadow-sm ring-1 ring-black/[0.04] backdrop-blur-sm dark:bg-zinc-800/95 dark:ring-white/10"
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      Plans background
+                    </span>
+                    <ProposalSectionBackgroundPicker
+                      background={(selectedCellMeta.child as PackagesBlock).background}
+                      onChange={(next) => {
+                        const { ci, child } = selectedCellMeta;
+                        const st = block.stacks[ci];
+                        const nextSt = st.map((c) => {
+                          if (c.id !== child.id) return c;
+                          const p = c as PackagesBlock;
+                          if (!next) {
+                            const { background: _b, ...rest } = p;
+                            void _b;
+                            return rest as ProposalColumnChildBlock;
+                          }
+                          return { ...p, background: next } as ProposalColumnChildBlock;
+                        });
+                        onChange(patchColumnStackAtIndex(block, ci, nextSt));
+                      }}
+                    />
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          ) : null;
+        const chromedColumns = (
+          <div className="relative">
+            {floatRail}
+            {columnRow}
+          </div>
+        );
+        if (pad <= 0) return chromedColumns;
         return (
           <div className="rounded-lg" style={{ padding: pad }}>
-            {columnRow}
+            {chromedColumns}
           </div>
         );
       })()}
@@ -1212,6 +1361,7 @@ function SectionBlockFields({
                 <SortableShell
                   id={child.id}
                   selected={isSelected}
+                  toolbarShowOnHover={child.type !== "image"}
                   onSelect={() => {
                     setColumnsLayoutEditingId((prev) =>
                       prev !== null && prev !== child.id ? null : prev,
@@ -1247,11 +1397,6 @@ function SectionBlockFields({
                             variant="shell"
                             block={ib}
                             onChange={(next) => updateChild(child.id, next as ProposalContentBlock)}
-                            canMoveUp={idx > 0}
-                            canMoveDown={idx < children.length - 1}
-                            onMoveUp={() => moveChild(child.id, -1)}
-                            onMoveDown={() => moveChild(child.id, 1)}
-                            onDuplicate={() => duplicateChild(child.id)}
                             onDelete={() => removeChild(child.id)}
                           />
                         </div>
@@ -1554,7 +1699,7 @@ function BlockFields({
     activeId: string | null;
     setActiveId: React.Dispatch<React.SetStateAction<string | null>>;
   };
-  /** Columns only: image duplicate/remove/move live in {@link ProposalImageBlockToolbar}. */
+  /** Columns only: image remove is on {@link ProposalImageBlockToolbar}; duplicate/move stay on the column row. */
   imageColumnToolbar?: ProposalImageColumnToolbarActions;
 }) {
   const patch = (next: ProposalBlock) => onChange(next);
@@ -1617,21 +1762,18 @@ function BlockFields({
     case "image": {
       const b = block as ImageBlock;
       const col = imageColumnToolbar;
+      const showEmbeddedColumnToolbar = Boolean(col) && selection?.selectedId === b.id;
       return (
         <>
-          {!selection ? (
-            <ProposalImageBlockToolbar
-              variant="embedded"
-              block={b}
-              onChange={patch}
-              className="mb-2"
-              onDelete={col?.onRemove}
-              onDuplicate={col?.onDuplicate}
-              canMoveUp={col?.canMoveUp}
-              canMoveDown={col?.canMoveDown}
-              onMoveUp={col?.onMoveUp}
-              onMoveDown={col?.onMoveDown}
-            />
+          {showEmbeddedColumnToolbar ? (
+            <div className="mb-2">
+              <ProposalImageBlockToolbar
+                variant="embedded"
+                block={b}
+                onChange={patch}
+                onDelete={col?.onRemove}
+              />
+            </div>
           ) : null}
           <ProposalImageBlockEditor block={b} onChange={patch} />
         </>
@@ -1823,6 +1965,7 @@ function BlockFields({
           onChange={(next) => patch(next)}
           resizeLayoutActive={columnsLayoutEditing?.activeId === col.id}
           onExitResizeLayout={() => columnsLayoutEditing?.setActiveId(null)}
+          ancestorSelectedBlockId={selection?.selectedId ?? null}
         />
       );
     }
@@ -2556,6 +2699,7 @@ export function ProposalDocumentEditor({
                         <SortableShell
                           id={block.id}
                           selected={isSelected}
+                          toolbarShowOnHover={block.type !== "image"}
                           onSelect={() => {
                             setRootColumnsLayoutEditingId((prev) =>
                               prev !== null && prev !== block.id ? null : prev,
@@ -2591,11 +2735,6 @@ export function ProposalDocumentEditor({
                                     variant="shell"
                                     block={ib}
                                     onChange={(next) => updateBlock(block.id, next)}
-                                    canMoveUp={idx > 0}
-                                    canMoveDown={idx < blocks.length - 1}
-                                    onMoveUp={() => moveBlock(block.id, -1)}
-                                    onMoveDown={() => moveBlock(block.id, 1)}
-                                    onDuplicate={() => duplicateBlock(block.id)}
                                     onDelete={() => removeBlock(block.id)}
                                   />
                                   {dragHandle}

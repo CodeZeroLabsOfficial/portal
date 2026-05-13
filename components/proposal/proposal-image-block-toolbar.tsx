@@ -5,15 +5,11 @@ import {
   AlignCenter,
   AlignLeft,
   AlignRight,
-  ArrowDown,
-  ArrowUp,
-  Copy,
   Crop,
   ImageIcon,
   LayoutGrid,
   Link2,
   Loader2,
-  MoreHorizontal,
   Search,
   Trash2,
   Upload,
@@ -64,11 +60,6 @@ export type ProposalImageBlockToolbarProps = {
   block: ImageBlock;
   onChange: (next: ImageBlock) => void;
   className?: string;
-  canMoveUp?: boolean;
-  canMoveDown?: boolean;
-  onMoveUp?: () => void;
-  onMoveDown?: () => void;
-  onDuplicate?: () => void;
   onDelete?: () => void;
 };
 
@@ -77,11 +68,6 @@ export function ProposalImageBlockToolbar({
   block,
   onChange,
   className,
-  canMoveUp,
-  canMoveDown,
-  onMoveUp,
-  onMoveDown,
-  onDuplicate,
   onDelete,
 }: ProposalImageBlockToolbarProps) {
   const mediaLibrary = useProposalMediaLibraryOptional();
@@ -329,57 +315,6 @@ export function ProposalImageBlockToolbar({
           </PopoverContent>
         </Popover>
 
-        {toolbarDivider()}
-
-        {onDuplicate || onMoveUp || onMoveDown ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button type="button" className={tbIconBtn()} aria-label="More block actions" title="More">
-                <MoreHorizontal className="h-4 w-4" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-[10rem]" onCloseAutoFocus={(e) => e.preventDefault()}>
-              {onDuplicate ? (
-                <DropdownMenuItem
-                  className="cursor-pointer gap-2"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    onDuplicate();
-                  }}
-                >
-                  <Copy className="h-4 w-4" /> Duplicate
-                </DropdownMenuItem>
-              ) : null}
-              {onMoveUp ? (
-                <DropdownMenuItem
-                  className="cursor-pointer gap-2"
-                  disabled={!canMoveUp}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    onMoveUp();
-                  }}
-                >
-                  <ArrowUp className="h-4 w-4" /> Move up
-                </DropdownMenuItem>
-              ) : null}
-              {onMoveDown ? (
-                <DropdownMenuItem
-                  className="cursor-pointer gap-2"
-                  disabled={!canMoveDown}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    onMoveDown();
-                  }}
-                >
-                  <ArrowDown className="h-4 w-4" /> Move down
-                </DropdownMenuItem>
-              ) : null}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : null}
-
-        {onDuplicate || onMoveUp || onMoveDown ? toolbarDivider() : null}
-
         <button
           type="button"
           className={tbIconBtn(align === "left")}
@@ -409,18 +344,21 @@ export function ProposalImageBlockToolbar({
         </button>
 
         {onDelete ? (
-          <button
-            type="button"
-            className={cn(tbIconBtn(), "text-destructive hover:bg-red-500/15 hover:text-destructive")}
-            aria-label="Delete block"
-            title="Delete block"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete();
-            }}
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
+          <>
+            {toolbarDivider()}
+            <button
+              type="button"
+              className={cn(tbIconBtn(), "text-destructive hover:bg-red-500/15 hover:text-destructive")}
+              aria-label="Delete block"
+              title="Delete block"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </>
         ) : null}
       </div>
     </div>
