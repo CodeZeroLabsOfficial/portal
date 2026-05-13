@@ -33,9 +33,23 @@ const passwordSchema = z.object({
   password: z.string().min(1).max(200),
 });
 
+const SIGNATURE_DATA_URL_MAX = 750_000;
+
 const acceptSchema = z.object({
   shareToken: z.string().min(8),
   signerName: z.string().trim().min(2).max(200),
+  signatureDataUrl: z
+    .string()
+    .max(SIGNATURE_DATA_URL_MAX)
+    .optional()
+    .refine(
+      (s) =>
+        s === undefined ||
+        (typeof s === "string" && s.startsWith("data:image/png;base64,") && s.length > 32),
+      "Invalid signature image.",
+    ),
+  signatureMethod: z.enum(["draw", "type"]).optional(),
+  clientSignedAtMs: z.number().int().min(1).max(Number.MAX_SAFE_INTEGER).optional(),
 });
 
 const packageSelectionSchema = z.object({
@@ -232,7 +246,14 @@ export async function acceptProposalPublicAction(
   raw: unknown,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   const parsed = acceptSchema.safeParse(raw);
-  if (!parsed.success) return { ok: false, message: "Please enter your full name." };
+  if (!parsed.success) {
+    const first = parsed.error.issues[0];
+    const msg =
+      first?.message === "Invalid signature image."
+        ? "Could not read the signature image. Try clearing and signing again."
+        : "Please enter your full name.";
+    return { ok: false, message: msg };
+  }
 
   const proposal = await getProposalRecordByShareToken(parsed.data.shareToken);
   if (!proposal) return { ok: false, message: "Proposal not found." };
@@ -243,6 +264,17 @@ export async function acceptProposalPublicAction(
   if (!db) return { ok: false, message: "Service unavailable." };
 
   const now = Date.now();
+  const sigUrl = parsed.data.signatureDataUrl;
+  const sigMethod = parsed.data.signatureMethod;
+  const clientSignedAtMs = parsed.data.clientSignedAtMs;
+  const hasSignaturePayload = Boolean(sigUrl && sigMethod);
+  if (sigUrl && !sigMethod) {
+    return { ok: false, message: "Invalid signature payload." };
+  }
+  if (sigMethod && !sigUrl) {
+    return { ok: false, message: "Invalid signature payload." };
+  }
+
   const write = await runAdminWrite(
     "proposal_accept_failed",
     { proposalId: proposal.id, shareToken: parsed.data.shareToken },
@@ -255,6 +287,15 @@ export async function acceptProposalPublicAction(
           status: "accepted",
           acceptedAtMs: now,
           acceptedByName: parsed.data.signerName,
+          ...(hasSignaturePayload
+            ? {
+                acceptedSignatureDataUrl: sigUrl,
+                acceptedSignatureMethod: sigMethod,
+                ...(typeof clientSignedAtMs === "number"
+                  ? { acceptedClientSignedAtMs: clientSignedAtMs }
+                  : {}),
+              }
+            : {}),
           updatedAtMs: now,
           updatedAt: FieldValue.serverTimestamp(),
         }),
@@ -293,6 +334,9 @@ export async function acceptProposalPublicAction(
           customerId: proposal.customerId,
           signerName: parsed.data.signerName,
           atMs: now,
+          signatureMethod: sigMethod ?? null,
+          hasSignatureImage: Boolean(sigUrl),
+          clientSignedAtMs: clientSignedAtMs ?? null,
         }),
       });
     } catch {

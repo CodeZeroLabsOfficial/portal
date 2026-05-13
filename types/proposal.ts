@@ -465,6 +465,12 @@ export interface ProposalRecord {
   /** After explicit acceptance on the public page. */
   acceptedAtMs?: number;
   acceptedByName?: string;
+  /** PNG data URL captured at acceptance when the buyer signs via the agreement modal. */
+  acceptedSignatureDataUrl?: string;
+  /** How the signature image was produced (`draw` canvas vs `type` name + date). */
+  acceptedSignatureMethod?: "draw" | "type";
+  /** Optional client clock at sign (ms); server `acceptedAtMs` remains authoritative. */
+  acceptedClientSignedAtMs?: number;
   /** Stripe Checkout / PaymentIntent linkage when collecting payment in-proposal. */
   stripePaymentIntentId?: string;
   /** Customer choices from public viewer (e.g. selected package tier). Keyed by block id. */

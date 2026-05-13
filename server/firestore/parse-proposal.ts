@@ -125,6 +125,12 @@ export function parseProposalRecord(id: string, data: Record<string, unknown>): 
     lastViewedAtMs: asNumber(data.lastViewedAtMs),
     acceptedAtMs: asNumber(data.acceptedAtMs),
     acceptedByName: asString(data.acceptedByName),
+    acceptedSignatureDataUrl: asString(data.acceptedSignatureDataUrl),
+    acceptedSignatureMethod:
+      data.acceptedSignatureMethod === "draw" || data.acceptedSignatureMethod === "type"
+        ? data.acceptedSignatureMethod
+        : undefined,
+    acceptedClientSignedAtMs: asNumber(data.acceptedClientSignedAtMs),
     stripePaymentIntentId: asString(data.stripePaymentIntentId),
     publicSelections: parsePublicSelections(data.publicSelections),
     sourceTemplateId: asString(data.sourceTemplateId),

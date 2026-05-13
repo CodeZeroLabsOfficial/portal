@@ -2,15 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import {
-  ArrowRight,
-  CheckCircle2,
-  Download,
-  FileSignature,
-  Loader2,
-  Menu,
-  X,
-} from "lucide-react";
+import { ArrowRight, CheckCircle2, Download, Menu, X } from "lucide-react";
 import {
   Dialog,
   DialogClose,
@@ -26,8 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { AgreementSignatureForm } from "@/components/proposal/agreement-signature-form";
 import type {
   AgreementBlock,
   PackagesBlock,
@@ -309,8 +300,6 @@ export function AgreementBlockPublic({
 }: AgreementBlockPublicProps) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
-  const [name, setName] = React.useState("");
-  const [agreed, setAgreed] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [localAcceptedName, setLocalAcceptedName] = React.useState<string | null>(null);
@@ -341,13 +330,6 @@ export function AgreementBlockPublic({
 
   const accepted = localDone || proposalStatus === "accepted";
   const displayName = localAcceptedName ?? acceptedByName;
-  const canSign =
-    interactive &&
-    !accepted &&
-    Boolean(shareToken) &&
-    name.trim().length >= 2 &&
-    (!requireAcceptTerms || agreed);
-
   const scrollRef = React.useRef<HTMLDivElement | null>(null);
   const signRef = React.useRef<HTMLDivElement | null>(null);
 
@@ -361,21 +343,28 @@ export function AgreementBlockPublic({
     }
   }
 
-  async function onSign(e: React.FormEvent) {
-    e.preventDefault();
+  async function onSign(payload: {
+    signerName: string;
+    signatureDataUrl: string;
+    signatureMethod: "draw" | "type";
+    clientSignedAtMs: number;
+  }) {
     if (!shareToken || !interactive) return;
     setBusy(true);
     setError(null);
     const res = await acceptProposalPublicAction({
       shareToken,
-      signerName: name.trim(),
+      signerName: payload.signerName,
+      signatureDataUrl: payload.signatureDataUrl,
+      signatureMethod: payload.signatureMethod,
+      clientSignedAtMs: payload.clientSignedAtMs,
     });
     setBusy(false);
     if (!res.ok) {
       setError(res.message);
       return;
     }
-    setLocalAcceptedName(name.trim());
+    setLocalAcceptedName(payload.signerName);
     setLocalDone(true);
     router.refresh();
   }
@@ -570,73 +559,19 @@ export function AgreementBlockPublic({
                     </div>
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-6 sm:p-8">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-                      Signature
-                    </p>
-                    <h3 className="mt-1 text-xl font-semibold tracking-tight text-zinc-900">
-                      Sign &amp; accept this agreement
-                    </h3>
-                    <p className="mt-2 text-sm text-zinc-600">
-                      Type your full legal name below. Your signature is recorded against this
-                      proposal{proposalTitle ? <> (<span className="font-medium text-zinc-900">{proposalTitle}</span>)</> : null}.
-                    </p>
-                    <form className="mt-5 grid gap-4 sm:grid-cols-[1fr,auto] sm:items-end" onSubmit={onSign}>
-                      <div className="space-y-2">
-                        <Label htmlFor="agreement-sign-name" className="text-zinc-900">
-                          Full name
-                        </Label>
-                        <Input
-                          id="agreement-sign-name"
-                          autoComplete="name"
-                          placeholder="Jane Doe"
-                          value={name}
-                          onChange={(e) => setName(e.target.value)}
-                          disabled={!interactive || busy}
-                          minLength={2}
-                          className="h-11 border-zinc-200 bg-white text-base text-zinc-900"
-                        />
-                        {requireAcceptTerms ? (
-                          <label className="mt-1 flex items-start gap-2 text-xs text-zinc-600">
-                            <input
-                              type="checkbox"
-                              className="mt-0.5 h-4 w-4 rounded border-zinc-300"
-                              checked={agreed}
-                              onChange={(e) => setAgreed(e.target.checked)}
-                              disabled={!interactive || busy}
-                            />
-                            <span>
-                              I have read and agree to the terms of this {agreementTitle.toLowerCase()}
-                              {proposalTitle ? <> for <span className="font-medium text-zinc-900">{proposalTitle}</span></> : null}.
-                            </span>
-                          </label>
-                        ) : null}
-                        {error ? (
-                          <p className="text-sm text-destructive" role="alert">
-                            {error}
-                          </p>
-                        ) : null}
-                        {!interactive ? (
-                          <p className="text-xs text-zinc-500">
-                            Signing is disabled in preview — the live proposal will accept your customer&apos;s signature here.
-                          </p>
-                        ) : null}
-                      </div>
-                      <Button
-                        type="submit"
-                        size="lg"
-                        className="h-11 gap-2 rounded-xl text-base font-semibold shadow-md hover:opacity-95"
-                        style={{ backgroundColor: ctaColor, color: ctaForeground }}
-                        disabled={!canSign || busy}
-                      >
-                        {busy ? (
-                          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                        ) : (
-                          <FileSignature className="h-4 w-4" aria-hidden />
-                        )}
-                        Sign &amp; accept
-                      </Button>
-                    </form>
+                  <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 sm:p-6">
+                    <AgreementSignatureForm
+                      disabled={!interactive || !shareToken}
+                      busy={busy}
+                      requireAcceptTerms={requireAcceptTerms}
+                      agreementTitle={agreementTitle}
+                      proposalTitle={proposalTitle}
+                      ctaColor={ctaColor}
+                      ctaForeground={ctaForeground}
+                      error={error}
+                      onDismissError={() => setError(null)}
+                      onSubmit={onSign}
+                    />
                   </div>
                 )}
               </section>
