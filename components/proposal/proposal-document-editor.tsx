@@ -818,7 +818,6 @@ function ColumnPane({
   selectedCellId,
   setSelectedCellId,
   setActiveColumnIndex,
-  reserveInsertGutter,
 }: {
   label: string;
   columnIndex: number;
@@ -827,8 +826,6 @@ function ColumnPane({
   selectedCellId: string | null;
   setSelectedCellId: React.Dispatch<React.SetStateAction<string | null>>;
   setActiveColumnIndex: React.Dispatch<React.SetStateAction<number>>;
-  /** Space for the in-column + control when this column is the add target. */
-  reserveInsertGutter?: boolean;
 }) {
   function setStack(next: ProposalColumnChildBlock[]) {
     onPatchColumnStack(columnIndex, next);
@@ -853,7 +850,7 @@ function ColumnPane({
       }}
     >
       <span className="sr-only">{label}</span>
-      <div className={cn("min-w-0 space-y-4", reserveInsertGutter && "pl-10 sm:pl-11")}>
+      <div className="min-w-0 space-y-4">
         {stack.length === 0 ? (
           <ColumnGhostText
             placeholder="Type / to add content"
@@ -1055,7 +1052,7 @@ function ColumnsBlockFields({
                   style={{ flex: `${flexRow[i]} 1 0%` } as React.CSSProperties}
                 >
                   {showColumnLeftRail ? (
-                    <div className="pointer-events-none absolute left-1 top-1/2 z-20 flex -translate-y-1/2 flex-col items-center gap-2 sm:left-1.5">
+                    <div className="pointer-events-none absolute right-full top-1/2 z-20 -mr-1 flex -translate-y-1/2 flex-col items-center gap-2 sm:-mr-1.5">
                       <div className="pointer-events-auto flex flex-col items-center gap-2">
                         {showInsertHere ? (
                           <ColumnInsertMenu
@@ -1122,7 +1119,6 @@ function ColumnsBlockFields({
                     selectedCellId={selectedCellId}
                     setSelectedCellId={setSelectedCellId}
                     setActiveColumnIndex={setActiveColumnIndex}
-                    reserveInsertGutter={showInsertHere}
                   />
                 </div>
                 {resizeMode && i < block.stacks.length - 1 ? (
