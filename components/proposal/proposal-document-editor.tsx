@@ -2488,7 +2488,7 @@ export function ProposalDocumentEditor({
                                     }
                                   : undefined
                               }
-                              showOverflowMenu={!isSection}
+                              showOverflowMenu={!isSection && block.type !== "splash"}
                               style={supportsStyle ? getBlockStyle(block) : undefined}
                               onStyleChange={
                                 supportsStyle ? (next) => applyBlockStyle(block.id, next) : undefined
