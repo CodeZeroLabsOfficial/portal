@@ -314,6 +314,11 @@ interface FontOption {
   value: string;
 }
 
+/**
+ * Font dropdown entries: `label` is UI copy; `value` is a full CSS `font-family` stack
+ * stored on the TipTap `textStyle` mark. Keep `Default` first (`value: ""` clears the mark).
+ * For web fonts (Inter, etc.), load them app-wide first, then use their family name here.
+ */
 const FONT_OPTIONS: FontOption[] = [
   { label: "Default", value: "" },
   {
@@ -321,11 +326,53 @@ const FONT_OPTIONS: FontOption[] = [
     value:
       "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
   },
-  { label: "Serif", value: "ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif" },
+  { label: "Serif (UI)", value: "ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif" },
   {
-    label: "Monospace",
+    label: "Monospace (UI)",
     value: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
   },
+  { label: "Arial", value: "Arial, Helvetica, sans-serif" },
+  { label: "Helvetica Neue", value: "'Helvetica Neue', Helvetica, Arial, sans-serif" },
+  { label: "Verdana", value: "Verdana, Geneva, sans-serif" },
+  { label: "Tahoma", value: "Tahoma, Verdana, Geneva, sans-serif" },
+  {
+    label: "Trebuchet MS",
+    value: "'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', sans-serif",
+  },
+  { label: "Segoe UI", value: "'Segoe UI', system-ui, -apple-system, Roboto, sans-serif" },
+  { label: "Calibri", value: "Calibri, 'Segoe UI', Candara, sans-serif" },
+  { label: "Cambria", value: "Cambria, Georgia, 'Times New Roman', serif" },
+  { label: "Georgia", value: "Georgia, 'Times New Roman', Times, serif" },
+  { label: "Times New Roman", value: "'Times New Roman', Times, serif" },
+  {
+    label: "Palatino",
+    value: "Palatino, 'Palatino Linotype', 'Book Antiqua', 'URW Palladio L', serif",
+  },
+  { label: "Garamond", value: "Garamond, 'Palatino Linotype', 'Times New Roman', serif" },
+  { label: "Book Antiqua", value: "'Book Antiqua', Palatino, 'Palatino Linotype', serif" },
+  {
+    label: "Lucida Sans",
+    value: "'Lucida Sans', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, sans-serif",
+  },
+  {
+    label: "Century Gothic",
+    value: "'Century Gothic', CenturyGothic, AppleGothic, sans-serif",
+  },
+  {
+    label: "Franklin Gothic",
+    value: "'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif",
+  },
+  { label: "Rockwell", value: "Rockwell, 'Rockwell Nova', 'Courier New', serif" },
+  { label: "Courier New", value: "'Courier New', Courier, monospace" },
+  { label: "Consolas", value: "Consolas, 'Lucida Console', Monaco, monospace" },
+  { label: "Optima", value: "Optima, 'Segoe UI', Candara, Calibri, sans-serif" },
+  {
+    label: "Futura",
+    value: "Futura, 'Trebuchet MS', 'Century Gothic', CenturyGothic, sans-serif",
+  },
+  { label: "Impact", value: "Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif" },
+  { label: "Brush Script MT", value: "'Brush Script MT', 'Segoe Script', cursive" },
+  { label: "Copperplate", value: "Copperplate, 'Copperplate Gothic Light', fantasy" },
 ];
 
 function normalizeFontFamily(s: string | null | undefined): string {
@@ -383,7 +430,10 @@ function FontFamilyPicker({ editor }: { editor: Editor }) {
       {open ? (
         <div
           role="menu"
-          className={cn(BUBBLE_MENU_PANEL_CLASS, "min-w-[11rem] max-w-[min(18rem,calc(100vw-2rem))]")}
+          className={cn(
+            BUBBLE_MENU_PANEL_CLASS,
+            "min-w-[11rem] max-w-[min(18rem,calc(100vw-2rem))] max-h-[min(50vh,22rem)] overflow-y-auto overflow-x-hidden",
+          )}
           onPointerDown={(e) => e.stopPropagation()}
         >
           {FONT_OPTIONS.map((opt) => {
