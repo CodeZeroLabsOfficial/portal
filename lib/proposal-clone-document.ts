@@ -59,6 +59,8 @@ function cloneBlock(block: ProposalBlock): ProposalBlock {
     }
     case "signature":
       return { ...block, id };
+    case "agreement":
+      return { ...block, id };
     case "embed":
       return { ...block, id };
     case "payment":

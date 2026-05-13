@@ -12,6 +12,7 @@ export type ProposalBlockType =
   | "embed"
   | "form"
   | "signature"
+  | "agreement"
   | "payment"
   | "divider"
   | "spacer"
@@ -255,6 +256,32 @@ export interface SignatureBlock extends ProposalBlockBase {
   termsSummary?: string;
 }
 
+/**
+ * Call-to-action card placed near the end of a proposal that opens a full-screen
+ * Services Agreement modal. The modal aggregates the buyer's plan + add-on
+ * selections and shows the legal terms; the buyer signs in-place which calls
+ * the same `acceptProposalPublicAction` as the legacy footer.
+ */
+export interface AgreementBlock extends ProposalBlockBase {
+  type: "agreement";
+  /** CTA heading shown on the proposal page (default: "Ready to get started?"). */
+  heading?: string;
+  /** CTA button label (default: "View Agreement"). */
+  buttonLabel?: string;
+  /** Title shown in the modal header (default: "Services Agreement"). */
+  agreementTitle?: string;
+  /** Optional rich HTML intro rendered above the legal sections in the modal. */
+  introHtml?: string;
+  /**
+   * Rich HTML for the legal text body of the agreement. When empty, the modal
+   * falls back to a sensible default with sections for Parties, Scope, Pricing,
+   * Term, Termination, Confidentiality, and Governing Law.
+   */
+  legalHtml?: string;
+  /** When true, requires a “I have read and agree” checkbox before signing (default true). */
+  requireAcceptTerms?: boolean;
+}
+
 export interface EmbedBlock extends ProposalBlockBase {
   type: "embed";
   url: string;
@@ -309,6 +336,7 @@ export type ProposalColumnChildBlock =
   | PackagesBlock
   | FormBlock
   | SignatureBlock
+  | AgreementBlock
   | EmbedBlock
   | PaymentBlock
   | DividerBlock
@@ -350,6 +378,7 @@ export type ProposalContentBlock =
   | PackagesBlock
   | FormBlock
   | SignatureBlock
+  | AgreementBlock
   | EmbedBlock
   | PaymentBlock
   | DividerBlock
@@ -378,6 +407,7 @@ export type ProposalBlock =
   | PackagesBlock
   | FormBlock
   | SignatureBlock
+  | AgreementBlock
   | EmbedBlock
   | PaymentBlock
   | DividerBlock

@@ -13,9 +13,21 @@ export interface ProposalPublicFooterProps {
   shareToken: string;
   status: string;
   acceptedByName?: string;
+  /**
+   * When true, suppress the inline acceptance form — used when the proposal
+   * contains an `agreement` block that drives signing through its own modal.
+   * The “Accepted” confirmation card is still shown after acceptance, plus the
+   * print / Save as PDF button.
+   */
+  hideAcceptanceForm?: boolean;
 }
 
-export function ProposalPublicFooter({ shareToken, status, acceptedByName }: ProposalPublicFooterProps) {
+export function ProposalPublicFooter({
+  shareToken,
+  status,
+  acceptedByName,
+  hideAcceptanceForm = false,
+}: ProposalPublicFooterProps) {
   const router = useRouter();
   const [name, setName] = React.useState("");
   const [busy, setBusy] = React.useState(false);
@@ -62,7 +74,7 @@ export function ProposalPublicFooter({ shareToken, status, acceptedByName }: Pro
             </CardDescription>
           </CardHeader>
         </Card>
-      ) : (
+      ) : hideAcceptanceForm ? null : (
         <Card className="border-border/80">
           <CardHeader>
             <CardTitle className="text-base">Accept proposal</CardTitle>

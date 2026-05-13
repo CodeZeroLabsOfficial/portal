@@ -317,6 +317,17 @@ const signatureBlockSchema = z.object({
   termsSummary: z.string().optional(),
 });
 
+const agreementBlockSchema = z.object({
+  id: idSchema,
+  type: z.literal("agreement"),
+  heading: z.string().max(200).optional(),
+  buttonLabel: z.string().max(80).optional(),
+  agreementTitle: z.string().max(200).optional(),
+  introHtml: z.string().max(20_000).optional(),
+  legalHtml: z.string().max(120_000).optional(),
+  requireAcceptTerms: z.boolean().optional(),
+});
+
 const embedBlockSchema = z.object({
   id: idSchema,
   type: z.literal("embed"),
@@ -373,6 +384,7 @@ const columnInnerUnionSchema = z.discriminatedUnion("type", [
   packagesBlockSchema,
   formBlockSchema,
   signatureBlockSchema,
+  agreementBlockSchema,
   embedBlockSchema,
   paymentBlockSchema,
   dividerBlockSchema,
@@ -493,6 +505,7 @@ const nestedBlockUnionSchema = z.discriminatedUnion("type", [
   packagesBlockSchema,
   formBlockSchema,
   signatureBlockSchema,
+  agreementBlockSchema,
   embedBlockSchema,
   paymentBlockSchema,
   dividerBlockSchema,
@@ -533,6 +546,7 @@ const blockUnionSchema = z.discriminatedUnion("type", [
   packagesBlockSchema,
   formBlockSchema,
   signatureBlockSchema,
+  agreementBlockSchema,
   embedBlockSchema,
   paymentBlockSchema,
   dividerBlockSchema,

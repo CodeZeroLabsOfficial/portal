@@ -58,6 +58,7 @@ import {
 } from "lucide-react";
 import type {
   AccordionBlock,
+  AgreementBlock,
   BlockStyle,
   ColumnsBlock,
   FormBlock,
@@ -248,7 +249,7 @@ const PRIMARY_BLOCK_OPTIONS: BlockOption[] = [
   { id: "pricing-quote", type: "pricing", label: "Quote", icon: Coins, accent: "text-emerald-500", accentBg: "bg-emerald-500/10" },
   { id: "packages", type: "packages", label: "Plans", icon: Package, accent: "text-amber-500", accentBg: "bg-amber-500/10" },
   { id: "video", type: "video", label: "Video", icon: MonitorPlay, accent: "text-rose-500", accentBg: "bg-rose-500/10" },
-  { id: "signature", type: "signature", label: "Accept", icon: PenLine, accent: "text-cyan-500", accentBg: "bg-cyan-500/10" },
+  { id: "agreement", type: "agreement", label: "Accept", icon: PenLine, accent: "text-cyan-500", accentBg: "bg-cyan-500/10" },
 ];
 
 /** First tile when inserting at document root — groups nested blocks below. */
@@ -322,7 +323,7 @@ const COLUMN_MENU_INTERACTIVE: BlockOption[] = [
   { id: "col-embed", type: "embed", label: "Embed", icon: LayoutTemplate, accent: "text-teal-500", accentBg: "bg-teal-500/10" },
   { id: "col-form", type: "form", label: "Form", icon: SquarePen, accent: "text-indigo-500", accentBg: "bg-indigo-500/10" },
   { id: "col-payment", type: "payment", label: "Payment", icon: CreditCard, accent: "text-orange-500", accentBg: "bg-orange-500/10" },
-  { id: "col-signature", type: "signature", label: "Accept", icon: PenLine, accent: "text-cyan-500", accentBg: "bg-cyan-500/10" },
+  { id: "col-agreement", type: "agreement", label: "Accept", icon: PenLine, accent: "text-cyan-500", accentBg: "bg-cyan-500/10" },
 ];
 
 /** Secondary options revealed via "Add block from library". */
@@ -453,6 +454,15 @@ function createBlock(type: ProposalBlock["type"]): ProposalBlock {
         requirePrintedName: true,
         requireAcceptTerms: true,
         termsSummary: "By accepting, you agree to the scope and pricing described above.",
+      };
+    case "agreement":
+      return {
+        id,
+        type: "agreement",
+        heading: "Ready to get started?",
+        buttonLabel: "View Agreement",
+        agreementTitle: "Services Agreement",
+        requireAcceptTerms: true,
       };
     case "embed":
       return { id, type: "embed", url: "", title: "Embedded content" };
@@ -1605,6 +1615,105 @@ function SpacerBlockHeightEditor({
   );
 }
 
+/**
+ * Services Agreement editor: edits the CTA heading + button label, the modal
+ * title, and the agreement body (legal HTML). When `legalHtml` is empty the
+ * public modal renders a sensible default with sections for Parties, Scope,
+ * Pricing, Term, Termination, Confidentiality, and Governing Law.
+ */
+function AgreementBlockEditor({
+  block,
+  onChange,
+}: {
+  block: AgreementBlock;
+  onChange: (next: AgreementBlock) => void;
+}) {
+  return (
+    <div className="space-y-4">
+      <div className="rounded-2xl border border-dashed border-border/70 bg-muted/15 px-6 py-8 text-center">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          CTA preview
+        </p>
+        <p className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
+          {block.heading?.trim() || "Ready to get started?"}
+        </p>
+        <div className="mt-4 inline-flex h-10 items-center rounded-lg px-5 text-sm font-semibold text-slate-900 shadow-sm" style={{ backgroundColor: "#5EE3C0" }}>
+          {block.buttonLabel?.trim() || "View Agreement"}
+        </div>
+        <p className="mt-3 text-[11px] text-muted-foreground">
+          Opens the “{block.agreementTitle?.trim() || "Services Agreement"}” modal for the buyer to review &amp; sign.
+        </p>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label htmlFor={`agreement-heading-${block.id}`}>CTA heading</Label>
+          <Input
+            id={`agreement-heading-${block.id}`}
+            value={block.heading ?? ""}
+            placeholder="Ready to get started?"
+            onChange={(e) => onChange({ ...block, heading: e.target.value })}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor={`agreement-button-${block.id}`}>Button label</Label>
+          <Input
+            id={`agreement-button-${block.id}`}
+            value={block.buttonLabel ?? ""}
+            placeholder="View Agreement"
+            onChange={(e) => onChange({ ...block, buttonLabel: e.target.value })}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor={`agreement-title-${block.id}`}>Modal title</Label>
+        <Input
+          id={`agreement-title-${block.id}`}
+          value={block.agreementTitle ?? ""}
+          placeholder="Services Agreement"
+          onChange={(e) => onChange({ ...block, agreementTitle: e.target.value })}
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor={`agreement-intro-${block.id}`}>Modal intro (optional, plain text or HTML)</Label>
+        <textarea
+          id={`agreement-intro-${block.id}`}
+          className="min-h-[72px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          value={block.introHtml ?? ""}
+          placeholder="e.g. Please review the terms below before signing."
+          onChange={(e) => onChange({ ...block, introHtml: e.target.value })}
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor={`agreement-legal-${block.id}`}>Legal terms (HTML — leave blank for the standard template)</Label>
+        <textarea
+          id={`agreement-legal-${block.id}`}
+          className="min-h-[220px] w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-xs leading-relaxed"
+          value={block.legalHtml ?? ""}
+          placeholder={`<h3>1. Parties</h3>\n<p>...</p>\n<h3>2. Scope of Services</h3>\n<p>...</p>`}
+          onChange={(e) => onChange({ ...block, legalHtml: e.target.value })}
+        />
+        <p className="text-[11px] text-muted-foreground">
+          When empty, the modal shows a default agreement with sections for Parties, Scope, Pricing, Term,
+          Termination, Confidentiality and Governing Law.
+        </p>
+      </div>
+
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={block.requireAcceptTerms !== false}
+          onChange={(e) => onChange({ ...block, requireAcceptTerms: e.target.checked })}
+        />
+        Require &quot;I have read and agree&quot; checkbox before signing
+      </label>
+    </div>
+  );
+}
+
 function BlockFields({
   block,
   onChange,
@@ -1852,6 +1961,10 @@ function BlockFields({
           </label>
         </div>
       );
+    }
+    case "agreement": {
+      const b = block as AgreementBlock;
+      return <AgreementBlockEditor block={b} onChange={patch} />;
     }
     case "embed":
       return (
@@ -2125,6 +2238,8 @@ function blockLabel(type: ProposalBlock["type"]): string {
       return "Form";
     case "signature":
       return "Signature";
+    case "agreement":
+      return "Agreement";
     case "embed":
       return "Embed";
     case "payment":

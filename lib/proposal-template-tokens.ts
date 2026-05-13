@@ -175,6 +175,22 @@ function mapContentBlock(block: ProposalContentBlock, ctx: ProposalTokenContext)
         termsSummary:
           block.termsSummary !== undefined ? replaceProposalTokens(block.termsSummary, ctx) : block.termsSummary,
       };
+    case "agreement":
+      return {
+        ...block,
+        heading:
+          block.heading !== undefined ? replaceProposalTokens(block.heading, ctx) : block.heading,
+        buttonLabel:
+          block.buttonLabel !== undefined ? replaceProposalTokens(block.buttonLabel, ctx) : block.buttonLabel,
+        agreementTitle:
+          block.agreementTitle !== undefined
+            ? replaceProposalTokens(block.agreementTitle, ctx)
+            : block.agreementTitle,
+        introHtml:
+          block.introHtml !== undefined ? replaceProposalTokens(block.introHtml, ctx) : block.introHtml,
+        legalHtml:
+          block.legalHtml !== undefined ? replaceProposalTokens(block.legalHtml, ctx) : block.legalHtml,
+      };
     case "embed":
       return {
         ...block,

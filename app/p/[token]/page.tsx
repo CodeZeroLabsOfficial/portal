@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { ProposalAnalyticsTracker } from "@/components/proposal/proposal-analytics-tracker";
 import { ProposalDocumentView } from "@/components/proposal/proposal-document-view";
+import { hasAgreementBlock } from "@/components/proposal/agreement-block-public";
 import { ProposalPasswordGate } from "@/components/proposal/proposal-password-gate";
 import { ProposalPublicFooter } from "@/components/proposal/proposal-public-footer";
 import { isProposalUnlockedForRequest } from "@/lib/proposal-public-session";
@@ -72,6 +73,8 @@ export default async function PublicProposalPage(props: PublicProposalPageProps)
               branding={proposal.branding}
               shareToken={proposal.shareToken}
               publicSelections={proposal.publicSelections}
+              proposalStatus={proposal.status}
+              acceptedByName={proposal.acceptedByName}
             />
           </div>
           <div className={`${PROPOSAL_PUBLIC_CONTENT_CLASSES} mt-10`}>
@@ -79,6 +82,7 @@ export default async function PublicProposalPage(props: PublicProposalPageProps)
               shareToken={proposal.shareToken}
               status={proposal.status}
               acceptedByName={proposal.acceptedByName}
+              hideAcceptanceForm={hasAgreementBlock(proposal.document.blocks)}
             />
           </div>
         </>

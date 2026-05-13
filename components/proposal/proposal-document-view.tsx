@@ -3,6 +3,7 @@
 import * as React from "react";
 import type {
   AccordionBlock,
+  AgreementBlock,
   ImageBlock,
   PackagesBlock,
   ProposalBlock,
@@ -10,6 +11,7 @@ import type {
   ProposalContentBlock,
   ProposalDocument,
   ProposalPublicSelections,
+  ProposalStatus,
   SectionBlock,
   SplashBlock,
   TextBlock,
@@ -34,6 +36,7 @@ import { WORKSPACE_DETAIL_PAGE_TITLE_CLASS } from "@/lib/workspace-page-typograp
 import { cn } from "@/lib/utils";
 import { ChevronRight } from "lucide-react";
 import { embedVideoSrc } from "@/components/proposal/embed-video";
+import { AgreementBlockPublic } from "@/components/proposal/agreement-block-public";
 import { PricingBlockPublic } from "@/components/proposal/pricing-block-public";
 import { PackagesBlockPublic } from "@/components/proposal/packages-block-public";
 import { ProposalAccordionExpandSurface } from "@/components/proposal/proposal-accordion-expand-surface";
@@ -51,6 +54,10 @@ export interface ProposalDocumentViewProps {
   publicSelections?: ProposalPublicSelections;
   /** When true, root `section` bands span the full width of `<main>`; copy stays in the inner column */
   viewportSectionBleed?: boolean;
+  /** Proposal lifecycle status, surfaced to the agreement block so it can render an accepted state. */
+  proposalStatus?: ProposalStatus;
+  /** Name of the buyer that already signed the agreement (when status is `accepted`). */
+  acceptedByName?: string;
 }
 
 function AccordionPublicView({ block }: { block: AccordionBlock }) {
@@ -110,12 +117,21 @@ function AccordionPublicView({ block }: { block: AccordionBlock }) {
   );
 }
 
+interface ProposalRenderContext {
+  /** Full top-level block list — used by the agreement modal to summarise selections. */
+  allBlocks: ProposalBlock[];
+  proposalTitle?: string;
+  proposalStatus?: ProposalStatus;
+  acceptedByName?: string;
+}
+
 function BlockView({
   block,
   shareToken,
   publicSelections,
   viewportSectionBleed,
   splashPublicPresentation,
+  proposalContext,
 }: {
   block: ProposalBlock | ProposalContentBlock;
   shareToken?: string;
@@ -123,6 +139,7 @@ function BlockView({
   viewportSectionBleed?: boolean;
   /** Controls full-bleed splash chrome (matches section viewport bands). */
   splashPublicPresentation?: "editor" | "nestedColumn" | "rootFullWidth";
+  proposalContext?: ProposalRenderContext;
 }) {
   switch (block.type) {
     /** Grouped layouts render children sequentially with generous vertical rhythm. */
@@ -138,6 +155,7 @@ function BlockView({
           splashPublicPresentation={
             viewportSectionBleed && c.type === "splash" ? "nestedColumn" : splashPublicPresentation
           }
+          proposalContext={proposalContext}
         />
       ));
       const body = viewportSectionBleed ? (
@@ -400,6 +418,21 @@ function BlockView({
           </p>
         </div>
       );
+    case "agreement": {
+      const ab = block as AgreementBlock;
+      return (
+        <AgreementBlockPublic
+          block={ab}
+          allBlocks={proposalContext?.allBlocks ?? []}
+          shareToken={shareToken}
+          publicSelections={publicSelections}
+          proposalTitle={proposalContext?.proposalTitle}
+          proposalStatus={proposalContext?.proposalStatus}
+          acceptedByName={proposalContext?.acceptedByName}
+          interactive={Boolean(shareToken)}
+        />
+      );
+    }
     case "payment":
       return (
         <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-foreground">
@@ -436,6 +469,7 @@ function BlockView({
                   publicSelections={publicSelections}
                   viewportSectionBleed={viewportSectionBleed}
                   splashPublicPresentation={splashPublicPresentation}
+                  proposalContext={proposalContext}
                 />
               ))}
             </div>
@@ -486,6 +520,8 @@ export function ProposalDocumentView({
   shareToken,
   publicSelections,
   viewportSectionBleed = true,
+  proposalStatus,
+  acceptedByName,
 }: ProposalDocumentViewProps) {
   const style = React.useMemo(() => {
     if (!branding?.primaryColor && !branding?.fontFamily) return undefined;
@@ -496,6 +532,16 @@ export function ProposalDocumentView({
       fontFamily: branding?.fontFamily,
     } as React.CSSProperties;
   }, [branding]);
+
+  const proposalContext = React.useMemo<ProposalRenderContext>(
+    () => ({
+      allBlocks: document.blocks,
+      proposalTitle: document.title,
+      proposalStatus,
+      acceptedByName,
+    }),
+    [document.blocks, document.title, proposalStatus, acceptedByName],
+  );
 
   return (
     <article
@@ -532,6 +578,7 @@ export function ProposalDocumentView({
                       : "nestedColumn"
                     : undefined
                 }
+                proposalContext={proposalContext}
               />
             );
             if (block.type === "section" || splashRootBand || packagesRootBand) {
@@ -571,6 +618,7 @@ export function ProposalDocumentView({
                 publicSelections={publicSelections}
                 viewportSectionBleed={false}
                 splashPublicPresentation={block.type === "splash" ? "nestedColumn" : undefined}
+                proposalContext={proposalContext}
               />
             </section>
           ))}
