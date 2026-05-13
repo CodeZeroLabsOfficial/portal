@@ -5,6 +5,7 @@ import { getCurrentSessionUser, isStaff } from "@/lib/auth/server-session";
 import { getProposalTemplateForStaff } from "@/server/firestore/proposal-templates";
 import { ProposalDocumentView } from "@/components/proposal/proposal-document-view";
 import { PROPOSAL_PUBLIC_DOCUMENT_OUTER_CLASSES } from "@/lib/proposal-public-layout";
+import { proposalEndsInFullBleedBand } from "@/lib/proposal-blocks";
 import { Button } from "@/components/ui/button";
 
 interface PageProps {
@@ -29,6 +30,12 @@ export default async function ProposalTemplatePublicPreviewPage({ params }: Page
     notFound();
   }
 
+  /** Drop the trailing breathing room when the doc already ends in a full-bleed band — matches `/p/[token]`. */
+  const flushBottom = proposalEndsInFullBleedBand(template.document.blocks);
+  const mainClasses = flushBottom
+    ? "proposal-print-root w-full pb-0 pt-0 print:pb-0 min-h-dvh"
+    : "proposal-print-root w-full pb-12 pt-0 print:pb-8 sm:pb-14 min-h-dvh";
+
   return (
     <div className="relative min-h-dvh bg-background">
       <header className="fixed inset-x-0 top-0 z-50 border-b border-border/80 bg-background/85 px-4 py-3 shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-background/70">
@@ -47,7 +54,7 @@ export default async function ProposalTemplatePublicPreviewPage({ params }: Page
           </Button>
         </div>
       </header>
-      <main className="proposal-print-root w-full pb-12 pt-0 print:pb-8 sm:pb-14 min-h-dvh">
+      <main className={mainClasses}>
         <div className={PROPOSAL_PUBLIC_DOCUMENT_OUTER_CLASSES}>
           <ProposalDocumentView document={template.document} branding={template.branding} />
         </div>

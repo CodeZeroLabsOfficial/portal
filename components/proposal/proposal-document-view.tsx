@@ -44,6 +44,7 @@ import { ProposalSectionShell } from "@/components/proposal/proposal-section-she
 import { ProposalSplashBlockCanvas } from "@/components/proposal/proposal-splash-block";
 import { isProposalImagePlaceholderUrl } from "@/components/proposal/proposal-image-block-editor";
 import { isSectionBackgroundActive } from "@/lib/section-background";
+import { proposalEndsInFullBleedBand } from "@/lib/proposal-blocks";
 
 export interface ProposalDocumentViewProps {
   document: ProposalDocument;
@@ -558,6 +559,16 @@ export function ProposalDocumentView({
     [document.blocks, document.title, proposalStatus, acceptedByName],
   );
 
+  /**
+   * Drop the document's trailing 50px when the last block already renders as a
+   * viewport-bleed band — the band's own padding carries the rhythm and the
+   * extra gap would otherwise reveal a strip of page background below it.
+   */
+  const flushBottom = proposalEndsInFullBleedBand(document.blocks);
+  const rootStackClasses = flushBottom
+    ? "flex flex-col gap-0"
+    : PROPOSAL_DOCUMENT_ROOT_STACK_GAP_CLASSES;
+
   return (
     <article
       style={style}
@@ -572,7 +583,7 @@ export function ProposalDocumentView({
         </div>
       ) : null}
       {viewportSectionBleed ? (
-        <div className={cn("w-full", PROPOSAL_DOCUMENT_ROOT_STACK_GAP_CLASSES)}>
+        <div className={cn("w-full", rootStackClasses)}>
           {document.blocks.map((block) => {
             const splashRootBand = Boolean(viewportSectionBleed && block.type === "splash");
             const packagesRootBand = Boolean(
@@ -623,7 +634,7 @@ export function ProposalDocumentView({
           })}
         </div>
       ) : (
-        <div className={cn(PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES, PROPOSAL_DOCUMENT_ROOT_STACK_GAP_CLASSES)}>
+        <div className={cn(PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES, rootStackClasses)}>
           {document.blocks.map((block) => (
             <section
               key={block.id}
