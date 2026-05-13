@@ -1017,6 +1017,14 @@ function ColumnsBlockFields({
                   }}
                   className={cn(
                     "min-w-0 md:min-w-[3.5rem]",
+                    !resizeMode &&
+                      cn(
+                        "group/colcell rounded-md border border-transparent p-2",
+                        "transition-[border-color,box-shadow,background-color] duration-150 ease-out",
+                        "hover:border-border/65 hover:bg-muted/25 hover:shadow-sm",
+                        "focus-within:border-border/80 focus-within:bg-muted/20 focus-within:shadow-sm",
+                        "dark:hover:bg-muted/15 dark:focus-within:bg-muted/15",
+                      ),
                     resizeMode &&
                       "rounded-lg border border-sky-400/40 bg-background/60 py-1 ring-1 ring-sky-500/20 dark:bg-background/40 md:px-0 md:py-1",
                   )}

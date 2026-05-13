@@ -39,17 +39,24 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { isProposalImagePlaceholderUrl, PROPOSAL_IMAGE_BLOCK_PLACEHOLDER_URL } from "@/components/proposal/proposal-image-block-editor";
 
+/** Matches {@link BlockToolbar} `appearance="surface"` chrome (not the dark `elevated` bar). */
 const barShell = cn(
-  "inline-flex max-w-[calc(100vw-5rem)] flex-wrap items-center gap-0.5 rounded-lg border px-1 py-0.5 shadow-xl",
-  "border-zinc-700/55 bg-zinc-900/96 text-zinc-100 backdrop-blur-sm",
+  "inline-flex max-w-[calc(100vw-3rem)] shrink-0 flex-nowrap items-center gap-0.5 overflow-x-auto rounded-full border border-border/70 bg-muted/95 p-1 text-foreground shadow-sm ring-1 ring-black/[0.04] backdrop-blur-sm",
+  "dark:bg-zinc-800/95 dark:ring-white/10",
+  "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
 );
 
-function tbIconBtn(active?: boolean) {
+function tbIconBtn(active?: boolean, opts?: { compactLabel?: boolean }) {
   return cn(
-    "inline-flex h-8 min-w-8 shrink-0 items-center justify-center rounded-md px-2 text-sm transition-colors",
-    "text-zinc-300 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/50",
-    active && "bg-sky-500/20 text-white",
+    "inline-flex h-8 shrink-0 items-center justify-center rounded-full text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+    opts?.compactLabel ? "min-w-8 px-1.5 text-[10px] font-bold tracking-wide" : "w-8",
+    "text-muted-foreground hover:bg-background hover:text-foreground disabled:pointer-events-none disabled:opacity-40",
+    active && "bg-primary/15 text-foreground",
   );
+}
+
+function toolbarDivider() {
+  return <span className="mx-0.5 h-5 w-px shrink-0 bg-border" aria-hidden />;
 }
 
 export type ProposalImageBlockToolbarProps = {
@@ -183,7 +190,11 @@ export function ProposalImageBlockToolbar({
         }}
       />
 
-      <div className={barShell}>
+      <div
+        className={barShell}
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
+      >
         <Popover open={linkOpen} onOpenChange={setLinkOpen}>
           <PopoverTrigger asChild>
             <button
@@ -278,15 +289,15 @@ export function ProposalImageBlockToolbar({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <button type="button" className={tbIconBtn()} title="Crop (coming soon)" aria-disabled disabled>
-          <Crop className="h-4 w-4 opacity-50" />
+        <button type="button" className={tbIconBtn()} title="Crop (coming soon)" disabled>
+          <Crop className="h-4 w-4" />
         </button>
 
         <Popover open={altOpen} onOpenChange={setAltOpen}>
           <PopoverTrigger asChild>
             <button
               type="button"
-              className={cn(tbIconBtn(Boolean(block.alt?.trim() || block.caption?.trim())), "px-2.5 text-xs font-bold tracking-wide")}
+              className={tbIconBtn(Boolean(block.alt?.trim() || block.caption?.trim()), { compactLabel: true })}
               aria-label="Alt text and caption"
               title="Alt text and caption"
             >
@@ -319,7 +330,7 @@ export function ProposalImageBlockToolbar({
           </PopoverContent>
         </Popover>
 
-        <div className="mx-0.5 hidden h-5 w-px shrink-0 bg-white/15 sm:block" aria-hidden />
+        {toolbarDivider()}
 
         <button
           type="button"
@@ -399,7 +410,7 @@ export function ProposalImageBlockToolbar({
         {shell && onDelete ? (
           <button
             type="button"
-            className={cn(tbIconBtn(), "text-red-300 hover:bg-red-500/15 hover:text-red-100")}
+            className={cn(tbIconBtn(), "text-destructive hover:bg-red-500/15 hover:text-destructive")}
             aria-label="Delete block"
             title="Delete block"
             onClick={(e) => {
