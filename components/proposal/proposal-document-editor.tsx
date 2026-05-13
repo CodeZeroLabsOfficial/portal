@@ -730,15 +730,27 @@ function ColumnGhostText({ onSeed, placeholder }: { onSeed: (block: TextBlock) =
   );
 }
 
+type ProposalImageColumnToolbarActions = {
+  onRemove: () => void;
+  onDuplicate: () => void;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+};
+
 function NestedColumnBlockFields({
   block,
   onChange,
   textPlaceholder,
+  imageColumnToolbar,
 }: {
   block: ProposalColumnChildBlock;
   onChange: (next: ProposalColumnChildBlock) => void;
   /** Rich-text placeholder when this block is a column cell (Qwilr-style hint). */
   textPlaceholder?: string;
+  /** When this cell is an image: move duplicate/remove into the image toolbar. */
+  imageColumnToolbar?: ProposalImageColumnToolbarActions;
 }) {
   const patchNested = (next: ProposalBlock) => onChange(next as ProposalColumnChildBlock);
   switch (block.type) {
@@ -778,6 +790,7 @@ function NestedColumnBlockFields({
         <BlockFields
           block={block as ProposalBlock}
           onChange={patchNested}
+          imageColumnToolbar={block.type === "image" ? imageColumnToolbar : undefined}
         />
       );
   }
@@ -936,12 +949,22 @@ function ColumnsBlockFields({
                   <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" disabled={idx === stack.length - 1} onClick={() => move(child.id, 1)}>
                     Down
                   </Button>
-                  <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => dup(child.id)}>
-                    Duplicate
-                  </Button>
-                  <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs text-destructive hover:text-destructive" onClick={() => removeAt(child.id)}>
-                    Remove
-                  </Button>
+                  {child.type !== "image" ? (
+                    <>
+                      <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => dup(child.id)}>
+                        Duplicate
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs text-destructive hover:text-destructive"
+                        onClick={() => removeAt(child.id)}
+                      >
+                        Remove
+                      </Button>
+                    </>
+                  ) : null}
                 </div>
                 {child.type === "packages" ? (
                   <div className="flex flex-wrap items-center gap-2 border-b border-border/30 pb-2">
@@ -965,6 +988,18 @@ function ColumnsBlockFields({
                   block={child}
                   onChange={(n) => updateChild(child.id, n)}
                   textPlaceholder="Type / to add content"
+                  imageColumnToolbar={
+                    child.type === "image"
+                      ? {
+                          onRemove: () => removeAt(child.id),
+                          onDuplicate: () => dup(child.id),
+                          canMoveUp: idx > 0,
+                          canMoveDown: idx < stack.length - 1,
+                          onMoveUp: () => move(child.id, -1),
+                          onMoveDown: () => move(child.id, 1),
+                        }
+                      : undefined
+                  }
                 />
               </div>
             ))
@@ -1508,6 +1543,7 @@ function BlockFields({
   getBlockStyle,
   applyBlockStyle,
   columnsLayoutEditing,
+  imageColumnToolbar,
 }: {
   block: ProposalBlock;
   onChange: (next: ProposalBlock) => void;
@@ -1518,6 +1554,8 @@ function BlockFields({
     activeId: string | null;
     setActiveId: React.Dispatch<React.SetStateAction<string | null>>;
   };
+  /** Columns only: image duplicate/remove/move live in {@link ProposalImageBlockToolbar}. */
+  imageColumnToolbar?: ProposalImageColumnToolbarActions;
 }) {
   const patch = (next: ProposalBlock) => onChange(next);
   const sectionChrome = useProposalSectionEditorChrome();
@@ -1578,10 +1616,22 @@ function BlockFields({
     }
     case "image": {
       const b = block as ImageBlock;
+      const col = imageColumnToolbar;
       return (
         <>
           {!selection ? (
-            <ProposalImageBlockToolbar variant="embedded" block={b} onChange={patch} className="mb-2" />
+            <ProposalImageBlockToolbar
+              variant="embedded"
+              block={b}
+              onChange={patch}
+              className="mb-2"
+              onDelete={col?.onRemove}
+              onDuplicate={col?.onDuplicate}
+              canMoveUp={col?.canMoveUp}
+              canMoveDown={col?.canMoveDown}
+              onMoveUp={col?.onMoveUp}
+              onMoveDown={col?.onMoveDown}
+            />
           ) : null}
           <ProposalImageBlockEditor block={b} onChange={patch} />
         </>

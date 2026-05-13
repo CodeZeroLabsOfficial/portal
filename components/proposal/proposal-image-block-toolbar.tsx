@@ -73,7 +73,7 @@ export type ProposalImageBlockToolbarProps = {
 };
 
 export function ProposalImageBlockToolbar({
-  variant,
+  variant: _variant,
   block,
   onChange,
   className,
@@ -155,7 +155,6 @@ export function ProposalImageBlockToolbar({
 
   const align = block.align ?? "center";
   const hasImage = !isProposalImagePlaceholderUrl(block.url);
-  const shell = variant === "shell";
 
   const applyLink = () => {
     const t = linkDraft.trim();
@@ -332,35 +331,7 @@ export function ProposalImageBlockToolbar({
 
         {toolbarDivider()}
 
-        <button
-          type="button"
-          className={tbIconBtn(align === "left")}
-          aria-label="Align left"
-          title="Align left"
-          onClick={() => setAlign("left")}
-        >
-          <AlignLeft className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          className={tbIconBtn(align === "center")}
-          aria-label="Align center"
-          title="Align center"
-          onClick={() => setAlign("center")}
-        >
-          <AlignCenter className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          className={tbIconBtn(align === "right")}
-          aria-label="Align right"
-          title="Align right"
-          onClick={() => setAlign("right")}
-        >
-          <AlignRight className="h-4 w-4" />
-        </button>
-
-        {shell && (onDuplicate || onMoveUp || onMoveDown) ? (
+        {onDuplicate || onMoveUp || onMoveDown ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button type="button" className={tbIconBtn()} aria-label="More block actions" title="More">
@@ -407,7 +378,37 @@ export function ProposalImageBlockToolbar({
           </DropdownMenu>
         ) : null}
 
-        {shell && onDelete ? (
+        {onDuplicate || onMoveUp || onMoveDown ? toolbarDivider() : null}
+
+        <button
+          type="button"
+          className={tbIconBtn(align === "left")}
+          aria-label="Align left"
+          title="Align left"
+          onClick={() => setAlign("left")}
+        >
+          <AlignLeft className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          className={tbIconBtn(align === "center")}
+          aria-label="Align center"
+          title="Align center"
+          onClick={() => setAlign("center")}
+        >
+          <AlignCenter className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          className={tbIconBtn(align === "right")}
+          aria-label="Align right"
+          title="Align right"
+          onClick={() => setAlign("right")}
+        >
+          <AlignRight className="h-4 w-4" />
+        </button>
+
+        {onDelete ? (
           <button
             type="button"
             className={cn(tbIconBtn(), "text-destructive hover:bg-red-500/15 hover:text-destructive")}
