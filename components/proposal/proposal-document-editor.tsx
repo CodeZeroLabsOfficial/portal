@@ -23,11 +23,8 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
-  ArrowDown,
   ArrowLeft,
-  ArrowUp,
   Check,
-  Copy,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -57,7 +54,6 @@ import {
   SeparatorHorizontal,
   SquarePen,
   Star,
-  Trash2,
   type LucideIcon,
 } from "lucide-react";
 import type {
@@ -695,6 +691,18 @@ function patchColumnStackAtIndex(
   };
 }
 
+function findColumnCellMeta(
+  col: ColumnsBlock,
+  cellId: string | null,
+): { ci: number; si: number; child: ProposalColumnChildBlock } | null {
+  if (!cellId) return null;
+  for (let ci = 0; ci < col.stacks.length; ci++) {
+    const si = col.stacks[ci].findIndex((c) => c.id === cellId);
+    if (si >= 0) return { ci, si, child: col.stacks[ci][si] };
+  }
+  return null;
+}
+
 function ColumnResizeGrip({
   gripped,
   onPointerDown,
@@ -734,102 +742,6 @@ function ColumnGhostText({ onSeed, placeholder }: { onSeed: (block: TextBlock) =
         onSeed({ id: idRef.current, type: "text", html: next, body: undefined });
       }}
     />
-  );
-}
-
-/** Surface pill aligned with {@link ProposalImageBlockToolbar} / {@link BlockToolbar} `appearance="surface"`. */
-const COLUMN_CELL_BUBBLE_SHELL = cn(
-  "inline-flex max-w-[calc(100vw-3rem)] shrink-0 flex-nowrap items-center gap-0.5 overflow-x-auto rounded-full border border-border/70 bg-muted/95 p-1 text-foreground shadow-sm ring-1 ring-black/[0.04] backdrop-blur-sm",
-  "dark:bg-zinc-800/95 dark:ring-white/10",
-  "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
-);
-
-function columnCellBubbleBtn() {
-  return cn(
-    "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-    "text-muted-foreground hover:bg-background hover:text-foreground disabled:pointer-events-none disabled:opacity-40",
-  );
-}
-
-function ColumnCellBubbleControls({
-  canMoveUp,
-  canMoveDown,
-  onMoveUp,
-  onMoveDown,
-  showDuplicateRemove,
-  onDuplicate,
-  onRemove,
-}: {
-  canMoveUp: boolean;
-  canMoveDown: boolean;
-  onMoveUp: () => void;
-  onMoveDown: () => void;
-  showDuplicateRemove: boolean;
-  onDuplicate: () => void;
-  onRemove: () => void;
-}) {
-  return (
-    <div
-      className={COLUMN_CELL_BUBBLE_SHELL}
-      onPointerDown={(e) => e.stopPropagation()}
-      onClick={(e) => e.stopPropagation()}
-    >
-      <button
-        type="button"
-        className={columnCellBubbleBtn()}
-        aria-label="Move up"
-        title="Move up"
-        disabled={!canMoveUp}
-        onClick={(e) => {
-          e.stopPropagation();
-          onMoveUp();
-        }}
-      >
-        <ArrowUp className="h-4 w-4" />
-      </button>
-      <button
-        type="button"
-        className={columnCellBubbleBtn()}
-        aria-label="Move down"
-        title="Move down"
-        disabled={!canMoveDown}
-        onClick={(e) => {
-          e.stopPropagation();
-          onMoveDown();
-        }}
-      >
-        <ArrowDown className="h-4 w-4" />
-      </button>
-      {showDuplicateRemove ? (
-        <>
-          <span className="mx-0.5 h-5 w-px shrink-0 bg-border" aria-hidden />
-          <button
-            type="button"
-            className={columnCellBubbleBtn()}
-            aria-label="Duplicate"
-            title="Duplicate"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDuplicate();
-            }}
-          >
-            <Copy className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            className={cn(columnCellBubbleBtn(), "text-destructive hover:bg-red-500/15 hover:text-destructive")}
-            aria-label="Remove block"
-            title="Remove"
-            onClick={(e) => {
-              e.stopPropagation();
-              onRemove();
-            }}
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
-        </>
-      ) : null}
-    </div>
   );
 }
 
@@ -929,14 +841,10 @@ function ColumnsBlockFields({
     );
   }, [block.stacks.length]);
 
-  const selectedCellMeta = React.useMemo(() => {
-    if (!selectedCellId) return null;
-    for (let ci = 0; ci < block.stacks.length; ci++) {
-      const si = block.stacks[ci].findIndex((c) => c.id === selectedCellId);
-      if (si >= 0) return { ci, si, child: block.stacks[ci][si] as ProposalColumnChildBlock };
-    }
-    return null;
-  }, [block.stacks, selectedCellId]);
+  const selectedCellMeta = React.useMemo(
+    () => findColumnCellMeta(block, selectedCellId),
+    [block.stacks, selectedCellId],
+  );
 
   React.useEffect(() => {
     if (ancestorSelectedBlockId !== block.id) setSelectedCellId(null);
@@ -1157,41 +1065,6 @@ function ColumnsBlockFields({
                     </button>
                   }
                 />
-                {selectedCellMeta ? (
-                  <ColumnCellBubbleControls
-                    canMoveUp={selectedCellMeta.si > 0}
-                    canMoveDown={selectedCellMeta.si < block.stacks[selectedCellMeta.ci].length - 1}
-                    onMoveUp={() => {
-                      const { ci, si } = selectedCellMeta;
-                      const st = block.stacks[ci];
-                      if (si <= 0) return;
-                      onChange(patchColumnStackAtIndex(block, ci, arrayMove(st, si, si - 1)));
-                    }}
-                    onMoveDown={() => {
-                      const { ci, si } = selectedCellMeta;
-                      const st = block.stacks[ci];
-                      if (si >= st.length - 1) return;
-                      onChange(patchColumnStackAtIndex(block, ci, arrayMove(st, si, si + 1)));
-                    }}
-                    showDuplicateRemove={selectedCellMeta.child.type !== "image"}
-                    onDuplicate={() => {
-                      const { ci, si, child } = selectedCellMeta;
-                      if (child.type === "image") return;
-                      const st = block.stacks[ci];
-                      const cloned = cloneBlockWithFreshIds(child as ProposalBlock) as ProposalColumnChildBlock;
-                      const n = [...st];
-                      n.splice(si + 1, 0, cloned);
-                      onChange(patchColumnStackAtIndex(block, ci, n));
-                    }}
-                    onRemove={() => {
-                      const { ci, child } = selectedCellMeta;
-                      if (child.type === "image") return;
-                      setSelectedCellId((cur) => (cur === child.id ? null : cur));
-                      const st = block.stacks[ci];
-                      onChange(patchColumnStackAtIndex(block, ci, st.filter((x) => x.id !== child.id)));
-                    }}
-                  />
-                ) : null}
                 {selectedCellMeta?.child.type === "packages" ? (
                   <div
                     className="pointer-events-auto w-[min(16rem,calc(100vw-2rem))] space-y-1.5 rounded-xl border border-border/70 bg-muted/95 p-2.5 shadow-sm ring-1 ring-black/[0.04] backdrop-blur-sm dark:bg-zinc-800/95 dark:ring-white/10"
