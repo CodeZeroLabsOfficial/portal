@@ -51,6 +51,8 @@ export interface AgreementBlockPublicProps {
   /** Current proposal status — drives the “accepted” state in the modal footer. */
   proposalStatus?: ProposalStatus;
   acceptedByName?: string;
+  /** Staff locality IANA zone — signing UI default date and typed-signature label use this. */
+  localityTimeZone?: string;
   /** When false (editor / preview) the CTA is disabled and the sign form is read-only. */
   interactive?: boolean;
 }
@@ -296,6 +298,7 @@ export function AgreementBlockPublic({
   proposalTitle,
   proposalStatus,
   acceptedByName,
+  localityTimeZone,
   interactive = true,
 }: AgreementBlockPublicProps) {
   const router = useRouter();
@@ -568,6 +571,7 @@ export function AgreementBlockPublic({
                       proposalTitle={proposalTitle}
                       ctaColor={ctaColor}
                       ctaForeground={ctaForeground}
+                      localityTimeZone={localityTimeZone}
                       error={error}
                       onDismissError={() => setError(null)}
                       onSubmit={onSign}

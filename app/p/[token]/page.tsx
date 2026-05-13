@@ -12,6 +12,7 @@ import {
   PROPOSAL_PUBLIC_SHELL_CLASSES,
 } from "@/lib/proposal-public-layout";
 import { getProposalRecordByShareToken } from "@/server/firestore/parse-proposal";
+import { getUserStoredTimeZone } from "@/server/firestore/user-locality";
 
 interface PublicProposalPageProps {
   params: Promise<{ token: string }>;
@@ -50,6 +51,8 @@ export default async function PublicProposalPage(props: PublicProposalPageProps)
     notFound();
   }
 
+  const localityTimeZone = (await getUserStoredTimeZone(proposal.createdByUid))?.trim() || undefined;
+
   const requiresPassword = Boolean(proposal.sharePasswordHash);
   const unlocked = !requiresPassword || (await isProposalUnlockedForRequest(proposal.id));
 
@@ -87,6 +90,7 @@ export default async function PublicProposalPage(props: PublicProposalPageProps)
               publicSelections={proposal.publicSelections}
               proposalStatus={proposal.status}
               acceptedByName={proposal.acceptedByName}
+              localityTimeZone={localityTimeZone}
             />
           </div>
           {showFooter ? (

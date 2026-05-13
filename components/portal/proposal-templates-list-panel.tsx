@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import type { ProposalTemplateRecord, ProposalTemplateStage } from "@/types/proposal-template";
 import { deleteProposalTemplateAction, setProposalTemplateStageAction } from "@/server/actions/proposal-templates";
+import { formatLastEditedInLocality } from "@/lib/proposal-locality-dates";
 import { CloneProposalTemplateButton } from "@/components/proposal/clone-proposal-template-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,22 +25,11 @@ import { cn } from "@/lib/utils";
 
 export interface ProposalTemplatesListPanelProps {
   templates: ProposalTemplateRecord[];
+  localityTimeZone?: string;
 }
 
 function lastEditedMs(t: ProposalTemplateRecord): number {
   return (typeof t.updatedAtMs === "number" && t.updatedAtMs > 0 ? t.updatedAtMs : t.createdAtMs) || 0;
-}
-
-function formatLastEdited(ms: number): string {
-  if (!ms) return "—";
-  try {
-    return new Intl.DateTimeFormat(undefined, {
-      dateStyle: "medium",
-      timeStyle: "short",
-    }).format(new Date(ms));
-  } catch {
-    return new Date(ms).toLocaleString();
-  }
 }
 
 const TEMPLATE_STAGE_BADGE: Record<ProposalTemplateStage, string> = {
@@ -68,7 +58,7 @@ function templateStageDisplay(stage: ProposalTemplateStage): {
   };
 }
 
-export function ProposalTemplatesListPanel({ templates }: ProposalTemplatesListPanelProps) {
+export function ProposalTemplatesListPanel({ templates, localityTimeZone }: ProposalTemplatesListPanelProps) {
   const router = useRouter();
 
   React.useEffect(() => {
@@ -119,10 +109,12 @@ export function ProposalTemplatesListPanel({ templates }: ProposalTemplatesListP
     return sorted.filter((t) => {
       const desc = (t.description ?? "").trim();
       const stageLabel = templateStageDisplay(t.stage).label;
-      const hay = [t.name, desc, stageLabel, formatLastEdited(lastEditedMs(t))].join(" ").toLowerCase();
+      const hay = [t.name, desc, stageLabel, formatLastEditedInLocality(lastEditedMs(t), localityTimeZone)]
+        .join(" ")
+        .toLowerCase();
       return hay.includes(q);
     });
-  }, [sorted, query]);
+  }, [sorted, query, localityTimeZone]);
 
   return (
     <section className="overflow-hidden rounded-xl border border-border/80 bg-card/80 shadow-sm backdrop-blur-sm">
@@ -217,7 +209,7 @@ export function ProposalTemplatesListPanel({ templates }: ProposalTemplatesListP
                         </td>
                         <td className="whitespace-nowrap px-4 py-3 align-middle text-muted-foreground tabular-nums">
                           <time dateTime={edited > 0 ? new Date(edited).toISOString() : undefined}>
-                            {formatLastEdited(edited)}
+                            {formatLastEditedInLocality(edited, localityTimeZone)}
                           </time>
                         </td>
                         <td className="px-2 py-3 align-middle">

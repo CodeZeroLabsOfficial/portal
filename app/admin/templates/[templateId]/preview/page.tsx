@@ -56,7 +56,11 @@ export default async function ProposalTemplatePublicPreviewPage({ params }: Page
       </header>
       <main className={mainClasses}>
         <div className={PROPOSAL_PUBLIC_DOCUMENT_OUTER_CLASSES}>
-          <ProposalDocumentView document={template.document} branding={template.branding} />
+          <ProposalDocumentView
+            document={template.document}
+            branding={template.branding}
+            localityTimeZone={user.timeZone?.trim() || undefined}
+          />
         </div>
       </main>
     </div>

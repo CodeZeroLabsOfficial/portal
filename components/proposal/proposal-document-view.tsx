@@ -59,6 +59,8 @@ export interface ProposalDocumentViewProps {
   proposalStatus?: ProposalStatus;
   /** Name of the buyer that already signed the agreement (when status is `accepted`). */
   acceptedByName?: string;
+  /** IANA zone from Settings → Locality — agreement dates and previews use this when set. */
+  localityTimeZone?: string;
 }
 
 function AccordionPublicView({ block }: { block: AccordionBlock }) {
@@ -124,6 +126,7 @@ interface ProposalRenderContext {
   proposalTitle?: string;
   proposalStatus?: ProposalStatus;
   acceptedByName?: string;
+  localityTimeZone?: string;
 }
 
 function BlockView({
@@ -430,6 +433,7 @@ function BlockView({
           proposalTitle={proposalContext?.proposalTitle}
           proposalStatus={proposalContext?.proposalStatus}
           acceptedByName={proposalContext?.acceptedByName}
+          localityTimeZone={proposalContext?.localityTimeZone}
           interactive={Boolean(shareToken)}
         />
       );
@@ -538,6 +542,7 @@ export function ProposalDocumentView({
   viewportSectionBleed = true,
   proposalStatus,
   acceptedByName,
+  localityTimeZone,
 }: ProposalDocumentViewProps) {
   const style = React.useMemo(() => {
     if (!branding?.primaryColor && !branding?.fontFamily) return undefined;
@@ -555,8 +560,9 @@ export function ProposalDocumentView({
       proposalTitle: document.title,
       proposalStatus,
       acceptedByName,
+      localityTimeZone,
     }),
-    [document.blocks, document.title, proposalStatus, acceptedByName],
+    [document.blocks, document.title, proposalStatus, acceptedByName, localityTimeZone],
   );
 
   /**

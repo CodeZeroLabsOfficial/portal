@@ -47,7 +47,7 @@ export default async function AdminTemplatesHubPage() {
           </div>
         </div>
 
-        <ProposalTemplatesListPanel templates={templates} />
+        <ProposalTemplatesListPanel templates={templates} localityTimeZone={user.timeZone?.trim() || undefined} />
       </div>
     </WorkspaceShell>
   );

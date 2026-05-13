@@ -163,7 +163,10 @@ export async function createDraftProposalFromCustomerAction(
   if (tid) {
     const template = await getProposalTemplateForStaff(user, tid);
     if (!template) return { ok: false, message: "Template not found." };
-    document = applyProposalTokensToDocument(cloneProposalDocument(template.document), { customer });
+    document = applyProposalTokensToDocument(cloneProposalDocument(template.document), {
+      customer,
+      timeZone: user.timeZone?.trim() || undefined,
+    });
     branding = cloneBrandingFromTemplate(template.branding);
     sourceTemplateId = template.id;
   } else {
@@ -250,6 +253,7 @@ export async function createDraftProposalFromOpportunityAction(
     document = applyProposalTokensToDocument(cloneProposalDocument(template.document), {
       customer,
       opportunity,
+      timeZone: user.timeZone?.trim() || undefined,
     });
     branding = cloneBrandingFromTemplate(template.branding);
     sourceTemplateId = template.id;

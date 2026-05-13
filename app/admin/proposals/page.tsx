@@ -41,7 +41,7 @@ export default async function AdminProposalsHubPage() {
           </p>
         </div>
 
-        <ProposalsListPanel proposals={proposals} />
+        <ProposalsListPanel proposals={proposals} localityTimeZone={user.timeZone?.trim() || undefined} />
       </div>
     </WorkspaceShell>
   );

@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Copy, ExternalLink, Loader2, Pencil, Search, SquareArrowOutUpRight, Trash2 } from "lucide-react";
 import type { ProposalHubListRow, ProposalRecord } from "@/types/proposal";
 import { cloneProposalAction, deleteProposalAction } from "@/server/actions/proposal-builder";
+import { formatLastEditedInLocality } from "@/lib/proposal-locality-dates";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,8 @@ import { cn } from "@/lib/utils";
 
 export interface ProposalsListPanelProps {
   proposals: ProposalHubListRow[];
+  /** Settings → Locality IANA zone for “Last edited” timestamps. */
+  localityTimeZone?: string;
 }
 
 type ProposalLifecyclePhase = "saved" | "sent" | "viewed";
@@ -95,25 +98,13 @@ function lastEditedMs(p: ProposalRecord): number {
   return (typeof p.updatedAtMs === "number" && p.updatedAtMs > 0 ? p.updatedAtMs : p.createdAtMs) || 0;
 }
 
-function formatLastEdited(ms: number): string {
-  if (!ms) return "—";
-  try {
-    return new Intl.DateTimeFormat(undefined, {
-      dateStyle: "medium",
-      timeStyle: "short",
-    }).format(new Date(ms));
-  } catch {
-    return new Date(ms).toLocaleString();
-  }
-}
-
 function editHref(p: ProposalRecord): string {
   const base = `/admin/proposals/${p.id}`;
   if (p.customerId) return `${base}?customer=${encodeURIComponent(p.customerId)}`;
   return base;
 }
 
-export function ProposalsListPanel({ proposals }: ProposalsListPanelProps) {
+export function ProposalsListPanel({ proposals, localityTimeZone }: ProposalsListPanelProps) {
   const router = useRouter();
 
   React.useEffect(() => {
@@ -134,12 +125,12 @@ export function ProposalsListPanel({ proposals }: ProposalsListPanelProps) {
     if (!q) return sorted;
     return sorted.filter((p) => {
       const stage = proposalHubStageDisplay(p);
-      const hay = [p.accountCompanyName, p.title, stage.label, formatLastEdited(lastEditedMs(p))]
+      const hay = [p.accountCompanyName, p.title, stage.label, formatLastEditedInLocality(lastEditedMs(p), localityTimeZone)]
         .join(" ")
         .toLowerCase();
       return hay.includes(q);
     });
-  }, [sorted, query]);
+  }, [sorted, query, localityTimeZone]);
 
   async function onDelete(p: ProposalHubListRow) {
     if (!window.confirm(`Delete proposal “${p.title}”? This cannot be undone.`)) return;
@@ -265,7 +256,7 @@ export function ProposalsListPanel({ proposals }: ProposalsListPanelProps) {
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 align-middle text-muted-foreground tabular-nums">
                         <time dateTime={edited > 0 ? new Date(edited).toISOString() : undefined}>
-                          {formatLastEdited(edited)}
+                          {formatLastEditedInLocality(edited, localityTimeZone)}
                         </time>
                       </td>
                       <td className="px-2 py-3 align-middle">

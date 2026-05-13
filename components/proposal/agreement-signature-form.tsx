@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { formatIsoCalendarDateLong, todayIsoDateInTimeZone } from "@/lib/proposal-locality-dates";
 import { cn } from "@/lib/utils";
 
 const INK = "#1a1a5e";
@@ -27,7 +28,7 @@ function getCanvasPoint(canvas: HTMLCanvasElement, clientX: number, clientY: num
   return { x, y };
 }
 
-function buildTypedSignatureDataUrl(name: string, dateIso: string): string {
+function buildTypedSignatureDataUrl(name: string, dateIso: string, localityTimeZone?: string): string {
   const W = 720;
   const H = 200;
   const canvas = document.createElement("canvas");
@@ -53,12 +54,7 @@ function buildTypedSignatureDataUrl(name: string, dateIso: string): string {
 
   let dateLabel = "";
   if (/^\d{4}-\d{2}-\d{2}$/.test(dateIso)) {
-    const d = new Date(`${dateIso}T12:00:00`);
-    dateLabel = d.toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    dateLabel = formatIsoCalendarDateLong(dateIso, localityTimeZone, undefined);
   }
   ctx.font = '500 14px ui-sans-serif, system-ui, -apple-system, sans-serif';
   ctx.fillStyle = "#64748b";
@@ -97,6 +93,8 @@ export interface AgreementSignatureFormProps {
   /** Called when the user changes inputs so parent can clear server-side error messages. */
   onDismissError?: () => void;
   onSubmit: (payload: AgreementSignaturePayload) => void | Promise<void>;
+  /** Staff Settings → Locality IANA zone (public page uses proposal creator’s saved zone). */
+  localityTimeZone?: string;
 }
 
 export function AgreementSignatureForm({
@@ -110,6 +108,7 @@ export function AgreementSignatureForm({
   error,
   onDismissError,
   onSubmit,
+  localityTimeZone,
 }: AgreementSignatureFormProps) {
   const [tab, setTab] = React.useState<AgreementSignatureMethod>("draw");
   const [signerName, setSignerName] = React.useState("");
@@ -125,10 +124,8 @@ export function AgreementSignatureForm({
   const lastRef = React.useRef<{ x: number; y: number } | null>(null);
 
   React.useEffect(() => {
-    const t = new Date();
-    const iso = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
-    setSignedDate(iso);
-  }, []);
+    setSignedDate(todayIsoDateInTimeZone(localityTimeZone));
+  }, [localityTimeZone]);
 
   const initCanvas = React.useCallback(() => {
     const canvas = canvasRef.current;
@@ -182,10 +179,7 @@ export function AgreementSignatureForm({
       return;
     }
     setSignerName("");
-    const t = new Date();
-    setSignedDate(
-      `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`,
-    );
+    setSignedDate(todayIsoDateInTimeZone(localityTimeZone));
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -218,7 +212,7 @@ export function AgreementSignatureForm({
         setLocalError("Please choose the date you are signing.");
         return;
       }
-      signatureDataUrl = buildTypedSignatureDataUrl(name, signedDate);
+      signatureDataUrl = buildTypedSignatureDataUrl(name, signedDate, localityTimeZone);
     }
 
     const clientSignedAtMs = Date.now();
@@ -369,11 +363,7 @@ export function AgreementSignatureForm({
               </p>
               <p className="mt-3 text-sm text-zinc-500">
                 {/^\d{4}-\d{2}-\d{2}$/.test(signedDate)
-                  ? new Date(`${signedDate}T12:00:00`).toLocaleDateString(undefined, {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })
+                  ? formatIsoCalendarDateLong(signedDate, localityTimeZone, undefined) || "—"
                   : "—"}
               </p>
             </div>

@@ -40,6 +40,7 @@ export default async function EditProposalTemplatePage({ params }: PageProps) {
           initialTemplateName={template.name}
           initialTemplateDescription={template.description ?? ""}
           initialDocument={template.document}
+          localityTimeZone={user.timeZone?.trim() || undefined}
         />
       </div>
     </WorkspaceShell>

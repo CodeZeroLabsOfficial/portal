@@ -207,6 +207,7 @@ export default async function AdminProposalDetailPage({ params, searchParams }: 
         proposalId={proposal.id}
         initialDocument={proposal.document}
         initialStatus={proposal.status}
+        localityTimeZone={user.timeZone?.trim() || undefined}
         proposalEditShellToolbar={{
           customerBackHref: customerBackId ? `/admin/customers/${encodeURIComponent(customerBackId)}` : null,
           recipientEmail: recipient,

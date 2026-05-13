@@ -1,3 +1,4 @@
+import { formatProposalMergeDate } from "@/lib/proposal-locality-dates";
 import type { CustomerRecord } from "@/types/customer";
 import type { OpportunityRecord } from "@/types/opportunity";
 import type {
@@ -11,6 +12,8 @@ import type {
 export interface ProposalTokenContext {
   customer: CustomerRecord;
   opportunity?: OpportunityRecord | null;
+  /** IANA zone from Settings → Locality (`PortalUser.timeZone`) — drives `{{date}}` calendar day. */
+  timeZone?: string;
   /**
    * Used for `{{date}}` (long localised date). When omitted, `replaceProposalTokens` uses the time of each call;
    * `applyProposalTokensToDocument` sets this once so every field in a document shares the same value.
@@ -29,8 +32,8 @@ function firstNameFromFullName(fullName: string): string {
 export function replaceProposalTokens(text: string, ctx: ProposalTokenContext): string {
   const { customer, opportunity } = ctx;
   const at = ctx.mergedAt ?? new Date();
-  /** Long calendar date at merge time (fixed locale so server region does not change output). */
-  const date = at.toLocaleDateString("en-AU", { dateStyle: "long" });
+  /** Long calendar date at merge time (en-AU wording; optional IANA zone from staff locality). */
+  const date = formatProposalMergeDate(at, ctx.timeZone);
   const company = customer.company?.trim() ?? "";
   const oppName = opportunity?.name?.trim() ?? "";
   let dealAmount = "";

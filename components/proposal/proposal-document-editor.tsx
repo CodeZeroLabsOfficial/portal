@@ -2298,6 +2298,8 @@ export interface ProposalDocumentEditorProps {
   proposalEditShellToolbar?: ProposalEditShellToolbarProps;
   /** Rendered between the proposal toolbar and block tabs (e.g. summary + share grid from the server page). */
   proposalEditMiddleSlot?: ReactNode;
+  /** Settings → Locality IANA zone for preview tab agreement dates and merge-style display. */
+  localityTimeZone?: string;
 }
 
 export function ProposalDocumentEditor({
@@ -2310,6 +2312,7 @@ export function ProposalDocumentEditor({
   initialStatus = "draft",
   proposalEditShellToolbar,
   proposalEditMiddleSlot,
+  localityTimeZone,
 }: ProposalDocumentEditorProps) {
   const isTemplate = variant === "template";
   const [templateName, setTemplateName] = React.useState(initialTemplateName);
@@ -2962,7 +2965,7 @@ export function ProposalDocumentEditor({
           className="mt-4 overflow-x-visible rounded-2xl border border-border/70 bg-muted/15 py-6 md:py-10"
         >
           <div className={PROPOSAL_PUBLIC_DOCUMENT_OUTER_CLASSES}>
-            <ProposalDocumentView document={doc} />
+            <ProposalDocumentView document={doc} localityTimeZone={localityTimeZone} />
           </div>
         </TabsContent>
       </Tabs>
