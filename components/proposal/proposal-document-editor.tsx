@@ -1069,65 +1069,63 @@ function ColumnsBlockFields({
         );
         const floatRail =
           !resizeMode ? (
-            <div className="pointer-events-none absolute left-2 top-1/2 z-20 flex -translate-y-1/2 flex-col items-start gap-2 sm:left-3">
-              <div className="pointer-events-auto flex flex-col items-start gap-2">
-                <ColumnInsertMenu
-                  onAdd={(insert) => {
-                    const ci = activeColumnIndex;
-                    const st = block.stacks[ci];
-                    if (!st) return;
-                    onChange(
-                      patchColumnStackAtIndex(block, ci, [...st, insert as ProposalColumnChildBlock]),
-                    );
-                  }}
-                  align="start"
-                  trigger={
-                    <button
-                      type="button"
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border/80 bg-muted/50 text-muted-foreground shadow-sm transition-colors hover:border-sky-500/50 hover:bg-background hover:text-foreground data-[state=open]:border-primary data-[state=open]:bg-primary data-[state=open]:text-primary-foreground"
-                      aria-label="Add content"
-                      title={`Add block to column ${activeColumnIndex + 1}`}
-                    >
-                      <Plus className="h-4 w-4" aria-hidden />
-                    </button>
-                  }
-                />
-                {selectedCellMeta?.child.type === "packages" ? (
-                  <div
-                    className="pointer-events-auto w-[min(16rem,calc(100vw-2rem))] space-y-1.5 rounded-xl border border-border/70 bg-muted/95 p-2.5 shadow-sm ring-1 ring-black/[0.04] backdrop-blur-sm dark:bg-zinc-800/95 dark:ring-white/10"
-                    onPointerDown={(e) => e.stopPropagation()}
-                    onClick={(e) => e.stopPropagation()}
+            <div className="flex shrink-0 flex-col items-center justify-center gap-2 self-center">
+              <ColumnInsertMenu
+                onAdd={(insert) => {
+                  const ci = activeColumnIndex;
+                  const st = block.stacks[ci];
+                  if (!st) return;
+                  onChange(
+                    patchColumnStackAtIndex(block, ci, [...st, insert as ProposalColumnChildBlock]),
+                  );
+                }}
+                align="start"
+                trigger={
+                  <button
+                    type="button"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border/80 bg-muted/50 text-muted-foreground shadow-sm transition-colors hover:border-sky-500/50 hover:bg-background hover:text-foreground data-[state=open]:border-primary data-[state=open]:bg-primary data-[state=open]:text-primary-foreground"
+                    aria-label="Add content"
+                    title={`Add block to column ${activeColumnIndex + 1}`}
                   >
-                    <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                      Plans background
-                    </span>
-                    <ProposalSectionBackgroundPicker
-                      background={(selectedCellMeta.child as PackagesBlock).background}
-                      onChange={(next) => {
-                        const { ci, child } = selectedCellMeta;
-                        const st = block.stacks[ci];
-                        const nextSt = st.map((c) => {
-                          if (c.id !== child.id) return c;
-                          const p = c as PackagesBlock;
-                          if (!next) {
-                            const { background: _b, ...rest } = p;
-                            void _b;
-                            return rest as ProposalColumnChildBlock;
-                          }
-                          return { ...p, background: next } as ProposalColumnChildBlock;
-                        });
-                        onChange(patchColumnStackAtIndex(block, ci, nextSt));
-                      }}
-                    />
-                  </div>
-                ) : null}
-              </div>
+                    <Plus className="h-4 w-4" aria-hidden />
+                  </button>
+                }
+              />
+              {selectedCellMeta?.child.type === "packages" ? (
+                <div
+                  className="w-[min(15rem,calc(100vw-2rem))] space-y-1.5 rounded-xl border border-border/70 bg-muted/95 p-2.5 shadow-sm ring-1 ring-black/[0.04] backdrop-blur-sm dark:bg-zinc-800/95 dark:ring-white/10"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Plans background
+                  </span>
+                  <ProposalSectionBackgroundPicker
+                    background={(selectedCellMeta.child as PackagesBlock).background}
+                    onChange={(next) => {
+                      const { ci, child } = selectedCellMeta;
+                      const st = block.stacks[ci];
+                      const nextSt = st.map((c) => {
+                        if (c.id !== child.id) return c;
+                        const p = c as PackagesBlock;
+                        if (!next) {
+                          const { background: _b, ...rest } = p;
+                          void _b;
+                          return rest as ProposalColumnChildBlock;
+                        }
+                        return { ...p, background: next } as ProposalColumnChildBlock;
+                      });
+                      onChange(patchColumnStackAtIndex(block, ci, nextSt));
+                    }}
+                  />
+                </div>
+              ) : null}
             </div>
           ) : null;
         const chromedColumns = (
-          <div className={cn("relative", !resizeMode && "pl-11 sm:pl-12")}>
+          <div className="flex items-center gap-2 sm:gap-2.5">
             {floatRail}
-            {columnRow}
+            <div className="min-w-0 flex-1">{columnRow}</div>
           </div>
         );
         if (pad <= 0) return chromedColumns;
