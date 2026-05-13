@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, ImageIcon, MonitorPlay, Paintbrush } from "lucide-react";
+import { Check, MonitorPlay, Paintbrush } from "lucide-react";
 import { STYLE_PRESET_COLORS } from "@/lib/block-style";
 import { cn } from "@/lib/utils";
 import type { SplashBlock, SplashBlockBackground } from "@/types/proposal";
@@ -85,9 +85,9 @@ function RangeRow({
 }) {
   return (
     <div>
-      <div className="mb-1 flex items-center justify-between gap-4">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
-        <span className="tabular-nums text-xs font-semibold tracking-tight text-foreground">
+      <div className="mb-1 flex items-end justify-between gap-3">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">{label}</p>
+        <span className="font-mono text-[11px] font-semibold tabular-nums text-foreground underline decoration-muted-foreground/45 underline-offset-[3px]">
           {format(value)}
           {suffix}
         </span>
@@ -99,7 +99,7 @@ function RangeRow({
         step={1}
         value={value}
         aria-label={label}
-        className="h-2 w-full cursor-pointer accent-primary"
+        className="h-1.5 w-full cursor-pointer accent-sky-500 hover:accent-sky-600"
         onChange={(e) => onChange(Number(e.target.value))}
       />
     </div>
@@ -129,9 +129,9 @@ function TintSwatchPicker({
   return (
     <div>
       {label ? (
-        <p className="mb-2 px-0.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
+        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
       ) : null}
-      <div className="grid grid-cols-6 gap-2">
+      <div className="grid grid-cols-6 gap-1.5">
         {STYLE_PRESET_COLORS.map((c) => {
           const isActive = sameHex(c.value, value);
           return (
@@ -141,8 +141,8 @@ function TintSwatchPicker({
               aria-label={c.label}
               title={c.label}
               className={cn(
-                "relative h-8 w-8 rounded-full border transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                isActive ? "ring-2 ring-ring ring-offset-2 ring-offset-background" : "border-border hover:scale-105",
+                "relative h-7 w-7 rounded-full border transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+                isActive ? "ring-2 ring-ring ring-offset-1 ring-offset-background" : "border-border hover:scale-105",
               )}
               style={{ backgroundColor: c.value }}
               onClick={() => onChange(c.value)}
@@ -150,7 +150,7 @@ function TintSwatchPicker({
               {isActive ? (
                 <Check
                   className={cn(
-                    "absolute inset-0 m-auto h-4 w-4",
+                    "absolute inset-0 m-auto h-3.5 w-3.5",
                     needsLightFg(c.value) ? "text-white" : "text-zinc-900",
                   )}
                   aria-hidden
@@ -160,8 +160,8 @@ function TintSwatchPicker({
           );
         })}
       </div>
-      <div className="mt-2 flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-2 py-1.5">
-        <span className="h-6 w-6 shrink-0 rounded-full ring-1 ring-border" style={{ backgroundColor: value }} />
+      <div className="mt-1.5 flex h-8 items-center gap-2 rounded-md border border-border/70 bg-muted/30 px-2 py-0">
+        <span className="h-5 w-5 shrink-0 rounded-full ring-1 ring-border" style={{ backgroundColor: value }} />
         <Input
           type="text"
           value={draft}
@@ -169,7 +169,7 @@ function TintSwatchPicker({
           onBlur={() => commitDraft()}
           spellCheck={false}
           aria-label={hexInputAriaLabel ?? (label ? `${label} hex` : "Colour hex")}
-          className="h-8 border-transparent bg-transparent"
+          className="h-7 border-0 bg-transparent p-0 text-xs font-medium tabular-nums tracking-tight text-foreground"
           placeholder="#000000"
           onKeyDown={(e) => {
             if (e.key === "Enter") {
@@ -215,6 +215,42 @@ function FocalPointGrid({
         }),
       )}
     </div>
+  );
+}
+
+function SplashBackgroundTintScrollRow({ tintHex }: { tintHex: string }) {
+  return (
+    <button
+      type="button"
+      className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left ring-1 ring-border/50 transition-colors hover:bg-muted/35 hover:ring-border/70"
+      onClick={() => {
+        document.getElementById("splash-bg-tint-controls")?.scrollIntoView({
+          behavior: "smooth",
+          block: "nearest",
+        });
+      }}
+    >
+      <div className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/60 bg-muted/20">
+        <span
+          className="absolute inset-0 opacity-50"
+          style={{
+            backgroundImage:
+              "linear-gradient(45deg, #d1d5db 25%, transparent 25%), linear-gradient(-45deg, #d1d5db 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e5e7eb 75%), linear-gradient(-45deg, transparent 75%, #e5e7eb 75%)",
+            backgroundSize: "5px 5px",
+            backgroundPosition: "0 0, 0 2.5px, 2.5px -2.5px, -2.5px 0px",
+          }}
+          aria-hidden
+        />
+        <span
+          className="relative z-[1] h-5 w-5 rounded-full shadow-sm ring-1 ring-black/10"
+          style={{ backgroundColor: tintHex }}
+        />
+      </div>
+      <span className="min-w-0 flex-1 text-left">
+        <span className="block text-xs font-semibold leading-tight text-foreground">Background tint</span>
+        <span className="mt-0.5 block truncate text-[10px] leading-snug text-muted-foreground">Adjust tint below</span>
+      </span>
+    </button>
   );
 }
 
@@ -283,9 +319,24 @@ export function ProposalSplashBackgroundPicker({
                 <img src={resolved.imageUrl} alt="" className="h-full w-full object-cover" draggable={false} />
               </span>
             ) : resolved.kind === "video" && resolved.videoUrl ? (
-              <span className="absolute bottom-1 right-1 flex h-4 w-4 items-center justify-center overflow-hidden rounded-full bg-muted ring-[1.5px] ring-border">
-                <MonitorPlay className="h-2.5 w-2.5 text-muted-foreground" />
-              </span>
+              model.posterUrl?.trim() ? (
+                <span className="absolute bottom-1 right-1 h-4 w-4 overflow-hidden rounded-full ring-[1.5px] ring-border">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={model.posterUrl.trim()} alt="" className="h-full w-full object-cover" draggable={false} />
+                </span>
+              ) : resolved.isDirectVideo ? (
+                <video
+                  className="pointer-events-none absolute bottom-1 right-1 h-4 w-4 rounded-full object-cover ring-[1.5px] ring-border"
+                  muted
+                  playsInline
+                  preload="metadata"
+                  src={resolved.videoUrl}
+                />
+              ) : (
+                <span className="absolute bottom-1 right-1 flex h-4 w-4 items-center justify-center overflow-hidden rounded-full bg-muted ring-[1.5px] ring-border">
+                  <MonitorPlay className="h-2.5 w-2.5 text-muted-foreground" />
+                </span>
+              )
             ) : (
               <span
                 className="absolute bottom-1 right-1 h-4 w-4 rounded-full ring-[1.5px] ring-border"
@@ -298,22 +349,22 @@ export function ProposalSplashBackgroundPicker({
       <DropdownMenuContent
         align="start"
         sideOffset={8}
-        className="w-[min(360px,calc(100vw-2rem))] overflow-hidden rounded-xl border border-border bg-popover p-0 text-popover-foreground shadow-lg"
+        className="w-[min(272px,calc(100vw-2rem))] overflow-hidden rounded-lg border-0 bg-popover p-0 text-popover-foreground shadow-xl ring-1 ring-black/[0.06] dark:ring-white/10"
         onCloseAutoFocus={(e) => e.preventDefault()}
       >
         <Tabs defaultValue="background" className="w-full">
-          <TabsList className="mx-3 mt-2 grid h-9 w-[calc(100%-1.5rem)] grid-cols-2 gap-0 rounded-lg bg-muted p-0.5">
-            <TabsTrigger value="background" className="text-xs font-semibold">
+          <TabsList className="mx-2 mt-1.5 grid h-8 w-[calc(100%-1rem)] grid-cols-2 gap-0 rounded-md bg-muted/60 p-0.5">
+            <TabsTrigger value="background" className="rounded-[6px] text-[11px] font-semibold data-[state=inactive]:text-muted-foreground">
               Background
             </TabsTrigger>
-            <TabsTrigger value="layout" className="text-xs font-semibold">
+            <TabsTrigger value="layout" className="rounded-[6px] text-[11px] font-semibold data-[state=inactive]:text-muted-foreground">
               Layout
             </TabsTrigger>
           </TabsList>
           <TabsContent value="background" className="mt-0 outline-none">
             <div className="max-h-[min(58vh,460px)] overflow-y-auto overflow-x-hidden">
-          <div className="border-b border-border/80 px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Background type</p>
+          <div className="border-b border-border/60 px-3 py-2.5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Background type</p>
             <Tabs
               value={model.type}
               onValueChange={(v) => {
@@ -322,30 +373,43 @@ export function ProposalSplashBackgroundPicker({
                 else if (t === "image") patchBg({ type: "image", videoUrl: undefined });
                 else patchBg({ type: "video" });
               }}
-              className="mt-3"
+              className="mt-2"
             >
-              <TabsList className="grid h-10 w-full grid-cols-3 gap-1 rounded-lg bg-muted p-1">
-                <TabsTrigger value="color" className="px-2 text-xs font-semibold">
+              <TabsList className="grid h-8 w-full grid-cols-3 gap-0 rounded-md border-0 bg-muted/60 p-0.5 shadow-none">
+                <TabsTrigger
+                  value="color"
+                  className="h-7 rounded-[6px] px-2 py-0 text-[11px] font-semibold data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none"
+                >
                   Color
                 </TabsTrigger>
-                <TabsTrigger value="image" className="px-2 text-xs font-semibold">
+                <TabsTrigger
+                  value="image"
+                  className="h-7 rounded-[6px] px-2 py-0 text-[11px] font-semibold data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none"
+                >
                   Image
                 </TabsTrigger>
-                <TabsTrigger value="video" className="px-2 text-xs font-semibold">
+                <TabsTrigger
+                  value="video"
+                  className="h-7 rounded-[6px] px-2 py-0 text-[11px] font-semibold data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none"
+                >
                   Video
                 </TabsTrigger>
               </TabsList>
-              <TabsContent value="color" className="mt-3 space-y-2 outline-none">
+              <TabsContent value="color" className="mt-2 space-y-2 outline-none">
                 <TintSwatchPicker
-                  label="Backdrop"
+                  label="Backdrop color"
                   value={normalizeHex(model.color) ?? "#0f172a"}
                   onChange={(c) => patchBg({ type: "color", color: c })}
                 />
               </TabsContent>
-              <TabsContent value="image" className="mt-3 space-y-3 outline-none">
+              <TabsContent value="image" className="mt-2 space-y-1.5 outline-none">
                 <button
                   type="button"
-                  className="flex w-full items-center gap-3 rounded-lg border border-border/80 bg-muted/20 px-3 py-2.5 text-left transition-colors hover:bg-muted/40"
+                  className={cn(
+                    "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left ring-1 ring-border/50 transition-colors",
+                    mediaLibrary && "cursor-pointer hover:bg-muted/35 hover:ring-border/70",
+                    !mediaLibrary && "bg-muted/10",
+                  )}
                   onClick={() => {
                     if (mediaLibrary) {
                       setOpen(false);
@@ -363,116 +427,180 @@ export function ProposalSplashBackgroundPicker({
                     document.getElementById(`splash-img-url-${block.id}`)?.focus();
                   }}
                 >
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-background shadow-inner">
+                  <div className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/60 bg-muted/20">
                     {model.url?.trim() ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={model.url.trim()} alt="" className="h-full w-full object-cover" draggable={false} />
+                      <img src={model.url.trim()} alt="" className="relative z-[1] h-full w-full object-cover" draggable={false} />
                     ) : (
-                      <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                      <>
+                        <span
+                          className="absolute inset-0 opacity-50"
+                          style={{
+                            backgroundImage:
+                              "linear-gradient(45deg, #d1d5db 25%, transparent 25%), linear-gradient(-45deg, #d1d5db 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e5e7eb 75%), linear-gradient(-45deg, transparent 75%, #e5e7eb 75%)",
+                            backgroundSize: "5px 5px",
+                            backgroundPosition: "0 0, 0 2.5px, 2.5px -2.5px, -2.5px 0px",
+                          }}
+                          aria-hidden
+                        />
+                      </>
                     )}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-medium text-foreground">Background image</span>
-                    <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
+                  </div>
+                  <div className="min-w-0 flex-1 text-left">
+                    <p className="text-xs font-semibold leading-tight text-foreground">Background image</p>
+                    <p className="mt-0.5 truncate text-[10px] leading-snug text-muted-foreground">
                       {model.url?.trim() || (mediaLibrary ? "Library or paste a HTTPS URL" : "Paste a HTTPS URL")}
-                    </span>
-                  </span>
+                    </p>
+                  </div>
                 </button>
-                <Input
-                  id={`splash-img-url-${block.id}`}
-                  value={model.url ?? ""}
-                  onChange={(e) => patchBg({ type: "image", url: e.target.value })}
-                  placeholder="https://…"
-                  spellCheck={false}
-                  className="text-sm"
-                />
-              </TabsContent>
-              <TabsContent value="video" className="mt-3 space-y-3 outline-none">
-                <button
-                  type="button"
-                  className="flex w-full items-center gap-3 rounded-lg border border-border/80 bg-muted/20 px-3 py-2.5 text-left transition-colors hover:bg-muted/40"
-                  onClick={() => {
-                    if (mediaLibrary) {
-                      setOpen(false);
-                      window.setTimeout(() => {
-                        mediaLibrary.openSelection({
-                          allowedKinds: ["video"],
-                          onSelect: (asset) => {
-                            if (asset.kind !== "video") return;
-                            patchBg({ type: "video", videoUrl: asset.downloadUrl });
-                          },
-                        });
-                      }, 0);
-                      return;
-                    }
-                    document.getElementById(`splash-video-url-${block.id}`)?.focus();
-                  }}
-                >
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-background shadow-inner">
-                    {model.videoUrl?.trim() ? (
-                      <MonitorPlay className="h-5 w-5 text-muted-foreground" />
-                    ) : (
-                      <MonitorPlay className="h-5 w-5 text-muted-foreground/60" />
-                    )}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-medium text-foreground">Background video</span>
-                    <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
-                      {model.videoUrl?.trim() ||
-                        (mediaLibrary ? "Library, YouTube, Vimeo, or direct file" : "YouTube, Vimeo, or direct file")}
-                    </span>
-                  </span>
-                </button>
-                <div className="space-y-1.5">
-                  <Label className="text-[11px] font-semibold text-muted-foreground">Video URL</Label>
+                <div className="space-y-1 pt-0.5">
+                  <Label className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Image URL</Label>
                   <Input
-                    id={`splash-video-url-${block.id}`}
-                    value={model.videoUrl ?? ""}
-                    onChange={(e) => patchBg({ type: "video", videoUrl: e.target.value })}
+                    id={`splash-img-url-${block.id}`}
+                    value={model.url ?? ""}
+                    onChange={(e) => patchBg({ type: "image", url: e.target.value })}
                     placeholder="https://…"
                     spellCheck={false}
+                    className="h-8 rounded-md border-border/80 text-xs"
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <Label className="text-[11px] font-semibold text-muted-foreground">Poster (mobile)</Label>
-                  <Input
-                    value={model.posterUrl ?? ""}
-                    onChange={(e) => patchBg({ posterUrl: e.target.value })}
-                    placeholder="Image URL · optional"
-                    spellCheck={false}
-                  />
-                </div>
+                <SplashBackgroundTintScrollRow tintHex={normalizeHex(model.tintColor) ?? "#000000"} />
+              </TabsContent>
+              <TabsContent value="video" className="mt-2 space-y-1.5 outline-none">
+                <button
+                  type="button"
+                  disabled={!mediaLibrary}
+                  title={!mediaLibrary ? "Media library is not available in this context" : undefined}
+                  className={cn(
+                    "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left ring-1 ring-border/50 transition-colors",
+                    mediaLibrary && "cursor-pointer hover:bg-muted/35 hover:ring-border/70",
+                    !mediaLibrary && "cursor-not-allowed opacity-60",
+                  )}
+                  onClick={() => {
+                    if (!mediaLibrary) return;
+                    setOpen(false);
+                    window.setTimeout(() => {
+                      mediaLibrary.openSelection({
+                        allowedKinds: ["video"],
+                        onSelect: (asset) => {
+                          if (asset.kind !== "video") return;
+                          patchBg({ type: "video", videoUrl: asset.downloadUrl, posterUrl: undefined });
+                        },
+                      });
+                    }, 0);
+                  }}
+                >
+                  <div className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/60 bg-muted/20">
+                    {!model.videoUrl?.trim() ? (
+                      <>
+                        <span
+                          className="absolute inset-0 opacity-50"
+                          style={{
+                            backgroundImage:
+                              "linear-gradient(45deg, #d1d5db 25%, transparent 25%), linear-gradient(-45deg, #d1d5db 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e5e7eb 75%), linear-gradient(-45deg, transparent 75%, #e5e7eb 75%)",
+                            backgroundSize: "5px 5px",
+                            backgroundPosition: "0 0, 0 2.5px, 2.5px -2.5px, -2.5px 0px",
+                          }}
+                          aria-hidden
+                        />
+                        <MonitorPlay className="relative z-[1] h-4 w-4 text-muted-foreground" aria-hidden />
+                      </>
+                    ) : model.videoUrl.trim() && /\.(mp4|webm|mov|m4v)(\?|$)/i.test(model.videoUrl.trim()) ? (
+                      <video
+                        muted
+                        playsInline
+                        preload="metadata"
+                        className="relative z-[1] h-full w-full object-cover"
+                        src={model.videoUrl.trim()}
+                      />
+                    ) : (
+                      <MonitorPlay className="relative z-[1] h-4 w-4 text-muted-foreground" aria-hidden />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1 text-left">
+                    <p className="text-xs font-semibold leading-tight text-foreground">Background video</p>
+                    <p className="mt-0.5 truncate text-[10px] leading-snug text-muted-foreground">
+                      {model.videoUrl?.trim() || (mediaLibrary ? "Choose from library" : "Library unavailable")}
+                    </p>
+                  </div>
+                </button>
+                <SplashBackgroundTintScrollRow tintHex={normalizeHex(model.tintColor) ?? "#000000"} />
+                <button
+                  type="button"
+                  disabled={!mediaLibrary}
+                  title={!mediaLibrary ? "Media library is not available in this context" : undefined}
+                  className={cn(
+                    "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left ring-1 ring-border/50 transition-colors",
+                    mediaLibrary && "cursor-pointer hover:bg-muted/35 hover:ring-border/70",
+                    !mediaLibrary && "cursor-not-allowed opacity-60",
+                  )}
+                  onClick={() => {
+                    if (!mediaLibrary) return;
+                    setOpen(false);
+                    window.setTimeout(() => {
+                      mediaLibrary.openSelection({
+                        allowedKinds: ["image"],
+                        onSelect: (asset) => {
+                          if (asset.kind !== "image") return;
+                          patchBg({ posterUrl: asset.downloadUrl });
+                        },
+                      });
+                    }, 0);
+                  }}
+                >
+                  <div className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/60 bg-muted/20">
+                    {model.posterUrl?.trim() ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={model.posterUrl.trim()} alt="" className="relative z-[1] h-full w-full object-cover" draggable={false} />
+                    ) : (
+                      <>
+                        <span
+                          className="absolute inset-0 opacity-50"
+                          style={{
+                            backgroundImage:
+                              "linear-gradient(45deg, #d1d5db 25%, transparent 25%), linear-gradient(-45deg, #d1d5db 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e5e7eb 75%), linear-gradient(-45deg, transparent 75%, #e5e7eb 75%)",
+                            backgroundSize: "5px 5px",
+                            backgroundPosition: "0 0, 0 2.5px, 2.5px -2.5px, -2.5px 0px",
+                          }}
+                          aria-hidden
+                        />
+                      </>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1 text-left">
+                    <p className="text-xs font-semibold leading-tight text-foreground">Mobile image fallback</p>
+                    <p className="mt-0.5 truncate text-[10px] leading-snug text-muted-foreground">
+                      {model.posterUrl?.trim() || (mediaLibrary ? "Choose from library" : "Library unavailable")}
+                    </p>
+                  </div>
+                </button>
               </TabsContent>
             </Tabs>
           </div>
 
-          <div className="space-y-4 px-4 py-4">
-            <div className="flex items-start gap-3 rounded-lg border border-border/70 bg-muted/15 px-3 py-2.5">
-              <span
-                className="mt-0.5 flex h-9 w-9 shrink-0 rounded-full border border-border bg-muted ring-1 ring-inset ring-black/5 dark:ring-white/10"
-                style={{ backgroundColor: normalizeHex(model.tintColor) ?? "#000000" }}
-                aria-hidden
+          <div id="splash-bg-tint-controls" className="space-y-3 px-3 py-3">
+            <div>
+              <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Tint &amp; matte</p>
+              <TintSwatchPicker
+                label=""
+                hexInputAriaLabel="Tint colour hex"
+                value={normalizeHex(model.tintColor) ?? "#000000"}
+                onChange={(c) => patchBg({ tintColor: c })}
               />
-              <div className="min-w-0 flex-1 space-y-2">
-                <p className="text-sm font-medium leading-none text-foreground">Background tint</p>
-                <TintSwatchPicker
-                  label=""
-                  hexInputAriaLabel="Tint colour hex"
-                  value={normalizeHex(model.tintColor) ?? "#000000"}
-                  onChange={(c) => patchBg({ tintColor: c })}
-                />
-              </div>
             </div>
 
             <div>
-              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Tint style</p>
-              <div className="inline-flex h-9 w-full rounded-lg bg-muted p-0.5 ring-1 ring-inset ring-border">
+              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Tint style</p>
+              <div className="inline-flex h-8 w-full rounded-md bg-muted/60 p-0.5 ring-1 ring-inset ring-border/60">
                 <button
                   type="button"
                   className={cn(
-                    "flex-1 rounded-md text-xs font-medium transition-colors",
-                    model.tintMode !== "blend" ? "bg-background text-foreground shadow-sm ring-1 ring-border" : "text-muted-foreground",
+                    "h-7 flex-1 rounded-[6px] text-[11px] font-semibold transition-colors",
+                    model.tintMode !== "blend"
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground",
                   )}
+                  aria-pressed={model.tintMode !== "blend"}
                   onClick={() => patchBg({ tintMode: "normal" })}
                 >
                   Normal
@@ -480,9 +608,12 @@ export function ProposalSplashBackgroundPicker({
                 <button
                   type="button"
                   className={cn(
-                    "flex-1 rounded-md text-xs font-medium transition-colors",
-                    model.tintMode === "blend" ? "bg-background text-foreground shadow-sm ring-1 ring-border" : "text-muted-foreground",
+                    "h-7 flex-1 rounded-[6px] text-[11px] font-semibold transition-colors",
+                    model.tintMode === "blend"
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground",
                   )}
+                  aria-pressed={model.tintMode === "blend"}
                   onClick={() => patchBg({ tintMode: "blend" })}
                 >
                   Blend
@@ -509,11 +640,11 @@ export function ProposalSplashBackgroundPicker({
               onChange={(v) => patchBg({ blur: Math.round(v) })}
             />
 
-            <label className="flex cursor-pointer items-center justify-between gap-4 rounded-lg border border-border/70 bg-muted/10 px-3 py-2.5">
-              <span className="text-sm font-medium text-foreground">Background card</span>
+            <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg px-2 py-1.5 ring-1 ring-border/50 hover:bg-muted/25">
+              <span className="text-xs font-semibold text-foreground">Background card</span>
               <input
                 type="checkbox"
-                className="h-4 w-4 shrink-0 cursor-pointer rounded border-input accent-primary"
+                className="h-3.5 w-3.5 shrink-0 cursor-pointer rounded border-input accent-sky-500"
                 checked={Boolean(block.showCard)}
                 onChange={(e) => onChange({ ...block, showCard: e.target.checked })}
               />

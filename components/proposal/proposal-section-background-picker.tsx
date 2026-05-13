@@ -58,9 +58,6 @@ export function ProposalSectionBackgroundPicker({
     });
   }
 
-  const shell = elevated
-    ? "border-zinc-700/60 bg-zinc-900/95 text-zinc-100 shadow-xl"
-    : "border border-border bg-popover text-popover-foreground shadow-lg";
   const labelMuted = elevated ? "text-zinc-400" : "text-muted-foreground";
 
   return (
@@ -85,27 +82,32 @@ export function ProposalSectionBackgroundPicker({
       <DropdownMenuContent
         align="center"
         sideOffset={8}
-        className={cn("w-[min(300px,calc(100vw-2rem))] overflow-hidden rounded-xl p-0", shell)}
+        className={cn(
+          "w-[min(272px,calc(100vw-2rem))] overflow-hidden rounded-lg border-0 p-0 shadow-xl",
+          elevated
+            ? "bg-zinc-900/95 text-zinc-100 ring-1 ring-white/15"
+            : "bg-popover text-popover-foreground ring-1 ring-black/[0.06] dark:ring-white/10",
+        )}
         onCloseAutoFocus={(e) => e.preventDefault()}
       >
-        <div className="border-b px-4 py-3">
-          <p className={cn("text-[10px] font-semibold uppercase tracking-[0.22em]", labelMuted)}>Background type</p>
+        <div className={cn("border-b px-3 py-2.5", elevated ? "border-white/10" : "border-border/60")}>
+          <p className={cn("text-[10px] font-semibold uppercase tracking-[0.16em]", labelMuted)}>Background type</p>
           <Tabs
             value={model.kind}
             onValueChange={(v) => setKind(v as SectionBackdropKind)}
-            className="mt-3"
+            className="mt-2"
           >
             <TabsList
               className={cn(
-                "grid h-10 w-full grid-cols-3 gap-1 rounded-lg p-1",
-                elevated ? "bg-black/70" : "bg-muted",
+                "grid h-8 w-full grid-cols-3 gap-0 rounded-md border-0 p-0.5 shadow-none",
+                elevated ? "bg-black/55" : "bg-muted/60",
               )}
             >
               <TabsTrigger
                 value="color"
                 className={cn(
-                  "gap-1.5 px-2 text-xs font-semibold",
-                  elevated && "text-zinc-300 data-[state=active]:bg-zinc-600 data-[state=active]:text-white",
+                  "h-7 rounded-[6px] px-2 py-0 text-[11px] font-semibold data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none",
+                  elevated && "text-zinc-400 data-[state=active]:bg-zinc-600 data-[state=active]:text-white data-[state=active]:shadow-sm",
                 )}
               >
                 Color
@@ -113,8 +115,8 @@ export function ProposalSectionBackgroundPicker({
               <TabsTrigger
                 value="image"
                 className={cn(
-                  "gap-1.5 px-2 text-xs font-semibold",
-                  elevated && "text-zinc-300 data-[state=active]:bg-zinc-600 data-[state=active]:text-white",
+                  "h-7 rounded-[6px] px-2 py-0 text-[11px] font-semibold data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none",
+                  elevated && "text-zinc-400 data-[state=active]:bg-zinc-600 data-[state=active]:text-white data-[state=active]:shadow-sm",
                 )}
               >
                 Image
@@ -122,14 +124,14 @@ export function ProposalSectionBackgroundPicker({
               <TabsTrigger
                 value="video"
                 className={cn(
-                  "gap-1.5 px-2 text-xs font-semibold",
-                  elevated && "text-zinc-300 data-[state=active]:bg-zinc-600 data-[state=active]:text-white",
+                  "h-7 rounded-[6px] px-2 py-0 text-[11px] font-semibold data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none",
+                  elevated && "text-zinc-400 data-[state=active]:bg-zinc-600 data-[state=active]:text-white data-[state=active]:shadow-sm",
                 )}
               >
                 Video
               </TabsTrigger>
             </TabsList>
-            <TabsContent value="color" className="mt-3 space-y-2 outline-none">
+            <TabsContent value="color" className="mt-2 space-y-2 outline-none">
               <TintSwatchPicker
                 elevated={elevated}
                 label="Backdrop color"
@@ -137,7 +139,7 @@ export function ProposalSectionBackgroundPicker({
                 onChange={(c) => patch({ kind: "color", color: c, mediaUrl: undefined })}
               />
             </TabsContent>
-            <TabsContent value="image" className="mt-3 space-y-2 outline-none">
+            <TabsContent value="image" className="mt-2 space-y-2 outline-none">
               <MiniAssetRow
                 elevated={elevated}
                 kind="image"
@@ -160,20 +162,23 @@ export function ProposalSectionBackgroundPicker({
                     : undefined
                 }
               />
-              <div className="space-y-1.5 pt-2">
-                <Label className={cn("text-[11px] font-semibold uppercase tracking-wide", labelMuted)}>
+              <div className="space-y-1 pt-1.5">
+                <Label className={cn("text-[10px] font-semibold uppercase tracking-[0.14em]", labelMuted)}>
                   Image URL
                 </Label>
                 <Input
                   value={model.mediaUrl ?? ""}
                   onChange={(e) => patch({ kind: "image", mediaUrl: e.target.value })}
                   placeholder="https://…"
-                  className={elevated ? "border-zinc-700 bg-zinc-900 text-zinc-100" : ""}
+                  className={cn(
+                    "h-8 rounded-md text-xs",
+                    elevated ? "border-zinc-700 bg-zinc-900 text-zinc-100" : "border-border/80",
+                  )}
                   spellCheck={false}
                 />
               </div>
             </TabsContent>
-            <TabsContent value="video" className="mt-3 space-y-2 outline-none">
+            <TabsContent value="video" className="mt-2 space-y-1.5 outline-none">
               <MiniAssetRow
                 elevated={elevated}
                 kind="video"
@@ -229,35 +234,35 @@ export function ProposalSectionBackgroundPicker({
           </Tabs>
         </div>
 
-        <div id="proposal-section-bg-tint-controls" className="space-y-4 px-4 py-4">
+        <div id="proposal-section-bg-tint-controls" className="space-y-3 px-3 py-3">
           <div>
-            <p className={cn("mb-3 text-[10px] font-semibold uppercase tracking-[0.18em]", labelMuted)}>
+            <p className={cn("mb-2 text-[10px] font-semibold uppercase tracking-[0.16em]", labelMuted)}>
               Tint &amp; matte
             </p>
             <TintSwatchPicker
               elevated={elevated}
-              label="Tint"
+              label=""
               value={normalizeHex(model.tintColor) ?? "#000000"}
               onChange={(c) => patch({ tintColor: c })}
             />
 
-            <p className={cn("mb-2 mt-4 px-1 text-[11px] font-semibold uppercase tracking-wider", labelMuted)}>
+            <p className={cn("mb-1.5 mt-3 text-[10px] font-semibold uppercase tracking-[0.14em]", labelMuted)}>
               Tint style
             </p>
             <div
               className={cn(
-                "inline-flex h-9 w-full rounded-lg p-0.5 ring-1 ring-inset",
-                elevated ? "bg-zinc-800/85 ring-white/15" : "bg-muted ring-border",
+                "inline-flex h-8 w-full rounded-md p-0.5",
+                elevated ? "bg-zinc-800/90 ring-1 ring-inset ring-white/10" : "bg-muted/60 ring-1 ring-inset ring-border/60",
               )}
             >
               <button
                 type="button"
                 className={cn(
-                  "flex-1 rounded-md text-xs font-medium transition-colors",
+                  "h-7 flex-1 rounded-[6px] text-[11px] font-semibold transition-colors",
                   model.tintStyle !== "blend"
                     ? elevated
-                      ? "bg-zinc-600 text-white"
-                      : "bg-background text-foreground shadow-sm ring-1 ring-border"
+                      ? "bg-zinc-600 text-white shadow-sm"
+                      : "bg-background text-foreground shadow-sm"
                     : elevated
                       ? "text-zinc-400 hover:text-zinc-200"
                       : "text-muted-foreground hover:text-foreground",
@@ -270,11 +275,11 @@ export function ProposalSectionBackgroundPicker({
               <button
                 type="button"
                 className={cn(
-                  "flex-1 rounded-md text-xs font-medium transition-colors",
+                  "h-7 flex-1 rounded-[6px] text-[11px] font-semibold transition-colors",
                   model.tintStyle === "blend"
                     ? elevated
-                      ? "bg-zinc-600 text-white"
-                      : "bg-background text-foreground shadow-sm ring-1 ring-border"
+                      ? "bg-zinc-600 text-white shadow-sm"
+                      : "bg-background text-foreground shadow-sm"
                     : elevated
                       ? "text-zinc-400 hover:text-zinc-200"
                       : "text-muted-foreground hover:text-foreground",
@@ -308,20 +313,25 @@ export function ProposalSectionBackgroundPicker({
             onChange={(v) => patch({ blurStrength: Math.round(v) })}
           />
 
-          <div className={cn("-mx-px flex flex-wrap gap-2 pt-1", elevated ? "border-t border-white/10" : "border-t border-border/70")}>
+          <div className={cn("flex flex-wrap gap-2 border-t pt-2", elevated ? "border-white/10" : "border-border/60")}>
             <Button
               type="button"
               variant="outline"
               size="sm"
-              className={cn("flex-1 text-xs", elevated ? "border-zinc-600 text-zinc-200 hover:bg-zinc-800" : "")}
+              className={cn(
+                "h-8 flex-1 rounded-md text-[11px] font-medium",
+                elevated ? "border-zinc-600 text-zinc-200 hover:bg-zinc-800" : "border-border/80",
+              )}
               onClick={() => onChange(undefined)}
               disabled={!background}
             >
               Clear background
             </Button>
           </div>
-          <p className={cn("-mt-1 text-[11px]", labelMuted)}>
-            {resolvedPreview.active ? "Shown on preview and shared pages immediately after save." : "Add colour, imagery, or subtle motion — then tighten with tint opacity and blur."}
+          <p className={cn("text-[10px] leading-snug", labelMuted)}>
+            {resolvedPreview.active
+              ? "Shown on preview and shared pages after save."
+              : "Pick a backdrop, then tune tint and blur."}
           </p>
         </div>
       </DropdownMenuContent>
@@ -398,9 +408,9 @@ function BackgroundTintPlaceholderRow({
   labelMuted: string;
 }) {
   const rowClass = cn(
-    "flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left ring-1 ring-border/70 transition-colors dark:ring-white/15",
-    "cursor-pointer hover:bg-muted/50",
-    elevated && "ring-white/15 hover:bg-white/5",
+    "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left ring-1 ring-border/50 transition-colors",
+    "cursor-pointer hover:bg-muted/35 hover:ring-border/70",
+    elevated && "ring-white/12 hover:bg-white/5 hover:ring-white/20",
   );
   return (
     <button
@@ -413,25 +423,30 @@ function BackgroundTintPlaceholderRow({
         });
       }}
     >
-      <div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/40 bg-muted/40 shadow-inner ring-2 ring-muted/40">
+      <div
+        className={cn(
+          "relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-muted/25",
+          elevated ? "border-white/15" : "border-border/60",
+        )}
+      >
         <span
-          className="absolute inset-0 opacity-[0.4]"
+          className="absolute inset-0 opacity-[0.45]"
           style={{
             backgroundImage:
-              "linear-gradient(45deg, #a1a1aa 25%, transparent 25%), linear-gradient(-45deg, #a1a1aa 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #d4d4d8 75%), linear-gradient(-45deg, transparent 75%, #d4d4d8 75%)",
-            backgroundSize: "6px 6px",
-            backgroundPosition: "0 0, 0 3px, 3px -3px, -3px 0px",
+              "linear-gradient(45deg, #c4c4cc 25%, transparent 25%), linear-gradient(-45deg, #c4c4cc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e2e2e8 75%), linear-gradient(-45deg, transparent 75%, #e2e2e8 75%)",
+            backgroundSize: "5px 5px",
+            backgroundPosition: "0 0, 0 2.5px, 2.5px -2.5px, -2.5px 0px",
           }}
           aria-hidden
         />
         <span
-          className="relative z-[1] h-7 w-7 rounded-full shadow-sm ring-1 ring-black/15"
+          className="relative z-[1] h-5 w-5 rounded-full shadow-sm ring-1 ring-black/10"
           style={{ backgroundColor: tintHex }}
         />
       </div>
       <div className="min-w-0 flex-1 text-left">
-        <p className="text-[11px] font-semibold text-foreground">Background tint</p>
-        <p className={cn("truncate text-[11px]", labelMuted)}>Adjust tint below</p>
+        <p className="text-xs font-semibold text-foreground">Background tint</p>
+        <p className={cn("truncate text-[10px]", labelMuted)}>Adjust tint below</p>
       </div>
     </button>
   );
@@ -458,39 +473,75 @@ function MiniAssetRow({
   const defaultEmptyHint = onPickFromLibrary ? "Library or paste a HTTPS URL" : "Paste a HTTPS URL";
   const subtitle = trimmed || (emptyHint ?? defaultEmptyHint);
   const rowClass = cn(
-    "flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left ring-1 ring-border/70 transition-colors dark:ring-white/15",
-    onPickFromLibrary && "cursor-pointer hover:bg-muted/50",
+    "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left ring-1 ring-border/50 transition-colors",
+    onPickFromLibrary && "cursor-pointer hover:bg-muted/35 hover:ring-border/70",
+    elevated && onPickFromLibrary && "ring-white/12 hover:bg-white/5 hover:ring-white/20",
+    !onPickFromLibrary && "bg-muted/10",
   );
-  const inner = (
-    <>
-      <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/40 bg-muted/40 shadow-inner ring-2 ring-muted/40">
-        {kind === "image" ? (
-          trimmed ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={trimmed} alt="" className="h-full w-full object-cover" draggable={false} />
-          ) : (
-            <ImageIcon className={cn("h-5 w-5", labelMuted)} />
-          )
-        ) : trimmed ? (
-          <video muted playsInline preload="metadata" className="h-full w-full object-cover opacity-95" src={trimmed} />
-        ) : (
-          <MonitorPlay className={cn("h-5 w-5", labelMuted)} />
-        )}
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-semibold text-foreground">{titleText}</p>
-        <p className={cn("truncate text-[11px]", labelMuted)}>{subtitle}</p>
-      </div>
-    </>
+
+  const checkerboard = (
+    <span
+      className="absolute inset-0 opacity-50"
+      style={{
+        backgroundImage:
+          "linear-gradient(45deg, #d1d5db 25%, transparent 25%), linear-gradient(-45deg, #d1d5db 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e5e7eb 75%), linear-gradient(-45deg, transparent 75%, #e5e7eb 75%)",
+        backgroundSize: "5px 5px",
+        backgroundPosition: "0 0, 0 2.5px, 2.5px -2.5px, -2.5px 0px",
+      }}
+      aria-hidden
+    />
   );
+
+  const thumb = (
+    <div
+      className={cn(
+        "relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-muted/20",
+        elevated ? "border-white/12" : "border-border/60",
+      )}
+    >
+      {!trimmed ? (
+        <>
+          {checkerboard}
+          {kind === "video" ? (
+            <MonitorPlay className="relative z-[1] h-4 w-4 text-muted-foreground" aria-hidden />
+          ) : null}
+        </>
+      ) : kind === "image" ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={trimmed} alt="" className="relative z-[1] h-full w-full object-cover" draggable={false} />
+      ) : (
+        <video
+          muted
+          playsInline
+          preload="metadata"
+          className="relative z-[1] h-full w-full object-cover"
+          src={trimmed}
+        />
+      )}
+    </div>
+  );
+
+  const text = (
+    <div className="min-w-0 flex-1">
+      <p className="text-xs font-semibold leading-tight text-foreground">{titleText}</p>
+      <p className={cn("mt-0.5 truncate text-[10px] leading-snug", labelMuted)}>{subtitle}</p>
+    </div>
+  );
+
   if (onPickFromLibrary) {
     return (
       <button type="button" className={rowClass} onClick={() => onPickFromLibrary()}>
-        {inner}
+        {thumb}
+        {text}
       </button>
     );
   }
-  return <div className={rowClass}>{inner}</div>;
+  return (
+    <div className={rowClass}>
+      {thumb}
+      {text}
+    </div>
+  );
 }
 
 function TintSwatchPicker({
@@ -519,8 +570,10 @@ function TintSwatchPicker({
 
   return (
     <div>
-      <p className={cn("mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider", labelMuted)}>{label}</p>
-      <div className="grid grid-cols-6 gap-2">
+      {label ? (
+        <p className={cn("mb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em]", labelMuted)}>{label}</p>
+      ) : null}
+      <div className="grid grid-cols-6 gap-1.5">
         {STYLE_PRESET_COLORS.map((c) => {
           const isActive = sameHex(c.value, value);
           return (
@@ -530,8 +583,8 @@ function TintSwatchPicker({
               aria-label={c.label}
               title={c.label}
               className={cn(
-                "relative h-8 w-8 rounded-full border transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                isActive ? cn("ring-2 ring-ring ring-offset-2", ringActive) : swatchIdle,
+                "relative h-7 w-7 rounded-full border transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+                isActive ? cn("ring-2 ring-ring ring-offset-1", ringActive) : swatchIdle,
               )}
               style={{ backgroundColor: c.value }}
               onClick={() => onChange(c.value)}
@@ -539,7 +592,7 @@ function TintSwatchPicker({
               {isActive ? (
                 <Check
                   className={cn(
-                    "absolute inset-0 m-auto h-4 w-4",
+                    "absolute inset-0 m-auto h-3.5 w-3.5",
                     needsLightFg(c.value) ? "text-white" : "text-zinc-900",
                   )}
                   aria-hidden
@@ -551,19 +604,22 @@ function TintSwatchPicker({
       </div>
       <div
         className={cn(
-          "mt-2 flex items-center gap-2 rounded-lg border px-2 py-1.5",
-          elevated ? "border-zinc-700/70 bg-black/55" : "border-border bg-muted/40",
+          "mt-1.5 flex h-8 items-center gap-2 rounded-md border px-2 py-0",
+          elevated ? "border-zinc-700/70 bg-black/40" : "border-border/70 bg-muted/30",
         )}
       >
-        <span className={cn("h-6 w-6 shrink-0 rounded-full ring-1", elevated ? "ring-zinc-700" : "ring-border")} style={{ backgroundColor: value }} />
+        <span className={cn("h-5 w-5 shrink-0 rounded-full ring-1", elevated ? "ring-zinc-600" : "ring-border")} style={{ backgroundColor: value }} />
         <Input
           type="text"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onBlur={() => commitDraft()}
           spellCheck={false}
-          aria-label={`${label} hex`}
-          className={elevated ? "h-8 border-transparent bg-transparent text-zinc-100" : "h-8 border-transparent bg-transparent"}
+          aria-label={label ? `${label} hex` : "Colour hex"}
+          className={cn(
+            "h-7 border-0 bg-transparent p-0 text-xs font-medium tabular-nums tracking-tight",
+            elevated ? "text-zinc-100" : "text-foreground",
+          )}
           placeholder="#0F172A"
           onKeyDown={(e) => {
             if (e.key === "Enter") {
@@ -599,9 +655,9 @@ function RangeRow({
   const labelMuted = elevated ? "text-zinc-400" : "text-muted-foreground";
   return (
     <div>
-      <div className="mb-1 flex items-center justify-between gap-4">
-        <p className={cn("text-[11px] font-semibold uppercase tracking-wider", labelMuted)}>{label}</p>
-        <span className="tabular-nums text-xs font-semibold tracking-tight text-foreground">
+      <div className="mb-1 flex items-end justify-between gap-3">
+        <p className={cn("text-[10px] font-semibold uppercase tracking-[0.12em]", labelMuted)}>{label}</p>
+        <span className="font-mono text-[11px] font-semibold tabular-nums text-foreground underline decoration-muted-foreground/45 underline-offset-[3px]">
           {format(value)}
           {suffix}
         </span>
@@ -614,8 +670,8 @@ function RangeRow({
         value={value}
         aria-label={label}
         className={cn(
-          "h-2 w-full cursor-pointer accent-primary hover:accent-primary",
-          elevated && "[&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-sm [&::-moz-range-thumb]:rounded-full",
+          "h-1.5 w-full cursor-pointer accent-sky-500 hover:accent-sky-600",
+          elevated && "[&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow [&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:w-3.5 [&::-moz-range-thumb]:rounded-full",
         )}
         onChange={(e) => onChange(Number(e.target.value))}
       />
