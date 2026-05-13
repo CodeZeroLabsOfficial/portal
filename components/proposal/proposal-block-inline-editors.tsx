@@ -28,6 +28,8 @@ import {
   resolvePackagesTotalSectionLabel,
 } from "@/lib/proposal-packages-totals";
 import { Input } from "@/components/ui/input";
+import type { SubscriptionProductOption } from "@/types/subscription-product";
+import { useEditorStripeCatalog } from "@/components/proposal/editor-stripe-catalog-context";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -282,6 +284,23 @@ function defaultTier(): PackageTier {
 export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorProps) {
   const tiers = block.tiers ?? [];
   const currency = (block.currency ?? "aud").toUpperCase();
+  const subscriptionProductOptions = useEditorStripeCatalog();
+  const orderedStripeProducts = React.useMemo(() => {
+    const rank = (name: string): number => {
+      const n = name.trim().toLowerCase();
+      if (n === "starter") return 0;
+      if (n === "professional") return 1;
+      if (n === "premium") return 2;
+      if (n === "enterprise") return 3;
+      return 100;
+    };
+    return [...subscriptionProductOptions].sort((a, b) => {
+      const ra = rank(a.productName);
+      const rb = rank(b.productName);
+      if (ra !== rb) return ra - rb;
+      return a.productName.localeCompare(b.productName, undefined, { sensitivity: "base" });
+    });
+  }, [subscriptionProductOptions]);
   const [term, setTerm] = React.useState<"12_months" | "24_months">("24_months");
   const [addonsSectionOpen, setAddonsSectionOpen] = React.useState(true);
   const style = resolveBlockStyle(block.style);
@@ -458,6 +477,7 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
             term={term}
             currency={currency}
             highlightColor={style.highlightColor}
+            stripeProductOptions={orderedStripeProducts}
             onChange={(next) => patchTier(tier.id, next)}
             onRemove={() => removeTier(tier.id)}
             onToggleRecommended={() => toggleRecommended(tier.id)}
@@ -835,6 +855,7 @@ function TierCard({
   term,
   currency,
   highlightColor,
+  stripeProductOptions,
   onChange,
   onRemove,
   onToggleRecommended,
@@ -843,6 +864,7 @@ function TierCard({
   term: "12_months" | "24_months";
   currency: string;
   highlightColor: string;
+  stripeProductOptions: readonly SubscriptionProductOption[];
   onChange: (next: Partial<PackageTier>) => void;
   onRemove: () => void;
   onToggleRecommended: () => void;
@@ -1021,6 +1043,74 @@ function TierCard({
             </div>
           ) : null}
         </div>
+
+        {stripeProductOptions.length > 0 ? (
+          <div
+            className="mt-3 border-t border-dashed pt-3"
+            style={{ borderColor: isRecommended ? recommendedFaintBorder : undefined }}
+          >
+            <label
+              className={cn("mb-1 block text-[11px] font-medium", isRecommended ? "" : "text-muted-foreground")}
+              style={isRecommended ? { color: recommendedDimText } : undefined}
+            >
+              Stripe product (subscription)
+            </label>
+            <select
+              className={cn(
+                "mt-0.5 w-full rounded-md border px-2 py-1.5 text-xs outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring",
+                isRecommended
+                  ? "border-white/35 bg-white/95 text-foreground"
+                  : "border-border bg-background text-foreground",
+              )}
+              value={tier.stripeProductId ?? ""}
+              onChange={(e) => {
+                const v = e.target.value.trim();
+                onChange({
+                  stripeProductId: v ? v : undefined,
+                  stripePriceId: undefined,
+                });
+              }}
+              aria-label="Stripe subscription product for this tier"
+            >
+              <option value="">— None —</option>
+              {stripeProductOptions.map((p) => (
+                <option key={p.productId} value={p.productId}>
+                  {p.productName}
+                </option>
+              ))}
+            </select>
+            <p
+              className={cn("mt-1 text-[10px] leading-snug", isRecommended ? "" : "text-muted-foreground")}
+              style={isRecommended ? { color: recommendedDimText } : undefined}
+            >
+              Uses the buyer’s plan term (12 vs 24 months) to pick the matching recurring price on this product, same
+              as Add subscription.
+            </p>
+            <label
+              className={cn("mt-2 block text-[10px] font-medium", isRecommended ? "" : "text-muted-foreground")}
+              style={isRecommended ? { color: recommendedDimText } : undefined}
+            >
+              Optional: single Price id override
+            </label>
+            <Input
+              value={tier.stripePriceId ?? ""}
+              onChange={(e) => {
+                const v = e.target.value.trim();
+                if (v) {
+                  onChange({ stripePriceId: v, stripeProductId: undefined });
+                } else {
+                  onChange({ stripePriceId: undefined });
+                }
+              }}
+              placeholder="price_…"
+              className={cn(
+                "mt-0.5 h-8 text-xs",
+                isRecommended ? "border-white/35 bg-white/95 text-foreground" : "",
+              )}
+              aria-label="Optional Stripe price id override"
+            />
+          </div>
+        ) : null}
 
         <div className="mt-auto pt-3">
           <Button

@@ -13,6 +13,7 @@ import {
 } from "@/lib/proposal-public-layout";
 import { getProposalRecordByShareToken } from "@/server/firestore/parse-proposal";
 import { getUserStoredTimeZone } from "@/server/firestore/user-locality";
+import { loadProposalPublicSubscriptionUi } from "@/server/proposal/public-proposal-subscription-ui";
 
 interface PublicProposalPageProps {
   params: Promise<{ token: string }>;
@@ -57,6 +58,10 @@ export default async function PublicProposalPage(props: PublicProposalPageProps)
   const unlocked = !requiresPassword || (await isProposalUnlockedForRequest(proposal.id));
 
   const agreementPresent = hasAgreementBlock(proposal.document.blocks);
+  const publicSubscriptionUi =
+    unlocked && proposal.status === "accepted"
+      ? await loadProposalPublicSubscriptionUi(proposal)
+      : null;
   /**
    * Mirror {@link ProposalPublicFooter}'s null-return condition: when an agreement
    * block drives signing and the proposal hasn't been accepted yet, the footer
@@ -91,6 +96,7 @@ export default async function PublicProposalPage(props: PublicProposalPageProps)
               proposalStatus={proposal.status}
               acceptedByName={proposal.acceptedByName}
               localityTimeZone={localityTimeZone}
+              publicSubscriptionUi={publicSubscriptionUi}
             />
           </div>
           {showFooter ? (

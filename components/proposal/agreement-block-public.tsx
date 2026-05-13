@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, CheckCircle2, CreditCard, Download, Loader2, Menu, X } from "lucide-react";
+import { ArrowRight, CheckCircle2, CreditCard, Download, Menu, X } from "lucide-react";
 import {
   Dialog,
   DialogClose,
@@ -39,7 +39,8 @@ import {
 import { sanitizeProposalHtml } from "@/lib/sanitize-proposal-html";
 import { acceptProposalPublicAction } from "@/server/actions/proposal-builder";
 import { isDocumentPackageSelectionComplete } from "@/lib/proposal-package-selection";
-import { resolveSubscriptionStripePriceIdFromBlocks } from "@/lib/proposal-subscription-price";
+import { ProposalPublicSubscriptionModal } from "@/components/proposal/proposal-public-subscription-modal";
+import type { ProposalPublicSubscriptionUi } from "@/server/proposal/public-proposal-subscription-ui";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -57,6 +58,8 @@ export interface AgreementBlockPublicProps {
   acceptedByName?: string;
   /** Staff locality IANA zone — signing UI default date and typed-signature label use this. */
   localityTimeZone?: string;
+  /** When set after acceptance, buyer can complete the same subscription flow as admin (prefilled). */
+  publicSubscriptionUi?: ProposalPublicSubscriptionUi | null;
   /** When false (editor / preview) the CTA is disabled and the sign form is read-only. */
   interactive?: boolean;
 }
@@ -307,11 +310,12 @@ export function AgreementBlockPublic({
   acceptedByName,
   localityTimeZone,
   interactive = true,
+  publicSubscriptionUi = null,
 }: AgreementBlockPublicProps) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
-  const [subCheckoutBusy, setSubCheckoutBusy] = React.useState(false);
+  const [subscribeOpen, setSubscribeOpen] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [localAcceptedName, setLocalAcceptedName] = React.useState<string | null>(null);
   const [localDone, setLocalDone] = React.useState(proposalStatus === "accepted");
@@ -341,11 +345,6 @@ export function AgreementBlockPublic({
 
   const planSelectionComplete = React.useMemo(
     () => isDocumentPackageSelectionComplete(allBlocks, publicSelections),
-    [allBlocks, publicSelections],
-  );
-
-  const subscriptionStripePriceId = React.useMemo(
-    () => resolveSubscriptionStripePriceIdFromBlocks(allBlocks, publicSelections),
     [allBlocks, publicSelections],
   );
 
@@ -393,32 +392,6 @@ export function AgreementBlockPublic({
       router.refresh();
     } finally {
       setBusy(false);
-    }
-  }
-
-  async function startSubscriptionCheckout() {
-    if (!shareToken || !interactive) return;
-    setSubCheckoutBusy(true);
-    try {
-      const r = await fetch("/api/public/proposal-subscription-checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ shareToken }),
-      });
-      const data = (await r.json()) as { url?: string; error?: string };
-      if (!r.ok) {
-        toast.error(data.error || "Could not start checkout. Try again or contact us.");
-        return;
-      }
-      if (data.url) {
-        window.location.href = data.url;
-        return;
-      }
-      toast.error("Checkout did not return a link. Please contact support.");
-    } catch {
-      toast.error("Network error. Check your connection and try again.");
-    } finally {
-      setSubCheckoutBusy(false);
     }
   }
 
@@ -642,18 +615,13 @@ export function AgreementBlockPublic({
                       We&apos;ll follow up with next steps shortly.
                     </p>
                     <div className="mt-6 flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
-                      {subscriptionStripePriceId && shareToken && interactive ? (
+                      {publicSubscriptionUi && shareToken && interactive ? (
                         <Button
                           type="button"
                           className="gap-2 border-emerald-600/30 bg-emerald-700 text-white hover:bg-emerald-800"
-                          disabled={subCheckoutBusy}
-                          onClick={() => void startSubscriptionCheckout()}
+                          onClick={() => setSubscribeOpen(true)}
                         >
-                          {subCheckoutBusy ? (
-                            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                          ) : (
-                            <CreditCard className="h-4 w-4" aria-hidden />
-                          )}
+                          <CreditCard className="h-4 w-4" aria-hidden />
                           Add card &amp; start subscription
                         </Button>
                       ) : null}
@@ -701,6 +669,15 @@ export function AgreementBlockPublic({
           </div>
         </DialogContent>
       </Dialog>
+
+      {publicSubscriptionUi && shareToken ? (
+        <ProposalPublicSubscriptionModal
+          open={subscribeOpen}
+          onOpenChange={setSubscribeOpen}
+          shareToken={shareToken}
+          ui={publicSubscriptionUi}
+        />
+      ) : null}
     </div>
   );
 }

@@ -37,6 +37,7 @@ import { cn } from "@/lib/utils";
 import { ChevronRight } from "lucide-react";
 import { embedVideoSrc } from "@/components/proposal/embed-video";
 import { AgreementBlockPublic } from "@/components/proposal/agreement-block-public";
+import type { ProposalPublicSubscriptionUi } from "@/server/proposal/public-proposal-subscription-ui";
 import { PricingBlockPublic } from "@/components/proposal/pricing-block-public";
 import { PackagesBlockPublic } from "@/components/proposal/packages-block-public";
 import { ProposalAccordionExpandSurface } from "@/components/proposal/proposal-accordion-expand-surface";
@@ -61,6 +62,8 @@ export interface ProposalDocumentViewProps {
   acceptedByName?: string;
   /** IANA zone from Settings → Locality — agreement dates and previews use this when set. */
   localityTimeZone?: string;
+  /** Prefilled subscription summary for the agreement success flow (public page only). */
+  publicSubscriptionUi?: ProposalPublicSubscriptionUi | null;
 }
 
 function AccordionPublicView({ block }: { block: AccordionBlock }) {
@@ -127,6 +130,7 @@ interface ProposalRenderContext {
   proposalStatus?: ProposalStatus;
   acceptedByName?: string;
   localityTimeZone?: string;
+  publicSubscriptionUi?: ProposalPublicSubscriptionUi | null;
 }
 
 function BlockView({
@@ -435,6 +439,7 @@ function BlockView({
           acceptedByName={proposalContext?.acceptedByName}
           localityTimeZone={proposalContext?.localityTimeZone}
           interactive={Boolean(shareToken)}
+          publicSubscriptionUi={proposalContext?.publicSubscriptionUi}
         />
       );
       const backdropActive = isSectionBackgroundActive(ab.background);
@@ -543,6 +548,7 @@ export function ProposalDocumentView({
   proposalStatus,
   acceptedByName,
   localityTimeZone,
+  publicSubscriptionUi = null,
 }: ProposalDocumentViewProps) {
   const style = React.useMemo(() => {
     if (!branding?.primaryColor && !branding?.fontFamily) return undefined;
@@ -561,8 +567,9 @@ export function ProposalDocumentView({
       proposalStatus,
       acceptedByName,
       localityTimeZone,
+      publicSubscriptionUi,
     }),
-    [document.blocks, document.title, proposalStatus, acceptedByName, localityTimeZone],
+    [document.blocks, document.title, proposalStatus, acceptedByName, localityTimeZone, publicSubscriptionUi],
   );
 
   /**

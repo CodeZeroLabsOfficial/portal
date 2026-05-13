@@ -24,7 +24,7 @@ import { updateOpportunityStage } from "@/server/firestore/crm-opportunities";
 import { PROPOSAL_UNLOCK_COOKIE } from "@/lib/proposal-public-session";
 import { cloneProposalDocument } from "@/lib/proposal-clone-document";
 import { isProposalPackageSelectionComplete } from "@/lib/proposal-package-selection";
-import { resolveSubscriptionStripePriceIdFromProposal } from "@/lib/proposal-subscription-price";
+import { resolveSubscriptionStripePriceIdForProposalWithStripe } from "@/server/stripe/resolve-proposal-subscription-with-catalog";
 import { runAdminWrite } from "@/lib/firebase/admin-write";
 import { uploadSignedAgreementSignaturePng } from "@/lib/firebase/admin-storage";
 import {
@@ -325,7 +325,7 @@ export async function acceptProposalPublicAction(
 
   await applyProposalAcceptCrmSideEffects(db, proposal, parsed.data.signerName);
 
-  const stripeSubscriptionPriceId = resolveSubscriptionStripePriceIdFromProposal(proposal);
+  const stripeSubscriptionPriceId = await resolveSubscriptionStripePriceIdForProposalWithStripe(proposal);
   const commerceSnapshot = buildSignedAgreementCommerceSnapshot(proposal);
   if (proposal.customerId && stripeSubscriptionPriceId) {
     await persistCustomerSubscriptionIntentAfterAccept(

@@ -80,6 +80,7 @@ import type {
   TextBlock,
   VideoBlock,
 } from "@/types/proposal";
+import type { SubscriptionProductOption } from "@/types/subscription-product";
 import { ProposalRichText } from "@/components/proposal/proposal-rich-text";
 import { ProposalDocumentView } from "@/components/proposal/proposal-document-view";
 import { ProposalSectionShell } from "@/components/proposal/proposal-section-shell";
@@ -152,6 +153,7 @@ import {
   SplashBlockInspector,
 } from "@/components/proposal/proposal-splash-editor";
 import { AccordionBlockEditor } from "@/components/proposal/accordion-block-editor";
+import { EditorStripeCatalogContext } from "@/components/proposal/editor-stripe-catalog-context";
 
 function newId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `b-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -2300,6 +2302,8 @@ export interface ProposalDocumentEditorProps {
   proposalEditMiddleSlot?: ReactNode;
   /** Settings → Locality IANA zone for preview tab agreement dates and merge-style display. */
   localityTimeZone?: string;
+  /** Same Stripe products as **Add subscription** — used to link plan tiers to `prod_…`. */
+  subscriptionProductOptions?: SubscriptionProductOption[];
 }
 
 export function ProposalDocumentEditor({
@@ -2313,6 +2317,7 @@ export function ProposalDocumentEditor({
   proposalEditShellToolbar,
   proposalEditMiddleSlot,
   localityTimeZone,
+  subscriptionProductOptions = [],
 }: ProposalDocumentEditorProps) {
   const isTemplate = variant === "template";
   const [templateName, setTemplateName] = React.useState(initialTemplateName);
@@ -2591,6 +2596,7 @@ export function ProposalDocumentEditor({
   }
 
   return (
+    <EditorStripeCatalogContext.Provider value={subscriptionProductOptions}>
     <ProposalMediaLibraryProvider>
     <div className="space-y-6">
       {isTemplate && templateId ? (
@@ -2971,5 +2977,6 @@ export function ProposalDocumentEditor({
       </Tabs>
     </div>
     </ProposalMediaLibraryProvider>
+    </EditorStripeCatalogContext.Provider>
   );
 }

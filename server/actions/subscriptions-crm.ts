@@ -12,58 +12,16 @@ import { COLLECTIONS } from "@/server/firestore/collections";
 import { getCustomerRecordForOrg, syncStripeCustomerBasics } from "@/server/firestore/crm-customers";
 import { ensureStripeCustomer } from "@/server/stripe/proposal-billing";
 import { upsertSubscriptionMirror } from "@/server/stripe/stripe-sync";
+import {
+  createSubscriptionScheduleForCustomer,
+  parseStartDateToUtcMs,
+} from "@/server/stripe/subscription-schedule-create";
 
 function revalidateSubscriptionPaths(customerId?: string) {
   revalidatePath("/admin/subscriptions", "layout");
   if (customerId) {
     revalidatePath(`/admin/customers/${customerId}`);
   }
-}
-
-function parseStartDateToUtcMs(startDateIso: string): number | null {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(startDateIso);
-  if (!match) return null;
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
-  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return null;
-  const ms = Date.UTC(year, month - 1, day, 0, 0, 0, 0);
-  const d = new Date(ms);
-  if (d.getUTCFullYear() !== year || d.getUTCMonth() !== month - 1 || d.getUTCDate() !== day) return null;
-  return ms;
-}
-
-function recurringIntervalMonths(
-  recurring: { interval?: "day" | "week" | "month" | "year"; interval_count?: number } | null | undefined,
-): number | null {
-  if (!recurring?.interval) return null;
-  const count = Number.isFinite(recurring.interval_count) ? Number(recurring.interval_count) : 1;
-  if (recurring.interval === "month") return count;
-  if (recurring.interval === "year") return count * 12;
-  return null;
-}
-
-function addUtcMonthsClamped(startMs: number, months: number): number {
-  const start = new Date(startMs);
-  const startYear = start.getUTCFullYear();
-  const startMonth = start.getUTCMonth();
-  const startDay = start.getUTCDate();
-  const targetMonthIndex = startMonth + months;
-  const targetYear = startYear + Math.floor(targetMonthIndex / 12);
-  const targetMonth = ((targetMonthIndex % 12) + 12) % 12;
-  const targetMonthLastDay = new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate();
-  const targetDay = Math.min(startDay, targetMonthLastDay);
-  return Date.UTC(targetYear, targetMonth, targetDay, 0, 0, 0, 0);
-}
-
-function productNameFromPriceObject(
-  product: unknown,
-): string | undefined {
-  if (!product || typeof product !== "object") return undefined;
-  const obj = product as { deleted?: boolean; name?: unknown; id?: unknown };
-  if (obj.deleted === true) return typeof obj.id === "string" ? obj.id : undefined;
-  if (typeof obj.name === "string" && obj.name.trim()) return obj.name.trim();
-  return typeof obj.id === "string" ? obj.id : undefined;
 }
 
 export async function createSubscriptionAction(
@@ -109,7 +67,6 @@ export async function createSubscriptionAction(
   if (startAtMs < todayStartMs) {
     return { ok: false, message: "Start date cannot be in the past." };
   }
-  const startAtUnix = Math.floor(startAtMs / 1000);
 
   try {
     const { stripeCustomerId, created } = await ensureStripeCustomer(stripe, customer, user.organizationId);
@@ -120,114 +77,28 @@ export async function createSubscriptionAction(
       }
     }
 
-    const selectedPriceId = parsed.data.priceId.trim();
-    const price = await stripe.prices.retrieve(selectedPriceId, { expand: ["product"] });
-    const intervalMonths = recurringIntervalMonths(price.recurring);
-    if (!intervalMonths || intervalMonths <= 0) {
-      return { ok: false, message: "Selected Stripe Price must be a recurring month/year price." };
-    }
-    if (parsed.data.durationMonths % intervalMonths !== 0) {
-      return {
-        ok: false,
-        message: `Selected duration (${parsed.data.durationMonths} months) must align with billing interval (${intervalMonths} month cycle).`,
-      };
-    }
-    const iterations = Math.max(1, Math.floor(parsed.data.durationMonths / intervalMonths));
-    const subscriptionEnd = addUtcMonthsClamped(startAtMs, parsed.data.durationMonths);
-
-    const schedule = await stripe.subscriptionSchedules.create({
-      customer: stripeCustomerId,
-      start_date: startAtMs <= nowMs ? "now" : startAtUnix,
-      end_behavior: "cancel",
-      phases: [
-        {
-          items: [{ price: selectedPriceId, quantity: 1 }],
-          iterations,
-          proration_behavior: "none",
-        },
-      ],
-      default_settings: {
-        collection_method: parsed.data.collectionMethod,
-        ...(parsed.data.collectionMethod === "send_invoice"
-          ? { days_until_due: parsed.data.daysUntilDue ?? 14 }
-          : {}),
-        ...(parsed.data.defaultPaymentMethodId
-          ? { default_payment_method: parsed.data.defaultPaymentMethodId }
-          : {}),
-      },
-      metadata: {
-        crm_customer_id: customer.id,
-        duration_months: String(parsed.data.durationMonths),
-        start_date: parsed.data.startDate,
-        ...(user.organizationId ? { organization_id: user.organizationId } : {}),
-      },
+    const scheduleResult = await createSubscriptionScheduleForCustomer({
+      stripe,
+      db,
+      customer,
+      organizationId: user.organizationId,
+      stripePriceId: parsed.data.priceId,
+      startDateIso: parsed.data.startDate,
+      durationMonths: parsed.data.durationMonths,
+      collectionMethod: parsed.data.collectionMethod,
+      daysUntilDue:
+        parsed.data.collectionMethod === "send_invoice" ? parsed.data.daysUntilDue ?? 14 : undefined,
+      defaultPaymentMethodId:
+        parsed.data.collectionMethod === "charge_automatically"
+          ? parsed.data.defaultPaymentMethodId?.trim() || undefined
+          : undefined,
+      activityActorUid: user.uid,
     });
 
-    const subscriptionId =
-      typeof schedule.subscription === "string"
-        ? schedule.subscription
-        : schedule.subscription?.id;
-    if (subscriptionId) {
-      const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
-        expand: ["default_payment_method", "items.data.price.product"],
-      });
-      await upsertSubscriptionMirror(db, subscription);
-      await db.collection(COLLECTIONS.subscriptions).doc(subscriptionId).set(
-        {
-          stripeScheduleId: schedule.id,
-          subscriptionStart: startAtMs,
-          plannedDurationMonths: parsed.data.durationMonths,
-          subscriptionEnd,
-          updatedAtMs: Date.now(),
-          updatedAt: FieldValue.serverTimestamp(),
-        },
-        { merge: true },
-      );
-    } else {
-      const scheduledMonthlyAmountMinor =
-        typeof price.unit_amount === "number"
-          ? price.recurring?.interval === "year"
-            ? Math.round(price.unit_amount / 12)
-            : price.unit_amount
-          : undefined;
-      await db.collection(COLLECTIONS.subscriptions).doc(schedule.id).set(
-        {
-          id: schedule.id,
-          customerId: stripeCustomerId,
-          ...(user.organizationId ? { organizationId: user.organizationId } : {}),
-          status: "scheduled",
-          priceId: selectedPriceId,
-          ...(productNameFromPriceObject(price.product)
-            ? { productName: productNameFromPriceObject(price.product) }
-            : {}),
-          currency: (price.currency ?? "aud").toLowerCase(),
-          interval: price.recurring?.interval === "year" ? "year" : "month",
-          collectionMethod: parsed.data.collectionMethod,
-          ...(typeof scheduledMonthlyAmountMinor === "number"
-            ? { monthlyAmountMinor: scheduledMonthlyAmountMinor }
-            : {}),
-          createdAtMs: startAtMs,
-          updatedAtMs: Date.now(),
-          updatedAt: FieldValue.serverTimestamp(),
-          stripeScheduleId: schedule.id,
-          subscriptionStart: startAtMs,
-          plannedDurationMonths: parsed.data.durationMonths,
-          subscriptionEnd,
-        },
-        { merge: true },
-      );
-    }
-    await db.collection(COLLECTIONS.customerActivities).add({
-      customerId: customer.id,
-      type: "stripe_sync",
-      title: "Stripe subscription schedule created",
-      detail: subscriptionId ?? schedule.id,
-      actorUid: user.uid,
-      createdAt: FieldValue.serverTimestamp(),
-    });
+    if (!scheduleResult.ok) return scheduleResult;
 
     revalidateSubscriptionPaths(customer.id);
-    return { ok: true, subscriptionId: subscriptionId ?? schedule.id };
+    return scheduleResult;
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not create subscription in Stripe.";
     logError("subscription_create_failed", { customerId: customer.id, message });

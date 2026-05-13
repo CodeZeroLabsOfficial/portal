@@ -180,6 +180,10 @@ function normalizePackageTierInput(raw: unknown): unknown {
     const sp = o.stripePriceId.trim();
     if (sp.length > 0) tier.stripePriceId = sp.slice(0, 120);
   }
+  if (typeof o.stripeProductId === "string") {
+    const pr = o.stripeProductId.trim();
+    if (pr.length > 0) tier.stripeProductId = pr.slice(0, 120);
+  }
   return tier;
 }
 
@@ -276,6 +280,8 @@ const packageTierSchema = z.object({
   upfrontCost12Minor: z.number().finite().min(0).optional(),
   /** Stripe recurring Price id for this tier (optional). */
   stripePriceId: z.string().min(3).max(120).optional(),
+  /** Stripe Product id — durations resolved like Add subscription (optional). */
+  stripeProductId: z.string().min(3).max(120).optional(),
   features: z.array(z.string()).default([]),
 });
 

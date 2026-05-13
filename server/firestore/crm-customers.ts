@@ -1226,6 +1226,22 @@ export async function deleteCustomerDocument(
   return { ok: true };
 }
 
+/** Persists Stripe customer id from server flows that cannot use {@link syncStripeCustomerBasics} (no staff user). */
+export async function persistStripeCustomerIdOnCustomer(
+  customerId: string,
+  stripeCustomerId: string,
+): Promise<void> {
+  const db = getFirebaseAdminFirestore();
+  if (!db) return;
+  const id = customerId.trim();
+  const sid = stripeCustomerId.trim();
+  if (!id || !sid) return;
+  await db
+    .collection(COLLECTIONS.customers)
+    .doc(id)
+    .set({ stripeCustomerId: sid, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+}
+
 export async function syncStripeCustomerBasics(
   user: PortalUser,
   customerId: string,
