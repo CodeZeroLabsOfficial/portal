@@ -1675,19 +1675,21 @@ function BlockFields({
       const col = imageColumnToolbar;
       const showEmbeddedColumnToolbar = Boolean(col) && selection?.selectedId === b.id;
       return (
-        <>
+        <div className="relative">
           {showEmbeddedColumnToolbar ? (
-            <div className="mb-2">
-              <ProposalImageBlockToolbar
-                variant="embedded"
-                block={b}
-                onChange={patch}
-                onDelete={col?.onRemove}
-              />
+            <div className="pointer-events-none absolute inset-x-0 top-0 z-30 -translate-y-full pb-1.5 pt-2">
+              <div className="pointer-events-auto flex w-full flex-wrap items-start justify-end gap-1.5">
+                <ProposalImageBlockToolbar
+                  variant="embedded"
+                  block={b}
+                  onChange={patch}
+                  onDelete={col?.onRemove}
+                />
+              </div>
             </div>
           ) : null}
           <ProposalImageBlockEditor block={b} onChange={patch} />
-        </>
+        </div>
       );
     }
     case "video": {
