@@ -2,9 +2,9 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { ProposalAnalyticsTracker } from "@/components/proposal/proposal-analytics-tracker";
 import { ProposalDocumentView } from "@/components/proposal/proposal-document-view";
-import { hasAgreementBlock } from "@/components/proposal/agreement-block-public";
 import { ProposalPasswordGate } from "@/components/proposal/proposal-password-gate";
 import { ProposalPublicFooter } from "@/components/proposal/proposal-public-footer";
+import { hasAgreementBlock } from "@/lib/proposal-blocks";
 import { isProposalUnlockedForRequest } from "@/lib/proposal-public-session";
 import {
   PROPOSAL_PUBLIC_CONTENT_CLASSES,

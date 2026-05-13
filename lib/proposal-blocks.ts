@@ -46,6 +46,19 @@ function findNestedContentSubtree(block: ProposalContentBlock, id: string): Prop
   return undefined;
 }
 
+/**
+ * True when the document contains at least one `agreement` block at any depth
+ * (including inside sections or column stacks). Server-safe — used by the
+ * public proposal page to decide whether to suppress the legacy footer
+ * acceptance form.
+ */
+export function hasAgreementBlock(blocks: ProposalBlock[]): boolean {
+  for (const b of iterateProposalContentBlocks(blocks)) {
+    if (b.type === "agreement") return true;
+  }
+  return false;
+}
+
 /** Depth-first search by block id (pricing, packages, and nested stacks). */
 export function findProposalBlockById(blocks: ProposalBlock[], id: string): ProposalBlock | undefined {
   for (const b of blocks) {

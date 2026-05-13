@@ -548,13 +548,3 @@ export function AgreementBlockPublic({
   );
 }
 
-/**
- * Walks the full document and returns true when at least one `agreement` block
- * is present at any depth (including nested in sections / columns).
- */
-export function hasAgreementBlock(blocks: ProposalBlock[]): boolean {
-  for (const b of iterateProposalContentBlocks(blocks)) {
-    if (b.type === "agreement") return true;
-  }
-  return false;
-}
