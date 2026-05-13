@@ -20,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useProposalMediaLibraryOptional } from "@/components/proposal/proposal-media-library";
+import { SplashBackgroundTintPopover } from "@/components/proposal/proposal-background-tint-popover";
 
 function normalizeHex(raw: unknown): string | undefined {
   if (typeof raw !== "string") return undefined;
@@ -218,42 +219,6 @@ function FocalPointGrid({
   );
 }
 
-function SplashBackgroundTintScrollRow({ tintHex }: { tintHex: string }) {
-  return (
-    <button
-      type="button"
-      className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left ring-1 ring-border/50 transition-colors hover:bg-muted/35 hover:ring-border/70"
-      onClick={() => {
-        document.getElementById("splash-bg-tint-controls")?.scrollIntoView({
-          behavior: "smooth",
-          block: "nearest",
-        });
-      }}
-    >
-      <div className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/60 bg-muted/20">
-        <span
-          className="absolute inset-0 opacity-50"
-          style={{
-            backgroundImage:
-              "linear-gradient(45deg, #d1d5db 25%, transparent 25%), linear-gradient(-45deg, #d1d5db 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e5e7eb 75%), linear-gradient(-45deg, transparent 75%, #e5e7eb 75%)",
-            backgroundSize: "5px 5px",
-            backgroundPosition: "0 0, 0 2.5px, 2.5px -2.5px, -2.5px 0px",
-          }}
-          aria-hidden
-        />
-        <span
-          className="relative z-[1] h-5 w-5 rounded-full shadow-sm ring-1 ring-black/10"
-          style={{ backgroundColor: tintHex }}
-        />
-      </div>
-      <span className="min-w-0 flex-1 text-left">
-        <span className="block text-xs font-semibold leading-tight text-foreground">Background tint</span>
-        <span className="mt-0.5 block truncate text-[10px] leading-snug text-muted-foreground">Adjust tint below</span>
-      </span>
-    </button>
-  );
-}
-
 function patchBackground(block: SplashBlock, part: Partial<SplashBlockBackground>): SplashBlock {
   return {
     ...block,
@@ -351,13 +316,27 @@ export function ProposalSplashBackgroundPicker({
         sideOffset={8}
         className="w-[min(272px,calc(100vw-2rem))] overflow-hidden rounded-lg border-0 bg-popover p-0 text-popover-foreground shadow-xl ring-1 ring-black/[0.06] dark:ring-white/10"
         onCloseAutoFocus={(e) => e.preventDefault()}
+        onPointerDownOutside={(e) => {
+          const t = e.target as HTMLElement;
+          if (t.closest("[data-background-tint-popover]")) e.preventDefault();
+        }}
+        onInteractOutside={(e) => {
+          const t = e.target as HTMLElement;
+          if (t.closest("[data-background-tint-popover]")) e.preventDefault();
+        }}
       >
         <Tabs defaultValue="background" className="w-full">
-          <TabsList className="mx-2 mt-1.5 grid h-8 w-[calc(100%-1rem)] grid-cols-2 gap-0 rounded-md bg-muted/60 p-0.5">
-            <TabsTrigger value="background" className="rounded-[6px] text-[11px] font-semibold data-[state=inactive]:text-muted-foreground">
+          <TabsList className="mx-2 mt-1.5 grid h-8 w-[calc(100%-1rem)] grid-cols-2 items-stretch gap-0 rounded-md bg-muted/60 p-0.5">
+            <TabsTrigger
+              value="background"
+              className="h-full min-h-0 w-full rounded-[6px] px-2 py-0 text-[11px] font-semibold data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none"
+            >
               Background
             </TabsTrigger>
-            <TabsTrigger value="layout" className="rounded-[6px] text-[11px] font-semibold data-[state=inactive]:text-muted-foreground">
+            <TabsTrigger
+              value="layout"
+              className="h-full min-h-0 w-full rounded-[6px] px-2 py-0 text-[11px] font-semibold data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none"
+            >
               Layout
             </TabsTrigger>
           </TabsList>
@@ -375,22 +354,22 @@ export function ProposalSplashBackgroundPicker({
               }}
               className="mt-2"
             >
-              <TabsList className="grid h-8 w-full grid-cols-3 gap-0 rounded-md border-0 bg-muted/60 p-0.5 shadow-none">
+              <TabsList className="grid h-8 w-full grid-cols-3 items-stretch gap-0 rounded-md border-0 bg-muted/60 p-0.5 shadow-none">
                 <TabsTrigger
                   value="color"
-                  className="h-7 rounded-[6px] px-2 py-0 text-[11px] font-semibold data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none"
+                  className="h-full min-h-0 w-full rounded-[6px] px-2 py-0 text-[11px] font-semibold data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none"
                 >
                   Color
                 </TabsTrigger>
                 <TabsTrigger
                   value="image"
-                  className="h-7 rounded-[6px] px-2 py-0 text-[11px] font-semibold data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none"
+                  className="h-full min-h-0 w-full rounded-[6px] px-2 py-0 text-[11px] font-semibold data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none"
                 >
                   Image
                 </TabsTrigger>
                 <TabsTrigger
                   value="video"
-                  className="h-7 rounded-[6px] px-2 py-0 text-[11px] font-semibold data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none"
+                  className="h-full min-h-0 w-full rounded-[6px] px-2 py-0 text-[11px] font-semibold data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none"
                 >
                   Video
                 </TabsTrigger>
@@ -400,6 +379,13 @@ export function ProposalSplashBackgroundPicker({
                   label="Backdrop color"
                   value={normalizeHex(model.color) ?? "#0f172a"}
                   onChange={(c) => patchBg({ type: "color", color: c })}
+                />
+                <SplashBackgroundTintPopover
+                  tintColor={model.tintColor}
+                  tintMode={model.tintMode}
+                  tintOpacity={model.tintOpacity}
+                  blur={model.blur}
+                  onPatch={patchBg}
                 />
               </TabsContent>
               <TabsContent value="image" className="mt-2 space-y-1.5 outline-none">
@@ -464,7 +450,13 @@ export function ProposalSplashBackgroundPicker({
                     className="h-8 rounded-md border-border/80 text-xs"
                   />
                 </div>
-                <SplashBackgroundTintScrollRow tintHex={normalizeHex(model.tintColor) ?? "#000000"} />
+                <SplashBackgroundTintPopover
+                  tintColor={model.tintColor}
+                  tintMode={model.tintMode}
+                  tintOpacity={model.tintOpacity}
+                  blur={model.blur}
+                  onPatch={patchBg}
+                />
               </TabsContent>
               <TabsContent value="video" className="mt-2 space-y-1.5 outline-none">
                 <button
@@ -524,7 +516,13 @@ export function ProposalSplashBackgroundPicker({
                     </p>
                   </div>
                 </button>
-                <SplashBackgroundTintScrollRow tintHex={normalizeHex(model.tintColor) ?? "#000000"} />
+                <SplashBackgroundTintPopover
+                  tintColor={model.tintColor}
+                  tintMode={model.tintMode}
+                  tintOpacity={model.tintOpacity}
+                  blur={model.blur}
+                  onPatch={patchBg}
+                />
                 <button
                   type="button"
                   disabled={!mediaLibrary}
@@ -578,68 +576,7 @@ export function ProposalSplashBackgroundPicker({
             </Tabs>
           </div>
 
-          <div id="splash-bg-tint-controls" className="space-y-3 px-3 py-3">
-            <div>
-              <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Tint &amp; matte</p>
-              <TintSwatchPicker
-                label=""
-                hexInputAriaLabel="Tint colour hex"
-                value={normalizeHex(model.tintColor) ?? "#000000"}
-                onChange={(c) => patchBg({ tintColor: c })}
-              />
-            </div>
-
-            <div>
-              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Tint style</p>
-              <div className="inline-flex h-8 w-full rounded-md bg-muted/60 p-0.5 ring-1 ring-inset ring-border/60">
-                <button
-                  type="button"
-                  className={cn(
-                    "h-7 flex-1 rounded-[6px] text-[11px] font-semibold transition-colors",
-                    model.tintMode !== "blend"
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                  aria-pressed={model.tintMode !== "blend"}
-                  onClick={() => patchBg({ tintMode: "normal" })}
-                >
-                  Normal
-                </button>
-                <button
-                  type="button"
-                  className={cn(
-                    "h-7 flex-1 rounded-[6px] text-[11px] font-semibold transition-colors",
-                    model.tintMode === "blend"
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                  aria-pressed={model.tintMode === "blend"}
-                  onClick={() => patchBg({ tintMode: "blend" })}
-                >
-                  Blend
-                </button>
-              </div>
-            </div>
-
-            <RangeRow
-              label="Tint opacity"
-              value={model.tintOpacity ?? 35}
-              min={0}
-              max={100}
-              suffix="%"
-              format={(n) => String(Math.round(n))}
-              onChange={(v) => patchBg({ tintOpacity: Math.round(v) })}
-            />
-            <RangeRow
-              label="Background blur"
-              value={model.blur ?? 0}
-              min={0}
-              max={24}
-              suffix=" px"
-              format={(n) => String(Math.round(n))}
-              onChange={(v) => patchBg({ blur: Math.round(v) })}
-            />
-
+          <div className="space-y-3 border-t border-border/60 px-3 py-3">
             <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg px-2 py-1.5 ring-1 ring-border/50 hover:bg-muted/25">
               <span className="text-xs font-semibold text-foreground">Background card</span>
               <input

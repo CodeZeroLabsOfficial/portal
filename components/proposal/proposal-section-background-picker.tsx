@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useProposalMediaLibraryOptional } from "@/components/proposal/proposal-media-library";
+import { SectionBackgroundTintPopover } from "@/components/proposal/proposal-background-tint-popover";
 
 export interface ProposalSectionBackgroundPickerProps {
   background?: SectionBackground;
@@ -61,7 +62,7 @@ export function ProposalSectionBackgroundPicker({
   const labelMuted = elevated ? "text-zinc-400" : "text-muted-foreground";
 
   return (
-    <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+    <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen} modal={false}>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
@@ -89,6 +90,14 @@ export function ProposalSectionBackgroundPicker({
             : "bg-popover text-popover-foreground ring-1 ring-black/[0.06] dark:ring-white/10",
         )}
         onCloseAutoFocus={(e) => e.preventDefault()}
+        onPointerDownOutside={(e) => {
+          const t = e.target as HTMLElement;
+          if (t.closest("[data-background-tint-popover]")) e.preventDefault();
+        }}
+        onInteractOutside={(e) => {
+          const t = e.target as HTMLElement;
+          if (t.closest("[data-background-tint-popover]")) e.preventDefault();
+        }}
       >
         <div className={cn("border-b px-3 py-2.5", elevated ? "border-white/10" : "border-border/60")}>
           <p className={cn("text-[10px] font-semibold uppercase tracking-[0.16em]", labelMuted)}>Background type</p>
@@ -99,14 +108,14 @@ export function ProposalSectionBackgroundPicker({
           >
             <TabsList
               className={cn(
-                "grid h-8 w-full grid-cols-3 gap-0 rounded-md border-0 p-0.5 shadow-none",
+                "grid h-8 w-full grid-cols-3 items-stretch gap-0 rounded-md border-0 p-0.5 shadow-none",
                 elevated ? "bg-black/55" : "bg-muted/60",
               )}
             >
               <TabsTrigger
                 value="color"
                 className={cn(
-                  "h-7 rounded-[6px] px-2 py-0 text-[11px] font-semibold data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none",
+                  "h-full min-h-0 w-full rounded-[6px] px-2 py-0 text-[11px] font-semibold data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none",
                   elevated && "text-zinc-400 data-[state=active]:bg-zinc-600 data-[state=active]:text-white data-[state=active]:shadow-sm",
                 )}
               >
@@ -115,7 +124,7 @@ export function ProposalSectionBackgroundPicker({
               <TabsTrigger
                 value="image"
                 className={cn(
-                  "h-7 rounded-[6px] px-2 py-0 text-[11px] font-semibold data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none",
+                  "h-full min-h-0 w-full rounded-[6px] px-2 py-0 text-[11px] font-semibold data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none",
                   elevated && "text-zinc-400 data-[state=active]:bg-zinc-600 data-[state=active]:text-white data-[state=active]:shadow-sm",
                 )}
               >
@@ -124,7 +133,7 @@ export function ProposalSectionBackgroundPicker({
               <TabsTrigger
                 value="video"
                 className={cn(
-                  "h-7 rounded-[6px] px-2 py-0 text-[11px] font-semibold data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none",
+                  "h-full min-h-0 w-full rounded-[6px] px-2 py-0 text-[11px] font-semibold data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none",
                   elevated && "text-zinc-400 data-[state=active]:bg-zinc-600 data-[state=active]:text-white data-[state=active]:shadow-sm",
                 )}
               >
@@ -137,6 +146,15 @@ export function ProposalSectionBackgroundPicker({
                 label="Backdrop color"
                 value={normalizeHex(model.color) ?? "#0f172a"}
                 onChange={(c) => patch({ kind: "color", color: c, mediaUrl: undefined })}
+              />
+              <SectionBackgroundTintPopover
+                elevated={elevated}
+                labelMuted={labelMuted}
+                tintColor={model.tintColor}
+                tintStyle={model.tintStyle}
+                tintOpacity={model.tintOpacity}
+                blurStrength={model.blurStrength}
+                onPatch={patch}
               />
             </TabsContent>
             <TabsContent value="image" className="mt-2 space-y-2 outline-none">
@@ -177,6 +195,15 @@ export function ProposalSectionBackgroundPicker({
                   spellCheck={false}
                 />
               </div>
+              <SectionBackgroundTintPopover
+                elevated={elevated}
+                labelMuted={labelMuted}
+                tintColor={model.tintColor}
+                tintStyle={model.tintStyle}
+                tintOpacity={model.tintOpacity}
+                blurStrength={model.blurStrength}
+                onPatch={patch}
+              />
             </TabsContent>
             <TabsContent value="video" className="mt-2 space-y-1.5 outline-none">
               <MiniAssetRow
@@ -202,10 +229,14 @@ export function ProposalSectionBackgroundPicker({
                     : undefined
                 }
               />
-              <BackgroundTintPlaceholderRow
+              <SectionBackgroundTintPopover
                 elevated={elevated}
-                tintHex={normalizeHex(model.tintColor) ?? "#000000"}
                 labelMuted={labelMuted}
+                tintColor={model.tintColor}
+                tintStyle={model.tintStyle}
+                tintOpacity={model.tintOpacity}
+                blurStrength={model.blurStrength}
+                onPatch={patch}
               />
               <MiniAssetRow
                 elevated={elevated}
@@ -234,85 +265,7 @@ export function ProposalSectionBackgroundPicker({
           </Tabs>
         </div>
 
-        <div id="proposal-section-bg-tint-controls" className="space-y-3 px-3 py-3">
-          <div>
-            <p className={cn("mb-2 text-[10px] font-semibold uppercase tracking-[0.16em]", labelMuted)}>
-              Tint &amp; matte
-            </p>
-            <TintSwatchPicker
-              elevated={elevated}
-              label=""
-              value={normalizeHex(model.tintColor) ?? "#000000"}
-              onChange={(c) => patch({ tintColor: c })}
-            />
-
-            <p className={cn("mb-1.5 mt-3 text-[10px] font-semibold uppercase tracking-[0.14em]", labelMuted)}>
-              Tint style
-            </p>
-            <div
-              className={cn(
-                "inline-flex h-8 w-full rounded-md p-0.5",
-                elevated ? "bg-zinc-800/90 ring-1 ring-inset ring-white/10" : "bg-muted/60 ring-1 ring-inset ring-border/60",
-              )}
-            >
-              <button
-                type="button"
-                className={cn(
-                  "h-7 flex-1 rounded-[6px] text-[11px] font-semibold transition-colors",
-                  model.tintStyle !== "blend"
-                    ? elevated
-                      ? "bg-zinc-600 text-white shadow-sm"
-                      : "bg-background text-foreground shadow-sm"
-                    : elevated
-                      ? "text-zinc-400 hover:text-zinc-200"
-                      : "text-muted-foreground hover:text-foreground",
-                )}
-                aria-pressed={model.tintStyle !== "blend"}
-                onClick={() => patch({ tintStyle: "normal" })}
-              >
-                Normal
-              </button>
-              <button
-                type="button"
-                className={cn(
-                  "h-7 flex-1 rounded-[6px] text-[11px] font-semibold transition-colors",
-                  model.tintStyle === "blend"
-                    ? elevated
-                      ? "bg-zinc-600 text-white shadow-sm"
-                      : "bg-background text-foreground shadow-sm"
-                    : elevated
-                      ? "text-zinc-400 hover:text-zinc-200"
-                      : "text-muted-foreground hover:text-foreground",
-                )}
-                aria-pressed={model.tintStyle === "blend"}
-                onClick={() => patch({ tintStyle: "blend" })}
-              >
-                Blend
-              </button>
-            </div>
-          </div>
-
-          <RangeRow
-            elevated={elevated}
-            label="Tint opacity"
-            value={model.tintOpacity ?? 16}
-            min={0}
-            max={100}
-            suffix=""
-            format={(n) => String(Math.round(n))}
-            onChange={(v) => patch({ tintOpacity: Math.round(v) })}
-          />
-          <RangeRow
-            elevated={elevated}
-            label="Background blur"
-            value={model.blurStrength ?? 0}
-            min={0}
-            max={24}
-            suffix=" px"
-            format={(n) => String(Math.round(n))}
-            onChange={(v) => patch({ blurStrength: Math.round(v) })}
-          />
-
+        <div className="space-y-3 px-3 py-3">
           <div className={cn("flex flex-wrap gap-2 border-t pt-2", elevated ? "border-white/10" : "border-border/60")}>
             <Button
               type="button"
@@ -396,60 +349,6 @@ function PreviewSwatchMini({ model, elevated }: { model: SectionBackground; elev
   }
 
   return <span className="pointer-events-none absolute inset-0">{inner}</span>;
-}
-
-function BackgroundTintPlaceholderRow({
-  elevated,
-  tintHex,
-  labelMuted,
-}: {
-  elevated?: boolean;
-  tintHex: string;
-  labelMuted: string;
-}) {
-  const rowClass = cn(
-    "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left ring-1 ring-border/50 transition-colors",
-    "cursor-pointer hover:bg-muted/35 hover:ring-border/70",
-    elevated && "ring-white/12 hover:bg-white/5 hover:ring-white/20",
-  );
-  return (
-    <button
-      type="button"
-      className={rowClass}
-      onClick={() => {
-        document.getElementById("proposal-section-bg-tint-controls")?.scrollIntoView({
-          behavior: "smooth",
-          block: "nearest",
-        });
-      }}
-    >
-      <div
-        className={cn(
-          "relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-muted/25",
-          elevated ? "border-white/15" : "border-border/60",
-        )}
-      >
-        <span
-          className="absolute inset-0 opacity-[0.45]"
-          style={{
-            backgroundImage:
-              "linear-gradient(45deg, #c4c4cc 25%, transparent 25%), linear-gradient(-45deg, #c4c4cc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e2e2e8 75%), linear-gradient(-45deg, transparent 75%, #e2e2e8 75%)",
-            backgroundSize: "5px 5px",
-            backgroundPosition: "0 0, 0 2.5px, 2.5px -2.5px, -2.5px 0px",
-          }}
-          aria-hidden
-        />
-        <span
-          className="relative z-[1] h-5 w-5 rounded-full shadow-sm ring-1 ring-black/10"
-          style={{ backgroundColor: tintHex }}
-        />
-      </div>
-      <div className="min-w-0 flex-1 text-left">
-        <p className="text-xs font-semibold text-foreground">Background tint</p>
-        <p className={cn("truncate text-[10px]", labelMuted)}>Adjust tint below</p>
-      </div>
-    </button>
-  );
 }
 
 function MiniAssetRow({
@@ -629,52 +528,6 @@ function TintSwatchPicker({
           }}
         />
       </div>
-    </div>
-  );
-}
-
-function RangeRow({
-  elevated,
-  label,
-  value,
-  min,
-  max,
-  suffix,
-  format,
-  onChange,
-}: {
-  elevated?: boolean;
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  suffix: string;
-  format: (n: number) => string;
-  onChange: (n: number) => void;
-}) {
-  const labelMuted = elevated ? "text-zinc-400" : "text-muted-foreground";
-  return (
-    <div>
-      <div className="mb-1 flex items-end justify-between gap-3">
-        <p className={cn("text-[10px] font-semibold uppercase tracking-[0.12em]", labelMuted)}>{label}</p>
-        <span className="font-mono text-[11px] font-semibold tabular-nums text-foreground underline decoration-muted-foreground/45 underline-offset-[3px]">
-          {format(value)}
-          {suffix}
-        </span>
-      </div>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={1}
-        value={value}
-        aria-label={label}
-        className={cn(
-          "h-1.5 w-full cursor-pointer accent-sky-500 hover:accent-sky-600",
-          elevated && "[&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow [&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:w-3.5 [&::-moz-range-thumb]:rounded-full",
-        )}
-        onChange={(e) => onChange(Number(e.target.value))}
-      />
     </div>
   );
 }
