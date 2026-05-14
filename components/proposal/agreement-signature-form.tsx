@@ -533,12 +533,12 @@ export function AgreementSignatureForm({
                               {signatureBannerDate || "—"}
                             </span>
                           </div>
-                          <div className="flex min-h-[100px] items-center justify-center pt-1">
+                          <div className="flex min-h-[140px] items-center justify-center px-2 pt-1 sm:min-h-[152px]">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                               src={capturedDataUrl}
                               alt=""
-                              className="max-h-[4.5rem] max-w-full object-contain"
+                              className="h-auto w-auto max-h-48 max-w-full object-contain sm:max-h-56"
                             />
                           </div>
                         </div>
