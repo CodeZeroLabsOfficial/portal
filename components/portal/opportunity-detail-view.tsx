@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import {
   ArrowLeft,
   ChevronDown,
+  FileText,
   Loader2,
   Mail,
   MessageSquare,
@@ -26,13 +27,15 @@ import type {
 } from "@/types/opportunity";
 import { OPPORTUNITY_STAGES, opportunityStageLabel } from "@/lib/crm/opportunity-stages";
 import { useOpportunityStageMutation } from "@/hooks/use-opportunity-stage-mutation";
+import type { ProposalTemplateRecord } from "@/types/proposal-template";
 import {
   addOpportunityActivityAction,
   addOpportunityNoteAction,
 } from "@/server/actions/opportunities-crm";
+import { createDraftProposalFromOpportunityAction } from "@/server/actions/proposals-crm";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -55,6 +58,7 @@ export interface OpportunityDetailViewProps {
   customer: CustomerRecord;
   notes: OpportunityNoteRecord[];
   activities: OpportunityActivityRecord[];
+  templates: ProposalTemplateRecord[];
 }
 
 const CHEVRON_CLIP =
@@ -518,7 +522,47 @@ export function OpportunityDetailView({
   customer,
   notes,
   activities,
+  templates,
 }: OpportunityDetailViewProps) {
+  const router = useRouter();
+  const [proposalTemplateId, setProposalTemplateId] = React.useState(() => templates[0]?.id ?? "");
+  const [proposalBusy, setProposalBusy] = React.useState(false);
+  const proposalTemplateIdsKey = templates.map((t) => t.id).join(",");
+
+  React.useEffect(() => {
+    const list = templates;
+    if (list.length === 0) {
+      setProposalTemplateId("");
+      return;
+    }
+    setProposalTemplateId((prev) =>
+      prev && list.some((t) => t.id === prev) ? prev : list[0].id,
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sync when template *set* changes, not array identity
+  }, [proposalTemplateIdsKey]);
+
+  async function createProposalFromOpportunity() {
+    setProposalBusy(true);
+    try {
+      const res = await createDraftProposalFromOpportunityAction(
+        opportunity.id,
+        proposalTemplateId.trim() ? proposalTemplateId.trim() : undefined,
+      );
+      if (!res.ok) {
+        window.alert(res.message);
+        return;
+      }
+      router.push(
+        `/admin/proposals/${res.proposalId}?customer=${encodeURIComponent(customer.id)}`,
+      );
+      router.refresh();
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : "Could not create proposal. Please try again.");
+    } finally {
+      setProposalBusy(false);
+    }
+  }
+
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -531,6 +575,50 @@ export function OpportunityDetailView({
       </div>
 
       <OpportunityStageProgress opportunity={opportunity} customer={customer} />
+
+      <Card className="border-border/80 bg-card/60">
+        <CardHeader className="pb-2">
+          <div className="flex items-center gap-2">
+            <FileText className="h-4 w-4 text-muted-foreground" aria-hidden />
+            <CardTitle className="text-base">Add proposal</CardTitle>
+          </div>
+          <CardDescription>
+            Creates a draft linked to this opportunity so when the buyer signs the agreement, this deal can move to
+            Won automatically.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap items-center justify-between gap-2">
+            {templates.length > 0 ? (
+              <select
+                className="min-w-[220px] rounded-md border border-input bg-background px-2 py-1.5 text-xs text-foreground"
+                value={proposalTemplateId}
+                onChange={(e) => setProposalTemplateId(e.target.value)}
+                disabled={proposalBusy}
+                aria-label="Template"
+              >
+                {templates.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            ) : null}
+            <Button
+              type="button"
+              size="sm"
+              className="gap-1.5 shadow-sm"
+              disabled={proposalBusy}
+              onClick={() => void createProposalFromOpportunity()}
+            >
+              {proposalBusy ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+              ) : (
+                <Plus className="h-3.5 w-3.5" aria-hidden />
+              )}
+              Add proposal
+            </Button>
+        </CardContent>
+      </Card>
 
       {opportunity.notes?.trim() ? (
         <Card className="border-border/80 bg-card/60">

@@ -6,6 +6,7 @@ import {
   listOpportunityActivities,
   listOpportunityNotes,
 } from "@/server/firestore/crm-opportunities";
+import { listProposalTemplatesForOrg } from "@/server/firestore/proposal-templates";
 import { OpportunityDetailView } from "@/components/portal/opportunity-detail-view";
 import { WorkspaceShell } from "@/components/portal/workspace-shell";
 
@@ -25,10 +26,11 @@ export default async function AdminOpportunityDetailPage({ params }: PageProps) 
     notFound();
   }
 
-  const [customer, notes, activities] = await Promise.all([
+  const [customer, notes, activities, templates] = await Promise.all([
     getCustomerRecordForOrg(user, opportunity.customerId),
     listOpportunityNotes(user, opportunityId),
     listOpportunityActivities(user, opportunityId),
+    listProposalTemplatesForOrg(user),
   ]);
   if (!customer) {
     notFound();
@@ -49,6 +51,7 @@ export default async function AdminOpportunityDetailPage({ params }: PageProps) 
         customer={customer}
         notes={notes}
         activities={activities}
+        templates={templates}
       />
     </WorkspaceShell>
   );
