@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
+import { Info, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import {
@@ -347,6 +347,19 @@ export function ProposalPublicSubscriptionFormPanel({
           <span className="text-lg font-semibold tabular-nums text-[#1a1a5e]">
             {formatCurrencyAmount(monthlyTotalMinor, monthlyCurrency)}
           </span>
+        </div>
+      ) : null}
+
+      {mode === "save_card_only" ? (
+        <div
+          className="flex gap-3 rounded-xl border border-indigo-100 bg-indigo-50/80 px-4 py-3 text-sm leading-snug text-indigo-950"
+          role="status"
+        >
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-indigo-600" aria-hidden />
+          <p>
+            This is preview mode — don&apos;t enter real card numbers here unless you intend to save them to the
+            linked customer in Stripe.
+          </p>
         </div>
       ) : null}
 
