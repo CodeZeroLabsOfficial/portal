@@ -362,7 +362,6 @@ export function AgreementBlockPublic({
     if (el instanceof HTMLElement) {
       el.scrollIntoView({ behavior: "smooth", block: "start" });
     }
-    setSectionsSidebarOpen(false);
   }
 
   function scrollToRef(ref: React.RefObject<HTMLDivElement | null>) {

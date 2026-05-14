@@ -197,6 +197,32 @@ function AgreementFlowAccordionTrigger({
   );
 }
 
+/** Smooth height roll-out / roll-up using CSS grid `0fr` → `1fr` (content stays mounted while collapsed). */
+function AgreementAccordionPanel({
+  open,
+  children,
+  className,
+}: {
+  open: boolean;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "grid motion-reduce:transition-none",
+        "transition-[grid-template-rows] duration-300 ease-out",
+        open ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+        className,
+      )}
+    >
+      <div className="min-h-0 overflow-hidden" inert={!open ? true : undefined}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export interface AgreementSignatureFormProps {
   disabled: boolean;
   busy: boolean;
@@ -573,23 +599,24 @@ export function AgreementSignatureForm({
               </div>
 
               <div className="space-y-3 pt-1">
-                <AgreementFlowAccordionTrigger
-                  icon={<PenLine aria-hidden />}
-                  title={capturedDataUrl ? "Signature added" : "Enter your signature"}
-                  subtitle={
-                    capturedDataUrl
-                      ? signatureBannerDate
-                        ? `Signed ${signatureBannerDate}`
-                        : "Signed"
-                      : "Draw, type, or upload your signature"
-                  }
-                  open={signSectionOpen}
-                  onToggle={() => setSignSectionOpen((o) => !o)}
-                  disabled={disabled || busy}
-                />
-                {signSectionOpen ? (
-                  <>
-                    <div className="space-y-2">
+                <div>
+                  <AgreementFlowAccordionTrigger
+                    icon={<PenLine aria-hidden />}
+                    title={capturedDataUrl ? "Signature added" : "Enter your signature"}
+                    subtitle={
+                      capturedDataUrl
+                        ? signatureBannerDate
+                          ? `Signed ${signatureBannerDate}`
+                          : "Signed"
+                        : "Draw, type, or upload your signature"
+                    }
+                    open={signSectionOpen}
+                    onToggle={() => setSignSectionOpen((o) => !o)}
+                    disabled={disabled || busy}
+                  />
+                  <AgreementAccordionPanel open={signSectionOpen} className={signSectionOpen ? "mt-3" : undefined}>
+                    <>
+                      <div className="space-y-2">
                       <Label className="text-sm font-medium text-[#3e4756]">E-signature</Label>
                       {capturedDataUrl ? (
                         <DropdownMenu modal={false}>
@@ -869,11 +896,12 @@ export function AgreementSignatureForm({
                         </div>
                       </div>
                     ) : null}
-                  </>
-                ) : null}
+                    </>
+                  </AgreementAccordionPanel>
+                </div>
 
                 {publicSubscriptionUi && shareToken ? (
-                  <>
+                  <div>
                     <AgreementFlowAccordionTrigger
                       icon={<CreditCard aria-hidden />}
                       title="Add payment details"
@@ -886,8 +914,18 @@ export function AgreementSignatureForm({
                       onToggle={() => setPaymentSectionOpen((o) => !o)}
                       disabled={disabled || busy}
                     />
-                    {paymentSectionOpen ? (
-                      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <AgreementAccordionPanel
+                      open={paymentSectionOpen}
+                      className={paymentSectionOpen ? "mt-3" : undefined}
+                    >
+                      <div
+                        className={cn(
+                          "rounded-xl border bg-white transition-[padding,box-shadow,border-color] duration-300 ease-out motion-reduce:transition-none",
+                          paymentSectionOpen
+                            ? "border-slate-200 p-4 shadow-sm"
+                            : "border-transparent p-0 shadow-none",
+                        )}
+                      >
                         <ProposalPublicSubscriptionFormPanel
                           active={paymentSectionOpen}
                           shareToken={shareToken}
@@ -902,8 +940,8 @@ export function AgreementSignatureForm({
                           primaryCtaForeground={ctaForeground}
                         />
                       </div>
-                    ) : null}
-                  </>
+                    </AgreementAccordionPanel>
+                  </div>
                 ) : null}
               </div>
             </div>

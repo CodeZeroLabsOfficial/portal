@@ -334,7 +334,9 @@ export function ProposalPublicSubscriptionFormPanel({
     onPaymentSummaryChange?.(cardSummary);
   }, [active, cardSummary, onPaymentSummaryChange]);
 
-  if (!active) return null;
+  if (!active) {
+    return <div className="h-0 w-full overflow-hidden" aria-hidden />;
+  }
 
   return (
     <div className={cn("space-y-5", className)}>
