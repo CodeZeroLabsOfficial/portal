@@ -29,9 +29,7 @@ import {
   packagesAddonsSectionActive,
 } from "@/lib/proposal-packages-totals";
 import { sanitizeProposalHtml } from "@/lib/sanitize-proposal-html";
-import { acceptProposalPublicAction } from "@/server/actions/proposal-builder";
 import { isDocumentPackageSelectionComplete } from "@/lib/proposal-package-selection";
-import { ProposalPublicSubscriptionFormPanel } from "@/components/proposal/proposal-public-subscription-form-panel";
 import type { ProposalPublicSubscriptionUi } from "@/server/proposal/public-proposal-subscription-ui";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -306,7 +304,6 @@ export function AgreementBlockPublic({
 }: AgreementBlockPublicProps) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
-  const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [localAcceptedName, setLocalAcceptedName] = React.useState<string | null>(null);
   const [localDone, setLocalDone] = React.useState(proposalStatus === "accepted");
@@ -374,39 +371,28 @@ export function AgreementBlockPublic({
     }
   }
 
-  async function onSign(payload: {
-    signerName: string;
-    signerEmail: string;
-    signerOrganization?: string;
-    signatureDataUrl: string;
-    signatureMethod: "draw" | "type" | "upload";
-    clientSignedAtMs: number;
-  }) {
+  async function onSign(
+    payload: {
+      signerName: string;
+      signerEmail: string;
+      signerOrganization?: string;
+      signatureDataUrl: string;
+      signatureMethod: "draw" | "type" | "upload";
+      clientSignedAtMs: number;
+    },
+    meta?: { subscriptionError?: string | null },
+  ) {
     if (!shareToken || !interactive) return;
-    setBusy(true);
     setError(null);
-    try {
-      const res = await acceptProposalPublicAction({
-        shareToken,
-        signerName: payload.signerName,
-        signerEmail: payload.signerEmail,
-        signerOrganization: payload.signerOrganization,
-        signatureDataUrl: payload.signatureDataUrl,
-        signatureMethod: payload.signatureMethod,
-        clientSignedAtMs: payload.clientSignedAtMs,
-      });
-      if (!res.ok) {
-        setError(res.message);
-        toast.error(res.message);
-        return;
-      }
-      setLocalAcceptedName(payload.signerName);
-      setLocalDone(true);
+    setLocalAcceptedName(payload.signerName);
+    setLocalDone(true);
+    if (meta?.subscriptionError) {
+      toast.error(meta.subscriptionError);
+      toast.success("Agreement signed.");
+    } else {
       toast.success("Agreement signed. Thank you.");
-      router.refresh();
-    } finally {
-      setBusy(false);
     }
+    router.refresh();
   }
 
   const sectionAnchors: Array<{ id: string; label: string }> = [
@@ -651,25 +637,6 @@ export function AgreementBlockPublic({
                       We&apos;ll follow up with next steps shortly.
                     </p>
                     <div className="mt-6 flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
-                      {publicSubscriptionUi && shareToken && interactive ? (
-                        <div className="w-full max-w-lg rounded-xl border border-emerald-200/80 bg-white p-4 text-left shadow-sm sm:min-w-[min(100%,28rem)]">
-                          <p className="text-sm font-semibold text-emerald-950">Start your subscription</p>
-                          <p className="mt-1 text-xs text-emerald-900/80">
-                            Card details can be added before signing. When you&apos;re ready, confirm billing below.
-                          </p>
-                          <div className="mt-4">
-                            <ProposalPublicSubscriptionFormPanel
-                              active
-                              shareToken={shareToken}
-                              ui={publicSubscriptionUi}
-                              cardElementId="proposal-post-accept-subscription-card"
-                              mode="manage_subscription"
-                              primaryCtaColor={ctaColor}
-                              primaryCtaForeground={ctaForeground}
-                            />
-                          </div>
-                        </div>
-                      ) : null}
                       <Button
                         type="button"
                         variant="outline"
@@ -695,7 +662,7 @@ export function AgreementBlockPublic({
                 ) : (
                   <AgreementSignatureForm
                     disabled={!interactive || !shareToken}
-                    busy={busy}
+                    busy={false}
                     requireAcceptTerms={requireAcceptTerms}
                     agreementTitle={agreementTitle}
                     proposalTitle={proposalTitle}

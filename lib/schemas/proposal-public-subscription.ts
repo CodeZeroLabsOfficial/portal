@@ -22,3 +22,12 @@ export const proposalPublicSubscriptionModalSchema = z
   });
 
 export type ProposalPublicSubscriptionModalInput = z.infer<typeof proposalPublicSubscriptionModalSchema>;
+
+/** Latest billing fields for `createProposalPublicSubscriptionAction` (public agreement flow). */
+export type ProposalPublicSubscriptionBillingSnapshot = {
+  collectionMethod: ProposalPublicSubscriptionModalInput["collectionMethod"];
+  daysUntilDue?: number;
+  defaultPaymentMethodId?: string;
+  /** Whether `createProposalPublicSubscriptionAction` can run for the current method + card state. */
+  readyToCreateSubscription: boolean;
+};

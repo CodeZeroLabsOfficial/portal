@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import {
   proposalPublicSubscriptionModalSchema,
+  type ProposalPublicSubscriptionBillingSnapshot,
   type ProposalPublicSubscriptionModalInput,
 } from "@/lib/schemas/proposal-public-subscription";
 import { createProposalPublicSubscriptionAction } from "@/server/actions/proposal-public-subscription";
@@ -64,6 +65,8 @@ export interface ProposalPublicSubscriptionFormPanelProps {
   onCardSaved?: () => void;
   /** Fires when the effective saved-card summary changes (for collapsed accordion labels). */
   onPaymentSummaryChange?: (summary: string | null) => void;
+  /** Fires when billing fields change while `active` (for chaining subscription create after accept). */
+  onBillingSnapshotChange?: (snapshot: ProposalPublicSubscriptionBillingSnapshot | null) => void;
   /** Matches agreement “Agree” / primary actions (e.g. block CTA colour). */
   primaryCtaColor?: string;
   primaryCtaForeground?: string;
@@ -80,6 +83,7 @@ export function ProposalPublicSubscriptionFormPanel({
   monthlyCurrency,
   onCardSaved,
   onPaymentSummaryChange,
+  onBillingSnapshotChange,
   primaryCtaColor,
   primaryCtaForeground,
   className,
@@ -110,6 +114,34 @@ export function ProposalPublicSubscriptionFormPanel({
 
   const collectionMethod = form.watch("collectionMethod");
   const effectivePmId = form.watch("defaultPaymentMethodId");
+  const daysUntilDueWatched = form.watch("daysUntilDue");
+
+  React.useEffect(() => {
+    if (!onBillingSnapshotChange || !active) return;
+    const pm = (effectivePmId ?? "").trim() || undefined;
+    const daysUntilDue =
+      typeof daysUntilDueWatched === "number" && Number.isFinite(daysUntilDueWatched)
+        ? daysUntilDueWatched
+        : undefined;
+    const readyToCreateSubscription =
+      collectionMethod === "send_invoice"
+        ? typeof daysUntilDue === "number"
+        : !showAddCard && Boolean(pm);
+    onBillingSnapshotChange({
+      collectionMethod,
+      daysUntilDue,
+      defaultPaymentMethodId: pm,
+      readyToCreateSubscription,
+    });
+  }, [
+    active,
+    collectionMethod,
+    daysUntilDueWatched,
+    effectivePmId,
+    onBillingSnapshotChange,
+    showAddCard,
+  ]);
+
   const publishableKey = getFirebasePublicConfig()?.stripePublishableKey?.trim();
 
   React.useEffect(() => {

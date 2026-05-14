@@ -15,9 +15,12 @@ import {
   normalizeLocalityTimeZone,
   todayIsoDateInTimeZone,
 } from "@/lib/proposal-locality-dates";
+import type { ProposalPublicSubscriptionBillingSnapshot } from "@/lib/schemas/proposal-public-subscription";
 import { cn } from "@/lib/utils";
 import { ProposalPublicSubscriptionFormPanel } from "@/components/proposal/proposal-public-subscription-form-panel";
 import type { ProposalPublicSubscriptionUi } from "@/server/proposal/public-proposal-subscription-ui";
+import { acceptProposalPublicAction } from "@/server/actions/proposal-builder";
+import { createProposalPublicSubscriptionAction } from "@/server/actions/proposal-public-subscription";
 
 const INK = "#1a1a5e";
 const LOGICAL_W = 640;
@@ -234,7 +237,8 @@ export interface AgreementSignatureFormProps {
   error: string | null;
   /** Called when the user changes inputs so parent can clear server-side error messages. */
   onDismissError?: () => void;
-  onSubmit: (payload: AgreementSignaturePayload) => void | Promise<void>;
+  /** Called after acceptance is recorded (and subscription create attempted when billing applies). */
+  onSubmit: (payload: AgreementSignaturePayload, meta?: { subscriptionError?: string | null }) => void | Promise<void>;
   /** Staff Settings → Locality IANA zone (public page uses proposal creator’s saved zone). */
   localityTimeZone?: string;
   shareToken?: string;
@@ -283,9 +287,13 @@ export function AgreementSignatureForm({
   const [localError, setLocalError] = React.useState<string | null>(null);
 
   const [signSectionOpen, setSignSectionOpen] = React.useState(true);
-  const [paymentSectionOpen, setPaymentSectionOpen] = React.useState(false);
+  const [paymentSectionOpen, setPaymentSectionOpen] = React.useState(() => Boolean(publicSubscriptionUi && shareToken));
   const [paymentMethodSummary, setPaymentMethodSummary] = React.useState<string | null>(null);
+  const [subscriptionBillingSnapshot, setSubscriptionBillingSnapshot] =
+    React.useState<ProposalPublicSubscriptionBillingSnapshot | null>(null);
+  const [signingBusy, setSigningBusy] = React.useState(false);
 
+  const formLocked = busy || signingBusy;
   const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
   const drawingRef = React.useRef(false);
   const lastRef = React.useRef<{ x: number; y: number } | null>(null);
@@ -311,7 +319,7 @@ export function AgreementSignatureForm({
   }, [adoptOpen, adoptTab, canvasReset, initCanvas]);
 
   const onPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (disabled || busy || adoptTab !== "draw") return;
+    if (disabled || formLocked || adoptTab !== "draw") return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -321,7 +329,7 @@ export function AgreementSignatureForm({
   };
 
   const onPointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!drawingRef.current || disabled || busy) return;
+    if (!drawingRef.current || disabled || formLocked) return;
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
     const last = lastRef.current;
@@ -460,6 +468,7 @@ export function AgreementSignatureForm({
   async function handleFinalSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLocalError(null);
+    onDismissError?.();
     const name = acceptName.trim();
     if (name.length < 2) {
       setLocalError("Please enter your full name.");
@@ -486,35 +495,77 @@ export function AgreementSignatureForm({
       setLocalError("Please confirm you have read and agree to the terms.");
       return;
     }
+    if (!shareToken) {
+      setLocalError("Signing is not available.");
+      return;
+    }
+    if (publicSubscriptionUi && !subscriptionBillingSnapshot?.readyToCreateSubscription) {
+      setLocalError("Add payment details and save your card before signing the agreement.");
+      return;
+    }
     const clientSignedAtMs = Date.now();
+    const payload: AgreementSignaturePayload = {
+      signerName: name,
+      signerEmail: email,
+      signerOrganization: acceptOrg.trim() || undefined,
+      signatureDataUrl: capturedDataUrl,
+      signatureMethod: capturedMethod,
+      clientSignedAtMs,
+    };
+    setSigningBusy(true);
     try {
-      await onSubmit({
-        signerName: name,
-        signerEmail: email,
-        signerOrganization: acceptOrg.trim() || undefined,
-        signatureDataUrl: capturedDataUrl,
-        signatureMethod: capturedMethod,
-        clientSignedAtMs,
+      const acceptRes = await acceptProposalPublicAction({
+        shareToken,
+        signerName: payload.signerName,
+        signerEmail: payload.signerEmail,
+        signerOrganization: payload.signerOrganization,
+        signatureDataUrl: payload.signatureDataUrl,
+        signatureMethod: payload.signatureMethod,
+        clientSignedAtMs: payload.clientSignedAtMs,
       });
+      if (!acceptRes.ok) {
+        setLocalError(acceptRes.message);
+        return;
+      }
+      let subscriptionError: string | null = null;
+      if (publicSubscriptionUi && subscriptionBillingSnapshot?.readyToCreateSubscription) {
+        const subRes = await createProposalPublicSubscriptionAction({
+          shareToken,
+          collectionMethod: subscriptionBillingSnapshot.collectionMethod,
+          daysUntilDue:
+            subscriptionBillingSnapshot.collectionMethod === "send_invoice"
+              ? subscriptionBillingSnapshot.daysUntilDue ?? 14
+              : undefined,
+          defaultPaymentMethodId:
+            subscriptionBillingSnapshot.collectionMethod === "charge_automatically"
+              ? subscriptionBillingSnapshot.defaultPaymentMethodId
+              : undefined,
+        });
+        if (!subRes.ok) subscriptionError = subRes.message;
+      }
+      await onSubmit(payload, { subscriptionError });
     } catch {
       setLocalError("We could not complete signing. Please try again.");
+    } finally {
+      setSigningBusy(false);
     }
   }
 
   const showError = localError || error;
   const canFinalSubmit =
     !disabled &&
-    !busy &&
+    !formLocked &&
     acceptName.trim().length >= 2 &&
     acceptEmail.trim().length > 0 &&
     capturedDataUrl &&
     capturedMethod &&
     electronicAgreed &&
-    (!requireAcceptTerms || termsAgreed);
+    (!requireAcceptTerms || termsAgreed) &&
+    (!publicSubscriptionUi || Boolean(subscriptionBillingSnapshot?.readyToCreateSubscription));
 
   const canAdopt =
     !disabled &&
-    !busy &&
+    !formLocked &&
     acceptName.trim().length >= 2 &&
     (adoptTab === "draw"
       ? hasInk
@@ -523,9 +574,9 @@ export function AgreementSignatureForm({
         : Boolean(uploadPreview));
 
   return (
-    <form className="space-y-5" onSubmit={handleFinalSubmit} noValidate aria-busy={busy}>
+    <form className="space-y-5" onSubmit={handleFinalSubmit} noValidate aria-busy={formLocked}>
       <div className="relative rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-8">
-        {busy ? (
+        {formLocked ? (
           <div
             className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-2xl bg-white/85 backdrop-blur-[1px]"
             aria-live="polite"
@@ -533,11 +584,12 @@ export function AgreementSignatureForm({
             <Loader2 className="h-8 w-8 animate-spin text-[#1a1a5e]" aria-hidden />
             <p className="mt-3 text-sm font-semibold text-zinc-800">Signing agreement…</p>
             <p className="mt-1 max-w-[14rem] text-center text-xs text-zinc-500">
-              Please wait while we record your acceptance.
+              Please wait while we record your acceptance
+              {publicSubscriptionUi ? " and start your subscription." : "."}
             </p>
           </div>
         ) : null}
-        <div className={cn(busy && "pointer-events-none opacity-60")}>
+        <div className={cn(formLocked && "pointer-events-none opacity-60")}>
           <div className="mx-auto max-w-md">
             <h3 className="text-center text-2xl font-semibold tracking-tight text-[#1a1a5e] sm:text-[26px]">
               Accept
@@ -560,7 +612,7 @@ export function AgreementSignatureForm({
                     onDismissError?.();
                     setAcceptName(e.target.value);
                   }}
-                  disabled={disabled || busy}
+                  disabled={disabled || formLocked}
                   className="h-11 border-zinc-200 bg-white text-base text-zinc-900"
                 />
               </div>
@@ -579,7 +631,7 @@ export function AgreementSignatureForm({
                     onDismissError?.();
                     setAcceptEmail(e.target.value);
                   }}
-                  disabled={disabled || busy}
+                  disabled={disabled || formLocked}
                   className="h-11 border-zinc-200 bg-white text-base text-zinc-900"
                 />
               </div>
@@ -597,7 +649,7 @@ export function AgreementSignatureForm({
                     onDismissError?.();
                     setAcceptOrg(e.target.value);
                   }}
-                  disabled={disabled || busy}
+                  disabled={disabled || formLocked}
                   className="h-11 border-zinc-200 bg-white text-base text-zinc-900"
                 />
               </div>
@@ -616,7 +668,7 @@ export function AgreementSignatureForm({
                     }
                     open={signSectionOpen}
                     onToggle={() => setSignSectionOpen((o) => !o)}
-                    disabled={disabled || busy}
+                    disabled={disabled || formLocked}
                   />
                   <AgreementAccordionPanel open={signSectionOpen} className={signSectionOpen ? "mt-3" : undefined}>
                     <>
@@ -627,11 +679,11 @@ export function AgreementSignatureForm({
                           <DropdownMenuTrigger asChild>
                             <button
                               type="button"
-                              disabled={disabled || busy}
+                              disabled={disabled || formLocked}
                               className={cn(
                                 "group w-full rounded-lg border border-zinc-300 bg-white text-left outline-none transition-colors",
                                 "hover:border-zinc-400 hover:bg-zinc-50/40 focus-visible:ring-2 focus-visible:ring-zinc-400/60",
-                                (disabled || busy) && "cursor-not-allowed opacity-60",
+                                (disabled || formLocked) && "cursor-not-allowed opacity-60",
                               )}
                               aria-label="E-signature options"
                             >
@@ -690,12 +742,12 @@ export function AgreementSignatureForm({
                       ) : (
                         <button
                           type="button"
-                          disabled={disabled || busy}
+                          disabled={disabled || formLocked}
                           onClick={openAdoptPanel}
                           className={cn(
                             "w-full rounded-lg border border-zinc-300 bg-white outline-none transition-colors",
                             "hover:border-zinc-400 hover:bg-zinc-50/40 focus-visible:ring-2 focus-visible:ring-zinc-400/60",
-                            (disabled || busy) && "cursor-not-allowed opacity-60",
+                            (disabled || formLocked) && "cursor-not-allowed opacity-60",
                           )}
                         >
                           <div className="flex min-h-[7.25rem] flex-col items-center justify-center px-4 py-6 sm:min-h-[7.75rem]">
@@ -720,7 +772,7 @@ export function AgreementSignatureForm({
                             <button
                               key={m}
                               type="button"
-                              disabled={disabled || busy}
+                              disabled={disabled || formLocked}
                               onClick={() => {
                                 onDismissError?.();
                                 setAdoptTab(m);
@@ -745,7 +797,7 @@ export function AgreementSignatureForm({
                               <button
                                 type="button"
                                 onClick={clearAdoptSignature}
-                                disabled={disabled || busy}
+                                disabled={disabled || formLocked}
                                 className="text-sm font-medium text-zinc-400 transition-colors hover:text-zinc-700"
                               >
                                 Clear
@@ -776,7 +828,7 @@ export function AgreementSignatureForm({
                               <button
                                 type="button"
                                 onClick={clearAdoptSignature}
-                                disabled={disabled || busy}
+                                disabled={disabled || formLocked}
                                 className="text-sm font-medium text-zinc-400 transition-colors hover:text-zinc-700"
                               >
                                 Clear
@@ -791,7 +843,7 @@ export function AgreementSignatureForm({
                                 onDismissError?.();
                                 setTypedSignatureText(e.target.value);
                               }}
-                              disabled={disabled || busy}
+                              disabled={disabled || formLocked}
                               className="h-12 border-zinc-200 bg-white text-base text-zinc-900 placeholder:text-zinc-400"
                             />
                             <div className="rounded-xl border border-zinc-200 bg-white px-4 py-6 sm:px-6 sm:py-8">
@@ -819,7 +871,7 @@ export function AgreementSignatureForm({
                               <button
                                 type="button"
                                 onClick={clearAdoptSignature}
-                                disabled={disabled || busy}
+                                disabled={disabled || formLocked}
                                 className="text-sm font-medium text-zinc-400 transition-colors hover:text-zinc-700"
                               >
                                 Clear
@@ -884,7 +936,7 @@ export function AgreementSignatureForm({
                             variant="outline"
                             className="h-11 flex-1 rounded-xl border border-zinc-300 bg-white text-base font-semibold text-zinc-900 shadow-md hover:bg-zinc-50 hover:opacity-95"
                             onClick={closeAdoptPanel}
-                            disabled={disabled || busy}
+                            disabled={disabled || formLocked}
                           >
                             Cancel
                           </Button>
@@ -916,7 +968,7 @@ export function AgreementSignatureForm({
                       }
                       open={paymentSectionOpen}
                       onToggle={() => setPaymentSectionOpen((o) => !o)}
-                      disabled={disabled || busy}
+                      disabled={disabled || formLocked}
                     />
                     <AgreementAccordionPanel
                       open={paymentSectionOpen}
@@ -939,6 +991,7 @@ export function AgreementSignatureForm({
                           monthlyTotalMinor={monthlyTotalMinor}
                           monthlyCurrency={monthlyCurrency}
                           onPaymentSummaryChange={setPaymentMethodSummary}
+                          onBillingSnapshotChange={setSubscriptionBillingSnapshot}
                           onCardSaved={() => setPaymentSectionOpen(false)}
                           primaryCtaColor={ctaColor}
                           primaryCtaForeground={ctaForeground}
@@ -967,7 +1020,7 @@ export function AgreementSignatureForm({
                     onDismissError?.();
                     setElectronicAgreed(e.target.checked);
                   }}
-                  disabled={disabled || busy}
+                  disabled={disabled || formLocked}
                 />
                 <span
                   aria-hidden
@@ -1004,7 +1057,7 @@ export function AgreementSignatureForm({
                       onDismissError?.();
                       setTermsAgreed(e.target.checked);
                     }}
-                    disabled={disabled || busy}
+                    disabled={disabled || formLocked}
                   />
                   <span
                     aria-hidden
@@ -1055,7 +1108,7 @@ export function AgreementSignatureForm({
               style={{ backgroundColor: ctaColor, color: ctaForeground }}
               disabled={!canFinalSubmit}
             >
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
+              {formLocked ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
               Sign Agreement
             </Button>
           </div>
