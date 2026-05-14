@@ -27,7 +27,6 @@ export type AgreementSignatureMethod = "draw" | "type" | "upload";
 /** Short US-style date (e.g. 5/14/2026) for the e-signature banner. */
 function signatureBannerDateLabel(
   adoptTab: AgreementSignatureMethod,
-  signedDate: string,
   localityTimeZone?: string,
 ): string {
   const tz = normalizeLocalityTimeZone(localityTimeZone);
@@ -37,8 +36,9 @@ function signatureBannerDateLabel(
     year: "numeric",
     ...(tz ? { timeZone: tz } : {}),
   };
-  if (adoptTab === "type" && /^\d{4}-\d{2}-\d{2}$/.test(signedDate)) {
-    return new Date(`${signedDate}T12:00:00`).toLocaleDateString("en-US", opts);
+  if (adoptTab === "type") {
+    const iso = todayIsoDateInTimeZone(localityTimeZone);
+    return new Date(`${iso}T12:00:00`).toLocaleDateString("en-US", opts);
   }
   return new Date().toLocaleDateString("en-US", opts);
 }
@@ -186,7 +186,6 @@ export function AgreementSignatureForm({
 
   const [adoptOpen, setAdoptOpen] = React.useState(false);
   const [adoptTab, setAdoptTab] = React.useState<AgreementSignatureMethod>("type");
-  const [signedDate, setSignedDate] = React.useState("");
   const [hasInk, setHasInk] = React.useState(false);
   const [canvasReset, setCanvasReset] = React.useState(0);
   const [uploadPreview, setUploadPreview] = React.useState<string | null>(null);
@@ -204,10 +203,6 @@ export function AgreementSignatureForm({
   const drawingRef = React.useRef(false);
   const lastRef = React.useRef<{ x: number; y: number } | null>(null);
   const adoptPanelRef = React.useRef<HTMLDivElement | null>(null);
-
-  React.useEffect(() => {
-    setSignedDate(todayIsoDateInTimeZone(localityTimeZone));
-  }, [localityTimeZone]);
 
   React.useEffect(() => {
     if (adoptOpen && adoptPanelRef.current) {
@@ -271,7 +266,6 @@ export function AgreementSignatureForm({
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
-    setSignedDate(todayIsoDateInTimeZone(localityTimeZone));
   }
 
   function openAdoptPanel() {
@@ -291,18 +285,29 @@ export function AgreementSignatureForm({
     onDismissError?.();
   }
 
-  function clearCapturedSignature() {
+  function clearCapturedSignature(options?: { reopenAdopt?: boolean }) {
     setLocalError(null);
     onDismissError?.();
     setCapturedDataUrl(null);
     setCapturedMethod(null);
     setSignatureBannerDate("");
-    setAdoptOpen(false);
     setUploadPreview(null);
     setHasInk(false);
     setCanvasReset((k) => k + 1);
     if (fileInputRef.current) fileInputRef.current.value = "";
-    setSignedDate(todayIsoDateInTimeZone(localityTimeZone));
+
+    if (options?.reopenAdopt) {
+      const name = acceptName.trim();
+      if (name.length < 2) {
+        setLocalError("Please enter your full name before signing.");
+        setAdoptOpen(false);
+        return;
+      }
+      setAdoptTab("type");
+      setAdoptOpen(true);
+    } else {
+      setAdoptOpen(false);
+    }
   }
 
   function openAdoptPanelForEdit() {
@@ -330,11 +335,8 @@ export function AgreementSignatureForm({
       if (!canvas) return;
       dataUrl = canvas.toDataURL("image/png");
     } else if (adoptTab === "type") {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(signedDate)) {
-        setLocalError("Please choose the date you are signing.");
-        return;
-      }
-      dataUrl = buildTypedSignatureDataUrl(name, signedDate, localityTimeZone);
+      const dateIso = todayIsoDateInTimeZone(localityTimeZone);
+      dataUrl = buildTypedSignatureDataUrl(name, dateIso, localityTimeZone);
     } else {
       if (!uploadPreview || !uploadPreview.startsWith("data:image/png;base64,")) {
         setLocalError("Please upload a signature image.");
@@ -348,7 +350,7 @@ export function AgreementSignatureForm({
     }
     setCapturedDataUrl(dataUrl);
     setCapturedMethod(adoptTab);
-    setSignatureBannerDate(signatureBannerDateLabel(adoptTab, signedDate, localityTimeZone));
+    setSignatureBannerDate(signatureBannerDateLabel(adoptTab, localityTimeZone));
     setAdoptOpen(false);
   }
 
@@ -425,11 +427,7 @@ export function AgreementSignatureForm({
     !disabled &&
     !busy &&
     acceptName.trim().length >= 2 &&
-    (adoptTab === "draw"
-      ? hasInk
-      : adoptTab === "type"
-        ? /^\d{4}-\d{2}-\d{2}$/.test(signedDate)
-        : Boolean(uploadPreview));
+    (adoptTab === "draw" ? hasInk : adoptTab === "type" ? true : Boolean(uploadPreview));
 
   return (
     <form className="space-y-5" onSubmit={handleFinalSubmit} noValidate aria-busy={busy}>
@@ -548,7 +546,7 @@ export function AgreementSignatureForm({
                       <DropdownMenuItem
                         className="cursor-pointer text-sm font-medium text-[#3e4756] focus:text-[#1a1a5e]"
                         onSelect={() => {
-                          clearCapturedSignature();
+                          clearCapturedSignature({ reopenAdopt: true });
                         }}
                       >
                         Clear
@@ -647,8 +645,7 @@ export function AgreementSignatureForm({
                 </div>
               ) : adoptTab === "type" ? (
                 <div className="mt-5 space-y-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-sm font-medium text-zinc-900">Type name &amp; date</span>
+                  <div className="flex justify-end">
                     <button
                       type="button"
                       onClick={clearAdoptSignature}
@@ -657,22 +654,6 @@ export function AgreementSignatureForm({
                     >
                       Clear
                     </button>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="agreement-sign-date" className="text-sm text-zinc-700">
-                      Date signed
-                    </Label>
-                    <Input
-                      id="agreement-sign-date"
-                      type="date"
-                      value={signedDate}
-                      onChange={(e) => {
-                        onDismissError?.();
-                        setSignedDate(e.target.value);
-                      }}
-                      disabled={disabled || busy}
-                      className="h-11 max-w-xs border-zinc-200 bg-white text-zinc-900"
-                    />
                   </div>
                   <div className="rounded-xl border border-zinc-200 bg-white px-4 py-6 sm:px-6 sm:py-8">
                     <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-400">Preview</p>
@@ -686,9 +667,11 @@ export function AgreementSignatureForm({
                       {acceptName.trim() || "Your name"}
                     </p>
                     <p className="mt-3 text-sm text-zinc-500">
-                      {/^\d{4}-\d{2}-\d{2}$/.test(signedDate)
-                        ? formatIsoCalendarDateLong(signedDate, localityTimeZone, undefined) || "—"
-                        : "—"}
+                      {formatIsoCalendarDateLong(
+                        todayIsoDateInTimeZone(localityTimeZone),
+                        localityTimeZone,
+                        undefined,
+                      ) || "—"}
                     </p>
                   </div>
                 </div>
