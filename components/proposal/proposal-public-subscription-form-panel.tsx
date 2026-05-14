@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Info, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import {
@@ -64,6 +64,9 @@ export interface ProposalPublicSubscriptionFormPanelProps {
   onCardSaved?: () => void;
   /** Fires when the effective saved-card summary changes (for collapsed accordion labels). */
   onPaymentSummaryChange?: (summary: string | null) => void;
+  /** Matches agreement “Agree” / primary actions (e.g. block CTA colour). */
+  primaryCtaColor?: string;
+  primaryCtaForeground?: string;
   className?: string;
 }
 
@@ -77,8 +80,12 @@ export function ProposalPublicSubscriptionFormPanel({
   monthlyCurrency,
   onCardSaved,
   onPaymentSummaryChange,
+  primaryCtaColor,
+  primaryCtaForeground,
   className,
 }: ProposalPublicSubscriptionFormPanelProps) {
+  const saveCardBg = primaryCtaColor?.trim() || "#1a1a5e";
+  const saveCardFg = primaryCtaForeground?.trim() || "#ffffff";
   const router = useRouter();
   const [serverError, setServerError] = React.useState<string | null>(null);
   const [cardError, setCardError] = React.useState<string | null>(null);
@@ -343,19 +350,6 @@ export function ProposalPublicSubscriptionFormPanel({
         </div>
       ) : null}
 
-      {mode === "save_card_only" ? (
-        <div
-          className="flex gap-3 rounded-xl border border-indigo-100 bg-indigo-50/80 px-4 py-3 text-sm leading-snug text-indigo-950"
-          role="status"
-        >
-          <Info className="mt-0.5 h-4 w-4 shrink-0 text-indigo-600" aria-hidden />
-          <p>
-            This is preview mode — don&apos;t enter real card numbers here unless you intend to save them to the
-            linked customer in Stripe.
-          </p>
-        </div>
-      ) : null}
-
       <form className="space-y-4" onSubmit={form.handleSubmit((v) => void onSubmit(v))} noValidate>
         <FormServerError message={serverError} rounded="lg" />
 
@@ -490,18 +484,6 @@ export function ProposalPublicSubscriptionFormPanel({
             {mode === "save_card_only" && cardSummary && !showAddCard ? (
               <p className="text-sm font-medium text-slate-700">Using: {cardSummary}</p>
             ) : null}
-            {showAddCard ? (
-              <Button
-                type="button"
-                variant="outline"
-                className="h-10 w-full rounded-lg border-slate-200 font-semibold sm:w-auto"
-                disabled={busy || cardSaving || !cardReady || !publishableKey}
-                onClick={() => void saveCardPaymentMethod()}
-              >
-                {cardSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
-                Save card
-              </Button>
-            ) : null}
           </div>
         )}
 
@@ -514,9 +496,36 @@ export function ProposalPublicSubscriptionFormPanel({
 
         {mode === "manage_subscription" ? (
           <div className="flex flex-wrap justify-end gap-2 pt-2">
+            {showAddCard && collectionMethod === "charge_automatically" ? (
+              <Button
+                type="button"
+                size="sm"
+                className="h-9 gap-1.5 rounded-md px-3 font-semibold text-white shadow-sm transition-opacity hover:opacity-90"
+                style={{ backgroundColor: saveCardBg, color: saveCardFg }}
+                disabled={busy || cardSaving || !cardReady || !publishableKey}
+                onClick={() => void saveCardPaymentMethod()}
+              >
+                {cardSaving ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden /> : null}
+                Save card
+              </Button>
+            ) : null}
             <Button type="submit" disabled={busy} className="min-w-[7rem] gap-2">
               {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
               Start subscription
+            </Button>
+          </div>
+        ) : showAddCard && collectionMethod === "charge_automatically" ? (
+          <div className="flex justify-end pt-2">
+            <Button
+              type="button"
+              size="sm"
+              className="h-9 gap-1.5 rounded-md px-3 font-semibold text-white shadow-sm transition-opacity hover:opacity-90"
+              style={{ backgroundColor: saveCardBg, color: saveCardFg }}
+              disabled={busy || cardSaving || !cardReady || !publishableKey}
+              onClick={() => void saveCardPaymentMethod()}
+            >
+              {cardSaving ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden /> : null}
+              Save card
             </Button>
           </div>
         ) : null}

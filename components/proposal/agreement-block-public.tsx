@@ -638,6 +638,8 @@ export function AgreementBlockPublic({
                               ui={publicSubscriptionUi}
                               cardElementId="proposal-post-accept-subscription-card"
                               mode="manage_subscription"
+                              primaryCtaColor={ctaColor}
+                              primaryCtaForeground={ctaForeground}
                             />
                           </div>
                         </div>
