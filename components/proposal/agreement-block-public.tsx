@@ -524,7 +524,7 @@ export function AgreementBlockPublic({
                 style={{ backgroundColor: ctaColor, color: ctaForeground }}
                 disabled={accepted}
               >
-                {accepted ? "Signed" : "Next"}
+                {accepted ? "Signed" : "Agree"}
                 {!accepted ? <ArrowRight className="h-4 w-4" aria-hidden /> : null}
               </Button>
               <DialogClose

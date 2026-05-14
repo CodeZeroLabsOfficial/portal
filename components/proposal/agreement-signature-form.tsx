@@ -793,11 +793,11 @@ export function AgreementSignatureForm({
                 handwritten signature.
               </p>
 
-              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-stretch">
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:gap-3 sm:justify-stretch">
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-11 flex-1 rounded-full border-zinc-300 bg-white text-base font-semibold text-[#1a1a5e] hover:bg-zinc-50"
+                  className="h-11 flex-1 rounded-xl border border-zinc-300 bg-white text-base font-semibold text-zinc-900 shadow-md hover:bg-zinc-50 hover:opacity-95"
                   onClick={closeAdoptPanel}
                   disabled={disabled || busy}
                 >
@@ -805,7 +805,8 @@ export function AgreementSignatureForm({
                 </Button>
                 <Button
                   type="button"
-                  className="h-11 flex-1 rounded-full border-0 bg-[#1a1a5e] text-base font-semibold text-white hover:bg-[#14144d]"
+                  className="h-11 flex-1 rounded-xl border-0 text-base font-semibold shadow-md hover:opacity-95"
+                  style={{ backgroundColor: ctaColor, color: ctaForeground }}
                   onClick={handleAdoptAndSign}
                   disabled={!canAdopt}
                 >
