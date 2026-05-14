@@ -532,50 +532,46 @@ export function AgreementBlockPublic({
             </div>
           </div>
 
-          <div className="relative min-h-0 overflow-hidden">
-            {sectionsSidebarOpen ? (
-              <button
-                type="button"
-                aria-label="Close agreement sections"
-                className="absolute inset-0 z-20 bg-zinc-900/20 motion-safe:animate-in motion-safe:fade-in-0"
-                onClick={() => setSectionsSidebarOpen(false)}
-              />
-            ) : null}
-
+          <div className="flex h-full min-h-0 flex-1 overflow-hidden">
             <aside
               id="agreement-sections-sidebar"
               aria-hidden={!sectionsSidebarOpen}
+              inert={!sectionsSidebarOpen ? true : undefined}
               className={cn(
-                "absolute left-0 top-0 z-30 flex h-full w-[min(18rem,88vw)] flex-col border-r border-zinc-200 bg-white shadow-xl motion-reduce:transition-none",
-                "transition-transform duration-300 ease-out",
-                sectionsSidebarOpen ? "translate-x-0" : "-translate-x-full pointer-events-none",
+                "flex h-full min-h-0 shrink-0 flex-col overflow-hidden border-r bg-white motion-reduce:transition-none",
+                "transition-[width] duration-300 ease-out",
+                sectionsSidebarOpen
+                  ? "w-[min(18rem,88vw)] border-zinc-200 shadow-[4px_0_16px_-8px_rgba(0,0,0,0.08)]"
+                  : "w-0 border-transparent",
               )}
             >
-              <div className="shrink-0 border-b border-zinc-100 px-4 py-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                  Jump to
-                </p>
+              <div className="flex h-full min-h-0 w-[min(18rem,88vw)] flex-col">
+                <div className="shrink-0 border-b border-zinc-100 px-4 py-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                    Jump to
+                  </p>
+                </div>
+                <nav className="min-h-0 flex-1 overflow-y-auto p-2" aria-label="Agreement sections">
+                  <ul className="space-y-0.5">
+                    {sectionAnchors.map((s) => (
+                      <li key={s.id}>
+                        <button
+                          type="button"
+                          className="w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium text-zinc-800 transition-colors hover:bg-zinc-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
+                          onClick={() => jumpToSection(s.id)}
+                        >
+                          {s.label}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </nav>
               </div>
-              <nav className="min-h-0 flex-1 overflow-y-auto p-2" aria-label="Agreement sections">
-                <ul className="space-y-0.5">
-                  {sectionAnchors.map((s) => (
-                    <li key={s.id}>
-                      <button
-                        type="button"
-                        className="w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium text-zinc-800 transition-colors hover:bg-zinc-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
-                        onClick={() => jumpToSection(s.id)}
-                      >
-                        {s.label}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </nav>
             </aside>
 
             <div
               ref={scrollRef}
-              className="min-h-0 h-full overflow-y-auto bg-white pb-[max(1rem,env(safe-area-inset-bottom))]"
+              className="min-h-0 min-w-0 flex-1 overflow-y-auto bg-white pb-[max(1rem,env(safe-area-inset-bottom))]"
             >
             <div className="mx-auto w-full max-w-3xl px-5 py-12 sm:px-10 sm:py-16">
               <div id="agreement-top" aria-hidden />
