@@ -12,7 +12,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  formatIsoCalendarDateLong,
   normalizeLocalityTimeZone,
   todayIsoDateInTimeZone,
 } from "@/lib/proposal-locality-dates";
@@ -59,7 +58,7 @@ function getCanvasPoint(canvas: HTMLCanvasElement, clientX: number, clientY: num
   return { x, y };
 }
 
-function buildTypedSignatureDataUrl(name: string, dateIso: string, localityTimeZone?: string): string {
+function buildTypedSignatureDataUrl(name: string): string {
   const W = 720;
   const H = 200;
   const canvas = document.createElement("canvas");
@@ -82,14 +81,6 @@ function buildTypedSignatureDataUrl(name: string, dateIso: string, localityTimeZ
     line = `${line}…`;
   }
   ctx.fillText(line, 32, 78);
-
-  let dateLabel = "";
-  if (/^\d{4}-\d{2}-\d{2}$/.test(dateIso)) {
-    dateLabel = formatIsoCalendarDateLong(dateIso, localityTimeZone, undefined);
-  }
-  ctx.font = "500 14px ui-sans-serif, system-ui, -apple-system, sans-serif";
-  ctx.fillStyle = "#64748b";
-  ctx.fillText(dateLabel, 32, 132);
   return canvas.toDataURL("image/png");
 }
 
@@ -186,6 +177,8 @@ export function AgreementSignatureForm({
 
   const [adoptOpen, setAdoptOpen] = React.useState(false);
   const [adoptTab, setAdoptTab] = React.useState<AgreementSignatureMethod>("type");
+  /** Type-tab only — how the signature *looks*; legal name stays in the Accept form above. */
+  const [typedSignatureText, setTypedSignatureText] = React.useState("");
   const [hasInk, setHasInk] = React.useState(false);
   const [canvasReset, setCanvasReset] = React.useState(0);
   const [uploadPreview, setUploadPreview] = React.useState<string | null>(null);
@@ -266,6 +259,7 @@ export function AgreementSignatureForm({
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
+    setTypedSignatureText("");
   }
 
   function openAdoptPanel() {
@@ -276,6 +270,7 @@ export function AgreementSignatureForm({
       setLocalError("Please enter your full name before signing.");
       return;
     }
+    setTypedSignatureText("");
     setAdoptOpen(true);
   }
 
@@ -291,6 +286,7 @@ export function AgreementSignatureForm({
     setCapturedDataUrl(null);
     setCapturedMethod(null);
     setSignatureBannerDate("");
+    setTypedSignatureText("");
     setUploadPreview(null);
     setHasInk(false);
     setCanvasReset((k) => k + 1);
@@ -313,6 +309,7 @@ export function AgreementSignatureForm({
   function openAdoptPanelForEdit() {
     setLocalError(null);
     onDismissError?.();
+    setTypedSignatureText("");
     if (capturedMethod) setAdoptTab(capturedMethod);
     setAdoptOpen(true);
   }
@@ -335,8 +332,12 @@ export function AgreementSignatureForm({
       if (!canvas) return;
       dataUrl = canvas.toDataURL("image/png");
     } else if (adoptTab === "type") {
-      const dateIso = todayIsoDateInTimeZone(localityTimeZone);
-      dataUrl = buildTypedSignatureDataUrl(name, dateIso, localityTimeZone);
+      const sig = typedSignatureText.trim();
+      if (sig.length < 2) {
+        setLocalError("Please enter your signature.");
+        return;
+      }
+      dataUrl = buildTypedSignatureDataUrl(sig);
     } else {
       if (!uploadPreview || !uploadPreview.startsWith("data:image/png;base64,")) {
         setLocalError("Please upload a signature image.");
@@ -427,7 +428,11 @@ export function AgreementSignatureForm({
     !disabled &&
     !busy &&
     acceptName.trim().length >= 2 &&
-    (adoptTab === "draw" ? hasInk : adoptTab === "type" ? true : Boolean(uploadPreview));
+    (adoptTab === "draw"
+      ? hasInk
+      : adoptTab === "type"
+        ? typedSignatureText.trim().length >= 2
+        : Boolean(uploadPreview));
 
   return (
     <form className="space-y-5" onSubmit={handleFinalSubmit} noValidate aria-busy={busy}>
@@ -531,12 +536,12 @@ export function AgreementSignatureForm({
                               {signatureBannerDate || "—"}
                             </span>
                           </div>
-                          <div className="flex min-h-[140px] items-center justify-center px-2 pt-1 sm:min-h-[152px]">
+                          <div className="flex min-h-[192px] items-center justify-center px-2 pt-1 sm:min-h-[224px] md:min-h-[260px]">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                               src={capturedDataUrl}
                               alt=""
-                              className="h-auto w-auto max-h-48 max-w-full object-contain sm:max-h-56"
+                              className="h-auto w-auto max-h-64 max-w-full object-contain sm:max-h-72 md:max-h-80"
                             />
                           </div>
                         </div>
@@ -645,7 +650,10 @@ export function AgreementSignatureForm({
                 </div>
               ) : adoptTab === "type" ? (
                 <div className="mt-5 space-y-3">
-                  <div className="flex justify-end">
+                  <div className="flex items-center justify-between gap-3">
+                    <Label htmlFor="agreement-typed-signature" className="text-sm font-medium text-zinc-900">
+                      Enter your signature
+                    </Label>
                     <button
                       type="button"
                       onClick={clearAdoptSignature}
@@ -655,23 +663,33 @@ export function AgreementSignatureForm({
                       Clear
                     </button>
                   </div>
+                  <Input
+                    id="agreement-typed-signature"
+                    autoComplete="off"
+                    placeholder="Type your signature"
+                    value={typedSignatureText}
+                    onChange={(e) => {
+                      onDismissError?.();
+                      setTypedSignatureText(e.target.value);
+                    }}
+                    disabled={disabled || busy}
+                    className="h-12 border-zinc-200 bg-white text-base text-zinc-900 placeholder:text-zinc-400"
+                  />
                   <div className="rounded-xl border border-zinc-200 bg-white px-4 py-6 sm:px-6 sm:py-8">
                     <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-400">Preview</p>
                     <p
-                      className="mt-2 break-words text-3xl leading-snug text-[#1a1a5e] sm:text-4xl"
+                      className={cn(
+                        "mt-2 break-words text-3xl leading-snug sm:text-4xl",
+                        typedSignatureText.trim()
+                          ? "text-[#1a1a5e]"
+                          : "text-zinc-400",
+                      )}
                       style={{
                         fontFamily: '"Segoe Script", "Brush Script MT", "Apple Chancery", cursive',
                         fontStyle: "italic",
                       }}
                     >
-                      {acceptName.trim() || "Your name"}
-                    </p>
-                    <p className="mt-3 text-sm text-zinc-500">
-                      {formatIsoCalendarDateLong(
-                        todayIsoDateInTimeZone(localityTimeZone),
-                        localityTimeZone,
-                        undefined,
-                      ) || "—"}
+                      {typedSignatureText.trim() || "Type your signature"}
                     </p>
                   </div>
                 </div>
