@@ -17,11 +17,14 @@ export type ProposalPublicSubscriptionUi = {
   };
 };
 
-/** When non-null, the agreement success state can offer the same subscription flow as admin. */
+/** When non-null, the agreement block can show subscription billing (card setup before acceptance, create after). */
 export async function loadProposalPublicSubscriptionUi(
   proposal: ProposalRecord,
 ): Promise<ProposalPublicSubscriptionUi | null> {
-  if (proposal.status !== "accepted" || !proposal.customerId?.trim()) return null;
+  if (proposal.status === "draft" || proposal.status === "declined" || proposal.status === "expired") {
+    return null;
+  }
+  if (!proposal.customerId?.trim()) return null;
   const stripe = getStripe();
   if (!stripe) return null;
 
@@ -47,9 +50,11 @@ export async function loadProposalPublicSubscriptionUi(
   }
 
   const startsOnLabel =
-    typeof proposal.acceptedAtMs === "number" && Number.isFinite(proposal.acceptedAtMs)
+    proposal.status === "accepted" &&
+    typeof proposal.acceptedAtMs === "number" &&
+    Number.isFinite(proposal.acceptedAtMs)
       ? utcDateIsoFromMillis(proposal.acceptedAtMs)
-      : "—";
+      : "Upon acceptance";
 
   return {
     customerId: proposal.customerId.trim(),

@@ -59,9 +59,7 @@ export default async function PublicProposalPage(props: PublicProposalPageProps)
 
   const agreementPresent = hasAgreementBlock(proposal.document.blocks);
   const publicSubscriptionUi =
-    unlocked && proposal.status === "accepted"
-      ? await loadProposalPublicSubscriptionUi(proposal)
-      : null;
+    unlocked && agreementPresent ? await loadProposalPublicSubscriptionUi(proposal) : null;
   /**
    * Mirror {@link ProposalPublicFooter}'s null-return condition: when an agreement
    * block drives signing and the proposal hasn't been accepted yet, the footer

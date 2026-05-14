@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, Loader2, Upload } from "lucide-react";
+import { Check, ChevronRight, CreditCard, Loader2, PenLine, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -16,6 +16,8 @@ import {
   todayIsoDateInTimeZone,
 } from "@/lib/proposal-locality-dates";
 import { cn } from "@/lib/utils";
+import { ProposalPublicSubscriptionFormPanel } from "@/components/proposal/proposal-public-subscription-form-panel";
+import type { ProposalPublicSubscriptionUi } from "@/server/proposal/public-proposal-subscription-ui";
 
 const INK = "#1a1a5e";
 const LOGICAL_W = 640;
@@ -154,6 +156,47 @@ async function imageFileToPngDataUrl(file: File): Promise<string | null> {
   });
 }
 
+function AgreementFlowAccordionTrigger({
+  icon,
+  title,
+  subtitle,
+  open,
+  onToggle,
+  disabled,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  subtitle?: string;
+  open: boolean;
+  onToggle: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onToggle}
+      className={cn(
+        "flex w-full items-center gap-4 rounded-xl border border-slate-200 bg-slate-50/90 p-4 text-left shadow-sm transition-colors",
+        "hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/50",
+        disabled && "cursor-not-allowed opacity-60",
+      )}
+    >
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-800 [&>svg]:h-5 [&>svg]:w-5">
+        {icon}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[15px] font-medium text-slate-700">{title}</span>
+        {subtitle ? <span className="mt-0.5 block text-sm text-slate-500">{subtitle}</span> : null}
+      </span>
+      <ChevronRight
+        className={cn("h-5 w-5 shrink-0 text-slate-400 transition-transform duration-200", open && "rotate-90")}
+        aria-hidden
+      />
+    </button>
+  );
+}
+
 export interface AgreementSignatureFormProps {
   disabled: boolean;
   busy: boolean;
@@ -168,6 +211,11 @@ export interface AgreementSignatureFormProps {
   onSubmit: (payload: AgreementSignaturePayload) => void | Promise<void>;
   /** Staff Settings → Locality IANA zone (public page uses proposal creator’s saved zone). */
   localityTimeZone?: string;
+  shareToken?: string;
+  publicSubscriptionUi?: ProposalPublicSubscriptionUi | null;
+  /** First packages block monthly total (minor units) for payment header. */
+  monthlyTotalMinor?: number;
+  monthlyCurrency?: string;
 }
 
 export function AgreementSignatureForm({
@@ -182,6 +230,10 @@ export function AgreementSignatureForm({
   onDismissError,
   onSubmit,
   localityTimeZone,
+  shareToken,
+  publicSubscriptionUi,
+  monthlyTotalMinor,
+  monthlyCurrency,
 }: AgreementSignatureFormProps) {
   const [acceptName, setAcceptName] = React.useState("");
   const [acceptEmail, setAcceptEmail] = React.useState("");
@@ -203,6 +255,10 @@ export function AgreementSignatureForm({
   const [electronicAgreed, setElectronicAgreed] = React.useState(false);
   const [termsAgreed, setTermsAgreed] = React.useState(false);
   const [localError, setLocalError] = React.useState<string | null>(null);
+
+  const [signSectionOpen, setSignSectionOpen] = React.useState(true);
+  const [paymentSectionOpen, setPaymentSectionOpen] = React.useState(false);
+  const [paymentMethodSummary, setPaymentMethodSummary] = React.useState<string | null>(null);
 
   const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
   const drawingRef = React.useRef(false);
@@ -277,6 +333,7 @@ export function AgreementSignatureForm({
   function openAdoptPanel() {
     setLocalError(null);
     onDismissError?.();
+    setSignSectionOpen(true);
     const name = acceptName.trim();
     if (name.length < 2) {
       setLocalError("Please enter your full name before signing.");
@@ -309,6 +366,7 @@ export function AgreementSignatureForm({
   function openAdoptPanelForEdit() {
     setLocalError(null);
     onDismissError?.();
+    setSignSectionOpen(true);
     setTypedSignatureText("");
     if (capturedMethod) setAdoptTab(capturedMethod);
     setAdoptOpen(true);
@@ -514,295 +572,342 @@ export function AgreementSignatureForm({
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-[#3e4756]">E-signature</Label>
-                {capturedDataUrl ? (
-                  <DropdownMenu modal={false}>
-                    <DropdownMenuTrigger asChild>
-                      <button
-                        type="button"
-                        disabled={disabled || busy}
-                        className={cn(
-                          "group w-full rounded-lg border border-zinc-300 bg-white text-left outline-none transition-colors",
-                          "hover:border-zinc-400 hover:bg-zinc-50/40 focus-visible:ring-2 focus-visible:ring-zinc-400/60",
-                          (disabled || busy) && "cursor-not-allowed opacity-60",
-                        )}
-                        aria-label="E-signature options"
-                      >
-                        <div className="relative px-3 pb-3.5 pt-3">
-                          <div className="relative mb-2 flex h-6 w-full items-center">
-                            <div
-                              className="pointer-events-none absolute left-0 right-0 top-1/2 h-px -translate-y-1/2 bg-zinc-300"
-                              aria-hidden
-                            />
-                            <span className="relative z-10 bg-white py-0.5 pr-2 text-xs font-medium text-slate-600">
-                              Signed
-                            </span>
-                            <span className="relative z-10 min-w-0 flex-1 shrink" aria-hidden />
-                            <span className="relative z-10 bg-white py-0.5 pl-2 text-xs font-medium tabular-nums text-slate-600">
-                              {signatureBannerDate || "—"}
-                            </span>
+              <div className="space-y-3 pt-1">
+                <AgreementFlowAccordionTrigger
+                  icon={<PenLine aria-hidden />}
+                  title={capturedDataUrl ? "Signature added" : "Enter your signature"}
+                  subtitle={
+                    capturedDataUrl
+                      ? signatureBannerDate
+                        ? `Signed ${signatureBannerDate}`
+                        : "Signed"
+                      : "Draw, type, or upload your signature"
+                  }
+                  open={signSectionOpen}
+                  onToggle={() => setSignSectionOpen((o) => !o)}
+                  disabled={disabled || busy}
+                />
+                {signSectionOpen ? (
+                  <>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-[#3e4756]">E-signature</Label>
+                      {capturedDataUrl ? (
+                        <DropdownMenu modal={false}>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              type="button"
+                              disabled={disabled || busy}
+                              className={cn(
+                                "group w-full rounded-lg border border-zinc-300 bg-white text-left outline-none transition-colors",
+                                "hover:border-zinc-400 hover:bg-zinc-50/40 focus-visible:ring-2 focus-visible:ring-zinc-400/60",
+                                (disabled || busy) && "cursor-not-allowed opacity-60",
+                              )}
+                              aria-label="E-signature options"
+                            >
+                              <div className="relative px-3 pb-3.5 pt-3">
+                                <div className="mb-2 flex min-h-6 w-full items-center justify-between gap-3">
+                                  <span className="shrink-0 text-xs font-medium text-slate-600">Signed</span>
+                                  <span className="min-w-0 shrink truncate text-right text-xs font-medium tabular-nums text-slate-600">
+                                    {signatureBannerDate || "—"}
+                                  </span>
+                                </div>
+                                <div className="flex h-[7.25rem] max-h-[7.5rem] items-center justify-start overflow-hidden px-1 pt-0.5 sm:h-[7.75rem] sm:max-h-[8rem]">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img
+                                    src={capturedDataUrl}
+                                    alt=""
+                                    className="max-h-full w-auto max-w-full object-contain object-left"
+                                  />
+                                </div>
+                              </div>
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            align="start"
+                            sideOffset={8}
+                            className={cn(
+                              "z-[100] min-w-[11rem] overflow-hidden rounded-xl border border-slate-200 bg-white p-0",
+                              "shadow-[0_8px_32px_rgba(15,23,42,0.12),0_2px_8px_rgba(15,23,42,0.06)]",
+                              "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+                              "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2",
+                            )}
+                          >
+                            <DropdownMenuItem
+                              className={cn(
+                                "cursor-pointer justify-start rounded-none px-5 py-3 text-left text-[15px] font-medium leading-snug text-[#2d334a]",
+                                "focus:bg-slate-50 focus:text-[#2d334a] data-[highlighted]:bg-slate-50 data-[highlighted]:text-[#2d334a]",
+                              )}
+                              onSelect={() => {
+                                clearCapturedSignature();
+                              }}
+                            >
+                              Clear
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className={cn(
+                                "cursor-pointer justify-start rounded-none px-5 py-3 text-left text-[15px] font-medium leading-snug text-[#2d334a]",
+                                "focus:bg-slate-50 focus:text-[#2d334a] data-[highlighted]:bg-slate-50 data-[highlighted]:text-[#2d334a]",
+                              )}
+                              onSelect={() => {
+                                openAdoptPanelForEdit();
+                              }}
+                            >
+                              Edit
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={disabled || busy}
+                          onClick={openAdoptPanel}
+                          className={cn(
+                            "w-full rounded-lg border border-zinc-300 bg-white outline-none transition-colors",
+                            "hover:border-zinc-400 hover:bg-zinc-50/40 focus-visible:ring-2 focus-visible:ring-zinc-400/60",
+                            (disabled || busy) && "cursor-not-allowed opacity-60",
+                          )}
+                        >
+                          <div className="flex min-h-[7.25rem] flex-col items-center justify-center px-4 py-6 sm:min-h-[7.75rem]">
+                            <span className="text-lg font-semibold tracking-tight text-[#1a1a5e]">Sign</span>
                           </div>
-                          <div className="flex h-[7.25rem] max-h-[7.5rem] items-center justify-start overflow-hidden px-1 pt-0.5 sm:h-[7.75rem] sm:max-h-[8rem]">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={capturedDataUrl}
-                              alt=""
-                              className="max-h-full w-auto max-w-full object-contain object-left"
-                            />
-                          </div>
-                        </div>
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                      align="start"
-                      sideOffset={8}
-                      className={cn(
-                        "z-[100] min-w-[11rem] overflow-hidden rounded-xl border border-slate-200 bg-white p-0",
-                        "shadow-[0_8px_32px_rgba(15,23,42,0.12),0_2px_8px_rgba(15,23,42,0.06)]",
-                        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-                        "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2",
+                        </button>
                       )}
-                    >
-                      <DropdownMenuItem
-                        className={cn(
-                          "cursor-pointer justify-start rounded-none px-5 py-3 text-left text-[15px] font-medium leading-snug text-[#2d334a]",
-                          "focus:bg-slate-50 focus:text-[#2d334a] data-[highlighted]:bg-slate-50 data-[highlighted]:text-[#2d334a]",
-                        )}
-                        onSelect={() => {
-                          clearCapturedSignature();
-                        }}
-                      >
-                        Clear
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className={cn(
-                          "cursor-pointer justify-start rounded-none px-5 py-3 text-left text-[15px] font-medium leading-snug text-[#2d334a]",
-                          "focus:bg-slate-50 focus:text-[#2d334a] data-[highlighted]:bg-slate-50 data-[highlighted]:text-[#2d334a]",
-                        )}
-                        onSelect={() => {
-                          openAdoptPanelForEdit();
-                        }}
-                      >
-                        Edit
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                ) : (
-                  <button
-                    type="button"
-                    disabled={disabled || busy}
-                    onClick={openAdoptPanel}
-                    className={cn(
-                      "w-full rounded-lg border border-zinc-300 bg-white outline-none transition-colors",
-                      "hover:border-zinc-400 hover:bg-zinc-50/40 focus-visible:ring-2 focus-visible:ring-zinc-400/60",
-                      (disabled || busy) && "cursor-not-allowed opacity-60",
-                    )}
-                  >
-                    <div className="flex min-h-[7.25rem] flex-col items-center justify-center px-4 py-6 sm:min-h-[7.75rem]">
-                      <span className="text-lg font-semibold tracking-tight text-[#1a1a5e]">Sign</span>
                     </div>
-                  </button>
-                )}
+
+                    {adoptOpen ? (
+                      <div
+                        ref={adoptPanelRef}
+                        className="mx-auto mt-6 max-w-md border-t border-zinc-200 pt-8"
+                        role="region"
+                        aria-label="Adopt your signature"
+                      >
+                        <h4 className="text-xl font-semibold tracking-tight text-[#1a1a5e] sm:text-2xl">
+                          Adopt your signature
+                        </h4>
+                        <div className="mt-5 flex rounded-lg bg-zinc-100 p-1">
+                          {(["type", "draw", "upload"] as const).map((m) => (
+                            <button
+                              key={m}
+                              type="button"
+                              disabled={disabled || busy}
+                              onClick={() => {
+                                onDismissError?.();
+                                setAdoptTab(m);
+                                setLocalError(null);
+                              }}
+                              className={cn(
+                                "flex-1 rounded-md py-2.5 text-sm font-semibold transition-all",
+                                adoptTab === m
+                                  ? "bg-white text-[#1a1a5e] shadow-sm"
+                                  : "text-zinc-600 hover:text-zinc-900",
+                              )}
+                            >
+                              {m === "type" ? "Type" : m === "draw" ? "Draw" : "Upload"}
+                            </button>
+                          ))}
+                        </div>
+
+                        {adoptTab === "draw" ? (
+                          <div className="mt-5 space-y-2">
+                            <div className="flex items-center justify-between gap-3">
+                              <span className="text-sm font-medium text-zinc-900">Draw your signature</span>
+                              <button
+                                type="button"
+                                onClick={clearAdoptSignature}
+                                disabled={disabled || busy}
+                                className="text-sm font-medium text-zinc-400 transition-colors hover:text-zinc-700"
+                              >
+                                Clear
+                              </button>
+                            </div>
+                            <div className="min-h-[min(200px,38svh)] overflow-hidden rounded-xl border border-dashed border-zinc-300 bg-zinc-50/80 sm:min-h-0">
+                              <canvas
+                                ref={canvasRef}
+                                className="block w-full cursor-crosshair touch-none"
+                                width={LOGICAL_W}
+                                height={LOGICAL_H}
+                                onPointerDown={onPointerDown}
+                                onPointerMove={onPointerMove}
+                                onPointerUp={endStroke}
+                                onPointerCancel={endStroke}
+                                onPointerLeave={(e) => {
+                                  if (e.buttons === 0) endStroke();
+                                }}
+                              />
+                            </div>
+                          </div>
+                        ) : adoptTab === "type" ? (
+                          <div className="mt-5 space-y-3">
+                            <div className="flex items-center justify-between gap-3">
+                              <Label htmlFor="agreement-typed-signature" className="text-sm font-medium text-zinc-900">
+                                Enter your signature
+                              </Label>
+                              <button
+                                type="button"
+                                onClick={clearAdoptSignature}
+                                disabled={disabled || busy}
+                                className="text-sm font-medium text-zinc-400 transition-colors hover:text-zinc-700"
+                              >
+                                Clear
+                              </button>
+                            </div>
+                            <Input
+                              id="agreement-typed-signature"
+                              autoComplete="off"
+                              placeholder="Type your signature"
+                              value={typedSignatureText}
+                              onChange={(e) => {
+                                onDismissError?.();
+                                setTypedSignatureText(e.target.value);
+                              }}
+                              disabled={disabled || busy}
+                              className="h-12 border-zinc-200 bg-white text-base text-zinc-900 placeholder:text-zinc-400"
+                            />
+                            <div className="rounded-xl border border-zinc-200 bg-white px-4 py-6 sm:px-6 sm:py-8">
+                              <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-400">Preview</p>
+                              <p
+                                className={cn(
+                                  "mt-2 break-words text-3xl leading-snug sm:text-4xl",
+                                  typedSignatureText.trim()
+                                    ? "text-[#1a1a5e]"
+                                    : "text-zinc-400",
+                                )}
+                                style={{
+                                  fontFamily: '"Segoe Script", "Brush Script MT", "Apple Chancery", cursive',
+                                  fontStyle: "italic",
+                                }}
+                              >
+                                {typedSignatureText.trim() || "Type your signature"}
+                              </p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="mt-5 space-y-2">
+                            <div className="flex items-center justify-between gap-3">
+                              <span className="text-sm font-medium text-zinc-900">
+                                Upload an image of your signature
+                              </span>
+                              <button
+                                type="button"
+                                onClick={clearAdoptSignature}
+                                disabled={disabled || busy}
+                                className="text-sm font-medium text-zinc-400 transition-colors hover:text-zinc-700"
+                              >
+                                Clear
+                              </button>
+                            </div>
+                            <input
+                              ref={fileInputRef}
+                              type="file"
+                              accept="image/png,image/jpeg,image/jpg,image/webp"
+                              className="sr-only"
+                              tabIndex={-1}
+                              onChange={(e) => void onUploadFiles(e.target.files)}
+                            />
+                            <div
+                              role="button"
+                              tabIndex={0}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                  e.preventDefault();
+                                  fileInputRef.current?.click();
+                                }
+                              }}
+                              onDragOver={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                              }}
+                              onDrop={(e) => {
+                                e.preventDefault();
+                                void onUploadFiles(e.dataTransfer.files);
+                              }}
+                              className="flex min-h-[160px] cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-zinc-300 bg-zinc-50/60 px-4 py-8 text-center transition-colors hover:border-zinc-400 hover:bg-zinc-50"
+                              onClick={() => fileInputRef.current?.click()}
+                            >
+                              {uploadPreview ? (
+                                /* eslint-disable-next-line @next/next/no-img-element */
+                                <img
+                                  src={uploadPreview}
+                                  alt="Uploaded signature preview"
+                                  className="max-h-28 max-w-full object-contain"
+                                />
+                              ) : (
+                                <>
+                                  <Upload className="h-8 w-8 text-zinc-400" aria-hidden />
+                                  <p className="text-sm text-zinc-600">
+                                    Drag an image here, or{" "}
+                                    <span className="font-semibold text-[#1a1a5e] underline">browse</span>
+                                  </p>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        <p className="mt-5 text-xs leading-relaxed text-zinc-600">
+                          By selecting Adopt and sign, I agree that my electronic signature is as valid and legally
+                          binding as a handwritten signature.
+                        </p>
+
+                        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:gap-3 sm:justify-stretch">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="h-11 flex-1 rounded-xl border border-zinc-300 bg-white text-base font-semibold text-zinc-900 shadow-md hover:bg-zinc-50 hover:opacity-95"
+                            onClick={closeAdoptPanel}
+                            disabled={disabled || busy}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            type="button"
+                            className="h-11 flex-1 rounded-xl border-0 text-base font-semibold shadow-md hover:opacity-95"
+                            style={{ backgroundColor: ctaColor, color: ctaForeground }}
+                            onClick={handleAdoptAndSign}
+                            disabled={!canAdopt}
+                          >
+                            Adopt and sign
+                          </Button>
+                        </div>
+                      </div>
+                    ) : null}
+                  </>
+                ) : null}
+
+                {publicSubscriptionUi && shareToken ? (
+                  <>
+                    <AgreementFlowAccordionTrigger
+                      icon={<CreditCard aria-hidden />}
+                      title="Add payment details"
+                      subtitle={
+                        paymentMethodSummary
+                          ? paymentMethodSummary
+                          : "Securely add a card for your subscription"
+                      }
+                      open={paymentSectionOpen}
+                      onToggle={() => setPaymentSectionOpen((o) => !o)}
+                      disabled={disabled || busy}
+                    />
+                    {paymentSectionOpen ? (
+                      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <ProposalPublicSubscriptionFormPanel
+                          active={paymentSectionOpen}
+                          shareToken={shareToken}
+                          ui={publicSubscriptionUi}
+                          cardElementId="proposal-accept-flow-subscription-card"
+                          mode="save_card_only"
+                          monthlyTotalMinor={monthlyTotalMinor}
+                          monthlyCurrency={monthlyCurrency}
+                          onPaymentSummaryChange={setPaymentMethodSummary}
+                          onCardSaved={() => setPaymentSectionOpen(false)}
+                        />
+                      </div>
+                    ) : null}
+                  </>
+                ) : null}
               </div>
             </div>
           </div>
-
-          {adoptOpen ? (
-            <div
-              ref={adoptPanelRef}
-              className="mx-auto mt-8 max-w-lg border-t border-zinc-200 pt-8"
-              role="region"
-              aria-label="Adopt your signature"
-            >
-              <h4 className="text-xl font-semibold tracking-tight text-[#1a1a5e] sm:text-2xl">
-                Adopt your signature
-              </h4>
-              <div className="mt-5 flex rounded-lg bg-zinc-100 p-1">
-                {(["type", "draw", "upload"] as const).map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    disabled={disabled || busy}
-                    onClick={() => {
-                      onDismissError?.();
-                      setAdoptTab(m);
-                      setLocalError(null);
-                    }}
-                    className={cn(
-                      "flex-1 rounded-md py-2.5 text-sm font-semibold transition-all",
-                      adoptTab === m
-                        ? "bg-white text-[#1a1a5e] shadow-sm"
-                        : "text-zinc-600 hover:text-zinc-900",
-                    )}
-                  >
-                    {m === "type" ? "Type" : m === "draw" ? "Draw" : "Upload"}
-                  </button>
-                ))}
-              </div>
-
-              {adoptTab === "draw" ? (
-                <div className="mt-5 space-y-2">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-sm font-medium text-zinc-900">Draw your signature</span>
-                    <button
-                      type="button"
-                      onClick={clearAdoptSignature}
-                      disabled={disabled || busy}
-                      className="text-sm font-medium text-zinc-400 transition-colors hover:text-zinc-700"
-                    >
-                      Clear
-                    </button>
-                  </div>
-                  <div className="min-h-[min(200px,38svh)] overflow-hidden rounded-xl border border-dashed border-zinc-300 bg-zinc-50/80 sm:min-h-0">
-                    <canvas
-                      ref={canvasRef}
-                      className="block w-full cursor-crosshair touch-none"
-                      width={LOGICAL_W}
-                      height={LOGICAL_H}
-                      onPointerDown={onPointerDown}
-                      onPointerMove={onPointerMove}
-                      onPointerUp={endStroke}
-                      onPointerCancel={endStroke}
-                      onPointerLeave={(e) => {
-                        if (e.buttons === 0) endStroke();
-                      }}
-                    />
-                  </div>
-                </div>
-              ) : adoptTab === "type" ? (
-                <div className="mt-5 space-y-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <Label htmlFor="agreement-typed-signature" className="text-sm font-medium text-zinc-900">
-                      Enter your signature
-                    </Label>
-                    <button
-                      type="button"
-                      onClick={clearAdoptSignature}
-                      disabled={disabled || busy}
-                      className="text-sm font-medium text-zinc-400 transition-colors hover:text-zinc-700"
-                    >
-                      Clear
-                    </button>
-                  </div>
-                  <Input
-                    id="agreement-typed-signature"
-                    autoComplete="off"
-                    placeholder="Type your signature"
-                    value={typedSignatureText}
-                    onChange={(e) => {
-                      onDismissError?.();
-                      setTypedSignatureText(e.target.value);
-                    }}
-                    disabled={disabled || busy}
-                    className="h-12 border-zinc-200 bg-white text-base text-zinc-900 placeholder:text-zinc-400"
-                  />
-                  <div className="rounded-xl border border-zinc-200 bg-white px-4 py-6 sm:px-6 sm:py-8">
-                    <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-400">Preview</p>
-                    <p
-                      className={cn(
-                        "mt-2 break-words text-3xl leading-snug sm:text-4xl",
-                        typedSignatureText.trim()
-                          ? "text-[#1a1a5e]"
-                          : "text-zinc-400",
-                      )}
-                      style={{
-                        fontFamily: '"Segoe Script", "Brush Script MT", "Apple Chancery", cursive',
-                        fontStyle: "italic",
-                      }}
-                    >
-                      {typedSignatureText.trim() || "Type your signature"}
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="mt-5 space-y-2">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-sm font-medium text-zinc-900">Upload an image of your signature</span>
-                    <button
-                      type="button"
-                      onClick={clearAdoptSignature}
-                      disabled={disabled || busy}
-                      className="text-sm font-medium text-zinc-400 transition-colors hover:text-zinc-700"
-                    >
-                      Clear
-                    </button>
-                  </div>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/png,image/jpeg,image/jpg,image/webp"
-                    className="sr-only"
-                    tabIndex={-1}
-                    onChange={(e) => void onUploadFiles(e.target.files)}
-                  />
-                  <div
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        fileInputRef.current?.click();
-                      }
-                    }}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      void onUploadFiles(e.dataTransfer.files);
-                    }}
-                    className="flex min-h-[160px] cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-zinc-300 bg-zinc-50/60 px-4 py-8 text-center transition-colors hover:border-zinc-400 hover:bg-zinc-50"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    {uploadPreview ? (
-                      /* eslint-disable-next-line @next/next/no-img-element */
-                      <img
-                        src={uploadPreview}
-                        alt="Uploaded signature preview"
-                        className="max-h-28 max-w-full object-contain"
-                      />
-                    ) : (
-                      <>
-                        <Upload className="h-8 w-8 text-zinc-400" aria-hidden />
-                        <p className="text-sm text-zinc-600">
-                          Drag an image here, or{" "}
-                          <span className="font-semibold text-[#1a1a5e] underline">browse</span>
-                        </p>
-                      </>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              <p className="mt-5 text-xs leading-relaxed text-zinc-600">
-                By selecting Adopt and sign, I agree that my electronic signature is as valid and legally binding as a
-                handwritten signature.
-              </p>
-
-              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:gap-3 sm:justify-stretch">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-11 flex-1 rounded-xl border border-zinc-300 bg-white text-base font-semibold text-zinc-900 shadow-md hover:bg-zinc-50 hover:opacity-95"
-                  onClick={closeAdoptPanel}
-                  disabled={disabled || busy}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  className="h-11 flex-1 rounded-xl border-0 text-base font-semibold shadow-md hover:opacity-95"
-                  style={{ backgroundColor: ctaColor, color: ctaForeground }}
-                  onClick={handleAdoptAndSign}
-                  disabled={!canAdopt}
-                >
-                  Adopt and sign
-                </Button>
-              </div>
-            </div>
-          ) : null}
 
           <div className="mx-auto mt-8 max-w-md space-y-3 rounded-xl border border-zinc-100 bg-zinc-50/60 p-4">
             <label

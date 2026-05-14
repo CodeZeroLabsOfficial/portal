@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, CheckCircle2, CreditCard, Download, Menu, X } from "lucide-react";
+import { ArrowRight, CheckCircle2, Download, Menu, X } from "lucide-react";
 import {
   Dialog,
   DialogClose,
@@ -39,7 +39,7 @@ import {
 import { sanitizeProposalHtml } from "@/lib/sanitize-proposal-html";
 import { acceptProposalPublicAction } from "@/server/actions/proposal-builder";
 import { isDocumentPackageSelectionComplete } from "@/lib/proposal-package-selection";
-import { ProposalPublicSubscriptionModal } from "@/components/proposal/proposal-public-subscription-modal";
+import { ProposalPublicSubscriptionFormPanel } from "@/components/proposal/proposal-public-subscription-form-panel";
 import type { ProposalPublicSubscriptionUi } from "@/server/proposal/public-proposal-subscription-ui";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -315,7 +315,6 @@ export function AgreementBlockPublic({
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
-  const [subscribeOpen, setSubscribeOpen] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [localAcceptedName, setLocalAcceptedName] = React.useState<string | null>(null);
   const [localDone, setLocalDone] = React.useState(proposalStatus === "accepted");
@@ -347,6 +346,13 @@ export function AgreementBlockPublic({
     () => isDocumentPackageSelectionComplete(allBlocks, publicSelections),
     [allBlocks, publicSelections],
   );
+
+  const subscriptionMonthly = React.useMemo(() => {
+    if (packageSummaries.length === 0) return null;
+    const total = packageSummaries.reduce((acc, s) => acc + s.monthlyTotalMinor, 0);
+    const currency = packageSummaries[0]?.currency ?? "AUD";
+    return { total, currency };
+  }, [packageSummaries]);
 
   const accepted = localDone || proposalStatus === "accepted";
   const displayName = localAcceptedName ?? acceptedByName;
@@ -620,14 +626,21 @@ export function AgreementBlockPublic({
                     </p>
                     <div className="mt-6 flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
                       {publicSubscriptionUi && shareToken && interactive ? (
-                        <Button
-                          type="button"
-                          className="gap-2 border-emerald-600/30 bg-emerald-700 text-white hover:bg-emerald-800"
-                          onClick={() => setSubscribeOpen(true)}
-                        >
-                          <CreditCard className="h-4 w-4" aria-hidden />
-                          Add card &amp; start subscription
-                        </Button>
+                        <div className="w-full max-w-lg rounded-xl border border-emerald-200/80 bg-white p-4 text-left shadow-sm sm:min-w-[min(100%,28rem)]">
+                          <p className="text-sm font-semibold text-emerald-950">Start your subscription</p>
+                          <p className="mt-1 text-xs text-emerald-900/80">
+                            Card details can be added before signing. When you&apos;re ready, confirm billing below.
+                          </p>
+                          <div className="mt-4">
+                            <ProposalPublicSubscriptionFormPanel
+                              active
+                              shareToken={shareToken}
+                              ui={publicSubscriptionUi}
+                              cardElementId="proposal-post-accept-subscription-card"
+                              mode="manage_subscription"
+                            />
+                          </div>
+                        </div>
                       ) : null}
                       <Button
                         type="button"
@@ -661,6 +674,10 @@ export function AgreementBlockPublic({
                     ctaColor={ctaColor}
                     ctaForeground={ctaForeground}
                     localityTimeZone={localityTimeZone}
+                    shareToken={shareToken}
+                    publicSubscriptionUi={publicSubscriptionUi}
+                    monthlyTotalMinor={subscriptionMonthly?.total}
+                    monthlyCurrency={subscriptionMonthly?.currency}
                     error={error}
                     onDismissError={() => setError(null)}
                     onSubmit={onSign}
@@ -671,15 +688,6 @@ export function AgreementBlockPublic({
           </div>
         </DialogContent>
       </Dialog>
-
-      {publicSubscriptionUi && shareToken ? (
-        <ProposalPublicSubscriptionModal
-          open={subscribeOpen}
-          onOpenChange={setSubscribeOpen}
-          shareToken={shareToken}
-          ui={publicSubscriptionUi}
-        />
-      ) : null}
     </div>
   );
 }

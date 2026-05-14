@@ -20,8 +20,8 @@ async function resolveForPublicProposal(shareToken: string, customerId: string) 
   if (!proposal || proposal.status === "draft") {
     return { error: "Proposal not found." as const };
   }
-  if (proposal.status !== "accepted") {
-    return { error: "Proposal must be accepted first." as const };
+  if (proposal.status === "declined" || proposal.status === "expired") {
+    return { error: "Proposal is not available for billing setup." as const };
   }
   if (proposal.customerId?.trim() !== cid) {
     return { error: "Customer does not match this proposal." as const };
