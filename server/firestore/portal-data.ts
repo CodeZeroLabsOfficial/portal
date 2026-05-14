@@ -188,18 +188,29 @@ async function listSubscriptionsForUser(user: PortalUser): Promise<SubscriptionR
     return [];
   }
 
-  const col = db.collection(COLLECTIONS.subscriptions);
-
-  let snap;
   if (isStaff(user) && user.organizationId) {
-    snap = await col.where("organizationId", "==", user.organizationId).limit(100).get();
-  } else if (user.stripeCustomerId) {
-    snap = await col.where("customerId", "==", user.stripeCustomerId).limit(100).get();
-  } else {
-    snap = await col.limit(0).get();
+    const col = db.collection(COLLECTIONS.subscriptions);
+    const snap = await col.where("organizationId", "==", user.organizationId).limit(100).get();
+    return snap.docs.map((doc) => parseSubscription(doc.id, doc.data() as Record<string, unknown>));
   }
 
-  return snap.docs.map((doc) => parseSubscription(doc.id, doc.data() as Record<string, unknown>));
+  const uidScoped = await db
+    .collection(COLLECTIONS.users)
+    .doc(user.uid)
+    .collection("subscriptions")
+    .limit(100)
+    .get();
+  if (!uidScoped.empty) {
+    return uidScoped.docs.map((doc) => parseSubscription(doc.id, doc.data() as Record<string, unknown>));
+  }
+
+  if (user.stripeCustomerId) {
+    const col = db.collection(COLLECTIONS.subscriptions);
+    const snap = await col.where("customerId", "==", user.stripeCustomerId).limit(100).get();
+    return snap.docs.map((doc) => parseSubscription(doc.id, doc.data() as Record<string, unknown>));
+  }
+
+  return [];
 }
 
 async function listInvoicesForUser(user: PortalUser): Promise<InvoiceRecord[]> {
@@ -208,17 +219,24 @@ async function listInvoicesForUser(user: PortalUser): Promise<InvoiceRecord[]> {
     return [];
   }
 
-  const col = db.collection(COLLECTIONS.invoices);
-  let snap;
   if (isStaff(user) && user.organizationId) {
-    snap = await col.where("organizationId", "==", user.organizationId).limit(100).get();
-  } else if (user.stripeCustomerId) {
-    snap = await col.where("customerId", "==", user.stripeCustomerId).limit(100).get();
-  } else {
-    snap = await col.limit(0).get();
+    const col = db.collection(COLLECTIONS.invoices);
+    const snap = await col.where("organizationId", "==", user.organizationId).limit(100).get();
+    return snap.docs.map((doc) => parseInvoice(doc.id, doc.data() as Record<string, unknown>));
   }
 
-  return snap.docs.map((doc) => parseInvoice(doc.id, doc.data() as Record<string, unknown>));
+  const uidScoped = await db.collection(COLLECTIONS.users).doc(user.uid).collection("invoices").limit(100).get();
+  if (!uidScoped.empty) {
+    return uidScoped.docs.map((doc) => parseInvoice(doc.id, doc.data() as Record<string, unknown>));
+  }
+
+  if (user.stripeCustomerId) {
+    const col = db.collection(COLLECTIONS.invoices);
+    const snap = await col.where("customerId", "==", user.stripeCustomerId).limit(100).get();
+    return snap.docs.map((doc) => parseInvoice(doc.id, doc.data() as Record<string, unknown>));
+  }
+
+  return [];
 }
 
 async function listPaymentsForUser(user: PortalUser): Promise<PaymentRecord[]> {
@@ -227,17 +245,24 @@ async function listPaymentsForUser(user: PortalUser): Promise<PaymentRecord[]> {
     return [];
   }
 
-  const col = db.collection(COLLECTIONS.payments);
-  let snap;
   if (isStaff(user) && user.organizationId) {
-    snap = await col.where("organizationId", "==", user.organizationId).limit(100).get();
-  } else if (user.stripeCustomerId) {
-    snap = await col.where("customerId", "==", user.stripeCustomerId).limit(100).get();
-  } else {
-    snap = await col.limit(0).get();
+    const col = db.collection(COLLECTIONS.payments);
+    const snap = await col.where("organizationId", "==", user.organizationId).limit(100).get();
+    return snap.docs.map((doc) => parsePayment(doc.id, doc.data() as Record<string, unknown>));
   }
 
-  return snap.docs.map((doc) => parsePayment(doc.id, doc.data() as Record<string, unknown>));
+  const uidScoped = await db.collection(COLLECTIONS.users).doc(user.uid).collection("payments").limit(100).get();
+  if (!uidScoped.empty) {
+    return uidScoped.docs.map((doc) => parsePayment(doc.id, doc.data() as Record<string, unknown>));
+  }
+
+  if (user.stripeCustomerId) {
+    const col = db.collection(COLLECTIONS.payments);
+    const snap = await col.where("customerId", "==", user.stripeCustomerId).limit(100).get();
+    return snap.docs.map((doc) => parsePayment(doc.id, doc.data() as Record<string, unknown>));
+  }
+
+  return [];
 }
 
 async function listProposalsForUser(user: PortalUser): Promise<ProposalRecord[]> {

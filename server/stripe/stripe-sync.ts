@@ -99,6 +99,26 @@ function mapCollectionMethod(
   return undefined;
 }
 
+async function resolvePortalUserIdForStripeCustomer(db: Firestore, stripeCustomerId: string): Promise<string | null> {
+  const trimmed = stripeCustomerId.trim();
+  if (!trimmed) return null;
+  const snap = await db.collection(COLLECTIONS.users).where("stripeCustomerId", "==", trimmed).limit(1).get();
+  if (snap.empty) return null;
+  return snap.docs[0].id;
+}
+
+/** Copies a subscription-shaped doc to `users/{uid}/subscriptions/{docId}` when `users.stripeCustomerId` matches. */
+export async function mirrorSubscriptionRowToLinkedPortalUser(
+  db: Firestore,
+  stripeCustomerId: string,
+  docId: string,
+  data: Record<string, unknown>,
+): Promise<void> {
+  const uid = await resolvePortalUserIdForStripeCustomer(db, stripeCustomerId);
+  if (!uid) return;
+  await db.collection(COLLECTIONS.users).doc(uid).collection("subscriptions").doc(docId).set(data, { merge: true });
+}
+
 function productLabelFromSubscription(sub: Stripe.Subscription): string | undefined {
   const item = sub.items?.data?.[0];
   const price = item?.price;
@@ -189,6 +209,11 @@ export async function upsertSubscriptionMirror(db: Firestore, sub: Stripe.Subscr
   };
 
   await ref.set(record, { merge: true });
+
+  const uid = await resolvePortalUserIdForStripeCustomer(db, record.customerId as string);
+  if (uid) {
+    await db.collection(COLLECTIONS.users).doc(uid).collection("subscriptions").doc(sub.id).set(record, { merge: true });
+  }
 }
 
 export async function upsertInvoiceMirror(db: Firestore, invoice: Stripe.Invoice): Promise<void> {
@@ -212,24 +237,28 @@ export async function upsertInvoiceMirror(db: Firestore, invoice: Stripe.Invoice
       ? invoice.status_transitions.paid_at * 1000
       : undefined;
 
-  await ref.set(
-    {
-      id: invoice.id,
-      stripeInvoiceId: invoice.id,
-      customerId,
-      organizationId: metadataOrganizationId(invoice),
-      status: mapInvoiceStatus(invoice.status),
-      currency: (invoice.currency ?? "aud").toLowerCase(),
-      amountDue: typeof invoice.amount_due === "number" ? invoice.amount_due : 0,
-      hostedInvoiceUrl: invoice.hosted_invoice_url ?? undefined,
-      invoicePdf: invoice.invoice_pdf ?? undefined,
-      issuedAtMs: issued,
-      paidAtMs: paidAt,
-      updatedAtMs: Date.now(),
-      updatedAt: FieldValue.serverTimestamp(),
-    },
-    { merge: true },
-  );
+  const invoiceRecord = {
+    id: invoice.id,
+    stripeInvoiceId: invoice.id,
+    customerId,
+    organizationId: metadataOrganizationId(invoice),
+    status: mapInvoiceStatus(invoice.status),
+    currency: (invoice.currency ?? "aud").toLowerCase(),
+    amountDue: typeof invoice.amount_due === "number" ? invoice.amount_due : 0,
+    hostedInvoiceUrl: invoice.hosted_invoice_url ?? undefined,
+    invoicePdf: invoice.invoice_pdf ?? undefined,
+    issuedAtMs: issued,
+    paidAtMs: paidAt,
+    updatedAtMs: Date.now(),
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+
+  await ref.set(invoiceRecord, { merge: true });
+
+  const uid = await resolvePortalUserIdForStripeCustomer(db, customerId);
+  if (uid) {
+    await db.collection(COLLECTIONS.users).doc(uid).collection("invoices").doc(invoice.id).set(invoiceRecord, { merge: true });
+  }
 }
 
 export async function upsertPaymentIntentMirror(db: Firestore, pi: Stripe.PaymentIntent): Promise<void> {
@@ -241,22 +270,26 @@ export async function upsertPaymentIntentMirror(db: Firestore, pi: Stripe.Paymen
         ? pi.customer.id
         : "";
 
-  await ref.set(
-    {
-      id: pi.id,
-      stripePaymentIntentId: pi.id,
-      customerId,
-      organizationId: metadataOrganizationId(pi),
-      currency: (pi.currency ?? "aud").toLowerCase(),
-      amount: typeof pi.amount_received === "number" ? pi.amount_received : pi.amount,
-      status: pi.status,
-      description: pi.description ?? undefined,
-      createdAtMs: typeof pi.created === "number" ? pi.created * 1000 : Date.now(),
-      updatedAtMs: Date.now(),
-      updatedAt: FieldValue.serverTimestamp(),
-    },
-    { merge: true },
-  );
+  const paymentRecord = {
+    id: pi.id,
+    stripePaymentIntentId: pi.id,
+    customerId,
+    organizationId: metadataOrganizationId(pi),
+    currency: (pi.currency ?? "aud").toLowerCase(),
+    amount: typeof pi.amount_received === "number" ? pi.amount_received : pi.amount,
+    status: pi.status,
+    description: pi.description ?? undefined,
+    createdAtMs: typeof pi.created === "number" ? pi.created * 1000 : Date.now(),
+    updatedAtMs: Date.now(),
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+
+  await ref.set(paymentRecord, { merge: true });
+
+  const uid = await resolvePortalUserIdForStripeCustomer(db, customerId);
+  if (uid) {
+    await db.collection(COLLECTIONS.users).doc(uid).collection("payments").doc(pi.id).set(paymentRecord, { merge: true });
+  }
 }
 
 function isAlreadyExistsError(err: unknown): boolean {
@@ -304,17 +337,17 @@ export async function applyStripeWebhookEvent(db: Firestore, event: Stripe.Event
       case "customer.subscription.deleted": {
         const sub = event.data.object as Stripe.Subscription;
         if (event.type === "customer.subscription.deleted") {
-          await db
-            .collection(COLLECTIONS.subscriptions)
-            .doc(sub.id)
-            .set(
-              {
-                status: "canceled",
-                updatedAtMs: Date.now(),
-                updatedAt: FieldValue.serverTimestamp(),
-              },
-              { merge: true },
-            );
+          const patch = {
+            status: "canceled" as const,
+            updatedAtMs: Date.now(),
+            updatedAt: FieldValue.serverTimestamp(),
+          };
+          await db.collection(COLLECTIONS.subscriptions).doc(sub.id).set(patch, { merge: true });
+          const cus = typeof sub.customer === "string" ? sub.customer : sub.customer?.id ?? "";
+          const uid = await resolvePortalUserIdForStripeCustomer(db, cus);
+          if (uid) {
+            await db.collection(COLLECTIONS.users).doc(uid).collection("subscriptions").doc(sub.id).set(patch, { merge: true });
+          }
           return;
         }
         await upsertSubscriptionMirror(db, sub);

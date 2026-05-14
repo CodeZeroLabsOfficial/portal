@@ -3,7 +3,8 @@
  *
  * Security rules (high level — implement in Firebase console):
  * - `users`: user can read/write own doc; admins can read org members via custom claims or backend checks.
- * - `subscriptions`, `invoices`: customer sees own via stripeCustomerId match; staff via organizationId.
+ * - `users/{uid}/subscriptions`, `users/{uid}/invoices`, `users/{uid}/payments`, `users/{uid}/paymentMethods`: portal billing mirrors (webhooks / functions).
+ * - Top-level `subscriptions`, `invoices`, `payments`: org-scoped staff views and legacy customerId-indexed mirrors.
  * - `opportunities`: staff-only reads/writes (Admin SDK in this app); add rules matching `customers` if exposed to clients.
  * - `proposals`, `proposal_templates`: org-scoped; public reads only via dedicated share token rules or Cloud Function proxy.
  * - `analytics_events`: insert from authenticated viewer session or validated public token; reads restricted to proposal owners.

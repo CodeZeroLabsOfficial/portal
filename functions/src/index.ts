@@ -27,6 +27,10 @@ interface DeletePaymentMethodRequest {
   stripePmId?: unknown;
 }
 
+interface SetDefaultPaymentMethodRequest {
+  stripePmId?: unknown;
+}
+
 function getStripe(): Stripe {
   const secret = process.env.STRIPE_SECRET_KEY?.trim();
   if (!secret) {
@@ -71,8 +75,9 @@ async function requireAuthenticatedStripeUser(context: functions.https.CallableC
   return {uid, stripeCustomerId};
 }
 
-function customerPaymentMethodsCollection(uid: string) {
-  return db.collection("customers").doc(uid).collection("paymentMethods");
+/** Firestore mirror for saved cards: `users/{uid}/paymentMethods` (Stripe is source of truth for attachments). */
+function userPaymentMethodsCollection(uid: string) {
+  return db.collection("users").doc(uid).collection("paymentMethods");
 }
 
 function stripeErrorMessage(error: unknown, fallback: string): string {
@@ -100,6 +105,94 @@ async function clearDefaultFlags(
   allDocs.docs.forEach((doc) => batch.set(doc.ref, {isDefault: false}, {merge: true}));
   await batch.commit();
 }
+
+/** List card payment methods attached to the signed-in user's Stripe customer (source of truth for the app). */
+export const listPaymentMethods = functions.region("australia-southeast1").https.onCall(async (_rawData, context) => {
+  const auth = await requireAuthenticatedStripeUser(context);
+  const stripe = getStripe();
+
+  const customer = await stripe.customers.retrieve(auth.stripeCustomerId, {
+    expand: ["invoice_settings.default_payment_method"],
+  });
+  if (customer.deleted || typeof customer === "string") {
+    return {paymentMethods: [] as object[]};
+  }
+
+  let defaultPmId: string | null = null;
+  const inv = customer.invoice_settings?.default_payment_method;
+  if (inv && typeof inv === "object" && "id" in inv) {
+    defaultPmId = inv.id;
+  } else if (typeof inv === "string") {
+    defaultPmId = inv;
+  }
+
+  const list = await stripe.paymentMethods.list({
+    customer: auth.stripeCustomerId,
+    type: "card",
+    limit: 100,
+  });
+
+  const paymentMethods = list.data.map((pm) => {
+    const card = pm.card;
+    return {
+      id: pm.id,
+      stripePmId: pm.id,
+      type: "card",
+      brand: (card?.brand ?? "card").toLowerCase(),
+      last4: card?.last4 ?? "****",
+      expMonth: card?.exp_month ?? 0,
+      expYear: card?.exp_year ?? 0,
+      isDefault: pm.id === defaultPmId,
+    };
+  });
+
+  return {paymentMethods};
+});
+
+/** Set Stripe invoice default payment method (must already be attached to this customer). */
+export const setDefaultPaymentMethod = functions.region("australia-southeast1").https.onCall(async (rawData, context) => {
+  const auth = await requireAuthenticatedStripeUser(context);
+  const data = (rawData ?? {}) as SetDefaultPaymentMethodRequest;
+  const stripePmId = asTrimmedString(data.stripePmId);
+  if (!stripePmId || !stripePmId.startsWith("pm_")) {
+    throw new functions.https.HttpsError("invalid-argument", "A valid Stripe payment method ID is required.");
+  }
+
+  const stripe = getStripe();
+  const pm = await stripe.paymentMethods.retrieve(stripePmId);
+  if (pm.object !== "payment_method" || pm.type !== "card") {
+    throw new functions.https.HttpsError("invalid-argument", "Payment method must be a card.");
+  }
+  if (extractStripeCustomerId(pm.customer) !== auth.stripeCustomerId) {
+    throw new functions.https.HttpsError(
+      "failed-precondition",
+      "Payment method is not attached to this customer.",
+    );
+  }
+
+  await stripe.customers.update(auth.stripeCustomerId, {
+    invoice_settings: {default_payment_method: stripePmId},
+  });
+
+  await clearDefaultFlags(userPaymentMethodsCollection(auth.uid));
+  const nowMs = Date.now();
+  const card = pm.card;
+  await userPaymentMethodsCollection(auth.uid).doc(stripePmId).set(
+    {
+      type: "card",
+      brand: normalizeCardBrand(null, card?.brand ?? null),
+      last4: card?.last4 ?? "****",
+      expMonth: card?.exp_month ?? 0,
+      expYear: card?.exp_year ?? 0,
+      isDefault: true,
+      stripePmId,
+      updatedAtMs: nowMs,
+    },
+    {merge: true},
+  );
+
+  return {ok: true, stripePmId};
+});
 
 export const updatePaymentMethod = functions.region("australia-southeast1").https.onCall(async (rawData, context) => {
   const auth = await requireAuthenticatedStripeUser(context);
@@ -147,7 +240,7 @@ export const updatePaymentMethod = functions.region("australia-southeast1").http
   }
 
   const card = attachedPm.card;
-  const paymentMethodsCol = customerPaymentMethodsCollection(auth.uid);
+  const paymentMethodsCol = userPaymentMethodsCollection(auth.uid);
   if (isDefault) {
     await clearDefaultFlags(paymentMethodsCol);
   }
@@ -176,12 +269,17 @@ export const deletePaymentMethod = functions.region("australia-southeast1").http
   }
 
   const stripe = getStripe();
-  const paymentMethodsCol = customerPaymentMethodsCollection(auth.uid);
-  const allPaymentMethodsSnap = await paymentMethodsCol.get();
-  const toDelete = allPaymentMethodsSnap.docs.filter((doc) => {
+  const pmCol = userPaymentMethodsCollection(auth.uid);
+  const snap = await pmCol.get();
+  const allDocs = snap.docs;
+  const toDeleteByPath = new Map<string, FirebaseFirestore.QueryDocumentSnapshot>();
+  for (const doc of allDocs) {
     const stripeId = asTrimmedString(doc.data().stripePmId);
-    return doc.id === stripePmId || stripeId === stripePmId;
-  });
+    if (doc.id === stripePmId || stripeId === stripePmId) {
+      toDeleteByPath.set(doc.ref.path, doc);
+    }
+  }
+  const toDelete = Array.from(toDeleteByPath.values());
   const deletingDefault = toDelete.some((doc) => doc.data().isDefault === true);
 
   if (toDelete.length > 0) {
@@ -204,21 +302,21 @@ export const deletePaymentMethod = functions.region("australia-southeast1").http
   }
 
   if (deletingDefault) {
-    const remainingSnap = await paymentMethodsCol.get();
-    const nextDefault = remainingSnap.docs
-      .map((doc) => asTrimmedString(doc.data().stripePmId) ?? doc.id)
-      .find((id) => id.startsWith("pm_"));
+    const remainingStripe = await stripe.paymentMethods.list({
+      customer: auth.stripeCustomerId,
+      type: "card",
+      limit: 100,
+    });
+    const nextDefault = remainingStripe.data[0]?.id;
 
     if (nextDefault) {
       await stripe.customers.update(auth.stripeCustomerId, {
         invoice_settings: {default_payment_method: nextDefault},
       });
-
-      await clearDefaultFlags(paymentMethodsCol);
-      await paymentMethodsCol.doc(nextDefault).set({isDefault: true}, {merge: true});
+      await clearDefaultFlags(pmCol);
+      await pmCol.doc(nextDefault).set({isDefault: true}, {merge: true});
     } else {
       await stripe.customers.update(auth.stripeCustomerId, {
-        // Stripe accepts null to clear the default PM; cast keeps TS happy.
         invoice_settings: {default_payment_method: null as unknown as string},
       });
     }
@@ -227,7 +325,10 @@ export const deletePaymentMethod = functions.region("australia-southeast1").http
   return {ok: true, stripePmId};
 });
 
-/** Health endpoint remains available for monitoring/deploy checks. */
-export const crmHealth = functions.region("australia-southeast1").https.onRequest((_req, res) => {
-  res.status(200).send("CRM Cloud Functions bundle loaded.");
+/**
+ * HTTP health check (Gen1 `onRequest`). Renamed from `crmHealth` because Firebase does not allow
+ * changing an existing function between callable and HTTP — deploy a new name, then delete the old one.
+ */
+export const portalFunctionsHealth = functions.region("australia-southeast1").https.onRequest((_req, res) => {
+  res.status(200).send("Portal Cloud Functions bundle loaded.");
 });

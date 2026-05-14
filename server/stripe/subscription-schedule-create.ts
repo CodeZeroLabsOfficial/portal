@@ -5,7 +5,7 @@ import { logError } from "@/lib/logging";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import type { CustomerRecord } from "@/types/customer";
 import { ensureStripeCustomer } from "@/server/stripe/proposal-billing";
-import { upsertSubscriptionMirror } from "@/server/stripe/stripe-sync";
+import { upsertSubscriptionMirror, mirrorSubscriptionRowToLinkedPortalUser } from "@/server/stripe/stripe-sync";
 
 export function parseStartDateToUtcMs(startDateIso: string): number | null {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(startDateIso);
@@ -160,17 +160,16 @@ export async function createSubscriptionScheduleForCustomer(
         expand: ["default_payment_method", "items.data.price.product"],
       });
       await upsertSubscriptionMirror(db, subscription);
-      await db.collection(COLLECTIONS.subscriptions).doc(subscriptionId).set(
-        {
-          stripeScheduleId: schedule.id,
-          subscriptionStart: startAtMs,
-          plannedDurationMonths: durationMonths,
-          subscriptionEnd,
-          updatedAtMs: Date.now(),
-          updatedAt: FieldValue.serverTimestamp(),
-        },
-        { merge: true },
-      );
+      const mergeFields = {
+        stripeScheduleId: schedule.id,
+        subscriptionStart: startAtMs,
+        plannedDurationMonths: durationMonths,
+        subscriptionEnd,
+        updatedAtMs: Date.now(),
+        updatedAt: FieldValue.serverTimestamp(),
+      };
+      await db.collection(COLLECTIONS.subscriptions).doc(subscriptionId).set(mergeFields, { merge: true });
+      await mirrorSubscriptionRowToLinkedPortalUser(db, stripeCustomerId, subscriptionId, mergeFields);
     } else {
       const scheduledMonthlyAmountMinor =
         typeof price.unit_amount === "number"
@@ -178,32 +177,31 @@ export async function createSubscriptionScheduleForCustomer(
             ? Math.round(price.unit_amount / 12)
             : price.unit_amount
           : undefined;
-      await db.collection(COLLECTIONS.subscriptions).doc(schedule.id).set(
-        {
-          id: schedule.id,
-          customerId: stripeCustomerId,
-          ...(organizationId ? { organizationId } : {}),
-          status: "scheduled",
-          priceId: selectedPriceId,
-          ...(productNameFromPriceObject(price.product)
-            ? { productName: productNameFromPriceObject(price.product) }
-            : {}),
-          currency: (price.currency ?? "aud").toLowerCase(),
-          interval: price.recurring?.interval === "year" ? "year" : "month",
-          collectionMethod,
-          ...(typeof scheduledMonthlyAmountMinor === "number"
-            ? { monthlyAmountMinor: scheduledMonthlyAmountMinor }
-            : {}),
-          createdAtMs: startAtMs,
-          updatedAtMs: Date.now(),
-          updatedAt: FieldValue.serverTimestamp(),
-          stripeScheduleId: schedule.id,
-          subscriptionStart: startAtMs,
-          plannedDurationMonths: durationMonths,
-          subscriptionEnd,
-        },
-        { merge: true },
-      );
+      const scheduleRecord = {
+        id: schedule.id,
+        customerId: stripeCustomerId,
+        ...(organizationId ? { organizationId } : {}),
+        status: "scheduled" as const,
+        priceId: selectedPriceId,
+        ...(productNameFromPriceObject(price.product)
+          ? { productName: productNameFromPriceObject(price.product) }
+          : {}),
+        currency: (price.currency ?? "aud").toLowerCase(),
+        interval: price.recurring?.interval === "year" ? ("year" as const) : ("month" as const),
+        collectionMethod,
+        ...(typeof scheduledMonthlyAmountMinor === "number"
+          ? { monthlyAmountMinor: scheduledMonthlyAmountMinor }
+          : {}),
+        createdAtMs: startAtMs,
+        updatedAtMs: Date.now(),
+        updatedAt: FieldValue.serverTimestamp(),
+        stripeScheduleId: schedule.id,
+        subscriptionStart: startAtMs,
+        plannedDurationMonths: durationMonths,
+        subscriptionEnd,
+      };
+      await db.collection(COLLECTIONS.subscriptions).doc(schedule.id).set(scheduleRecord, { merge: true });
+      await mirrorSubscriptionRowToLinkedPortalUser(db, stripeCustomerId, schedule.id, scheduleRecord);
     }
 
     const activityPayload: Record<string, unknown> = {
