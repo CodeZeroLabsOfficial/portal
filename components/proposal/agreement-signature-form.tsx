@@ -292,7 +292,7 @@ export function AgreementSignatureForm({
     onDismissError?.();
   }
 
-  function clearCapturedSignature(options?: { reopenAdopt?: boolean }) {
+  function clearCapturedSignature() {
     setLocalError(null);
     onDismissError?.();
     setCapturedDataUrl(null);
@@ -303,19 +303,7 @@ export function AgreementSignatureForm({
     setHasInk(false);
     setCanvasReset((k) => k + 1);
     if (fileInputRef.current) fileInputRef.current.value = "";
-
-    if (options?.reopenAdopt) {
-      const name = acceptName.trim();
-      if (name.length < 2) {
-        setLocalError("Please enter your full name before signing.");
-        setAdoptOpen(false);
-        return;
-      }
-      setAdoptTab("type");
-      setAdoptOpen(true);
-    } else {
-      setAdoptOpen(false);
-    }
+    setAdoptOpen(false);
   }
 
   function openAdoptPanelForEdit() {
@@ -582,7 +570,7 @@ export function AgreementSignatureForm({
                           "focus:bg-slate-50 focus:text-[#2d334a] data-[highlighted]:bg-slate-50 data-[highlighted]:text-[#2d334a]",
                         )}
                         onSelect={() => {
-                          clearCapturedSignature({ reopenAdopt: true });
+                          clearCapturedSignature();
                         }}
                       >
                         Clear
