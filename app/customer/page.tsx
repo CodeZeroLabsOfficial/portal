@@ -82,7 +82,7 @@ export default async function CustomerPortalPage() {
                 Awaiting response:{" "}
                 {
                   data.proposals.filter(
-                    (proposal) => proposal.status === "sent" || proposal.status === "viewed",
+                    (proposal) => proposal.status === "published" || proposal.status === "viewed",
                   ).length
                 }
               </p>

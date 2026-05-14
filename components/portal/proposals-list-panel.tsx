@@ -19,7 +19,7 @@ export interface ProposalsListPanelProps {
   localityTimeZone?: string;
 }
 
-type ProposalLifecyclePhase = "saved" | "sent" | "viewed";
+type ProposalLifecyclePhase = "draft" | "published" | "viewed";
 
 function proposalLifecyclePhase(p: ProposalRecord): ProposalLifecyclePhase {
   const viewed =
@@ -29,8 +29,8 @@ function proposalLifecyclePhase(p: ProposalRecord): ProposalLifecyclePhase {
     (typeof p.viewCount === "number" && p.viewCount > 0) ||
     (typeof p.lastViewedAtMs === "number" && p.lastViewedAtMs > 0);
   if (viewed) return "viewed";
-  if (p.status !== "draft") return "sent";
-  return "saved";
+  if (p.status !== "draft") return "published";
+  return "draft";
 }
 
 const HUB_BADGE: Record<string, string> = {
@@ -38,7 +38,7 @@ const HUB_BADGE: Record<string, string> = {
     "border-slate-500/45 bg-slate-500/10 text-slate-800 dark:border-slate-500/35 dark:bg-slate-500/15 dark:text-slate-200",
   published:
     "border-sky-500/45 bg-sky-500/10 text-sky-900 dark:border-sky-500/35 dark:bg-sky-500/15 dark:text-sky-200",
-  opened:
+  viewed:
     "border-emerald-500/45 bg-emerald-500/10 text-emerald-900 dark:border-emerald-500/35 dark:bg-emerald-500/15 dark:text-emerald-200",
   accepted:
     "border-emerald-600/50 bg-emerald-600/12 text-emerald-950 dark:border-emerald-500/40 dark:bg-emerald-600/18 dark:text-emerald-100",
@@ -73,24 +73,24 @@ function proposalHubStageDisplay(p: ProposalRecord): {
     };
   }
   const phase = proposalLifecyclePhase(p);
-  if (phase === "saved") {
+  if (phase === "draft") {
     return {
       label: "Draft",
-      title: "Saved in CRM — not published to a public link yet.",
+      title: "Draft — not published to a public link yet.",
       badgeKey: "draft",
     };
   }
-  if (phase === "sent") {
+  if (phase === "published") {
     return {
       label: "Published",
-      title: "Live — public link is active; no recorded opens yet.",
+      title: "Published — public link is active; no recorded opens yet.",
       badgeKey: "published",
     };
   }
   return {
-    label: "Opened",
-    title: "Recipient has opened or interacted with the public proposal.",
-    badgeKey: "opened",
+    label: "Viewed",
+    title: "Viewed — recipient has opened or interacted with the public proposal.",
+    badgeKey: "viewed",
   };
 }
 

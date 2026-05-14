@@ -74,7 +74,7 @@ export default async function DashboardPage() {
               <CardTitle className="text-3xl tabular-nums">{data.openProposals}</CardTitle>
             </CardHeader>
             <CardContent className="text-xs text-muted-foreground">
-              Draft, sent, and viewed proposals.
+              Draft, published, and viewed proposals.
             </CardContent>
           </Card>
           <Card className="border-border/70 bg-card/90">

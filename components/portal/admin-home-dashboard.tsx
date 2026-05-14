@@ -77,7 +77,7 @@ function proposalStatusLabel(status: string): { label: string; className: string
         "border-emerald-500/35 bg-emerald-500/15 text-emerald-200",
     };
   }
-  if (status === "sent" || status === "viewed") {
+  if (status === "published" || status === "viewed") {
     return {
       label: "Pending",
       className: "border-amber-500/35 bg-amber-500/10 text-amber-100",
@@ -230,7 +230,7 @@ function extractPricingMinorFromBlock(block: ProposalBlock): number {
 
 function sumPendingProposalValueMinor(proposals: ProposalRecord[]): number {
   return proposals
-    .filter((p) => p.status === "draft" || p.status === "sent" || p.status === "viewed")
+    .filter((p) => p.status === "draft" || p.status === "published" || p.status === "viewed")
     .reduce(
       (sum, p) =>
         sum +
@@ -520,7 +520,7 @@ export function AdminHomeDashboard({
     totalSubs === 0 ? 0 : Math.round(((totalSubs - activeSubCount) / totalSubs) * 1000) / 10;
 
   const pendingProposals = data.proposals.filter(
-    (p) => p.status === "draft" || p.status === "sent" || p.status === "viewed",
+    (p) => p.status === "draft" || p.status === "published" || p.status === "viewed",
   );
   const pendingCount = pendingProposals.length;
   const pendingValueMinor = sumPendingProposalValueMinor(data.proposals);

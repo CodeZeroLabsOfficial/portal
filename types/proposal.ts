@@ -436,7 +436,7 @@ export interface ProposalDocument {
   blocks: ProposalBlock[];
 }
 
-export type ProposalStatus = "draft" | "sent" | "viewed" | "accepted" | "declined" | "expired";
+export type ProposalStatus = "draft" | "published" | "viewed" | "accepted" | "declined" | "expired";
 
 export interface ProposalBranding {
   logoUrl?: string;
@@ -449,7 +449,7 @@ export interface ProposalRecord {
   organizationId: string;
   createdByUid: string;
   title: string;
-  /** Optional — links draft/sent proposals to `customers/{customerId}`. */
+  /** Optional — links draft/published proposals to `customers/{customerId}`. */
   customerId?: string;
   /** Optional — links to `opportunities/{opportunityId}` when created from pipeline. */
   opportunityId?: string;

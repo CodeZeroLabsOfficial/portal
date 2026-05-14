@@ -151,7 +151,7 @@ export async function sendProposalAction(
     "Could not publish proposal.",
     () =>
       ref.update({
-        status: "sent",
+        status: "published",
         sentAtMs: typeof prevSent === "number" ? prevSent : now,
         updatedAtMs: now,
         updatedAt: FieldValue.serverTimestamp(),

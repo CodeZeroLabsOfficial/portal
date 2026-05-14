@@ -349,7 +349,7 @@ export async function getDashboardData(user: PortalUser): Promise<DashboardData>
     (item) => item.status === "active" || item.status === "trialing",
   ).length;
   const openProposals = proposals.filter(
-    (item) => item.status === "draft" || item.status === "sent" || item.status === "viewed",
+    (item) => item.status === "draft" || item.status === "published" || item.status === "viewed",
   ).length;
   const acceptedCount = proposals.filter((item) => item.status === "accepted").length;
   const closedCount = proposals.filter(

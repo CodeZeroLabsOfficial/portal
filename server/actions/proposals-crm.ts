@@ -7,7 +7,7 @@ import { requireStaffSession } from "@/lib/auth/server-session";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { getCustomerRecordForOrg } from "@/server/firestore/crm-customers";
-import { getOpportunityForStaff } from "@/server/firestore/crm-opportunities";
+import { getOpportunityForStaff, updateOpportunityStage } from "@/server/firestore/crm-opportunities";
 import { getProposalTemplateForStaff } from "@/server/firestore/proposal-templates";
 import { cloneBrandingFromTemplate, cloneProposalDocument } from "@/lib/proposal-clone-document";
 import { encodeProposalDocumentForFirestore } from "@/lib/proposal-firestore-document";
@@ -289,6 +289,21 @@ export async function createDraftProposalFromOpportunityAction(
     if (sourceTemplateId) payload.sourceTemplateId = sourceTemplateId;
 
     await ref.set(payload);
+
+    try {
+      const stageRes = await updateOpportunityStage(user, opportunityId, "proposal_sent");
+      if (!stageRes.ok) {
+        logError("createDraftProposalFromOpportunity_stage_failed", {
+          opportunityId,
+          message: stageRes.message,
+        });
+      }
+    } catch (e) {
+      logError("createDraftProposalFromOpportunity_stage_failed", {
+        opportunityId,
+        message: e instanceof Error ? e.message : String(e),
+      });
+    }
 
     revalidatePath("/admin");
     revalidatePath("/admin/proposals");

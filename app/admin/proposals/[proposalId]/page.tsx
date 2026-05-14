@@ -16,7 +16,7 @@ import type { ProposalStatus } from "@/types/proposal";
 
 const PROPOSAL_STATUS_BADGE_CLASS: Partial<Record<ProposalStatus, string>> = {
   draft: "border-amber-500/40 text-amber-600 dark:text-amber-400",
-  sent: "border-sky-500/40 text-sky-600 dark:text-sky-400",
+  published: "border-sky-500/40 text-sky-600 dark:text-sky-400",
   viewed: "border-emerald-500/40 text-emerald-600 dark:text-emerald-400",
   accepted: "border-emerald-500/40 text-emerald-600 dark:text-emerald-400",
   declined: "border-red-500/40 text-red-600 dark:text-red-400",
@@ -27,9 +27,9 @@ const PROPOSAL_STATUS_BADGE_CLASS: Partial<Record<ProposalStatus, string>> = {
 function proposalDetailsStatusLabel(status: ProposalStatus): string {
   switch (status) {
     case "draft":
-      return "Saved";
-    case "sent":
-      return "Live";
+      return "Draft";
+    case "published":
+      return "Published";
     case "viewed":
       return "Viewed";
     case "accepted":
@@ -95,11 +95,13 @@ export default async function AdminProposalDetailPage({ params, searchParams }: 
                 <Badge
                   variant="outline"
                   title={
-                    proposal.status === "sent"
-                      ? "Live — public proposal is ready to view; no recorded opens yet."
+                    proposal.status === "published"
+                      ? "Published — public proposal is ready to view; no recorded opens yet."
                       : proposal.status === "draft"
-                        ? "Draft — saved to CRM, not published yet."
-                        : undefined
+                        ? "Draft — not published to a public link yet."
+                        : proposal.status === "viewed"
+                          ? "Viewed — recipient has viewed or acted on the public proposal."
+                          : undefined
                   }
                   className={cn(PROPOSAL_STATUS_BADGE_CLASS[proposal.status])}
                 >

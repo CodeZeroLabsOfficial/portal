@@ -22,7 +22,7 @@ function parseStatus(raw: unknown): ProposalStatus {
   const s = typeof raw === "string" ? raw : "";
   if (
     s === "draft" ||
-    s === "sent" ||
+    s === "published" ||
     s === "viewed" ||
     s === "accepted" ||
     s === "declined" ||
@@ -30,7 +30,7 @@ function parseStatus(raw: unknown): ProposalStatus {
   ) {
     return s;
   }
-  return "sent";
+  return "draft";
 }
 
 /**

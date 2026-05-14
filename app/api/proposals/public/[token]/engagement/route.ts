@@ -80,7 +80,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
       updatedAtMs: now,
       updatedAt: FieldValue.serverTimestamp(),
     };
-    if (proposal.status === "sent") {
+    if (proposal.status === "published") {
       pack.status = "viewed";
     }
     await ref.update(pack);
