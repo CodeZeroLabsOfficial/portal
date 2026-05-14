@@ -4,8 +4,10 @@ import { COLLECTIONS } from "@/server/firestore/collections";
 import type { ProposalRecord } from "@/types/proposal";
 
 /**
- * After a public proposal acceptance: move the linked deal to **Won**, promote
- * **Lead → Contact** without deleting pipeline rows (unlike staff “convert to contact”).
+ * After a public proposal acceptance: move the linked deal to **Won** when the
+ * proposal carries an `opportunityId` (no proposal `customerId` required). If both
+ * the proposal and the opportunity specify a customer, they must match or we skip
+ * Won and log. Also promotes **Lead → Contact** when a `customerId` is present.
  */
 export async function applyProposalAcceptCrmSideEffects(
   db: Firestore,
@@ -17,7 +19,7 @@ export async function applyProposalAcceptCrmSideEffects(
   const now = Timestamp.now();
   const orgId = proposal.organizationId?.trim();
 
-  if (opportunityId && customerId) {
+  if (opportunityId) {
     try {
       const oppRef = db.collection(COLLECTIONS.opportunities).doc(opportunityId);
       const oppSnap = await oppRef.get();
@@ -27,7 +29,9 @@ export async function applyProposalAcceptCrmSideEffects(
         const data = oppSnap.data() as Record<string, unknown>;
         const oppCustomer =
           typeof data.customerId === "string" ? data.customerId.trim() : "";
-        if (oppCustomer !== customerId) {
+        const bothCustomersKnown = Boolean(customerId) && Boolean(oppCustomer);
+        const customerMismatch = bothCustomersKnown && oppCustomer !== customerId;
+        if (customerMismatch) {
           logError("proposal_accept_opportunity_customer_mismatch", {
             opportunityId,
             proposalId: proposal.id,
