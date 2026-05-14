@@ -108,7 +108,7 @@ const PROPOSAL_PHASE_BADGE_CLASS: Record<ProposalLifecyclePhase, string> = {
 };
 
 const PROPOSAL_PHASE_TITLE: Record<ProposalLifecyclePhase, string> = {
-  draft: "Draft — not published to a public link yet. Use Save & publish in the editor when ready.",
+  draft: "Draft — not published to a public link yet. Use Publish in the editor when ready.",
   published: "Published — public proposal is ready to view; no recorded opens yet.",
   viewed: "Viewed — recipient has viewed or acted on the public proposal.",
 };
