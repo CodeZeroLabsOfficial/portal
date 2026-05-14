@@ -1041,7 +1041,14 @@ export function CustomerDetailView({
                             timeStyle: "short",
                           })
                         : "—"}{" "}
-                      · Signer: {signedAgreementModalData.record.signerName} · Monthly total:{" "}
+                      · Signer: {signedAgreementModalData.record.signerName}
+                      {signedAgreementModalData.record.signerEmail ? (
+                        <> · Email: {signedAgreementModalData.record.signerEmail}</>
+                      ) : null}
+                      {signedAgreementModalData.record.signerOrganization ? (
+                        <> · Org: {signedAgreementModalData.record.signerOrganization}</>
+                      ) : null}{" "}
+                      · Monthly total:{" "}
                       {signedAgreementModalData.record.totalAmount.formatted}
                     </p>
                   </header>

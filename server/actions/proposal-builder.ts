@@ -50,6 +50,11 @@ const SIGNATURE_DATA_URL_MAX = 750_000;
 const acceptSchema = z.object({
   shareToken: z.string().min(8),
   signerName: z.string().trim().min(2).max(200),
+  signerEmail: z.preprocess(
+    (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+    z.string().trim().email().max(320).optional(),
+  ),
+  signerOrganization: z.string().trim().max(500).optional(),
   signatureDataUrl: z
     .string()
     .max(SIGNATURE_DATA_URL_MAX)
@@ -60,7 +65,7 @@ const acceptSchema = z.object({
         (typeof s === "string" && s.startsWith("data:image/png;base64,") && s.length > 32),
       "Invalid signature image.",
     ),
-  signatureMethod: z.enum(["draw", "type"]).optional(),
+  signatureMethod: z.enum(["draw", "type", "upload"]).optional(),
   clientSignedAtMs: z.number().int().min(1).max(Number.MAX_SAFE_INTEGER).optional(),
 });
 
@@ -263,7 +268,9 @@ export async function acceptProposalPublicAction(
     const msg =
       first?.message === "Invalid signature image."
         ? "Could not read the signature image. Try clearing and signing again."
-        : "Please enter your full name.";
+        : first?.path?.[0] === "signerEmail"
+          ? "Please enter a valid email address."
+          : "Please enter your full name.";
     return { ok: false, message: msg };
   }
 
@@ -382,6 +389,11 @@ export async function acceptProposalPublicAction(
       addons: commerce.addons,
       totalAmount: commerce.totalAmount,
       signerName: parsed.data.signerName,
+      signerEmail:
+        parsed.data.signerEmail?.trim().toLowerCase() ??
+        proposal.recipientEmail?.trim().toLowerCase() ??
+        null,
+      signerOrganization: parsed.data.signerOrganization?.trim() || null,
       signatureMethod: sigMethod ?? null,
       signedAt: FieldValue.serverTimestamp(),
       signedAtMs: now,
@@ -431,6 +443,7 @@ export async function acceptProposalPublicAction(
           opportunityId: proposal.opportunityId,
           customerId: proposal.customerId,
           signerName: parsed.data.signerName,
+          signerEmail: parsed.data.signerEmail ?? proposal.recipientEmail?.trim().toLowerCase() ?? null,
           atMs: now,
           signatureMethod: sigMethod ?? null,
           hasSignatureImage: Boolean(sigUrl),

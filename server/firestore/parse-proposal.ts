@@ -127,7 +127,9 @@ export function parseProposalRecord(id: string, data: Record<string, unknown>): 
     acceptedByName: asString(data.acceptedByName),
     acceptedSignatureDataUrl: asString(data.acceptedSignatureDataUrl),
     acceptedSignatureMethod:
-      data.acceptedSignatureMethod === "draw" || data.acceptedSignatureMethod === "type"
+      data.acceptedSignatureMethod === "draw" ||
+      data.acceptedSignatureMethod === "type" ||
+      data.acceptedSignatureMethod === "upload"
         ? data.acceptedSignatureMethod
         : undefined,
     acceptedClientSignedAtMs: asNumber(data.acceptedClientSignedAtMs),

@@ -366,8 +366,10 @@ export function AgreementBlockPublic({
 
   async function onSign(payload: {
     signerName: string;
+    signerEmail: string;
+    signerOrganization?: string;
     signatureDataUrl: string;
-    signatureMethod: "draw" | "type";
+    signatureMethod: "draw" | "type" | "upload";
     clientSignedAtMs: number;
   }) {
     if (!shareToken || !interactive) return;
@@ -377,6 +379,8 @@ export function AgreementBlockPublic({
       const res = await acceptProposalPublicAction({
         shareToken,
         signerName: payload.signerName,
+        signerEmail: payload.signerEmail,
+        signerOrganization: payload.signerOrganization,
         signatureDataUrl: payload.signatureDataUrl,
         signatureMethod: payload.signatureMethod,
         clientSignedAtMs: payload.clientSignedAtMs,

@@ -29,7 +29,11 @@ export interface SignedAgreementRecord {
   addons: SignedAgreementAddonSnapshot[];
   totalAmount: SignedAgreementTotalAmount;
   signerName: string;
-  signatureMethod: "draw" | "type" | null;
+  /** Email entered on the public Accept form (may differ from CRM recipient). */
+  signerEmail?: string;
+  /** Organization entered on the public Accept form (optional). */
+  signerOrganization?: string;
+  signatureMethod: "draw" | "type" | "upload" | null;
   signedAtMs: number;
   clientSignedAtMs?: number;
   fullAgreementText?: string;

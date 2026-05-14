@@ -474,8 +474,8 @@ export interface ProposalRecord {
   acceptedByName?: string;
   /** PNG data URL captured at acceptance when the buyer signs via the agreement modal. */
   acceptedSignatureDataUrl?: string;
-  /** How the signature image was produced (`draw` canvas vs `type` name + date). */
-  acceptedSignatureMethod?: "draw" | "type";
+  /** How the signature image was produced (`draw`, `type`, or `upload`). */
+  acceptedSignatureMethod?: "draw" | "type" | "upload";
   /** Optional client clock at sign (ms); server `acceptedAtMs` remains authoritative. */
   acceptedClientSignedAtMs?: number;
   /** Stripe Checkout / PaymentIntent linkage when collecting payment in-proposal. */

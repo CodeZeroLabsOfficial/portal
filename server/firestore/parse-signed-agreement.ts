@@ -53,7 +53,9 @@ export function parseSignedAgreementRecord(id: string, data: Record<string, unkn
 
   const signatureMethodRaw = data.signatureMethod;
   const signatureMethod =
-    signatureMethodRaw === "draw" || signatureMethodRaw === "type" ? signatureMethodRaw : null;
+    signatureMethodRaw === "draw" || signatureMethodRaw === "type" || signatureMethodRaw === "upload"
+      ? signatureMethodRaw
+      : null;
 
   return {
     id,
@@ -68,6 +70,8 @@ export function parseSignedAgreementRecord(id: string, data: Record<string, unkn
     addons: parseAddons(data.addons),
     totalAmount: parseTotalAmount(data.totalAmount),
     signerName: asString(data.signerName)?.trim() || "—",
+    signerEmail: asString(data.signerEmail),
+    signerOrganization: asString(data.signerOrganization),
     signatureMethod,
     signedAtMs: asNumber(data.signedAtMs) ?? 0,
     clientSignedAtMs: asNumber(data.clientSignedAtMs),
