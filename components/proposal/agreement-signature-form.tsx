@@ -612,12 +612,7 @@ export function AgreementSignatureForm({
                     )}
                   >
                     <div className="flex min-h-[7.25rem] flex-col items-center justify-center px-4 py-6 sm:min-h-[7.75rem]">
-                      <span
-                        className="text-lg font-semibold tracking-tight"
-                        style={{ color: ctaColor }}
-                      >
-                        Sign
-                      </span>
+                      <span className="text-lg font-semibold tracking-tight text-[#1a1a5e]">Sign</span>
                     </div>
                   </button>
                 )}
@@ -823,10 +818,9 @@ export function AgreementSignatureForm({
           <div className="mx-auto mt-8 max-w-md space-y-3 rounded-xl border border-zinc-100 bg-zinc-50/60 p-4">
             <label
               className={cn(
-                "group flex cursor-pointer items-start gap-3.5 text-sm font-medium leading-snug",
+                "group flex cursor-pointer items-start gap-3 text-sm leading-snug text-[#1a1a5e]",
                 disabled && "pointer-events-none cursor-not-allowed opacity-60",
               )}
-              style={{ color: ctaColor }}
             >
               <span className="relative mt-0.5 h-8 w-8 shrink-0">
                 <input
@@ -842,19 +836,14 @@ export function AgreementSignatureForm({
                 <span
                   aria-hidden
                   className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded-lg border-2 border-slate-300 bg-white transition-colors",
-                    "group-focus-within:ring-2 group-focus-within:ring-slate-300/80 group-focus-within:ring-offset-2 group-focus-within:ring-offset-zinc-50",
+                    "flex h-8 w-8 items-center justify-center rounded-md border-2 border-slate-300 bg-white transition-colors",
+                    "group-focus-within:ring-2 group-focus-within:ring-slate-400/45 group-focus-within:ring-offset-2 group-focus-within:ring-offset-zinc-50",
                   )}
-                  style={
-                    electronicAgreed
-                      ? { borderColor: ctaColor, backgroundColor: ctaColor }
-                      : undefined
-                  }
+                  style={electronicAgreed ? { backgroundColor: ctaColor } : undefined}
                 >
                   <Check
-                    className="h-[15px] w-[15px] opacity-0 transition-opacity duration-150 group-has-[:checked]:opacity-100"
+                    className="h-[15px] w-[15px] text-white opacity-0 transition-opacity duration-150 group-has-[:checked]:opacity-100"
                     strokeWidth={2.75}
-                    style={{ color: ctaForeground }}
                     aria-hidden
                   />
                 </span>
@@ -866,10 +855,9 @@ export function AgreementSignatureForm({
             {requireAcceptTerms ? (
               <label
                 className={cn(
-                  "group flex cursor-pointer items-start gap-3.5 text-sm font-medium leading-snug",
+                  "group flex cursor-pointer items-start gap-3 text-sm leading-snug text-[#1a1a5e]",
                   disabled && "pointer-events-none cursor-not-allowed opacity-60",
                 )}
-                style={{ color: ctaColor }}
               >
                 <span className="relative mt-0.5 h-8 w-8 shrink-0">
                   <input
@@ -885,17 +873,14 @@ export function AgreementSignatureForm({
                   <span
                     aria-hidden
                     className={cn(
-                      "flex h-8 w-8 items-center justify-center rounded-lg border-2 border-slate-300 bg-white transition-colors",
-                      "group-focus-within:ring-2 group-focus-within:ring-slate-300/80 group-focus-within:ring-offset-2 group-focus-within:ring-offset-zinc-50",
+                      "flex h-8 w-8 items-center justify-center rounded-md border-2 border-slate-300 bg-white transition-colors",
+                      "group-focus-within:ring-2 group-focus-within:ring-slate-400/45 group-focus-within:ring-offset-2 group-focus-within:ring-offset-zinc-50",
                     )}
-                    style={
-                      termsAgreed ? { borderColor: ctaColor, backgroundColor: ctaColor } : undefined
-                    }
+                    style={termsAgreed ? { backgroundColor: ctaColor } : undefined}
                   >
                     <Check
-                      className="h-[15px] w-[15px] opacity-0 transition-opacity duration-150 group-has-[:checked]:opacity-100"
+                      className="h-[15px] w-[15px] text-white opacity-0 transition-opacity duration-150 group-has-[:checked]:opacity-100"
                       strokeWidth={2.75}
-                      style={{ color: ctaForeground }}
                       aria-hidden
                     />
                   </span>
@@ -905,7 +890,7 @@ export function AgreementSignatureForm({
                   {proposalTitle ? (
                     <>
                       {" "}
-                      for <span className="font-semibold">{proposalTitle}</span>
+                      for <span className="font-medium text-[#1a1a5e]">{proposalTitle}</span>
                     </>
                   ) : null}
                   .
