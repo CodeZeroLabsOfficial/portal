@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Info, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import {
@@ -350,19 +350,6 @@ export function ProposalPublicSubscriptionFormPanel({
         </div>
       ) : null}
 
-      {mode === "save_card_only" ? (
-        <div
-          className="flex gap-3 rounded-xl border border-indigo-100 bg-indigo-50/80 px-4 py-3 text-sm leading-snug text-indigo-950"
-          role="status"
-        >
-          <Info className="mt-0.5 h-4 w-4 shrink-0 text-indigo-600" aria-hidden />
-          <p>
-            This is preview mode — don&apos;t enter real card numbers here unless you intend to save them to the
-            linked customer in Stripe.
-          </p>
-        </div>
-      ) : null}
-
       <form className="space-y-4" onSubmit={form.handleSubmit((v) => void onSubmit(v))} noValidate>
         <FormServerError message={serverError} rounded="lg" />
 
@@ -388,12 +375,7 @@ export function ProposalPublicSubscriptionFormPanel({
             </dl>
           </div>
         ) : (
-          <div>
-            <h4 className="text-lg font-semibold tracking-tight text-[#1a1a5e]">Payment details</h4>
-            <p className="mt-1 text-sm text-slate-600">
-              Card is saved securely via Stripe. You can start the subscription after you sign the agreement.
-            </p>
-          </div>
+          <h4 className="text-lg font-semibold tracking-tight text-[#1a1a5e]">Payment details</h4>
         )}
 
         {mode === "manage_subscription" ? (
