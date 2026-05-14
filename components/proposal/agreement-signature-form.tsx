@@ -437,6 +437,10 @@ export function AgreementSignatureForm({
     setCapturedMethod(adoptTab);
     setSignatureBannerDate(signatureBannerDateLabel(adoptTab, localityTimeZone));
     setAdoptOpen(false);
+    setSignSectionOpen(false);
+    if (publicSubscriptionUi && shareToken) {
+      setPaymentSectionOpen(true);
+    }
   }
 
   async function onUploadFiles(files: FileList | null) {
