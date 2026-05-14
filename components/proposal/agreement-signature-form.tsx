@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Loader2, Upload } from "lucide-react";
+import { Check, Loader2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -59,8 +59,28 @@ function getCanvasPoint(canvas: HTMLCanvasElement, clientX: number, clientY: num
 }
 
 function buildTypedSignatureDataUrl(name: string): string {
-  const W = 720;
-  const H = 200;
+  const displayName = name.trim() || " ";
+  const fontPx = 56;
+  const H = 112;
+  const padX = 48;
+  const maxTextW = 680;
+
+  const measureCanvas = document.createElement("canvas");
+  const mctx = measureCanvas.getContext("2d");
+  if (!mctx) return "";
+  mctx.font = `italic ${fontPx}px "Segoe Script", "Brush Script MT", "Apple Chancery", cursive`;
+
+  let line = displayName;
+  if (mctx.measureText(line).width > maxTextW - padX) {
+    while (line.length > 1 && mctx.measureText(`${line}…`).width > maxTextW - padX) {
+      line = line.slice(0, -1);
+    }
+    line = `${line}…`;
+  }
+
+  const textW = Math.ceil(mctx.measureText(line).width);
+  const W = Math.max(160, Math.min(720, textW + padX));
+
   const canvas = document.createElement("canvas");
   canvas.width = W;
   canvas.height = H;
@@ -68,19 +88,11 @@ function buildTypedSignatureDataUrl(name: string): string {
   if (!ctx) return "";
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, W, H);
-  const displayName = name.trim() || " ";
   ctx.fillStyle = INK;
   ctx.textBaseline = "middle";
-  ctx.font = 'italic 40px "Segoe Script", "Brush Script MT", "Apple Chancery", cursive';
-  const maxW = W - 48;
-  let line = displayName;
-  if (ctx.measureText(line).width > maxW) {
-    while (line.length > 1 && ctx.measureText(`${line}…`).width > maxW) {
-      line = line.slice(0, -1);
-    }
-    line = `${line}…`;
-  }
-  ctx.fillText(line, 32, 78);
+  ctx.textAlign = "center";
+  ctx.font = `italic ${fontPx}px "Segoe Script", "Brush Script MT", "Apple Chancery", cursive`;
+  ctx.fillText(line, W / 2, H / 2 + 2);
   return canvas.toDataURL("image/png");
 }
 
@@ -517,7 +529,7 @@ export function AgreementSignatureForm({
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-[#3e4756]">E-signature</Label>
                 {capturedDataUrl ? (
-                  <DropdownMenu>
+                  <DropdownMenu modal={false}>
                     <DropdownMenuTrigger asChild>
                       <button
                         type="button"
@@ -529,27 +541,39 @@ export function AgreementSignatureForm({
                         )}
                         aria-label="E-signature options"
                       >
-                        <div className="relative px-4 pb-5 pt-6">
-                          <div className="pointer-events-none absolute left-4 right-4 top-0 flex -translate-y-1/2 justify-between bg-white px-0.5">
+                        <div className="relative px-3 pb-3.5 pt-5">
+                          <div className="pointer-events-none absolute left-3 right-3 top-0 flex -translate-y-1/2 justify-between bg-white px-0.5">
                             <span className="bg-white px-1 text-xs font-medium text-slate-600">Signed</span>
                             <span className="bg-white px-1 text-xs font-medium text-slate-600 tabular-nums">
                               {signatureBannerDate || "—"}
                             </span>
                           </div>
-                          <div className="flex min-h-[192px] items-center justify-center px-2 pt-1 sm:min-h-[224px] md:min-h-[260px]">
+                          <div className="flex h-[7.25rem] max-h-[7.5rem] items-center justify-center overflow-hidden px-1 pt-0.5 sm:h-[7.75rem] sm:max-h-[8rem]">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                               src={capturedDataUrl}
                               alt=""
-                              className="h-auto w-auto max-h-64 max-w-full object-contain sm:max-h-72 md:max-h-80"
+                              className="max-h-full w-full object-contain object-center"
                             />
                           </div>
                         </div>
                       </button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" sideOffset={6} className="min-w-[9rem] p-1 shadow-md">
+                    <DropdownMenuContent
+                      align="start"
+                      sideOffset={8}
+                      className={cn(
+                        "z-[100] min-w-[11rem] overflow-hidden rounded-xl border border-slate-200 bg-white p-0",
+                        "shadow-[0_8px_32px_rgba(15,23,42,0.12),0_2px_8px_rgba(15,23,42,0.06)]",
+                        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+                        "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2",
+                      )}
+                    >
                       <DropdownMenuItem
-                        className="cursor-pointer text-sm font-medium text-[#3e4756] focus:text-[#1a1a5e]"
+                        className={cn(
+                          "cursor-pointer justify-start rounded-none px-5 py-3 text-left text-[15px] font-medium leading-snug text-[#2d334a]",
+                          "focus:bg-slate-50 focus:text-[#2d334a] data-[highlighted]:bg-slate-50 data-[highlighted]:text-[#2d334a]",
+                        )}
                         onSelect={() => {
                           clearCapturedSignature({ reopenAdopt: true });
                         }}
@@ -557,7 +581,10 @@ export function AgreementSignatureForm({
                         Clear
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        className="cursor-pointer text-sm font-medium text-[#3e4756] focus:text-[#1a1a5e]"
+                        className={cn(
+                          "cursor-pointer justify-start rounded-none px-5 py-3 text-left text-[15px] font-medium leading-snug text-[#2d334a]",
+                          "focus:bg-slate-50 focus:text-[#2d334a] data-[highlighted]:bg-slate-50 data-[highlighted]:text-[#2d334a]",
+                        )}
                         onSelect={() => {
                           openAdoptPanelForEdit();
                         }}
@@ -577,7 +604,7 @@ export function AgreementSignatureForm({
                       (disabled || busy) && "cursor-not-allowed opacity-60",
                     )}
                   >
-                    <div className="flex min-h-[112px] flex-col items-center justify-center px-4 py-8">
+                    <div className="flex min-h-[7.25rem] flex-col items-center justify-center px-4 py-6 sm:min-h-[7.75rem]">
                       <span className="text-lg font-semibold tracking-tight text-[#1a1a5e]">Sign</span>
                     </div>
                   </button>
@@ -782,39 +809,81 @@ export function AgreementSignatureForm({
           ) : null}
 
           <div className="mx-auto mt-8 max-w-md space-y-3 rounded-xl border border-zinc-100 bg-zinc-50/60 p-4">
-            <label className="flex cursor-pointer items-start gap-3 text-sm leading-snug text-zinc-800">
-              <input
-                type="checkbox"
-                className="mt-0.5 h-4 w-4 shrink-0 rounded border-zinc-300 text-[#1a1a5e] focus:ring-[#1a1a5e]"
-                checked={electronicAgreed}
-                onChange={(e) => {
-                  onDismissError?.();
-                  setElectronicAgreed(e.target.checked);
-                }}
-                disabled={disabled || busy}
-              />
+            <label
+              className={cn(
+                "group flex cursor-pointer items-start gap-3.5 text-sm leading-snug text-[#1a1a5e]",
+                disabled && "pointer-events-none cursor-not-allowed opacity-60",
+              )}
+            >
+              <span className="relative mt-0.5 h-8 w-8 shrink-0">
+                <input
+                  type="checkbox"
+                  className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
+                  checked={electronicAgreed}
+                  onChange={(e) => {
+                    onDismissError?.();
+                    setElectronicAgreed(e.target.checked);
+                  }}
+                  disabled={disabled || busy}
+                />
+                <span
+                  aria-hidden
+                  className={cn(
+                    "flex h-8 w-8 items-center justify-center rounded-md border-2 border-slate-300 bg-white transition-colors",
+                    "group-has-[:checked]:border-[#1a1a5e] group-has-[:checked]:bg-[#1a1a5e]",
+                    "group-focus-within:ring-2 group-focus-within:ring-slate-400/45 group-focus-within:ring-offset-2 group-focus-within:ring-offset-zinc-50",
+                  )}
+                >
+                  <Check
+                    className="h-[15px] w-[15px] text-white opacity-0 transition-opacity duration-150 group-has-[:checked]:opacity-100"
+                    strokeWidth={2.75}
+                    aria-hidden
+                  />
+                </span>
+              </span>
               <span>
                 I agree that my electronic signature is as valid and legally binding as a handwritten signature.
               </span>
             </label>
             {requireAcceptTerms ? (
-              <label className="flex cursor-pointer items-start gap-3 text-sm leading-snug text-zinc-700">
-                <input
-                  type="checkbox"
-                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-zinc-300 text-[#1a1a5e] focus:ring-[#1a1a5e]"
-                  checked={termsAgreed}
-                  onChange={(e) => {
-                    onDismissError?.();
-                    setTermsAgreed(e.target.checked);
-                  }}
-                  disabled={disabled || busy}
-                />
+              <label
+                className={cn(
+                  "group flex cursor-pointer items-start gap-3.5 text-sm leading-snug text-[#1a1a5e]",
+                  disabled && "pointer-events-none cursor-not-allowed opacity-60",
+                )}
+              >
+                <span className="relative mt-0.5 h-8 w-8 shrink-0">
+                  <input
+                    type="checkbox"
+                    className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
+                    checked={termsAgreed}
+                    onChange={(e) => {
+                      onDismissError?.();
+                      setTermsAgreed(e.target.checked);
+                    }}
+                    disabled={disabled || busy}
+                  />
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "flex h-8 w-8 items-center justify-center rounded-md border-2 border-slate-300 bg-white transition-colors",
+                      "group-has-[:checked]:border-[#1a1a5e] group-has-[:checked]:bg-[#1a1a5e]",
+                      "group-focus-within:ring-2 group-focus-within:ring-slate-400/45 group-focus-within:ring-offset-2 group-focus-within:ring-offset-zinc-50",
+                    )}
+                  >
+                    <Check
+                      className="h-[15px] w-[15px] text-white opacity-0 transition-opacity duration-150 group-has-[:checked]:opacity-100"
+                      strokeWidth={2.75}
+                      aria-hidden
+                    />
+                  </span>
+                </span>
                 <span>
                   I have read and agree to the terms of this {agreementTitle.toLowerCase()}
                   {proposalTitle ? (
                     <>
                       {" "}
-                      for <span className="font-medium text-zinc-900">{proposalTitle}</span>
+                      for <span className="font-medium text-[#1a1a5e]">{proposalTitle}</span>
                     </>
                   ) : null}
                   .
