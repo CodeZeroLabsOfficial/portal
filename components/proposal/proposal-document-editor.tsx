@@ -2669,7 +2669,7 @@ export function ProposalDocumentEditor({
                   rel="noopener noreferrer"
                 >
                   <ExternalLink className="h-4 w-4" aria-hidden />
-                  Open public viewer
+                  Preview
                 </Link>
               </Button>
               <Button type="button" size="sm" disabled={saving} onClick={() => void save()} className="gap-2">
@@ -2712,7 +2712,7 @@ export function ProposalDocumentEditor({
                     rel="noopener noreferrer"
                   >
                     <ExternalLink className="h-4 w-4" aria-hidden />
-                    Open public viewer
+                    Preview
                   </Link>
                 </Button>
               ) : null}
