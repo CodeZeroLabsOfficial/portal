@@ -9,14 +9,6 @@ import {
   DialogContent,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { AgreementSignatureForm } from "@/components/proposal/agreement-signature-form";
 import type {
@@ -359,6 +351,19 @@ export function AgreementBlockPublic({
   const blockAgreementUntilPlanPicked = interactive && !accepted && !planSelectionComplete;
   const scrollRef = React.useRef<HTMLDivElement | null>(null);
   const signRef = React.useRef<HTMLDivElement | null>(null);
+  const [sectionsSidebarOpen, setSectionsSidebarOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!open) setSectionsSidebarOpen(false);
+  }, [open]);
+
+  function jumpToSection(id: string) {
+    const el = scrollRef.current?.querySelector(`#${CSS.escape(id)}`);
+    if (el instanceof HTMLElement) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    setSectionsSidebarOpen(false);
+  }
 
   function scrollToRef(ref: React.RefObject<HTMLDivElement | null>) {
     ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -460,6 +465,12 @@ export function AgreementBlockPublic({
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
+          onEscapeKeyDown={(e) => {
+            if (sectionsSidebarOpen) {
+              e.preventDefault();
+              setSectionsSidebarOpen(false);
+            }
+          }}
           className={cn(
             "z-50 grid gap-0 overflow-hidden border-0 bg-white p-0 text-zinc-900 shadow-2xl",
             // Mobile: fills viewport, no rounding.
@@ -476,37 +487,16 @@ export function AgreementBlockPublic({
         >
           <div className="flex items-center justify-between gap-3 border-b border-zinc-200 bg-white px-4 py-3 sm:px-6">
             <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    aria-label="Open sections menu"
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
-                  >
-                    <Menu className="h-5 w-5" aria-hidden />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" sideOffset={6} className="min-w-[16rem]">
-                  <DropdownMenuLabel className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                    Jump to
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {sectionAnchors.map((s) => (
-                    <DropdownMenuItem
-                      key={s.id}
-                      className="cursor-pointer"
-                      onSelect={() => {
-                        const el = scrollRef.current?.querySelector(`#${CSS.escape(s.id)}`);
-                        if (el instanceof HTMLElement) {
-                          el.scrollIntoView({ behavior: "smooth", block: "start" });
-                        }
-                      }}
-                    >
-                      {s.label}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <button
+                type="button"
+                aria-label={sectionsSidebarOpen ? "Close agreement sections" : "Open agreement sections"}
+                aria-expanded={sectionsSidebarOpen}
+                aria-controls="agreement-sections-sidebar"
+                onClick={() => setSectionsSidebarOpen((v) => !v)}
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
+              >
+                <Menu className="h-5 w-5" aria-hidden />
+              </button>
               <DialogTitle className="truncate text-sm font-semibold tracking-tight text-zinc-900 sm:text-base">
                 {agreementTitle}
               </DialogTitle>
@@ -542,10 +532,51 @@ export function AgreementBlockPublic({
             </div>
           </div>
 
-          <div
-            ref={scrollRef}
-            className="min-h-0 overflow-y-auto bg-white pb-[max(1rem,env(safe-area-inset-bottom))]"
-          >
+          <div className="relative min-h-0 overflow-hidden">
+            {sectionsSidebarOpen ? (
+              <button
+                type="button"
+                aria-label="Close agreement sections"
+                className="absolute inset-0 z-20 bg-zinc-900/20 motion-safe:animate-in motion-safe:fade-in-0"
+                onClick={() => setSectionsSidebarOpen(false)}
+              />
+            ) : null}
+
+            <aside
+              id="agreement-sections-sidebar"
+              aria-hidden={!sectionsSidebarOpen}
+              className={cn(
+                "absolute left-0 top-0 z-30 flex h-full w-[min(18rem,88vw)] flex-col border-r border-zinc-200 bg-white shadow-xl motion-reduce:transition-none",
+                "transition-transform duration-300 ease-out",
+                sectionsSidebarOpen ? "translate-x-0" : "-translate-x-full pointer-events-none",
+              )}
+            >
+              <div className="shrink-0 border-b border-zinc-100 px-4 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  Jump to
+                </p>
+              </div>
+              <nav className="min-h-0 flex-1 overflow-y-auto p-2" aria-label="Agreement sections">
+                <ul className="space-y-0.5">
+                  {sectionAnchors.map((s) => (
+                    <li key={s.id}>
+                      <button
+                        type="button"
+                        className="w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium text-zinc-800 transition-colors hover:bg-zinc-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
+                        onClick={() => jumpToSection(s.id)}
+                      >
+                        {s.label}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+            </aside>
+
+            <div
+              ref={scrollRef}
+              className="min-h-0 h-full overflow-y-auto bg-white pb-[max(1rem,env(safe-area-inset-bottom))]"
+            >
             <div className="mx-auto w-full max-w-3xl px-5 py-12 sm:px-10 sm:py-16">
               <div id="agreement-top" aria-hidden />
 
@@ -686,6 +717,7 @@ export function AgreementBlockPublic({
                   />
                 )}
               </section>
+            </div>
             </div>
           </div>
         </DialogContent>
