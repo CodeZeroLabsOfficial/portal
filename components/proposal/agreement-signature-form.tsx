@@ -3,9 +3,19 @@
 import * as React from "react";
 import { Loader2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { formatIsoCalendarDateLong, todayIsoDateInTimeZone } from "@/lib/proposal-locality-dates";
+import {
+  formatIsoCalendarDateLong,
+  normalizeLocalityTimeZone,
+  todayIsoDateInTimeZone,
+} from "@/lib/proposal-locality-dates";
 import { cn } from "@/lib/utils";
 
 const INK = "#1a1a5e";
@@ -13,6 +23,25 @@ const LOGICAL_W = 640;
 const LOGICAL_H = 200;
 
 export type AgreementSignatureMethod = "draw" | "type" | "upload";
+
+/** Short US-style date (e.g. 5/14/2026) for the e-signature banner. */
+function signatureBannerDateLabel(
+  adoptTab: AgreementSignatureMethod,
+  signedDate: string,
+  localityTimeZone?: string,
+): string {
+  const tz = normalizeLocalityTimeZone(localityTimeZone);
+  const opts: Intl.DateTimeFormatOptions = {
+    month: "numeric",
+    day: "numeric",
+    year: "numeric",
+    ...(tz ? { timeZone: tz } : {}),
+  };
+  if (adoptTab === "type" && /^\d{4}-\d{2}-\d{2}$/.test(signedDate)) {
+    return new Date(`${signedDate}T12:00:00`).toLocaleDateString("en-US", opts);
+  }
+  return new Date().toLocaleDateString("en-US", opts);
+}
 
 export interface AgreementSignaturePayload {
   signerName: string;
@@ -165,6 +194,7 @@ export function AgreementSignatureForm({
 
   const [capturedDataUrl, setCapturedDataUrl] = React.useState<string | null>(null);
   const [capturedMethod, setCapturedMethod] = React.useState<AgreementSignatureMethod | null>(null);
+  const [signatureBannerDate, setSignatureBannerDate] = React.useState("");
 
   const [electronicAgreed, setElectronicAgreed] = React.useState(false);
   const [termsAgreed, setTermsAgreed] = React.useState(false);
@@ -261,6 +291,27 @@ export function AgreementSignatureForm({
     onDismissError?.();
   }
 
+  function clearCapturedSignature() {
+    setLocalError(null);
+    onDismissError?.();
+    setCapturedDataUrl(null);
+    setCapturedMethod(null);
+    setSignatureBannerDate("");
+    setAdoptOpen(false);
+    setUploadPreview(null);
+    setHasInk(false);
+    setCanvasReset((k) => k + 1);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    setSignedDate(todayIsoDateInTimeZone(localityTimeZone));
+  }
+
+  function openAdoptPanelForEdit() {
+    setLocalError(null);
+    onDismissError?.();
+    if (capturedMethod) setAdoptTab(capturedMethod);
+    setAdoptOpen(true);
+  }
+
   function handleAdoptAndSign() {
     setLocalError(null);
     onDismissError?.();
@@ -297,6 +348,7 @@ export function AgreementSignatureForm({
     }
     setCapturedDataUrl(dataUrl);
     setCapturedMethod(adoptTab);
+    setSignatureBannerDate(signatureBannerDateLabel(adoptTab, signedDate, localityTimeZone));
     setAdoptOpen(false);
   }
 
@@ -332,7 +384,7 @@ export function AgreementSignatureForm({
       return;
     }
     if (!capturedDataUrl || !capturedMethod) {
-      setLocalError("Please open Sign and adopt your signature.");
+      setLocalError("Please add your signature in the e-signature box below.");
       return;
     }
     if (!electronicAgreed) {
@@ -460,33 +512,73 @@ export function AgreementSignatureForm({
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-zinc-900">E-signature</Label>
-                <button
-                  type="button"
-                  disabled={disabled || busy}
-                  onClick={openAdoptPanel}
-                  className={cn(
-                    "flex min-h-[112px] w-full flex-col items-center justify-center rounded-lg border border-amber-200/80 bg-amber-50/90 px-4 py-6 text-center transition-colors",
-                    "hover:bg-amber-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1a1a5e]/30",
-                    (disabled || busy) && "cursor-not-allowed opacity-60",
-                  )}
-                >
-                  {capturedDataUrl ? (
-                    <>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={capturedDataUrl}
-                        alt="Your adopted signature"
-                        className="max-h-16 max-w-full object-contain"
-                      />
-                      <span className="mt-2 text-xs font-semibold text-[#1a1a5e] underline decoration-[#1a1a5e]/40">
-                        Change signature
-                      </span>
-                    </>
-                  ) : (
-                    <span className="text-lg font-semibold tracking-tight text-[#1a1a5e]">Sign</span>
-                  )}
-                </button>
+                <Label className="text-sm font-medium text-[#3e4756]">E-signature</Label>
+                {capturedDataUrl ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        disabled={disabled || busy}
+                        className={cn(
+                          "group w-full rounded-lg border border-zinc-300 bg-white text-left outline-none transition-colors",
+                          "hover:border-zinc-400 hover:bg-zinc-50/40 focus-visible:ring-2 focus-visible:ring-zinc-400/60",
+                          (disabled || busy) && "cursor-not-allowed opacity-60",
+                        )}
+                        aria-label="E-signature options"
+                      >
+                        <div className="relative px-4 pb-5 pt-6">
+                          <div className="pointer-events-none absolute left-4 right-4 top-0 flex -translate-y-1/2 justify-between bg-white px-0.5">
+                            <span className="bg-white px-1 text-xs font-medium text-slate-600">Signed</span>
+                            <span className="bg-white px-1 text-xs font-medium text-slate-600 tabular-nums">
+                              {signatureBannerDate || "—"}
+                            </span>
+                          </div>
+                          <div className="flex min-h-[100px] items-center justify-center pt-1">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={capturedDataUrl}
+                              alt=""
+                              className="max-h-[4.5rem] max-w-full object-contain"
+                            />
+                          </div>
+                        </div>
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" sideOffset={6} className="min-w-[9rem] p-1 shadow-md">
+                      <DropdownMenuItem
+                        className="cursor-pointer text-sm font-medium text-[#3e4756] focus:text-[#1a1a5e]"
+                        onSelect={() => {
+                          clearCapturedSignature();
+                        }}
+                      >
+                        Clear
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="cursor-pointer text-sm font-medium text-[#3e4756] focus:text-[#1a1a5e]"
+                        onSelect={() => {
+                          openAdoptPanelForEdit();
+                        }}
+                      >
+                        Edit
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={disabled || busy}
+                    onClick={openAdoptPanel}
+                    className={cn(
+                      "w-full rounded-lg border border-zinc-300 bg-white outline-none transition-colors",
+                      "hover:border-zinc-400 hover:bg-zinc-50/40 focus-visible:ring-2 focus-visible:ring-zinc-400/60",
+                      (disabled || busy) && "cursor-not-allowed opacity-60",
+                    )}
+                  >
+                    <div className="flex min-h-[112px] flex-col items-center justify-center px-4 py-8">
+                      <span className="text-lg font-semibold tracking-tight text-[#1a1a5e]">Sign</span>
+                    </div>
+                  </button>
+                )}
               </div>
             </div>
           </div>

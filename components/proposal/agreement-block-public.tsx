@@ -652,21 +652,19 @@ export function AgreementBlockPublic({
                     </div>
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 sm:p-6">
-                    <AgreementSignatureForm
-                      disabled={!interactive || !shareToken}
-                      busy={busy}
-                      requireAcceptTerms={requireAcceptTerms}
-                      agreementTitle={agreementTitle}
-                      proposalTitle={proposalTitle}
-                      ctaColor={ctaColor}
-                      ctaForeground={ctaForeground}
-                      localityTimeZone={localityTimeZone}
-                      error={error}
-                      onDismissError={() => setError(null)}
-                      onSubmit={onSign}
-                    />
-                  </div>
+                  <AgreementSignatureForm
+                    disabled={!interactive || !shareToken}
+                    busy={busy}
+                    requireAcceptTerms={requireAcceptTerms}
+                    agreementTitle={agreementTitle}
+                    proposalTitle={proposalTitle}
+                    ctaColor={ctaColor}
+                    ctaForeground={ctaForeground}
+                    localityTimeZone={localityTimeZone}
+                    error={error}
+                    onDismissError={() => setError(null)}
+                    onSubmit={onSign}
+                  />
                 )}
               </section>
             </div>
