@@ -1150,6 +1150,68 @@ export async function updateCustomerDocument(
   return { ok: true };
 }
 
+/**
+ * One-click portal: resolve Firebase user by CRM email (create if missing) and set `portalUserId`.
+ * No-op when access is already linked.
+ */
+export async function enableCustomerPortalAccess(
+  user: PortalUser,
+  customerId: string,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const db = getFirebaseAdminFirestore();
+  if (!db || !isStaff(user)) {
+    return { ok: false, message: "CRM is only available to admin or team members." };
+  }
+
+  const id = customerId.trim();
+  if (!id) {
+    return { ok: false, message: "Customer id is required." };
+  }
+
+  const existing = await getCustomerRecordForOrg(user, id);
+  if (!existing) {
+    return { ok: false, message: "Customer not found." };
+  }
+  if (existing.portalUserId?.trim()) {
+    return { ok: true };
+  }
+
+  const email = existing.email?.trim().toLowerCase();
+  if (!email) {
+    return { ok: false, message: "Customer email is required to enable access." };
+  }
+
+  const resolved = await resolveOrCreateFirebaseUserByEmail(email, {
+    active: true,
+    createIfMissing: true,
+  });
+  if (!resolved.ok) {
+    return { ok: false, message: resolved.message };
+  }
+  if (!resolved.uid) {
+    return { ok: false, message: "Could not link or create an account for this email." };
+  }
+
+  await db.collection(COLLECTIONS.customers).doc(id).update({
+    portalUserId: resolved.uid,
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+
+  const updatedAt = Timestamp.now();
+  await db.collection(COLLECTIONS.customerActivities).add({
+    customerId: id,
+    type: "auth_linked",
+    title: resolved.createdNew ? "Created User Access" : "Linked User Access",
+    detail: email,
+    actorUid: user.uid,
+    createdAt: updatedAt,
+  });
+
+  await syncStripeCustomerIdFromCrmCustomerDoc(db, id);
+
+  return { ok: true };
+}
+
 export async function appendCustomerNote(
   user: PortalUser,
   customerId: string,

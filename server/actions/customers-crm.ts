@@ -18,6 +18,7 @@ import {
   setCustomerArchived,
   syncStripeCustomerBasics,
   updateCustomerDocument,
+  enableCustomerPortalAccess,
 } from "@/server/firestore/crm-customers";
 import type { SignedAgreementRecord } from "@/types/signed-agreement";
 import { getStripe } from "@/lib/stripe/server";
@@ -65,6 +66,27 @@ export async function updateCustomerAction(
     return { ok: false, message: result.message };
   }
   const id = parsed.data.id;
+  revalidateCrmCustomerPaths(id);
+  revalidatePath(`/admin/customers/${id}/edit`);
+  return { ok: true };
+}
+
+/** Staff-only: link or create Auth user for the CRM email and set `portalUserId` (mirrors edit-form “link + create” path). */
+export async function enableCustomerPortalAccessAction(
+  customerId: string,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const user = await requireStaffSession();
+  if (!user) {
+    return { ok: false, message: "You need an admin or team session." };
+  }
+  const id = customerId.trim();
+  if (!id) {
+    return { ok: false, message: "Customer id is required." };
+  }
+  const result = await enableCustomerPortalAccess(user, id);
+  if (!result.ok) {
+    return result;
+  }
   revalidateCrmCustomerPaths(id);
   revalidatePath(`/admin/customers/${id}/edit`);
   return { ok: true };

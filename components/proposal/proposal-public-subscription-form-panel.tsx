@@ -102,6 +102,7 @@ export function ProposalPublicSubscriptionFormPanel({
   const [defaultPmSummary, setDefaultPmSummary] = React.useState<string | null>(null);
   const stripeRef = React.useRef<StripeInstance | null>(null);
   const cardRef = React.useRef<StripeCardElement | null>(null);
+  const prevActiveRef = React.useRef(active);
 
   const form = useForm<ProposalPublicSubscriptionModalInput>({
     resolver: zodResolver(proposalPublicSubscriptionModalSchema),
@@ -145,27 +146,67 @@ export function ProposalPublicSubscriptionFormPanel({
   const publishableKey = getFirebasePublicConfig()?.stripePublishableKey?.trim();
 
   React.useEffect(() => {
-    if (!active) {
-      setServerError(null);
-      setCardError(null);
-      setCardReady(false);
-      setCardLoading(false);
-      setCardholderName("");
-      setSavedCards([]);
-      setShowAddCard(false);
-      setDefaultPmSummary(null);
-      if (cardRef.current) {
-        cardRef.current.destroy();
-        cardRef.current = null;
-      }
-      stripeRef.current = null;
-      form.reset({
-        collectionMethod: "charge_automatically",
-        daysUntilDue: 14,
-        defaultPaymentMethodId: undefined,
+    const becameInactive = prevActiveRef.current && !active;
+    prevActiveRef.current = active;
+
+    if (!becameInactive) return;
+
+    // Parent accordions set `active` false in the same update as a successful save. Billing /
+    // payment callbacks skip while `!active`, so push the latest snapshot once before reset.
+    if (onBillingSnapshotChange) {
+      const cm = form.getValues("collectionMethod");
+      const effectivePm = (form.getValues("defaultPaymentMethodId") ?? "").trim() || undefined;
+      const daysRaw = form.getValues("daysUntilDue");
+      const daysUntilDue =
+        typeof daysRaw === "number" && Number.isFinite(daysRaw) ? daysRaw : undefined;
+      const readyToCreateSubscription =
+        cm === "send_invoice"
+          ? typeof daysUntilDue === "number"
+          : !showAddCard && Boolean(effectivePm);
+      onBillingSnapshotChange({
+        collectionMethod: cm,
+        daysUntilDue,
+        defaultPaymentMethodId: effectivePm,
+        readyToCreateSubscription,
       });
     }
-  }, [active, form]);
+
+    if (onPaymentSummaryChange) {
+      const effectivePm = (form.getValues("defaultPaymentMethodId") ?? "").trim();
+      const summary =
+        !showAddCard && effectivePm
+          ? savedCards.find((c) => c.id === effectivePm)?.summary ?? defaultPmSummary
+          : null;
+      onPaymentSummaryChange(summary);
+    }
+
+    setServerError(null);
+    setCardError(null);
+    setCardReady(false);
+    setCardLoading(false);
+    setCardholderName("");
+    setSavedCards([]);
+    setShowAddCard(false);
+    setDefaultPmSummary(null);
+    if (cardRef.current) {
+      cardRef.current.destroy();
+      cardRef.current = null;
+    }
+    stripeRef.current = null;
+    form.reset({
+      collectionMethod: "charge_automatically",
+      daysUntilDue: 14,
+      defaultPaymentMethodId: undefined,
+    });
+  }, [
+    active,
+    form,
+    showAddCard,
+    savedCards,
+    defaultPmSummary,
+    onBillingSnapshotChange,
+    onPaymentSummaryChange,
+  ]);
 
   React.useEffect(() => {
     if (!active || collectionMethod !== "charge_automatically") return;

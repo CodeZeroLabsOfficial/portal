@@ -42,6 +42,7 @@ import type { SubscriptionRecord } from "@/types/subscription";
 import type { TaskRecord } from "@/types/task";
 import {
   addCustomerNoteAction,
+  enableCustomerPortalAccessAction,
   generatePortalPasswordResetLinkAction,
   getSignedAgreementModalPayloadAction,
 } from "@/server/actions/customers-crm";
@@ -210,12 +211,14 @@ export function CustomerDetailView({
   const [deletingProposalId, setDeletingProposalId] = React.useState<string | null>(null);
   const [portalSetupLink, setPortalSetupLink] = React.useState<string | null>(null);
   const [portalSetupBusy, setPortalSetupBusy] = React.useState(false);
+  const [enableAccessBusy, setEnableAccessBusy] = React.useState(false);
   const [portalSetupError, setPortalSetupError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     setPortalSetupLink(null);
     setPortalSetupError(null);
     setPortalSetupBusy(false);
+    setEnableAccessBusy(false);
   }, [customer.id]);
 
   const timeline = React.useMemo(() => {
@@ -297,6 +300,21 @@ export function CustomerDetailView({
     }
     setNoteBody("");
     router.refresh();
+  }
+
+  async function enablePortalAccess() {
+    setPortalSetupError(null);
+    setEnableAccessBusy(true);
+    try {
+      const res = await enableCustomerPortalAccessAction(customer.id);
+      if (!res.ok) {
+        setPortalSetupError(res.message);
+        return;
+      }
+      router.refresh();
+    } finally {
+      setEnableAccessBusy(false);
+    }
   }
 
   async function generatePortalPasswordSetupLink() {
@@ -556,25 +574,41 @@ export function CustomerDetailView({
               {portalSetupError ? <p className="text-xs text-destructive">{portalSetupError}</p> : null}
 
               <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  className="gap-1.5"
-                  disabled={!customer.portalUserId?.trim() || portalSetupBusy}
-                  onClick={() => void generatePortalPasswordSetupLink()}
-                >
-                  {portalSetupBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : null}
-                  Generate password setup link
-                </Button>
-                {portalSetupLink ? (
-                  <Button type="button" size="sm" variant="ghost" onClick={() => setPortalSetupLink(null)}>
-                    Clear link
+                {customer.portalUserId?.trim() ? (
+                  <>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      className="gap-1.5"
+                      disabled={portalSetupBusy}
+                      onClick={() => void generatePortalPasswordSetupLink()}
+                    >
+                      {portalSetupBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : null}
+                      Generate password setup link
+                    </Button>
+                    {portalSetupLink ? (
+                      <Button type="button" size="sm" variant="ghost" onClick={() => setPortalSetupLink(null)}>
+                        Clear link
+                      </Button>
+                    ) : null}
+                  </>
+                ) : (
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="gap-1.5"
+                    disabled={!customer.email?.trim() || enableAccessBusy}
+                    title={!customer.email?.trim() ? "Add an email to this customer first." : undefined}
+                    onClick={() => void enablePortalAccess()}
+                  >
+                    {enableAccessBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : null}
+                    Enable Access
                   </Button>
-                ) : null}
+                )}
               </div>
 
-              {portalSetupLink ? (
+              {portalSetupLink && customer.portalUserId?.trim() ? (
                 <div className="space-y-2">
                   <p className="text-xs text-muted-foreground">
                     Share through a secure channel. Anyone with the link can start the password flow for this login
