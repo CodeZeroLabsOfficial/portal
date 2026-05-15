@@ -6,6 +6,7 @@ import { z } from "zod";
 import { requireStaffSession } from "@/lib/auth/server-session";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import { runAdminWrite } from "@/lib/firebase/admin-write";
+import { omitUndefinedDeep } from "@/lib/omit-undefined-deep";
 import { encodeProposalDocumentForFirestore } from "@/lib/proposal-firestore-document";
 import { parseProposalDocument } from "@/lib/schemas/proposal-document";
 import { COLLECTIONS } from "@/server/firestore/collections";
@@ -87,7 +88,7 @@ export async function cloneProposalTemplateAction(
     name,
     description: source.description?.trim() ? source.description.trim() : "",
     stage: "draft",
-    document: encodeProposalDocumentForFirestore(source.document),
+    document: omitUndefinedDeep(encodeProposalDocumentForFirestore(source.document)) as Record<string, unknown>,
     createdAtMs: now,
     updatedAtMs: now,
     createdAt: FieldValue.serverTimestamp(),
@@ -146,7 +147,7 @@ export async function saveProposalTemplateAction(
           description: parsed.data.description?.trim()
             ? parsed.data.description.trim()
             : FieldValue.delete(),
-          document: encodeProposalDocumentForFirestore(normalized),
+          document: omitUndefinedDeep(encodeProposalDocumentForFirestore(normalized)) as Record<string, unknown>,
           updatedAtMs: Date.now(),
           updatedAt: FieldValue.serverTimestamp(),
         }),

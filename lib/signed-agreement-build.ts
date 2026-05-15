@@ -7,13 +7,12 @@ import type {
 } from "@/types/proposal";
 import { iterateProposalContentBlocks } from "@/lib/proposal-blocks";
 import {
-  packageAddonsTotalMinor,
   packageMonthlyTotalMinor,
   packagesAddonsSectionActive,
 } from "@/lib/proposal-packages-totals";
 import { effectivePricingLineQuantity } from "@/lib/pricing-line-quantity";
 import { formatCurrencyAmount } from "@/lib/format";
-import { sanitizeProposalHtml } from "@/lib/sanitize-proposal-html";
+import { sanitizeProposalHtmlServer } from "@/lib/sanitize-proposal-html-server";
 
 const FULL_AGREEMENT_TEXT_MAX = 120_000;
 
@@ -65,10 +64,10 @@ export function buildFullAgreementTextSnapshot(proposal: ProposalRecord): string
   if (!agreement) return undefined;
   const chunks: string[] = [];
   if (agreement.introHtml?.trim()) {
-    chunks.push(sanitizeProposalHtml(agreement.introHtml.trim()));
+    chunks.push(sanitizeProposalHtmlServer(agreement.introHtml.trim()));
   }
   if (agreement.legalHtml?.trim()) {
-    chunks.push(sanitizeProposalHtml(agreement.legalHtml.trim()));
+    chunks.push(sanitizeProposalHtmlServer(agreement.legalHtml.trim()));
   } else {
     chunks.push(DEFAULT_LEGAL_SNAPSHOT);
   }

@@ -8,6 +8,7 @@ import { z } from "zod";
 import { requireStaffSession } from "@/lib/auth/server-session";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import { softenPublicFirestoreErrorMessage } from "@/lib/firebase/public-error-messages";
+import { omitUndefinedDeep } from "@/lib/omit-undefined-deep";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { encodeProposalDocumentForFirestore } from "@/lib/proposal-firestore-document";
 import { parseProposalDocument } from "@/lib/schemas/proposal-document";
@@ -118,7 +119,7 @@ export async function saveProposalDocumentAction(
         .doc(parsed.data.proposalId)
         .update({
           title: parsed.data.title,
-          document: encodeProposalDocumentForFirestore(normalized),
+          document: omitUndefinedDeep(encodeProposalDocumentForFirestore(normalized)) as Record<string, unknown>,
           documentVersion: FieldValue.increment(1),
           updatedAtMs: Date.now(),
           updatedAt: FieldValue.serverTimestamp(),
@@ -589,24 +590,6 @@ export async function saveProposalPackageSelectionAction(
   revalidatePath(`/p/${parsed.data.shareToken}`);
   revalidatePath(`/admin/proposals/${proposal.id}`);
   return { ok: true };
-}
-
-/** Firestore rejects `undefined` under a document — strip before `set`. */
-function omitUndefinedDeep(value: unknown): unknown {
-  if (value === null || typeof value !== "object") {
-    return value;
-  }
-  if (Array.isArray(value)) {
-    return value.map((item) => omitUndefinedDeep(item));
-  }
-  const obj = value as Record<string, unknown>;
-  const out: Record<string, unknown> = {};
-  for (const key of Object.keys(obj)) {
-    const v = obj[key];
-    if (v === undefined) continue;
-    out[key] = omitUndefinedDeep(v);
-  }
-  return out;
 }
 
 function staffCanAccessProposal(user: PortalUser, p: ProposalRecord): boolean {

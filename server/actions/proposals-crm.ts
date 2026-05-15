@@ -7,6 +7,7 @@ import { requireStaffSession } from "@/lib/auth/server-session";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { getCustomerRecordForOrg } from "@/server/firestore/crm-customers";
+import { omitUndefinedDeep } from "@/lib/omit-undefined-deep";
 import { getOpportunityForStaff, appendOpportunityActivity, updateOpportunityStage } from "@/server/firestore/crm-opportunities";
 import { getProposalTemplateForStaff } from "@/server/firestore/proposal-templates";
 import { cloneBrandingFromTemplate, cloneProposalDocument } from "@/lib/proposal-clone-document";
@@ -30,24 +31,6 @@ function staffDisplayNameForActivity(user: PortalUser): string {
   const email = user.email?.trim();
   if (email) return email;
   return "Team member";
-}
-
-/** Firestore rejects `undefined` anywhere under a document — strip before `set`. */
-function omitUndefinedDeep(value: unknown): unknown {
-  if (value === null || typeof value !== "object") {
-    return value;
-  }
-  if (Array.isArray(value)) {
-    return value.map((item) => omitUndefinedDeep(item));
-  }
-  const obj = value as Record<string, unknown>;
-  const out: Record<string, unknown> = {};
-  for (const key of Object.keys(obj)) {
-    const v = obj[key];
-    if (v === undefined) continue;
-    out[key] = omitUndefinedDeep(v);
-  }
-  return out;
 }
 
 function formatAddressLine(c: CustomerRecord): string {
