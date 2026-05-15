@@ -405,46 +405,44 @@ function normalizeAgreementBlockInput(raw: unknown): unknown {
   return next;
 }
 
-const agreementBlockSchema: z.ZodTypeAny = z.lazy(() =>
-  z.preprocess(
-    normalizeAgreementBlockInput,
-    z.object({
-      id: idSchema,
-      type: z.literal("agreement"),
-      contractTemplateId: z.string().max(128).optional(),
-      contractTemplateLabel: z.string().max(200).optional(),
-      buttonLabel: z.string().max(80).optional(),
-      agreementTitle: z.string().max(200).optional(),
-      introHtml: z.string().max(20_000).optional(),
-      legalHtml: z.string().max(120_000).optional(),
-      requireAcceptTerms: z.boolean().optional(),
-      style: blockStyleSchema.optional(),
-      background: sectionBackgroundSchema.optional(),
-      children: z.array(agreementNestedBlockSchema).default([]),
-    }),
-  ),
+const agreementBlockObjectSchema = z.object({
+  id: idSchema,
+  type: z.literal("agreement"),
+  contractTemplateId: z.string().max(128).optional(),
+  contractTemplateLabel: z.string().max(200).optional(),
+  buttonLabel: z.string().max(80).optional(),
+  agreementTitle: z.string().max(200).optional(),
+  introHtml: z.string().max(20_000).optional(),
+  legalHtml: z.string().max(120_000).optional(),
+  requireAcceptTerms: z.boolean().optional(),
+  style: blockStyleSchema.optional(),
+  background: sectionBackgroundSchema.optional(),
+  /** Lazy so this object schema can be registered in unions before `agreementNestedBlockSchema` exists. */
+  children: z.lazy(() => z.array(agreementNestedBlockSchema)).default([]),
+});
+
+const agreementBlockSchema = z.preprocess(
+  normalizeAgreementBlockInput,
+  agreementBlockObjectSchema,
 );
 
 /** Blocks allowed inside each column pane (cannot nest columns or accordion). */
-const columnInnerUnionSchema = z.discriminatedUnion(
-  "type",
-  [
-    headerBlockSchema,
-    textBlockSchema,
-    imageBlockSchema,
-    videoBlockSchema,
-    pricingBlockSchema,
-    packagesBlockSchema,
-    formBlockSchema,
-    signatureBlockSchema,
-    agreementBlockSchema,
-    embedBlockSchema,
-    paymentBlockSchema,
-    dividerBlockSchema,
-    spacerBlockSchema,
-    iconBlockSchema,
-  ] as unknown as [z.ZodDiscriminatedUnionOption<"type">, ...z.ZodDiscriminatedUnionOption<"type">[]],
-);
+const columnInnerUnionSchema = z.discriminatedUnion("type", [
+  headerBlockSchema,
+  textBlockSchema,
+  imageBlockSchema,
+  videoBlockSchema,
+  pricingBlockSchema,
+  packagesBlockSchema,
+  formBlockSchema,
+  signatureBlockSchema,
+  agreementBlockSchema,
+  embedBlockSchema,
+  paymentBlockSchema,
+  dividerBlockSchema,
+  spacerBlockSchema,
+  iconBlockSchema,
+]);
 
 const columnInnerSchema = z.preprocess((raw) => {
   if (raw && typeof raw === "object" && (raw as Record<string, unknown>).type === "packages") {
