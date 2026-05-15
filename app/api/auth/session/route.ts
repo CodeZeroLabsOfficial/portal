@@ -50,31 +50,46 @@ export async function POST(request: Request) {
     const uid = decoded.uid;
     const userRef = db.collection(COLLECTIONS.users).doc(uid);
     const existingSnap = await userRef.get();
-    const existing = existingSnap.exists
-      ? (existingSnap.data() as Partial<PortalUser> | undefined)
-      : undefined;
+    const existingRaw = existingSnap.exists ? (existingSnap.data() as Record<string, unknown>) : undefined;
+    const existing = existingRaw as Partial<PortalUser> | undefined;
     const nowMs = Date.now();
+    const nowTs = Timestamp.fromMillis(nowMs);
     const role = readRole(existing?.role);
 
-    await userRef.set(
-      {
-        uid,
-        email: decoded.email ?? existing?.email ?? "",
-        name:
-          [existing?.name, typeof decoded.name === "string" ? decoded.name : "", existing?.displayName]
-            .map((s) => (typeof s === "string" ? s.trim() : ""))
-            .find(Boolean) ?? "",
-        displayName: decoded.name ?? existing?.displayName ?? "",
-        photoURL: decoded.picture ?? existing?.photoURL ?? "",
-        role,
-        organizationId: existing?.organizationId ?? "",
-        stripeCustomerId: existing?.stripeCustomerId ?? "",
-        createdAtMs: existing?.createdAtMs ?? nowMs,
-        updatedAtMs: nowMs,
-        updatedAt: Timestamp.fromMillis(nowMs),
-      },
-      { merge: true },
-    );
+    const hasCreatedAt =
+      existingRaw?.createdAt != null &&
+      typeof existingRaw.createdAt === "object" &&
+      "toMillis" in (existingRaw.createdAt as object) &&
+      typeof (existingRaw.createdAt as Timestamp).toMillis === "function";
+
+    const payload: Record<string, unknown> = {
+      uid,
+      email: decoded.email ?? existing?.email ?? (typeof existingRaw?.email === "string" ? existingRaw.email : "") ?? "",
+      name:
+        [
+          typeof existingRaw?.name === "string" ? existingRaw.name : undefined,
+          typeof decoded.name === "string" ? decoded.name : "",
+          existing?.displayName,
+        ]
+          .map((s) => (typeof s === "string" ? s.trim() : ""))
+          .find(Boolean) ?? "",
+      displayName: decoded.name ?? existing?.displayName ?? "",
+      photoURL: decoded.picture ?? existing?.photoURL ?? "",
+      role,
+      organizationId: existing?.organizationId ?? "",
+      stripeCustomerId: existing?.stripeCustomerId ?? "",
+      updatedAt: nowTs,
+    };
+
+    if (!hasCreatedAt) {
+      const legacyMs =
+        typeof existingRaw?.createdAtMs === "number" && Number.isFinite(existingRaw.createdAtMs)
+          ? (existingRaw.createdAtMs as number)
+          : nowMs;
+      payload.createdAt = Timestamp.fromMillis(legacyMs);
+    }
+
+    await userRef.set(payload, { merge: true });
 
     const cookieStore = await cookies();
     cookieStore.set(FIREBASE_SESSION_COOKIE_NAME, sessionCookie, {

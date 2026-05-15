@@ -8,6 +8,7 @@ import { zodErrorToMessage } from "@/lib/zod-error";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import { runAdminWrite } from "@/lib/firebase/admin-write";
 import { COLLECTIONS } from "@/server/firestore/collections";
+import { Timestamp } from "firebase-admin/firestore";
 
 export async function updateLocalityPreferencesAction(
   raw: unknown,
@@ -51,7 +52,7 @@ export async function updateLocalityPreferencesAction(
     }
   }
 
-  const nowMs = Date.now();
+  const nowTs = Timestamp.now();
   const write = await runAdminWrite(
     "locality_preferences_save_failed",
     { uid: user.uid },
@@ -65,7 +66,7 @@ export async function updateLocalityPreferencesAction(
           timeFormatPreset: timeFmt,
           localeRegionCode: region,
           currencyCode: currency,
-          updatedAtMs: nowMs,
+          updatedAt: nowTs,
         },
         { merge: true },
       ),

@@ -1,6 +1,7 @@
 import { unstable_noStore as noStore } from "next/cache";
 import { isStaff } from "@/lib/auth/server-session";
 import { asBoolean, asNumber, asString } from "@/lib/firestore/coerce";
+import { profileJoinedAtMillisFromRawUser } from "@/lib/firestore/profile-joined-at";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import type { InvoiceRecord } from "@/types/invoice";
@@ -140,16 +141,17 @@ function parseInvoice(id: string, data: Record<string, unknown>): InvoiceRecord 
 
 function parsePortalUser(id: string, data: Record<string, unknown>): PortalUser {
   const role = data.role === "admin" || data.role === "team" || data.role === "customer" ? data.role : "customer";
+  const nowMs = Date.now();
   return {
     uid: id,
     email: asString(data.email) ?? "",
+    name: asString(data.name),
     displayName: asString(data.displayName),
     photoURL: asString(data.photoURL),
     role,
     organizationId: asString(data.organizationId),
     stripeCustomerId: asString(data.stripeCustomerId),
-    createdAtMs: asNumber(data.createdAtMs) ?? 0,
-    updatedAtMs: asNumber(data.updatedAtMs) ?? 0,
+    joinedAtMs: profileJoinedAtMillisFromRawUser(data, nowMs),
   };
 }
 

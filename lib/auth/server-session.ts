@@ -1,7 +1,9 @@
 import { cookies } from "next/headers";
 import { FIREBASE_SESSION_COOKIE_NAME } from "@/lib/auth/session-cookie";
 import { getFirebaseAdminAuth, getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
-import { asNumber, asString } from "@/lib/firestore/coerce";
+import { asString } from "@/lib/firestore/coerce";
+import { profileJoinedAtMillisFromRawUser } from "@/lib/firestore/profile-joined-at";
+import { portalUserFirestorePayload } from "@/lib/auth/portal-user-firestore-write";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import type { PortalUser, UserRole } from "@/types/user";
 
@@ -15,7 +17,7 @@ function asRole(value: unknown): UserRole {
   return "customer";
 }
 
-function normalizePortalUser(uid: string, email: string, data?: Partial<PortalUser>): PortalUser {
+function normalizePortalUser(uid: string, email: string, data?: Record<string, unknown>): PortalUser {
   const nowMs = Date.now();
   return {
     uid,
@@ -43,8 +45,7 @@ function normalizePortalUser(uid: string, email: string, data?: Partial<PortalUs
     timeFormatPreset: asString(data?.timeFormatPreset),
     localeRegionCode: asString(data?.localeRegionCode),
     currencyCode: asString(data?.currencyCode),
-    createdAtMs: asNumber(data?.createdAtMs) ?? nowMs,
-    updatedAtMs: asNumber(data?.updatedAtMs) ?? nowMs,
+    joinedAtMs: profileJoinedAtMillisFromRawUser(data, nowMs),
   };
 }
 
@@ -71,11 +72,11 @@ export async function getCurrentSessionUser(): Promise<PortalUser | null> {
     const email = decoded.email ?? "";
 
     const userSnap = await db.collection(COLLECTIONS.users).doc(uid).get();
-    const stored = userSnap.exists ? (userSnap.data() as Partial<PortalUser>) : undefined;
+    const stored = userSnap.exists ? (userSnap.data() as Record<string, unknown>) : undefined;
     const normalized = normalizePortalUser(uid, email, stored);
 
     if (!userSnap.exists) {
-      await db.collection(COLLECTIONS.users).doc(uid).set(normalized, { merge: true });
+      await db.collection(COLLECTIONS.users).doc(uid).set(portalUserFirestorePayload(normalized), { merge: true });
     }
 
     return normalized;

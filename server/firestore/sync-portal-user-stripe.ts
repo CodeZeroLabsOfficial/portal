@@ -20,8 +20,7 @@ function isTimestampLike(v: unknown): v is Timestamp {
 /**
  * Provisions / updates `users/{portalUserId}` from `customers/{customerId}` when `portalUserId` is set:
  * `uid`, `email`, `name`, `displayName`, `role: customer` (unless existing staff), `stripeCustomerId`,
- * `organizationId`, `createdAt` / `updatedAt` as Firestore Timestamps, plus `createdAtMs` / `updatedAtMs`
- * for existing portal session code.
+ * `organizationId`, and Firestore Timestamps `createdAt` / `updatedAt` (no `createdAtMs` / `updatedAtMs`).
  */
 export async function syncPortalUserFromCrmCustomerDoc(db: Firestore, customerId: string): Promise<void> {
   const id = customerId.trim();
@@ -51,7 +50,6 @@ export async function syncPortalUserFromCrmCustomerDoc(db: Firestore, customerId
     const userSnap = await ref.get();
     const existing = userSnap.exists ? (userSnap.data() as Record<string, unknown>) : undefined;
     const nowTs = Timestamp.now();
-    const nowMs = nowTs.toMillis();
 
     const payload: Record<string, unknown> = {
       uid: portalUserId,
@@ -59,7 +57,6 @@ export async function syncPortalUserFromCrmCustomerDoc(db: Firestore, customerId
       name: displayName,
       displayName,
       updatedAt: nowTs,
-      updatedAtMs: nowMs,
     };
 
     if (!isStaffRole(existing?.role)) {
@@ -74,20 +71,14 @@ export async function syncPortalUserFromCrmCustomerDoc(db: Firestore, customerId
 
     if (!userSnap.exists) {
       payload.createdAt = nowTs;
-      payload.createdAtMs = nowMs;
     } else {
       const ex = existing;
       if (!ex) return;
       const hasCreatedAt = ex.createdAt != null && isTimestampLike(ex.createdAt);
-      const hasCreatedAtMs = typeof ex.createdAtMs === "number" && Number.isFinite(ex.createdAtMs);
-
-      if (!hasCreatedAt && !hasCreatedAtMs) {
-        payload.createdAt = nowTs;
-        payload.createdAtMs = nowMs;
-      } else if (!hasCreatedAt && hasCreatedAtMs) {
-        payload.createdAt = Timestamp.fromMillis(ex.createdAtMs as number);
-      } else if (hasCreatedAt && !hasCreatedAtMs) {
-        payload.createdAtMs = (ex.createdAt as Timestamp).toMillis();
+      if (!hasCreatedAt) {
+        const legacyMs =
+          typeof ex.createdAtMs === "number" && Number.isFinite(ex.createdAtMs) ? (ex.createdAtMs as number) : nowTs.toMillis();
+        payload.createdAt = Timestamp.fromMillis(legacyMs);
       }
     }
 

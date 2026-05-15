@@ -128,10 +128,10 @@ function newCustomersMomStats(customers: PortalUser[], now: Date): {
   const lastMonthStart = startOfPreviousMonthMs(now);
   const nowMs = now.getTime();
   const newThisMonth = customers.filter(
-    (c) => c.createdAtMs >= thisMonthStart && c.createdAtMs <= nowMs,
+    (c) => c.joinedAtMs >= thisMonthStart && c.joinedAtMs <= nowMs,
   ).length;
   const newLastMonth = customers.filter(
-    (c) => c.createdAtMs >= lastMonthStart && c.createdAtMs < thisMonthStart,
+    (c) => c.joinedAtMs >= lastMonthStart && c.joinedAtMs < thisMonthStart,
   ).length;
   if (newLastMonth === 0 && newThisMonth === 0) {
     return { pct: 0, neutral: true, lastMonthNew: 0 };

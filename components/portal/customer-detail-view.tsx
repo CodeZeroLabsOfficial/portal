@@ -536,10 +536,7 @@ export function CustomerDetailView({
                 <LogIn className="h-5 w-5 text-muted-foreground" aria-hidden />
                 Portal access
               </CardTitle>
-              <CardDescription>
-                Firebase login for the customer portal (web and app). Configure from Edit customer, then generate a
-                password setup link when inviting them to sign in.
-              </CardDescription>
+              <CardDescription>Provide access to the customer portal.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 p-4 text-sm">
               <div className="rounded-xl border border-border/60 bg-background/40 p-3">

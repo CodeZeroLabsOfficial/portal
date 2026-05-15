@@ -37,6 +37,9 @@ export interface PortalUser {
   localeRegionCode?: string;
   /** ISO 4217 currency for display, e.g. AUD. */
   currencyCode?: string;
-  createdAtMs: number;
-  updatedAtMs: number;
+  /**
+   * When this profile was first created (ms since epoch). Derived from Firestore `createdAt`
+   * (Timestamp) or legacy `createdAtMs` when loading — not written back under `joinedAtMs`.
+   */
+  joinedAtMs: number;
 }

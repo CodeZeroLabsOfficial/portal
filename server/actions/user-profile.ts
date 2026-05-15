@@ -7,6 +7,7 @@ import { zodErrorToMessage } from "@/lib/zod-error";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import { runAdminWrite } from "@/lib/firebase/admin-write";
 import { COLLECTIONS } from "@/server/firestore/collections";
+import { Timestamp } from "firebase-admin/firestore";
 
 export async function updateCurrentUserProfileAction(
   raw: unknown,
@@ -30,7 +31,7 @@ export async function updateCurrentUserProfileAction(
   const parts = [v.firstName.trim(), v.lastName.trim()].filter(Boolean);
   const displayName = parts.length > 0 ? parts.join(" ") : "";
 
-  const nowMs = Date.now();
+  const nowTs = Timestamp.now();
   const write = await runAdminWrite(
     "user_profile_save_failed",
     { uid: user.uid },
@@ -50,7 +51,7 @@ export async function updateCurrentUserProfileAction(
           postalCode: v.postalCode.trim(),
           country: v.country.trim(),
           displayName,
-          updatedAtMs: nowMs,
+          updatedAt: nowTs,
         },
         { merge: true },
       ),
