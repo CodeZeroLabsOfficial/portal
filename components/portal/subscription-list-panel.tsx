@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { MoreHorizontal, Plus, Search } from "lucide-react";
 import type { SubscriptionRecord } from "@/types/subscription";
 import { formatCurrencyAmount } from "@/lib/format";
@@ -237,7 +237,8 @@ export function SubscriptionListPanel({ rows, customerOptions, productOptions }:
                   </td>
                 </tr>
               ) : (
-                filtered.map((row) => {
+                <AnimatePresence initial={false}>
+                  {filtered.map((row, index) => {
                   const s = row.subscription;
                   const st = statusBadge(s.status);
                   const monthlyMinor = resolvedMonthlyMinor(s);
@@ -283,7 +284,15 @@ export function SubscriptionListPanel({ rows, customerOptions, productOptions }:
                   }
 
                   return (
-                    <tr key={s.id} className="border-b border-border/60 last:border-0">
+                    <motion.tr
+                      key={s.id}
+                      layout
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.18, delay: index * 0.012 }}
+                      className="border-b border-border/60 last:border-0"
+                    >
                       <td className="px-4 py-3 align-middle">
                         <Badge variant="outline" className={cn("font-normal capitalize", st.className)}>
                           {st.label}
@@ -345,9 +354,10 @@ export function SubscriptionListPanel({ rows, customerOptions, productOptions }:
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </td>
-                    </tr>
+                    </motion.tr>
                   );
-                })
+                  })}
+                </AnimatePresence>
               )}
             </tbody>
           </table>
