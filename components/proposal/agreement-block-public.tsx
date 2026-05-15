@@ -24,7 +24,6 @@ import { readableForeground, resolveAgreementButtonColor } from "@/lib/block-sty
 import { formatCurrencyAmount } from "@/lib/format";
 import { effectivePricingLineQuantity } from "@/lib/pricing-line-quantity";
 import {
-  packageAddonsTotalMinor,
   packageMonthlyTotalMinor,
   packagesAddonsSectionActive,
   packagesSelectionTermLabel,
@@ -103,7 +102,6 @@ interface PackageSelectionSummary {
   termLabel: string;
   monthlyMinor: number;
   monthlyTotalMinor: number;
-  addonsTotalMinor: number;
   addonLines: Array<{
     id: string;
     label: string;
@@ -135,7 +133,6 @@ function buildPackageSelectionSummary(
       ? (tier.monthlyCost24Minor ?? 0)
       : (tier.monthlyCost12Minor ?? 0);
   const monthlyTotal = packageMonthlyTotalMinor(block, selection);
-  const addonsTotal = packageAddonsTotalMinor(block, selection);
 
   const addonLines: PackageSelectionSummary["addonLines"] = [];
   if (packagesAddonsSectionActive(block)) {
@@ -167,7 +164,6 @@ function buildPackageSelectionSummary(
     termLabel: packagesSelectionTermLabel(block, selection.term),
     monthlyMinor: monthly,
     monthlyTotalMinor: monthlyTotal,
-    addonsTotalMinor: addonsTotal,
     addonLines,
     stripePriceId: tier.stripePriceId?.trim() || undefined,
   };
@@ -219,12 +215,6 @@ function PackageSummaryCard({ summary }: { summary: PackageSelectionSummary }) {
               </li>
             ))}
           </ul>
-          <div className="mt-3 flex items-baseline justify-between text-sm">
-            <span className="text-zinc-500">Add-ons subtotal</span>
-            <span className="tabular-nums text-zinc-900">
-              {formatCurrencyAmount(summary.addonsTotalMinor, summary.currency)}
-            </span>
-          </div>
         </div>
       ) : null}
 
