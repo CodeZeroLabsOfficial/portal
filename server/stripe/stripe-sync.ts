@@ -1,11 +1,14 @@
 import type { Firestore } from "firebase-admin/firestore";
 import { FieldValue } from "firebase-admin/firestore";
 import type Stripe from "stripe";
-import { COLLECTIONS } from "../firestore/collections";
+import { COLLECTIONS } from "@/server/firestore/collections";
+import { syncStripeCustomerIdFromCrmCustomerDoc } from "@/server/firestore/sync-portal-user-stripe";
 import type { InvoiceStatus } from "../../types/invoice";
 import type { SubscriptionStatus } from "../../types/subscription";
 
 function mapSubscriptionStatus(status: Stripe.Subscription.Status): SubscriptionStatus {
+  /** Stripe API may return `scheduled` before SDK types add it to `Subscription.Status`. */
+  if ((status as string) === "scheduled") return "scheduled";
   switch (status) {
     case "active":
     case "trialing":
@@ -161,6 +164,7 @@ async function linkStripeCustomerToCrm(db: Firestore, customer: Stripe.Customer)
         },
         { merge: true },
       );
+      await syncStripeCustomerIdFromCrmCustomerDoc(db, doc.id);
     }
   } catch {
     /* ignore query failures — indexes / transient errors */

@@ -21,6 +21,7 @@ import type {
   CustomerSubscriptionRollup,
 } from "@/types/customer";
 import { deleteOpportunitiesForCustomerDb } from "@/server/firestore/crm-opportunities";
+import { syncStripeCustomerIdFromCrmCustomerDoc } from "@/server/firestore/sync-portal-user-stripe";
 import { deleteMirroredStripeCustomer } from "@/server/stripe/delete-stripe-customer-for-crm";
 import { ensureStripeCustomer } from "@/server/stripe/proposal-billing";
 import { parseProposalRecord } from "@/server/firestore/parse-proposal";
@@ -730,7 +731,8 @@ export async function listInvoicesForStripeCustomer(
       .where("customerId", "==", stripeCustomerId)
       .limit(50)
       .get();
-    return snap.docs.map((d) => parseInvoice(d.id, d.data() as Record<string, unknown>));
+    const rows = snap.docs.map((d) => parseInvoice(d.id, d.data() as Record<string, unknown>));
+    return rows.sort((a, b) => (b.issuedAtMs ?? 0) - (a.issuedAtMs ?? 0));
   } catch {
     return [];
   }
@@ -748,7 +750,8 @@ export async function listSubscriptionsForStripeCustomer(
       .where("customerId", "==", stripeCustomerId)
       .limit(50)
       .get();
-    return snap.docs.map((d) => parseSubscriptionFirestore(d.id, d.data() as Record<string, unknown>));
+    const rows = snap.docs.map((d) => parseSubscriptionFirestore(d.id, d.data() as Record<string, unknown>));
+    return rows.sort((a, b) => (b.updatedAtMs ?? 0) - (a.updatedAtMs ?? 0));
   } catch {
     return [];
   }
@@ -1041,6 +1044,8 @@ export async function createCustomerDocument(
     });
   }
 
+  await syncStripeCustomerIdFromCrmCustomerDoc(db, docRef.id);
+
   return { ok: true, customerId: docRef.id };
 }
 
@@ -1131,6 +1136,8 @@ export async function updateCustomerDocument(
       createdAt: Timestamp.fromMillis(updatedAt.toMillis() + 1),
     });
   }
+
+  await syncStripeCustomerIdFromCrmCustomerDoc(db, customerId);
 
   return { ok: true };
 }
@@ -1240,6 +1247,7 @@ export async function persistStripeCustomerIdOnCustomer(
     .collection(COLLECTIONS.customers)
     .doc(id)
     .set({ stripeCustomerId: sid, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+  await syncStripeCustomerIdFromCrmCustomerDoc(db, id);
 }
 
 export async function syncStripeCustomerBasics(
@@ -1263,5 +1271,6 @@ export async function syncStripeCustomerBasics(
     actorUid: user.uid,
     createdAt: FieldValue.serverTimestamp(),
   });
+  await syncStripeCustomerIdFromCrmCustomerDoc(db, customerId);
   return { ok: true };
 }

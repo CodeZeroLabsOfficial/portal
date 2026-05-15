@@ -95,6 +95,12 @@ function statusBadge(status: SubscriptionRecord["status"]): { label: string; cla
       className: "border-emerald-500/35 bg-emerald-500/12 text-emerald-600 dark:text-emerald-300",
     };
   }
+  if (status === "scheduled") {
+    return {
+      label: "Scheduled",
+      className: "border-sky-500/35 bg-sky-500/10 text-sky-700 dark:text-sky-300",
+    };
+  }
   if (status === "past_due" || status === "unpaid") {
     return {
       label: status === "past_due" ? "Past due" : "Unpaid",
