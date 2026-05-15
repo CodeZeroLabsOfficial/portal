@@ -405,7 +405,7 @@ function normalizeAgreementBlockInput(raw: unknown): unknown {
   return next;
 }
 
-const agreementBlockObjectSchema = z.object({
+const agreementBlockSchema: z.ZodTypeAny = z.object({
   id: idSchema,
   type: z.literal("agreement"),
   contractTemplateId: z.string().max(128).optional(),
@@ -417,36 +417,40 @@ const agreementBlockObjectSchema = z.object({
   requireAcceptTerms: z.boolean().optional(),
   style: blockStyleSchema.optional(),
   background: sectionBackgroundSchema.optional(),
-  /** Lazy so this object schema can be registered in unions before `agreementNestedBlockSchema` exists. */
+  /** Lazy so this object exists in unions before `agreementNestedBlockSchema` is defined. */
   children: z.lazy(() => z.array(agreementNestedBlockSchema)).default([]),
 });
 
-const agreementBlockSchema = z.preprocess(
-  normalizeAgreementBlockInput,
-  agreementBlockObjectSchema,
+/** Blocks allowed inside each column pane (cannot nest columns or accordion). */
+const columnInnerUnionSchema = z.discriminatedUnion(
+  "type",
+  [
+    headerBlockSchema,
+    textBlockSchema,
+    imageBlockSchema,
+    videoBlockSchema,
+    pricingBlockSchema,
+    packagesBlockSchema,
+    formBlockSchema,
+    signatureBlockSchema,
+    agreementBlockSchema,
+    embedBlockSchema,
+    paymentBlockSchema,
+    dividerBlockSchema,
+    spacerBlockSchema,
+    iconBlockSchema,
+  ] as unknown as [z.ZodDiscriminatedUnionOption<"type">, ...z.ZodDiscriminatedUnionOption<"type">[]],
 );
 
-/** Blocks allowed inside each column pane (cannot nest columns or accordion). */
-const columnInnerUnionSchema = z.discriminatedUnion("type", [
-  headerBlockSchema,
-  textBlockSchema,
-  imageBlockSchema,
-  videoBlockSchema,
-  pricingBlockSchema,
-  packagesBlockSchema,
-  formBlockSchema,
-  signatureBlockSchema,
-  agreementBlockSchema,
-  embedBlockSchema,
-  paymentBlockSchema,
-  dividerBlockSchema,
-  spacerBlockSchema,
-  iconBlockSchema,
-]);
-
 const columnInnerSchema = z.preprocess((raw) => {
-  if (raw && typeof raw === "object" && (raw as Record<string, unknown>).type === "packages") {
-    return normalizePackagesBlockInput(raw);
+  if (raw && typeof raw === "object") {
+    const r = raw as Record<string, unknown>;
+    if (r.type === "packages") {
+      return normalizePackagesBlockInput(raw);
+    }
+    if (r.type === "agreement") {
+      return normalizeAgreementBlockInput(raw);
+    }
   }
   return raw;
 }, columnInnerUnionSchema);
@@ -615,6 +619,9 @@ const nestedBlockSchema = z.preprocess((raw) => {
     if (r.type === "columns") {
       return normalizeColumnsBlockInput(raw);
     }
+    if (r.type === "agreement") {
+      return normalizeAgreementBlockInput(raw);
+    }
   }
   return raw;
 }, nestedBlockUnionSchema);
@@ -660,6 +667,9 @@ const blockSchema = z.preprocess((raw) => {
     }
     if (r.type === "columns") {
       return normalizeColumnsBlockInput(raw);
+    }
+    if (r.type === "agreement") {
+      return normalizeAgreementBlockInput(raw);
     }
   }
   return raw;
