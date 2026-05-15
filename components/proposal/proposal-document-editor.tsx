@@ -2329,6 +2329,10 @@ export function ProposalDocumentEditor({
   const [saving, setSaving] = React.useState(false);
   const [sending, setSending] = React.useState(false);
   const [message, setMessage] = React.useState<string | null>(null);
+  const [publishJustSucceeded, setPublishJustSucceeded] = React.useState(false);
+  const publishSuccessResetRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [saveJustSucceeded, setSaveJustSucceeded] = React.useState(false);
+  const saveSuccessResetRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const sortableBlockIds = React.useMemo(() => blocks.map((b) => b.id), [blocks]);
 
@@ -2344,6 +2348,17 @@ export function ProposalDocumentEditor({
       setRootColumnsLayoutEditingId(null);
     }
   }, [blocks, rootColumnsLayoutEditingId]);
+
+  React.useEffect(() => {
+    return () => {
+      if (publishSuccessResetRef.current) {
+        clearTimeout(publishSuccessResetRef.current);
+      }
+      if (saveSuccessResetRef.current) {
+        clearTimeout(saveSuccessResetRef.current);
+      }
+    };
+  }, []);
 
   const proposalTitleFrozenRef = React.useRef<string | null>(null);
   const documentTitle = React.useMemo(() => {
@@ -2397,13 +2412,25 @@ export function ProposalDocumentEditor({
       setMessage("Missing proposal id.");
       return;
     }
+    if (saveSuccessResetRef.current) {
+      clearTimeout(saveSuccessResetRef.current);
+      saveSuccessResetRef.current = null;
+    }
+    setSaveJustSucceeded(false);
     const res = await saveProposalDocumentAction({
       proposalId,
       title: documentTitle,
       document: doc,
     });
     setSaving(false);
-    setMessage(res.ok ? "Saved." : res.message);
+    setMessage(res.ok ? null : res.message);
+    if (res.ok) {
+      setSaveJustSucceeded(true);
+      saveSuccessResetRef.current = setTimeout(() => {
+        saveSuccessResetRef.current = null;
+        setSaveJustSucceeded(false);
+      }, 1800);
+    }
   }
 
   async function saveAndExitTemplateNameEdit() {
@@ -2414,6 +2441,11 @@ export function ProposalDocumentEditor({
 
   async function send() {
     if (isTemplate || !proposalId) return;
+    if (publishSuccessResetRef.current) {
+      clearTimeout(publishSuccessResetRef.current);
+      publishSuccessResetRef.current = null;
+    }
+    setPublishJustSucceeded(false);
     setSending(true);
     setMessage(null);
     const saved = await saveProposalDocumentAction({ proposalId, title: documentTitle, document: doc });
@@ -2424,7 +2456,14 @@ export function ProposalDocumentEditor({
     }
     const sent = await sendProposalAction(proposalId);
     setSending(false);
-    setMessage(sent.ok ? "Published — link is live for customers." : sent.message);
+    setMessage(sent.ok ? null : sent.message);
+    if (sent.ok) {
+      setPublishJustSucceeded(true);
+      publishSuccessResetRef.current = setTimeout(() => {
+        publishSuccessResetRef.current = null;
+        setPublishJustSucceeded(false);
+      }, 1800);
+    }
   }
 
   function updateBlock(id: string, next: ProposalBlock) {
@@ -2722,14 +2761,34 @@ export function ProposalDocumentEditor({
                 size="sm"
                 disabled={sending}
                 onClick={() => void send()}
-                className="gap-1.5 text-muted-foreground hover:text-foreground"
+                className="min-w-[7rem] gap-1.5 text-muted-foreground transition-colors hover:text-foreground"
+                aria-label={publishJustSucceeded && !sending ? "Published" : "Publish"}
               >
-                {sending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Send className="h-4 w-4" aria-hidden />}
-                Publish
+                {sending ? (
+                  <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                ) : publishJustSucceeded ? (
+                  <Check className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
+                ) : (
+                  <Send className="h-4 w-4 shrink-0" aria-hidden />
+                )}
+                {publishJustSucceeded && !sending ? "Published" : "Publish"}
               </Button>
-              <Button type="button" size="sm" disabled={saving} onClick={() => void save()} className="gap-2">
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                Save
+              <Button
+                type="button"
+                size="sm"
+                disabled={saving}
+                onClick={() => void save()}
+                className="min-w-[5.5rem] gap-2 transition-colors"
+                aria-label={saveJustSucceeded && !saving ? "Saved" : "Save"}
+              >
+                {saving ? (
+                  <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                ) : saveJustSucceeded ? (
+                  <Check className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
+                ) : (
+                  <Save className="h-4 w-4 shrink-0" aria-hidden />
+                )}
+                {saveJustSucceeded && !saving ? "Saved" : "Save"}
               </Button>
             </div>
           </div>
@@ -2743,14 +2802,39 @@ export function ProposalDocumentEditor({
         </>
       ) : (
         <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" disabled={saving} onClick={() => void save()} className="gap-2">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            Save
+          <Button
+            type="button"
+            disabled={saving}
+            onClick={() => void save()}
+            className="min-w-[5.5rem] gap-2 transition-colors"
+            aria-label={saveJustSucceeded && !saving ? "Saved" : "Save"}
+          >
+            {saving ? (
+              <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+            ) : saveJustSucceeded ? (
+              <Check className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
+            ) : (
+              <Save className="h-4 w-4 shrink-0" aria-hidden />
+            )}
+            {saveJustSucceeded && !saving ? "Saved" : "Save"}
           </Button>
           {!isTemplate ? (
-            <Button type="button" variant="secondary" disabled={sending} onClick={() => void send()} className="gap-2">
-              {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              Publish
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={sending}
+              onClick={() => void send()}
+              className="min-w-[7rem] gap-2 transition-colors"
+              aria-label={publishJustSucceeded && !sending ? "Published" : "Publish"}
+            >
+              {sending ? (
+                <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+              ) : publishJustSucceeded ? (
+                <Check className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
+              ) : (
+                <Send className="h-4 w-4 shrink-0" aria-hidden />
+              )}
+              {publishJustSucceeded && !sending ? "Published" : "Publish"}
             </Button>
           ) : null}
           {message ? <span className="text-sm text-muted-foreground">{message}</span> : null}
