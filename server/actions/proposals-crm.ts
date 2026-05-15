@@ -7,7 +7,7 @@ import { requireStaffSession } from "@/lib/auth/server-session";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { getCustomerRecordForOrg } from "@/server/firestore/crm-customers";
-import { getOpportunityForStaff, updateOpportunityStage } from "@/server/firestore/crm-opportunities";
+import { getOpportunityForStaff, appendOpportunityActivity, updateOpportunityStage } from "@/server/firestore/crm-opportunities";
 import { getProposalTemplateForStaff } from "@/server/firestore/proposal-templates";
 import { cloneBrandingFromTemplate, cloneProposalDocument } from "@/lib/proposal-clone-document";
 import { encodeProposalDocumentForFirestore } from "@/lib/proposal-firestore-document";
@@ -17,6 +17,20 @@ import { logError } from "@/lib/logging";
 import type { CustomerRecord } from "@/types/customer";
 import type { OpportunityRecord } from "@/types/opportunity";
 import type { ProposalBlock, ProposalBranding, ProposalDocument } from "@/types/proposal";
+import type { PortalUser } from "@/types/user";
+
+/** Label for automated CRM copy — prefers display name, then first/last, then email. */
+function staffDisplayNameForActivity(user: PortalUser): string {
+  const fromDisplay = user.displayName?.trim();
+  if (fromDisplay) return fromDisplay;
+  const fn = user.firstName?.trim() ?? "";
+  const ln = user.lastName?.trim() ?? "";
+  const combined = [fn, ln].filter(Boolean).join(" ").trim();
+  if (combined) return combined;
+  const email = user.email?.trim();
+  if (email) return email;
+  return "Team member";
+}
 
 /** Firestore rejects `undefined` anywhere under a document — strip before `set`. */
 function omitUndefinedDeep(value: unknown): unknown {
@@ -289,6 +303,25 @@ export async function createDraftProposalFromOpportunityAction(
     if (sourceTemplateId) payload.sourceTemplateId = sourceTemplateId;
 
     await ref.set(payload);
+
+    try {
+      const activityRes = await appendOpportunityActivity(user, opportunityId, {
+        kind: "other",
+        title: `Proposal created by ${staffDisplayNameForActivity(user)}`,
+        detail: document.title.trim(),
+      });
+      if (!activityRes.ok) {
+        logError("createDraftProposalFromOpportunity_activity_failed", {
+          opportunityId,
+          message: activityRes.message,
+        });
+      }
+    } catch (e) {
+      logError("createDraftProposalFromOpportunity_activity_failed", {
+        opportunityId,
+        message: e instanceof Error ? e.message : String(e),
+      });
+    }
 
     try {
       const stageRes = await updateOpportunityStage(user, opportunityId, "proposal_sent");
