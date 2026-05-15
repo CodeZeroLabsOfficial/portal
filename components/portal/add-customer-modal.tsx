@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
+import { Copy, Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { createCustomerSchema, type CreateCustomerInput } from "@/lib/schemas/customer";
 import { createCustomerAction } from "@/server/actions/customers-crm";
@@ -17,6 +17,7 @@ import {
 import { FormServerError } from "@/components/ui/form-server-error";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "next/navigation";
 
 interface AddCustomerModalProps {
@@ -47,6 +48,7 @@ const defaultValues: CreateCustomerInput = {
   tags: [],
   customFields: [],
   linkAuthByEmail: false,
+  createAuthUserIfMissing: false,
   saveAsLead: false,
 };
 
@@ -63,6 +65,8 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
     defaultValues,
   });
 
+  const [postCreateInvite, setPostCreateInvite] = React.useState<{ link: string; customerId: string } | null>(null);
+
   React.useEffect(() => {
     if (!open) {
       form.reset(defaultValues);
@@ -71,6 +75,7 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
       setTagInput("");
       setCustomRows([]);
       setServerError(null);
+      setPostCreateInvite(null);
     }
   }, [open, form]);
 
@@ -101,6 +106,10 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
       return;
     }
     onOpenChange(false);
+    if (result.authPasswordResetLink) {
+      setPostCreateInvite({ link: result.authPasswordResetLink, customerId: result.customerId });
+      return;
+    }
     router.push(`/admin/customers/${result.customerId}`);
     router.refresh();
   }
@@ -119,8 +128,9 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[min(90vh,800px)] w-[min(100vw-2rem,880px)] max-w-[880px] overflow-y-auto border-white/[0.08] bg-[#141414] p-0 sm:max-w-[880px]">
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-h-[min(90vh,800px)] w-[min(100vw-2rem,880px)] max-w-[880px] overflow-y-auto border-white/[0.08] bg-[#141414] p-0 sm:max-w-[880px]">
         <div className="border-b border-white/[0.06] bg-gradient-to-br from-primary/15 via-transparent to-transparent px-6 pb-5 pt-6">
           <DialogHeader className="text-left">
             <DialogTitle className="text-xl font-semibold tracking-tight text-white">New customer</DialogTitle>
@@ -422,9 +432,25 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
               onChange={(e) => form.setValue("linkAuthByEmail", e.target.checked, { shouldDirty: true })}
             />
             <span className="text-sm leading-snug text-zinc-300">
-              <span className="font-medium text-white">Create user account</span>
+              <span className="font-medium text-white">Link existing Firebase login</span>
               <span className="mt-0.5 block text-xs text-zinc-500">
-                Allow user access to the customer portal to manage subscriptions, billing and payment methods.
+                If an Auth user already exists for this email, attach them to this CRM profile.
+              </span>
+            </span>
+          </label>
+
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] p-3 transition-colors hover:bg-white/[0.05]">
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4 rounded border-border"
+              checked={Boolean(form.watch("createAuthUserIfMissing"))}
+              onChange={(e) => form.setValue("createAuthUserIfMissing", e.target.checked, { shouldDirty: true })}
+            />
+            <span className="text-sm leading-snug text-zinc-300">
+              <span className="font-medium text-white">Create Firebase login if none exists</span>
+              <span className="mt-0.5 block text-xs text-zinc-500">
+                Creates an email/password account when missing. You will receive a one-time password-reset link to share
+                securely with the customer.
               </span>
             </span>
           </label>
@@ -447,5 +473,63 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
         </form>
       </DialogContent>
     </Dialog>
+
+      <Dialog
+        open={Boolean(postCreateInvite)}
+        onOpenChange={(next) => {
+          if (!next) {
+            const invite = postCreateInvite;
+            setPostCreateInvite(null);
+            if (invite) {
+              router.push(`/admin/customers/${invite.customerId}`);
+              router.refresh();
+            }
+          }
+        }}
+      >
+        <DialogContent className="max-w-lg border-white/[0.08] bg-[#141414] text-white">
+          <DialogHeader className="text-left">
+            <DialogTitle className="text-lg font-semibold">Firebase login created</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm leading-relaxed text-zinc-400">
+            Share this password-reset link once with the customer through a secure channel. Anyone with the link can
+            start the reset flow for this email.
+          </p>
+          <Textarea
+            readOnly
+            className="min-h-[5.5rem] resize-none border-white/[0.08] bg-white/[0.04] font-mono text-xs text-zinc-200"
+            value={postCreateInvite?.link ?? ""}
+          />
+          <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-end">
+            <Button
+              type="button"
+              variant="secondary"
+              className="gap-2 border-white/[0.08] bg-white/[0.08] text-white hover:bg-white/[0.12]"
+              onClick={() => {
+                if (!postCreateInvite?.link) return;
+                void navigator.clipboard.writeText(postCreateInvite.link);
+              }}
+            >
+              <Copy className="h-4 w-4" aria-hidden />
+              Copy link
+            </Button>
+            <Button
+              type="button"
+              className="gap-2"
+              onClick={() => {
+                const invite = postCreateInvite;
+                setPostCreateInvite(null);
+                if (invite) {
+                  router.push(`/admin/customers/${invite.customerId}`);
+                  router.refresh();
+                }
+              }}
+            >
+              Done
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

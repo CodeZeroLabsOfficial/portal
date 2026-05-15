@@ -32,7 +32,7 @@ function revalidateCrmCustomerPaths(customerId?: string) {
 
 export async function createCustomerAction(
   raw: unknown,
-): Promise<{ ok: true; customerId: string } | { ok: false; message: string }> {
+): Promise<{ ok: true; customerId: string; authPasswordResetLink?: string } | { ok: false; message: string }> {
   const user = await requireStaffSession();
   if (!user) {
     return { ok: false, message: "You need an admin or team session to manage customers." };
@@ -46,12 +46,16 @@ export async function createCustomerAction(
     return { ok: false, message: result.message };
   }
   revalidateCrmCustomerPaths(result.customerId);
-  return { ok: true, customerId: result.customerId };
+  return {
+    ok: true,
+    customerId: result.customerId,
+    ...(result.authPasswordResetLink ? { authPasswordResetLink: result.authPasswordResetLink } : {}),
+  };
 }
 
 export async function updateCustomerAction(
   raw: unknown,
-): Promise<{ ok: true } | { ok: false; message: string }> {
+): Promise<{ ok: true; authPasswordResetLink?: string } | { ok: false; message: string }> {
   const user = await requireStaffSession();
   if (!user) {
     return { ok: false, message: "You need an admin or team session to manage customers." };
@@ -67,7 +71,10 @@ export async function updateCustomerAction(
   const id = parsed.data.id;
   revalidateCrmCustomerPaths(id);
   revalidatePath(`/admin/customers/${id}/edit`);
-  return { ok: true };
+  return {
+    ok: true,
+    ...(result.authPasswordResetLink ? { authPasswordResetLink: result.authPasswordResetLink } : {}),
+  };
 }
 
 export async function addCustomerNoteAction(

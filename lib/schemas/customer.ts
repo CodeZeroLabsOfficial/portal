@@ -57,6 +57,11 @@ export const createCustomerSchema = z.object({
   customFields: z.array(customFieldPairSchema).max(15).default([]),
   /** When true, sets `portalUserId` if a Firebase Auth user exists for `email`. */
   linkAuthByEmail: z.boolean().default(false),
+  /**
+   * When true (with `linkAuthByEmail` or alone), creates an email/password Firebase user if none exists,
+   * then links `portalUserId`. Staff may receive a one-time password-reset link to share with the customer.
+   */
+  createAuthUserIfMissing: z.boolean().default(false),
   /** When true, stores `crmType: "lead"` until converted to a contact. */
   saveAsLead: z.boolean().default(false),
 });

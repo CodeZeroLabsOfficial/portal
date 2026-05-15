@@ -4,7 +4,8 @@ import { asNumber, asString, asStringStringMap } from "@/lib/firestore/coerce";
 import { logError } from "@/lib/logging";
 import { coerceTimestampToMillis } from "@/lib/firestore/timestamp";
 import { COLLECTIONS } from "@/server/firestore/collections";
-import { getFirebaseAdminAuth, getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
+import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
+import { resolveOrCreateFirebaseUserByEmail } from "@/server/auth/resolve-or-create-firebase-user";
 import { getStripe } from "@/lib/stripe/server";
 import { accountKeyToNormalizedCompany, companyNameToAccountKey } from "@/lib/account-key";
 import type { AccountListRow } from "@/lib/account-list";
@@ -883,6 +884,8 @@ export async function listTasksForCustomer(user: PortalUser, customerId: string)
 export interface CreateCustomerResult {
   ok: true;
   customerId: string;
+  /** Present when a new Firebase Auth user was created — share securely with the customer. */
+  authPasswordResetLink?: string;
 }
 
 export interface CreateCustomerError {
@@ -904,15 +907,19 @@ export async function createCustomerDocument(
   }
 
   let portalUserId: string | undefined;
-  if (input.linkAuthByEmail) {
-    const auth = getFirebaseAdminAuth();
-    if (auth) {
-      try {
-        const existing = await auth.getUserByEmail(input.email.trim().toLowerCase());
-        portalUserId = existing.uid;
-      } catch {
-        portalUserId = undefined;
-      }
+  let authPasswordResetLink: string | undefined;
+  const shouldResolveAuth = input.linkAuthByEmail || input.createAuthUserIfMissing;
+  if (shouldResolveAuth) {
+    const resolved = await resolveOrCreateFirebaseUserByEmail(input.email.trim().toLowerCase(), {
+      active: true,
+      createIfMissing: input.createAuthUserIfMissing,
+    });
+    if (!resolved.ok) {
+      return { ok: false, message: resolved.message };
+    }
+    portalUserId = resolved.uid ?? undefined;
+    if (resolved.createdNew && resolved.passwordResetLink) {
+      authPasswordResetLink = resolved.passwordResetLink;
     }
   }
 
@@ -1026,7 +1033,7 @@ export async function createCustomerDocument(
     await db.collection(COLLECTIONS.customerActivities).add({
       customerId: docRef.id,
       type: "auth_linked",
-      title: "Linked Firebase Auth user",
+      title: authPasswordResetLink ? "Created Firebase Auth user" : "Linked Firebase Auth user",
       detail: input.email.trim().toLowerCase(),
       actorUid: user.uid,
       createdAt: Timestamp.fromMillis(firstActivityAt.toMillis() + 1),
@@ -1046,13 +1053,17 @@ export async function createCustomerDocument(
 
   await syncStripeCustomerIdFromCrmCustomerDoc(db, docRef.id);
 
-  return { ok: true, customerId: docRef.id };
+  return {
+    ok: true,
+    customerId: docRef.id,
+    ...(authPasswordResetLink ? { authPasswordResetLink } : {}),
+  };
 }
 
 export async function updateCustomerDocument(
   user: PortalUser,
   input: UpdateCustomerFormInput,
-): Promise<{ ok: true } | { ok: false; message: string }> {
+): Promise<{ ok: true; authPasswordResetLink?: string } | { ok: false; message: string }> {
   const db = getFirebaseAdminFirestore();
   if (!db || !isStaff(user)) {
     return { ok: false, message: "CRM is only available to admin or team members." };
@@ -1072,17 +1083,19 @@ export async function updateCustomerDocument(
   }
 
   let portalUserId: string | null | undefined;
-  if (rest.linkAuthByEmail) {
-    const auth = getFirebaseAdminAuth();
-    if (auth) {
-      try {
-        const u = await auth.getUserByEmail(rest.email.trim().toLowerCase());
-        portalUserId = u.uid;
-      } catch {
-        portalUserId = null;
-      }
-    } else {
-      portalUserId = null;
+  let authPasswordResetLink: string | undefined;
+  const shouldResolveAuth = rest.linkAuthByEmail || rest.createAuthUserIfMissing;
+  if (shouldResolveAuth) {
+    const resolved = await resolveOrCreateFirebaseUserByEmail(rest.email.trim().toLowerCase(), {
+      active: true,
+      createIfMissing: rest.createAuthUserIfMissing,
+    });
+    if (!resolved.ok) {
+      return { ok: false, message: resolved.message };
+    }
+    portalUserId = resolved.uid;
+    if (resolved.createdNew && resolved.passwordResetLink) {
+      authPasswordResetLink = resolved.passwordResetLink;
     }
   }
 
@@ -1126,11 +1139,13 @@ export async function updateCustomerDocument(
     createdAt: updatedAt,
   });
 
-  if (rest.linkAuthByEmail && portalUserId && portalUserId !== existing.portalUserId) {
+  const authLinked =
+    shouldResolveAuth && portalUserId && typeof portalUserId === "string" && portalUserId !== existing.portalUserId;
+  if (authLinked) {
     await db.collection(COLLECTIONS.customerActivities).add({
       customerId,
       type: "auth_linked",
-      title: "Linked Firebase Auth user",
+      title: authPasswordResetLink ? "Created Firebase Auth user" : "Linked Firebase Auth user",
       detail: rest.email.trim().toLowerCase(),
       actorUid: user.uid,
       createdAt: Timestamp.fromMillis(updatedAt.toMillis() + 1),
@@ -1139,7 +1154,10 @@ export async function updateCustomerDocument(
 
   await syncStripeCustomerIdFromCrmCustomerDoc(db, customerId);
 
-  return { ok: true };
+  return {
+    ok: true,
+    ...(authPasswordResetLink ? { authPasswordResetLink } : {}),
+  };
 }
 
 export async function appendCustomerNote(
