@@ -14,7 +14,11 @@ import {
   SquareArrowOutUpRight,
   Trash2,
 } from "lucide-react";
-import type { ProposalTemplateRecord, ProposalTemplateStage } from "@/types/proposal-template";
+import type {
+  ProposalTemplateRecord,
+  ProposalTemplateStage,
+  ProposalTemplateType,
+} from "@/types/proposal-template";
 import { deleteProposalTemplateAction, setProposalTemplateStageAction } from "@/server/actions/proposal-templates";
 import { formatLastEditedInLocality } from "@/lib/proposal-locality-dates";
 import { CloneProposalTemplateButton } from "@/components/proposal/clone-proposal-template-button";
@@ -38,6 +42,11 @@ const TEMPLATE_STAGE_BADGE: Record<ProposalTemplateStage, string> = {
   published:
     "border-sky-500/45 bg-sky-500/10 text-sky-900 dark:border-sky-500/35 dark:bg-sky-500/15 dark:text-sky-200",
 };
+
+function proposalTemplateTypeLabel(templateType: ProposalTemplateType): string {
+  if (templateType === "contract") return "Contract";
+  return "Proposal";
+}
 
 function templateStageDisplay(stage: ProposalTemplateStage): {
   label: string;
@@ -109,7 +118,8 @@ export function ProposalTemplatesListPanel({ templates, localityTimeZone }: Prop
     return sorted.filter((t) => {
       const desc = (t.description ?? "").trim();
       const stageLabel = templateStageDisplay(t.stage).label;
-      const hay = [t.name, desc, stageLabel, formatLastEditedInLocality(lastEditedMs(t), localityTimeZone)]
+      const typeLabel = proposalTemplateTypeLabel(t.templateType);
+      const hay = [t.name, desc, typeLabel, stageLabel, formatLastEditedInLocality(lastEditedMs(t), localityTimeZone)]
         .join(" ")
         .toLowerCase();
       return hay.includes(q);
@@ -129,7 +139,7 @@ export function ProposalTemplatesListPanel({ templates, localityTimeZone }: Prop
               <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search name, stage, or date…"
+                placeholder="Search name, type, stage, or date…"
                 className="h-9 rounded-full border-border/80 bg-background/60 pl-9 text-[14px] text-foreground placeholder:text-muted-foreground"
                 aria-label="Search templates"
               />
@@ -153,6 +163,7 @@ export function ProposalTemplatesListPanel({ templates, localityTimeZone }: Prop
             <thead>
               <tr className="border-b border-border text-muted-foreground">
                 <th className="px-4 py-2.5 font-medium">Template name</th>
+                <th className="min-w-[100px] px-4 py-2.5 font-medium">Type</th>
                 <th className="min-w-[120px] px-4 py-2.5 font-medium">Stage</th>
                 <th className="min-w-[180px] px-4 py-2.5 font-medium">Last edited date</th>
                 <th className="min-w-[220px] px-2 py-2.5 text-center font-medium">Action buttons</th>
@@ -161,7 +172,7 @@ export function ProposalTemplatesListPanel({ templates, localityTimeZone }: Prop
             <tbody className="text-foreground">
               {sorted.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-10 text-center text-sm text-muted-foreground">
+                  <td colSpan={5} className="px-4 py-10 text-center text-sm text-muted-foreground">
                     <p className="mx-auto max-w-md leading-relaxed">
                       No templates yet. Use <span className="font-medium text-foreground">New template</span> to create
                       one for proposals from the CRM.
@@ -170,7 +181,7 @@ export function ProposalTemplatesListPanel({ templates, localityTimeZone }: Prop
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-10 text-center text-sm text-muted-foreground">
+                  <td colSpan={5} className="px-4 py-10 text-center text-sm text-muted-foreground">
                     No templates match your search.
                   </td>
                 </tr>
@@ -197,6 +208,9 @@ export function ProposalTemplatesListPanel({ templates, localityTimeZone }: Prop
                           >
                             {t.name}
                           </Link>
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 align-middle text-muted-foreground">
+                          {proposalTemplateTypeLabel(t.templateType)}
                         </td>
                         <td className="px-4 py-3 align-middle">
                           <Badge

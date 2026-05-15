@@ -41,6 +41,7 @@ export async function createProposalTemplateAction(): Promise<
         createdByUid: user.uid,
         name: "New template",
         description: "",
+        templateType: "proposal",
         stage: "draft",
         document: {
           title: "Untitled proposal",
@@ -87,6 +88,7 @@ export async function cloneProposalTemplateAction(
     createdByUid: user.uid,
     name,
     description: source.description?.trim() ? source.description.trim() : "",
+    templateType: source.templateType,
     stage: "draft",
     document: omitUndefinedDeep(encodeProposalDocumentForFirestore(source.document)) as Record<string, unknown>,
     createdAtMs: now,

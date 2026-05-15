@@ -5,8 +5,18 @@ import { COLLECTIONS } from "@/server/firestore/collections";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import { parseProposalDocument } from "@/lib/schemas/proposal-document";
 import { parseBranding } from "@/server/firestore/parse-proposal";
-import type { ProposalTemplateRecord, ProposalTemplateStage } from "@/types/proposal-template";
+import type {
+  ProposalTemplateRecord,
+  ProposalTemplateStage,
+  ProposalTemplateType,
+} from "@/types/proposal-template";
 import type { PortalUser } from "@/types/user";
+
+function parseProposalTemplateType(data: Record<string, unknown>): ProposalTemplateType {
+  const raw = asString(data.templateType)?.trim().toLowerCase();
+  if (raw === "contract") return "contract";
+  return "proposal";
+}
 
 export function parseProposalTemplateRecord(id: string, data: Record<string, unknown>): ProposalTemplateRecord {
   const documentRaw = data.document && typeof data.document === "object" ? data.document : {};
@@ -29,6 +39,7 @@ export function parseProposalTemplateRecord(id: string, data: Record<string, unk
     createdByUid: asString(data.createdByUid) ?? "",
     name: asString(data.name) ?? "Untitled template",
     description: asString(data.description),
+    templateType: parseProposalTemplateType(data),
     stage,
     document,
     branding: parseBranding(data.branding),
