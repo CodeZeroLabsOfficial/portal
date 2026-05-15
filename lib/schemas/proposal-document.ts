@@ -405,8 +405,6 @@ function normalizeAgreementBlockInput(raw: unknown): unknown {
   return next;
 }
 
-let agreementNestedBlockSchema: z.ZodTypeAny;
-
 const agreementBlockSchema: z.ZodTypeAny = z.lazy(() =>
   z.preprocess(
     normalizeAgreementBlockInput,
@@ -573,7 +571,7 @@ const agreementNestedBlockUnionSchema = z.discriminatedUnion(
   ] as unknown as [z.ZodDiscriminatedUnionOption<"type">, ...z.ZodDiscriminatedUnionOption<"type">[]],
 );
 
-agreementNestedBlockSchema = z.preprocess((raw) => {
+const agreementNestedBlockSchema = z.preprocess((raw) => {
   if (raw && typeof raw === "object") {
     const r = raw as Record<string, unknown>;
     if (r.type === "packages") {

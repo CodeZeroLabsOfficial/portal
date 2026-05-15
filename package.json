@@ -37,6 +37,7 @@
     "@vercel/blob": "^2.3.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "cssstyle": "^5.3.7",
     "firebase": "^11.1.0",
     "firebase-admin": "^13.0.2",
     "framer-motion": "^11.18.2",

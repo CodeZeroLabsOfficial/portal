@@ -120,7 +120,6 @@ import {
   PROPOSAL_DOCUMENT_COLUMNS_ROW_GAP_CLASSES,
   PROPOSAL_EDITOR_BLOCK_CANVAS_INNER_CLASSES,
   PROPOSAL_PUBLIC_DOCUMENT_OUTER_CLASSES,
-  PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES,
 } from "@/lib/proposal-public-layout";
 import { saveProposalDocumentAction, sendProposalAction } from "@/server/actions/proposal-builder";
 import { saveProposalTemplateAction } from "@/server/actions/proposal-templates";
@@ -968,7 +967,7 @@ function ColumnsBlockFields({
 
   const selectedCellMeta = React.useMemo(
     () => findColumnCellMeta(block, selectedCellId),
-    [block.stacks, selectedCellId],
+    [block, selectedCellId],
   );
 
   React.useEffect(() => {

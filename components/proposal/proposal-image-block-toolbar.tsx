@@ -64,7 +64,7 @@ export type ProposalImageBlockToolbarProps = {
 };
 
 export function ProposalImageBlockToolbar({
-  variant: _variant,
+  variant,
   block,
   onChange,
   className,
@@ -162,7 +162,7 @@ export function ProposalImageBlockToolbar({
   };
 
   return (
-    <div className={cn("pointer-events-auto", className)}>
+    <div className={cn("pointer-events-auto", className)} data-proposal-image-toolbar={variant}>
       <input
         ref={fileRef}
         type="file"
