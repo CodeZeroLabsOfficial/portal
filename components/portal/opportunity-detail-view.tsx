@@ -27,6 +27,7 @@ import type {
 } from "@/types/opportunity";
 import { OPPORTUNITY_STAGES, opportunityStageLabel } from "@/lib/crm/opportunity-stages";
 import { useOpportunityStageMutation } from "@/hooks/use-opportunity-stage-mutation";
+import { useProposalTemplatePickerState } from "@/hooks/use-proposal-template-picker-state";
 import type { ProposalTemplateRecord } from "@/types/proposal-template";
 import {
   addOpportunityActivityAction,
@@ -525,21 +526,8 @@ export function OpportunityDetailView({
   templates,
 }: OpportunityDetailViewProps) {
   const router = useRouter();
-  const [proposalTemplateId, setProposalTemplateId] = React.useState(() => templates[0]?.id ?? "");
+  const { proposalTemplateId, setProposalTemplateId } = useProposalTemplatePickerState(templates);
   const [proposalBusy, setProposalBusy] = React.useState(false);
-  const proposalTemplateIdsKey = templates.map((t) => t.id).join(",");
-
-  React.useEffect(() => {
-    const list = templates;
-    if (list.length === 0) {
-      setProposalTemplateId("");
-      return;
-    }
-    setProposalTemplateId((prev) =>
-      prev && list.some((t) => t.id === prev) ? prev : list[0].id,
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- sync when template *set* changes, not array identity
-  }, [proposalTemplateIdsKey]);
 
   async function createProposalFromOpportunity() {
     setProposalBusy(true);

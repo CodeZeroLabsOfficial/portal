@@ -1,14 +1,9 @@
-import type {
-  AgreementBlock,
-  PackagesBlock,
-  PackagesPublicSelection,
-  ProposalBlock,
-  ProposalRecord,
-} from "@/types/proposal";
-import { iterateProposalContentBlocks } from "@/lib/proposal-blocks";
+import type { PackagesBlock, ProposalRecord } from "@/types/proposal";
+import { findFirstAgreementBlock, iterateProposalContentBlocks } from "@/lib/proposal-blocks";
 import {
   packageMonthlyTotalMinor,
   packagesAddonsSectionActive,
+  packagesSelectionTermLabel,
 } from "@/lib/proposal-packages-totals";
 import { effectivePricingLineQuantity } from "@/lib/pricing-line-quantity";
 import { formatCurrencyAmount } from "@/lib/format";
@@ -26,11 +21,6 @@ const DEFAULT_LEGAL_SNAPSHOT = [
   "7. Warranties & Liability — As stated in proposal; capped liability.",
   "8. Governing Law — Provider jurisdiction.",
 ].join("\n\n");
-
-function termLabel(block: PackagesBlock, term: PackagesPublicSelection["term"]): string {
-  if (term === "24_months") return block.plan24Label?.trim() || "24 months";
-  return block.plan12Label?.trim() || "12 months";
-}
 
 export interface SignedAgreementAddonSnapshot {
   label: string;
@@ -51,16 +41,9 @@ export interface SignedAgreementCommerceSnapshot {
   };
 }
 
-function firstAgreementBlock(blocks: ProposalBlock[]): AgreementBlock | null {
-  for (const b of iterateProposalContentBlocks(blocks)) {
-    if (b.type === "agreement") return b;
-  }
-  return null;
-}
-
 /** Plain-ish snapshot for audit (truncated HTML or default section summary). */
 export function buildFullAgreementTextSnapshot(proposal: ProposalRecord): string | undefined {
-  const agreement = firstAgreementBlock(proposal.document.blocks);
+  const agreement = findFirstAgreementBlock(proposal.document.blocks);
   if (!agreement) return undefined;
   const chunks: string[] = [];
   if (agreement.introHtml?.trim()) {
@@ -103,7 +86,7 @@ export function buildSignedAgreementCommerceSnapshot(
     sumMonthly += monthlyTotal;
     const blockTitle = pb.title?.trim() || "Plan";
     planParts.push(
-      `${blockTitle}: ${tier.name?.trim() || "Plan"} — ${termLabel(pb, sel.term)} (${formatCurrencyAmount(monthly, cur)}/mo)`,
+      `${blockTitle}: ${tier.name?.trim() || "Plan"} — ${packagesSelectionTermLabel(pb, sel.term)} (${formatCurrencyAmount(monthly, cur)}/mo)`,
     );
     if (packagesAddonsSectionActive(pb)) {
       for (const li of pb.addonLineItems ?? []) {

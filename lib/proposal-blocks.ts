@@ -66,6 +66,14 @@ export function hasAgreementBlock(blocks: ProposalBlock[]): boolean {
   return false;
 }
 
+/** First `agreement` block in document order (nested layouts included), or null. */
+export function findFirstAgreementBlock(blocks: ProposalBlock[]): AgreementBlock | null {
+  for (const b of iterateProposalContentBlocks(blocks)) {
+    if (b.type === "agreement") return b as AgreementBlock;
+  }
+  return null;
+}
+
 /**
  * True when the last top-level block in the proposal renders as a viewport-bleed
  * band (section, splash, or packages/agreement with an active backdrop). Used by

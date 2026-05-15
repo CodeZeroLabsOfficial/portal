@@ -60,6 +60,7 @@ import { formatAddressLines, initialsFromName } from "@/lib/format";
 import { sanitizeProposalHtml } from "@/lib/sanitize-proposal-html";
 import { WORKSPACE_DETAIL_PAGE_TITLE_CLASS } from "@/lib/workspace-page-typography";
 import { cn } from "@/lib/utils";
+import { useProposalTemplatePickerState } from "@/hooks/use-proposal-template-picker-state";
 
 function formatMinor(amount: number, currency: string): string {
   try {
@@ -199,22 +200,7 @@ export function CustomerDetailView({
     isCustomerDetailTab(initialTab) ? initialTab : "overview",
   );
   const [busy, setBusy] = React.useState<string | null>(null);
-  const [proposalTemplateId, setProposalTemplateId] = React.useState(
-    () => templates[0]?.id ?? "",
-  );
-  const proposalTemplateIdsKey = templates.map((t) => t.id).join(",");
-
-  React.useEffect(() => {
-    const list = templates;
-    if (list.length === 0) {
-      setProposalTemplateId("");
-      return;
-    }
-    setProposalTemplateId((prev) =>
-      prev && list.some((t) => t.id === prev) ? prev : list[0].id,
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- sync when template *set* changes, not array identity
-  }, [proposalTemplateIdsKey]);
+  const { proposalTemplateId, setProposalTemplateId } = useProposalTemplatePickerState(templates);
   const [noteBody, setNoteBody] = React.useState("");
   const [noteKind, setNoteKind] = React.useState<CustomerNoteRecord["kind"]>("note");
   const [noteError, setNoteError] = React.useState<string | null>(null);

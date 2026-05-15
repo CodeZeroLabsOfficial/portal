@@ -27,6 +27,7 @@ import {
   packageAddonsTotalMinor,
   packageMonthlyTotalMinor,
   packagesAddonsSectionActive,
+  packagesSelectionTermLabel,
 } from "@/lib/proposal-packages-totals";
 import { sanitizeProposalHtml } from "@/lib/sanitize-proposal-html";
 import { isDocumentPackageSelectionComplete } from "@/lib/proposal-package-selection";
@@ -122,14 +123,6 @@ function packagesBlocksFromDocument(blocks: ProposalBlock[]): PackagesBlock[] {
   return out;
 }
 
-function termLabelForSelection(
-  block: PackagesBlock,
-  term: PackagesPublicSelection["term"],
-): string {
-  if (term === "24_months") return block.plan24Label?.trim() || "24 months";
-  return block.plan12Label?.trim() || "12 months";
-}
-
 function buildPackageSelectionSummary(
   block: PackagesBlock,
   selection: PackagesPublicSelection,
@@ -171,7 +164,7 @@ function buildPackageSelectionSummary(
     blockTitle: block.title?.trim() || "Plan",
     currency: (block.currency || "aud").toUpperCase(),
     tierName: tier.name?.trim() || "Plan",
-    termLabel: termLabelForSelection(block, selection.term),
+    termLabel: packagesSelectionTermLabel(block, selection.term),
     monthlyMinor: monthly,
     monthlyTotalMinor: monthlyTotal,
     addonsTotalMinor: addonsTotal,
@@ -255,7 +248,12 @@ function NoPackageSelectionCard() {
 }
 
 function LegalSections({ legalHtml }: { legalHtml?: string }) {
-  if (legalHtml && legalHtml.trim()) {
+  const sanitizedHtml = React.useMemo(() => {
+    if (!legalHtml?.trim()) return null;
+    return sanitizeProposalHtml(legalHtml);
+  }, [legalHtml]);
+
+  if (sanitizedHtml) {
     return (
       <div
         className={cn(
@@ -268,7 +266,7 @@ function LegalSections({ legalHtml }: { legalHtml?: string }) {
           "[&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5",
           "[&_a]:text-zinc-900 [&_a]:underline",
         )}
-        dangerouslySetInnerHTML={{ __html: sanitizeProposalHtml(legalHtml) }}
+        dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
       />
     );
   }
@@ -344,6 +342,18 @@ export function AgreementBlockPublic({
   }, [packageSummaries]);
 
   const accepted = localDone || proposalStatus === "accepted";
+  const hasCustomLegal = Boolean(block.legalHtml?.trim());
+  const sectionAnchors = React.useMemo(
+    () => [
+      { id: "agreement-top", label: "Top of agreement" },
+      ...(packageSummaries.length > 0 ? [{ id: "agreement-plan", label: "Selected plan & add-ons" }] : []),
+      ...(!hasCustomLegal
+        ? DEFAULT_LEGAL_SECTIONS.map((s, i) => ({ id: `agreement-section-${i}`, label: s.heading }))
+        : []),
+      { id: "agreement-sign", label: accepted ? "Signature" : "Sign agreement" },
+    ],
+    [packageSummaries.length, hasCustomLegal, accepted],
+  );
   const displayName = localAcceptedName ?? acceptedByName;
   const blockAgreementUntilPlanPicked = interactive && !accepted && !planSelectionComplete;
   const scrollRef = React.useRef<HTMLDivElement | null>(null);
@@ -394,17 +404,6 @@ export function AgreementBlockPublic({
     }
     router.refresh();
   }
-
-  const sectionAnchors: Array<{ id: string; label: string }> = [
-    { id: "agreement-top", label: "Top of agreement" },
-    ...(packageSummaries.length > 0
-      ? [{ id: "agreement-plan", label: "Selected plan & add-ons" }]
-      : []),
-    ...(!block.legalHtml?.trim()
-      ? DEFAULT_LEGAL_SECTIONS.map((s, i) => ({ id: `agreement-section-${i}`, label: s.heading }))
-      : []),
-    { id: "agreement-sign", label: accepted ? "Signature" : "Sign agreement" },
-  ];
 
   return (
     <div className="w-full">

@@ -19,6 +19,15 @@ export function packageTermMonths(sel: Pick<PackagesPublicSelection, "term">): n
   return sel.term === "24_months" ? 24 : 12;
 }
 
+/** Human label for the selected billing term (uses block copy or generic “12/24 months”). */
+export function packagesSelectionTermLabel(
+  block: PackagesBlock,
+  term: PackagesPublicSelection["term"],
+): string {
+  if (term === "24_months") return block.plan24Label?.trim() || "24 months";
+  return block.plan12Label?.trim() || "12 months";
+}
+
 /** Contract-style plan total (months × tier monthly rate). */
 export function packagePlanContractMinor(block: PackagesBlock, sel: PackagesPublicSelection): number {
   const tier = block.tiers.find((t) => t.id === sel.tierId);
