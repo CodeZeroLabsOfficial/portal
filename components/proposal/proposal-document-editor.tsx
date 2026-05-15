@@ -23,6 +23,8 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
+  AlignCenter,
+  AlignLeft,
   ArrowLeft,
   Check,
   ChevronDown,
@@ -139,13 +141,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { escapeHtml } from "@/lib/escape-html";
 import {
+  DEFAULT_AGREEMENT_BUTTON_COLOR,
   DEFAULT_HIGHLIGHT_COLOR,
   DEFAULT_PRIMARY_COLOR,
   readableForeground,
   resolveAgreementButtonColor,
+  STYLE_PRESET_COLORS,
 } from "@/lib/block-style";
 import {
   DEFAULT_PACKAGES_UPFRONT_COST_12_MINOR,
@@ -1311,7 +1316,7 @@ function SectionBlockFields({
           <InsertBlockSlot context="section" variant="between" onAdd={(b) => addChildAt(b, 0)} />
           {children.map((child, idx) => {
             const isSelected = selectedBlockId === child.id;
-            const supportsStyle = child.type === "packages" || child.type === "agreement";
+            const supportsStyle = child.type === "packages";
             return (
               <div key={child.id}>
                 <SortableShell
@@ -1685,8 +1690,212 @@ function applyContractTemplatePickToAgreementBlock(block: AgreementBlock, pick: 
   };
 }
 
+function agreementNormalizeColorInput(input: string): string | null {
+  const v = input.trim();
+  if (!v) return null;
+  if (/^#?[0-9a-fA-F]{3}$/.test(v)) return `#${v.replace("#", "")}`;
+  if (/^#?[0-9a-fA-F]{6}$/.test(v)) return `#${v.replace("#", "")}`;
+  if (/^[a-zA-Z]{3,32}$/.test(v)) return v.toLowerCase();
+  return null;
+}
+
+function agreementNormalizeHexForCompare(s: string): string {
+  const v = s.trim().replace(/^#/, "").toLowerCase();
+  if (v.length === 3 && /^[0-9a-f]{3}$/.test(v)) {
+    return `${v[0]}${v[0]}${v[1]}${v[1]}${v[2]}${v[2]}`;
+  }
+  return v.length === 6 && /^[0-9a-f]{6}$/.test(v) ? v : "";
+}
+
+function agreementSwatchIsActive(swatch: string, current: string): boolean {
+  const a = agreementNormalizeHexForCompare(swatch);
+  const b = agreementNormalizeHexForCompare(current);
+  return a !== "" && b !== "" && a === b;
+}
+
+function agreementHexForNativeColorInput(hex: string): string {
+  const v = hex.trim().replace(/^#/, "");
+  if (v.length === 3 && /^[0-9a-fA-F]{3}$/.test(v)) {
+    return `#${v[0]}${v[0]}${v[1]}${v[1]}${v[2]}${v[2]}`.toLowerCase();
+  }
+  if (v.length === 6 && /^[0-9a-fA-F]{6}$/.test(v)) return `#${v.toLowerCase()}`;
+  return DEFAULT_AGREEMENT_BUTTON_COLOR;
+}
+
+function agreementNeedsLightCheck(hex: string): boolean {
+  if (hex.toUpperCase() === "#FFFFFF" || hex.toUpperCase() === "#FFF") return false;
+  if (hex.toUpperCase() === "#E2E8F0") return false;
+  return true;
+}
+
+function AgreementSignButtonPreview({
+  block,
+  onChange,
+}: {
+  block: AgreementBlock;
+  onChange: (next: AgreementBlock) => void;
+}) {
+  const ctaColor = resolveAgreementButtonColor(block.style);
+  const fg = readableForeground(ctaColor);
+  const label = block.buttonLabel?.trim() || "View Agreement";
+  const align = block.buttonAlign ?? "center";
+  const [hexDraft, setHexDraft] = React.useState(ctaColor);
+  React.useEffect(() => setHexDraft(ctaColor), [ctaColor]);
+
+  function commitHexDraft() {
+    const next = agreementNormalizeColorInput(hexDraft);
+    if (next) {
+      onChange({ ...block, style: { ...block.style, primaryColor: next } });
+      setHexDraft(next);
+    } else {
+      setHexDraft(ctaColor);
+    }
+  }
+
+  function setPrimaryColor(next: string) {
+    onChange({ ...block, style: { ...block.style, primaryColor: next } });
+  }
+
+  return (
+    <Popover>
+      <div className={cn("mt-3 flex w-full", align === "start" ? "justify-start" : "justify-center")}>
+        <div className="relative inline-flex max-w-full">
+          <div
+            className="inline-flex h-10 min-w-0 max-w-full items-center justify-center rounded-lg px-5 text-sm font-semibold shadow-sm"
+            style={{ backgroundColor: ctaColor, color: fg }}
+          >
+            <span className="truncate">{label}</span>
+          </div>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className="absolute -right-1.5 -top-1.5 inline-flex h-7 w-7 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-md transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label="Edit sign button"
+            >
+              <Pencil className="h-3.5 w-3.5" aria-hidden />
+            </button>
+          </PopoverTrigger>
+        </div>
+      </div>
+      <PopoverContent className="w-80 p-4" align="end" side="right" sideOffset={10} collisionPadding={16}>
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor={`agreement-button-text-${block.id}`}>Button text</Label>
+            <Input
+              id={`agreement-button-text-${block.id}`}
+              value={block.buttonLabel ?? ""}
+              placeholder="View Agreement"
+              maxLength={80}
+              onChange={(e) => onChange({ ...block, buttonLabel: e.target.value })}
+            />
+          </div>
+          <div>
+            <p className="px-0.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Button color
+            </p>
+            <div className="mt-2 grid grid-cols-6 gap-2">
+              {STYLE_PRESET_COLORS.map((c) => {
+                const isActive = agreementSwatchIsActive(c.value, ctaColor);
+                return (
+                  <button
+                    key={c.value}
+                    type="button"
+                    aria-label={c.label}
+                    title={c.label}
+                    onClick={() => setPrimaryColor(c.value)}
+                    className={cn(
+                      "relative h-8 w-8 rounded-full border border-border transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      isActive ? "ring-2 ring-ring ring-offset-2 ring-offset-background" : "hover:scale-105",
+                    )}
+                    style={{ backgroundColor: c.value }}
+                  >
+                    {isActive ? (
+                      <Check
+                        className={cn(
+                          "absolute inset-0 m-auto h-4 w-4",
+                          agreementNeedsLightCheck(c.value) ? "text-white" : "text-zinc-900",
+                        )}
+                        aria-hidden
+                      />
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-2 flex items-center gap-2 rounded-lg border border-border bg-muted/40 p-1.5">
+              <input
+                type="color"
+                aria-label="Pick button colour"
+                value={agreementHexForNativeColorInput(ctaColor)}
+                onChange={(e) => setPrimaryColor(e.target.value)}
+                className="h-8 w-8 shrink-0 cursor-pointer overflow-hidden rounded-md border border-border bg-transparent p-0 [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:rounded-md [&::-webkit-color-swatch]:border-0"
+              />
+              <Input
+                type="text"
+                value={hexDraft}
+                onChange={(e) => setHexDraft(e.target.value)}
+                onBlur={commitHexDraft}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    e.currentTarget.blur();
+                  }
+                }}
+                spellCheck={false}
+                className="h-8 border-0 bg-transparent px-1 shadow-none focus-visible:ring-0"
+                aria-label="Button colour hex value"
+                placeholder="#4543F7"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => onChange({ ...block, style: undefined })}
+              className="mt-2 w-full rounded-md border border-border px-2 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              Reset to default
+            </button>
+          </div>
+          <div>
+            <p className="px-0.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Alignment</p>
+            <div className="mt-2 inline-flex rounded-lg border border-border p-0.5">
+              <button
+                type="button"
+                aria-pressed={align === "start"}
+                onClick={() => onChange({ ...block, buttonAlign: "start" })}
+                className={cn(
+                  "inline-flex h-8 w-9 items-center justify-center rounded-md transition-colors",
+                  align === "start"
+                    ? "bg-primary/15 text-primary"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                )}
+                aria-label="Align button left"
+              >
+                <AlignLeft className="h-4 w-4" aria-hidden />
+              </button>
+              <button
+                type="button"
+                aria-pressed={align === "center"}
+                onClick={() => onChange({ ...block, buttonAlign: undefined })}
+                className={cn(
+                  "inline-flex h-8 w-9 items-center justify-center rounded-md transition-colors",
+                  align === "center"
+                    ? "bg-primary/15 text-primary"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                )}
+                aria-label="Align button center"
+              >
+                <AlignCenter className="h-4 w-4" aria-hidden />
+              </button>
+            </div>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 /**
- * Accept block settings: sign button label, contract template, acknowledgement
+ * Accept block settings: sign button appearance, contract template, acknowledgement
  * option. Layout above the button is edited as nested blocks in the Accept surface.
  */
 function AgreementBlockEditor({
@@ -1697,22 +1906,13 @@ function AgreementBlockEditor({
   onChange: (next: AgreementBlock) => void;
 }) {
   const contractLib = useProposalContractTemplateLibraryOptional();
-  const ctaColor = resolveAgreementButtonColor(block.style);
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-dashed border-border/70 bg-muted/15 px-6 py-6 text-center">
         <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
           Sign button
         </p>
-        <div
-          className="mt-3 inline-flex h-10 items-center rounded-lg px-5 text-sm font-semibold shadow-sm"
-          style={{
-            backgroundColor: ctaColor,
-            color: readableForeground(ctaColor),
-          }}
-        >
-          {block.buttonLabel?.trim() || "View Agreement"}
-        </div>
+        <AgreementSignButtonPreview block={block} onChange={onChange} />
         <p className="mt-3 text-[11px] text-muted-foreground">
           {block.contractTemplateLabel?.trim() ? (
             <>
@@ -1722,7 +1922,7 @@ function AgreementBlockEditor({
           ) : (
             <>Attach a contract template to set the modal title and agreement copy. Buyers review &amp; sign in the modal.</>
           )}
-          <span className="block">Use the palette in the block toolbar to change the button color.</span>
+          <span className="block">Use the pencil on the button to change its label, colour, and alignment.</span>
         </p>
       </div>
 
@@ -1754,16 +1954,6 @@ function AgreementBlockEditor({
           </Button>
         </div>
       ) : null}
-
-      <div className="space-y-1.5">
-        <Label htmlFor={`agreement-button-${block.id}`}>Button label</Label>
-        <Input
-          id={`agreement-button-${block.id}`}
-          value={block.buttonLabel ?? ""}
-          placeholder="View Agreement"
-          onChange={(e) => onChange({ ...block, buttonLabel: e.target.value })}
-        />
-      </div>
 
       <label className="flex items-center gap-2 text-sm">
         <input
@@ -2934,9 +3124,9 @@ export function ProposalDocumentEditor({
   }
 
   function applyBlockStyle(id: string, style: BlockStyle | undefined) {
-    /** True when this block participates in the toolbar style picker (Plans + Accept). */
+    /** True when this block participates in the toolbar style picker (Plans only; Accept uses the sign-button inspector). */
     function blockTypeSupportsStyle(type: ProposalBlock["type"]): boolean {
-      return type === "packages" || type === "agreement";
+      return type === "packages";
     }
 
     function applyStyleToStacks(stacks: ProposalColumnChildBlock[]): ProposalColumnChildBlock[] {
@@ -3008,9 +3198,6 @@ export function ProposalDocumentEditor({
 
   function getBlockStyle(block: ProposalBlock): BlockStyle | undefined {
     if (block.type === "packages") {
-      return block.style;
-    }
-    if (block.type === "agreement") {
       return block.style;
     }
     return undefined;
@@ -3253,7 +3440,7 @@ export function ProposalDocumentEditor({
                   <InsertBlockSlot onAdd={(b) => addBlockAt(b, 0)} />
                   {blocks.map((block, idx) => {
                     const isSelected = selectedBlockId === block.id;
-                    const supportsStyle = block.type === "packages" || block.type === "agreement";
+                    const supportsStyle = block.type === "packages";
                     return (
                       <div key={block.id}>
                         <SortableShell

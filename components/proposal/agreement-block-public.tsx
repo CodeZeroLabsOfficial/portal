@@ -304,6 +304,7 @@ export function AgreementBlockPublic({
   }, [proposalStatus]);
 
   const buttonLabel = block.buttonLabel?.trim() || DEFAULT_BUTTON_LABEL;
+  const buttonAlign = block.buttonAlign ?? "center";
   const agreementTitle = block.agreementTitle?.trim() || DEFAULT_AGREEMENT_TITLE;
   const requireAcceptTerms = block.requireAcceptTerms !== false;
   const ctaColor = resolveAgreementButtonColor(block.style);
@@ -407,12 +408,22 @@ export function AgreementBlockPublic({
             </div>
           ))}
         </div>
-        <div className="flex flex-col items-center gap-4 border-t border-border/50 pt-8 text-center">
+        <div
+          className={cn(
+            "flex flex-col gap-4 border-t border-border/50 pt-8",
+            buttonAlign === "start" ? "items-stretch text-left" : "items-center text-center",
+          )}
+        >
           {blockAgreementUntilPlanPicked ? (
             <TooltipProvider delayDuration={200}>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="inline-flex max-w-full justify-center">
+                  <span
+                    className={cn(
+                      "inline-flex max-w-full",
+                      buttonAlign === "start" ? "justify-start" : "justify-center",
+                    )}
+                  >
                     <Button
                       type="button"
                       size="lg"

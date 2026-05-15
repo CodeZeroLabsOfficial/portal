@@ -282,6 +282,8 @@ export interface AgreementBlock extends ProposalBlockBase {
   children: ProposalAgreementChildBlock[];
   /** CTA button label (default: "View Agreement"). */
   buttonLabel?: string;
+  /** Horizontal alignment of the CTA row (default: center). */
+  buttonAlign?: "start" | "center";
   /** Modal header title — copied from the attached contract template (default in UI: "Services Agreement"). */
   agreementTitle?: string;
   /** Intro HTML above the legal body — copied from the attached contract template when present. */

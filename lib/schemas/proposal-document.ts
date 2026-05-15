@@ -411,6 +411,7 @@ const agreementBlockSchema: z.ZodTypeAny = z.object({
   contractTemplateId: z.string().max(128).optional(),
   contractTemplateLabel: z.string().max(200).optional(),
   buttonLabel: z.string().max(80).optional(),
+  buttonAlign: z.enum(["start", "center"]).optional(),
   agreementTitle: z.string().max(200).optional(),
   introHtml: z.string().max(20_000).optional(),
   legalHtml: z.string().max(120_000).optional(),
