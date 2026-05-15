@@ -15,6 +15,7 @@ import type {
   AgreementBlock,
   PackagesBlock,
   PackagesPublicSelection,
+  ProposalAgreementChildBlock,
   ProposalBlock,
   ProposalPublicSelections,
   ProposalStatus,
@@ -52,9 +53,10 @@ export interface AgreementBlockPublicProps {
   publicSubscriptionUi?: ProposalPublicSubscriptionUi | null;
   /** When false (editor / preview) the CTA is disabled and the sign form is read-only. */
   interactive?: boolean;
+  /** Renders nested blocks above the sign button (same pipeline as the public document viewer). */
+  renderAgreementChild: (child: ProposalAgreementChildBlock) => React.ReactNode;
 }
 
-const DEFAULT_HEADING = "Ready to get started?";
 const DEFAULT_BUTTON_LABEL = "View Agreement";
 const DEFAULT_AGREEMENT_TITLE = "Services Agreement";
 
@@ -289,6 +291,7 @@ export function AgreementBlockPublic({
   localityTimeZone,
   interactive = true,
   publicSubscriptionUi = null,
+  renderAgreementChild,
 }: AgreementBlockPublicProps) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
@@ -300,7 +303,6 @@ export function AgreementBlockPublic({
     setLocalDone(proposalStatus === "accepted");
   }, [proposalStatus]);
 
-  const heading = block.heading?.trim() || DEFAULT_HEADING;
   const buttonLabel = block.buttonLabel?.trim() || DEFAULT_BUTTON_LABEL;
   const agreementTitle = block.agreementTitle?.trim() || DEFAULT_AGREEMENT_TITLE;
   const requireAcceptTerms = block.requireAcceptTerms !== false;
@@ -397,44 +399,50 @@ export function AgreementBlockPublic({
 
   return (
     <div className="w-full">
-      <div className="mx-auto flex max-w-2xl flex-col items-center gap-6 py-10 text-center sm:py-14">
-        <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-          {heading}
-        </h2>
-        {blockAgreementUntilPlanPicked ? (
-          <TooltipProvider delayDuration={200}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="inline-flex max-w-full justify-center">
-                  <Button
-                    type="button"
-                    size="lg"
-                    disabled
-                    className="h-12 max-w-full rounded-xl px-8 text-base font-semibold shadow-md"
-                    style={{ backgroundColor: ctaColor, color: ctaForeground }}
-                  >
-                    {buttonLabel}
-                  </Button>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="max-w-xs text-left text-sm leading-snug">
-                Select a plan in the proposal above first. Your choice appears in the agreement
-                automatically.
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        ) : (
-          <Button
-            type="button"
-            size="lg"
-            onClick={() => setOpen(true)}
-            disabled={!interactive}
-            className="h-12 rounded-xl px-8 text-base font-semibold shadow-md transition-colors hover:opacity-95"
-            style={{ backgroundColor: ctaColor, color: ctaForeground }}
-          >
-            {buttonLabel}
-          </Button>
-        )}
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-10 py-10 sm:py-14">
+        <div className="flex w-full min-w-0 flex-col gap-6 text-left">
+          {(block.children ?? []).map((child) => (
+            <div key={child.id} className="w-full min-w-0">
+              {renderAgreementChild(child)}
+            </div>
+          ))}
+        </div>
+        <div className="flex flex-col items-center gap-4 border-t border-border/50 pt-8 text-center">
+          {blockAgreementUntilPlanPicked ? (
+            <TooltipProvider delayDuration={200}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex max-w-full justify-center">
+                    <Button
+                      type="button"
+                      size="lg"
+                      disabled
+                      className="h-12 max-w-full rounded-xl px-8 text-base font-semibold shadow-md"
+                      style={{ backgroundColor: ctaColor, color: ctaForeground }}
+                    >
+                      {buttonLabel}
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs text-left text-sm leading-snug">
+                  Select a plan in the proposal above first. Your choice appears in the agreement
+                  automatically.
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : (
+            <Button
+              type="button"
+              size="lg"
+              onClick={() => setOpen(true)}
+              disabled={!interactive}
+              className="h-12 rounded-xl px-8 text-base font-semibold shadow-md transition-colors hover:opacity-95"
+              style={{ backgroundColor: ctaColor, color: ctaForeground }}
+            >
+              {buttonLabel}
+            </Button>
+          )}
+        </div>
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>

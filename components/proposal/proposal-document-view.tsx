@@ -443,6 +443,21 @@ function BlockView({
           localityTimeZone={proposalContext?.localityTimeZone}
           interactive={Boolean(shareToken)}
           publicSubscriptionUi={proposalContext?.publicSubscriptionUi}
+          renderAgreementChild={(child) => (
+            <BlockView
+              key={child.id}
+              block={child}
+              shareToken={shareToken}
+              publicSelections={publicSelections}
+              viewportSectionBleed={viewportSectionBleed}
+              splashPublicPresentation={
+                viewportSectionBleed && child.type === "splash"
+                  ? "nestedColumn"
+                  : splashPublicPresentation
+              }
+              proposalContext={proposalContext}
+            />
+          )}
         />
       );
       const backdropActive = isSectionBackgroundActive(ab.background);

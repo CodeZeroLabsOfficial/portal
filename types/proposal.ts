@@ -264,32 +264,31 @@ export interface SignatureBlock extends ProposalBlockBase {
 }
 
 /**
- * Call-to-action card placed near the end of a proposal that opens a full-screen
- * Services Agreement modal. The modal aggregates the buyer's plan + add-on
- * selections and shows the legal terms; the buyer signs in-place which calls
- * the same `acceptProposalPublicAction` as the legacy footer.
+ * Accept block: composable surface (like a section) plus a CTA that opens the
+ * full-screen agreement modal. The modal aggregates plan + add-on selections and
+ * legal copy from the attached contract template; signing calls the same
+ * `acceptProposalPublicAction` as the legacy footer.
  */
 export interface AgreementBlock extends ProposalBlockBase {
   type: "agreement";
   /**
-   * When set, indicates the legal copy was last applied from this org contract template.
-   * `legalHtml` / titles are still snapshotted on the block for stable proposals.
+   * When set, indicates agreement copy was last applied from this org contract template.
+   * Modal title, intro, and legal HTML are snapshotted on the block when the template is chosen so proposals stay stable.
    */
   contractTemplateId?: string;
   /** Display name of {@link contractTemplateId} at attach time (optional, for editor hints). */
   contractTemplateLabel?: string;
-  /** CTA heading shown on the proposal page (default: "Ready to get started?"). */
-  heading?: string;
+  /** Layout + copy above the CTA — headings, text, columns, spacers, etc. (nested Accept blocks are not allowed). */
+  children: ProposalAgreementChildBlock[];
   /** CTA button label (default: "View Agreement"). */
   buttonLabel?: string;
-  /** Title shown in the modal header (default: "Services Agreement"). */
+  /** Modal header title — copied from the attached contract template (default in UI: "Services Agreement"). */
   agreementTitle?: string;
-  /** Optional rich HTML intro rendered above the legal sections in the modal. */
+  /** Intro HTML above the legal body — copied from the attached contract template when present. */
   introHtml?: string;
   /**
-   * Rich HTML for the legal text body of the agreement. When empty, the modal
-   * falls back to a sensible default with sections for Parties, Scope, Pricing,
-   * Term, Termination, Confidentiality, and Governing Law.
+   * Legal body HTML — copied from the attached contract template. When empty, the public modal uses built-in sections
+   * (Parties, Scope, Pricing, Term, Termination, Confidentiality, Governing Law).
    */
   legalHtml?: string;
   /** When true, requires a “I have read and agree” checkbox before signing (default true). */
@@ -408,6 +407,9 @@ export type ProposalContentBlock =
   | ColumnsBlock
   | AccordionBlock
   | IconBlock;
+
+/** Blocks allowed inside an Accept (agreement) block — nested Accept blocks are not allowed. */
+export type ProposalAgreementChildBlock = Exclude<ProposalContentBlock, AgreementBlock>;
 
 export interface SectionBlock extends ProposalBlockBase {
   type: "section";

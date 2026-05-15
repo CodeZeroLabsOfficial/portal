@@ -83,8 +83,8 @@ export function ContractTemplateEditorClient({ initial }: { initial: ContractTem
           placeholder="Services Agreement"
         />
         <p className="text-[11px] text-muted-foreground">
-          When you attach this template to an Accept block, this becomes the agreement modal title unless you change it
-          on the block.
+          When you attach this template to an Accept block, this title is copied onto the proposal as the agreement modal
+          heading.
         </p>
       </div>
 
@@ -109,7 +109,7 @@ export function ContractTemplateEditorClient({ initial }: { initial: ContractTem
           placeholder={`<h3>1. Parties</h3>\n<p>…</p>`}
         />
         <p className="text-[11px] text-muted-foreground">
-          Leave empty if you want the block to fall back to the built-in default sections until you add HTML here.
+          Leave empty to use the built-in default sections in the buyer agreement modal until you add HTML here.
         </p>
       </div>
     </div>

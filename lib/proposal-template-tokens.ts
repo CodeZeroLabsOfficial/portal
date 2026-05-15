@@ -3,6 +3,7 @@ import type { CustomerRecord } from "@/types/customer";
 import type { OpportunityRecord } from "@/types/opportunity";
 import type {
   ColumnsBlock,
+  ProposalAgreementChildBlock,
   ProposalBlock,
   ProposalColumnChildBlock,
   ProposalContentBlock,
@@ -181,10 +182,9 @@ function mapContentBlock(block: ProposalContentBlock, ctx: ProposalTokenContext)
     case "agreement":
       return {
         ...block,
+        children: block.children.map((c) => mapContentBlock(c as ProposalContentBlock, ctx) as ProposalAgreementChildBlock),
         contractTemplateId: block.contractTemplateId,
         contractTemplateLabel: block.contractTemplateLabel,
-        heading:
-          block.heading !== undefined ? replaceProposalTokens(block.heading, ctx) : block.heading,
         buttonLabel:
           block.buttonLabel !== undefined ? replaceProposalTokens(block.buttonLabel, ctx) : block.buttonLabel,
         agreementTitle:

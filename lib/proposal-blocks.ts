@@ -25,6 +25,11 @@ export function* iterateProposalContentBlocks(blocks: ProposalBlock[]): Generato
       for (const child of b.children) {
         yield* walkNestedContent(child);
       }
+    } else if (b.type === "agreement") {
+      yield b as ProposalContentBlock;
+      for (const child of b.children) {
+        yield* walkNestedContent(child as ProposalContentBlock);
+      }
     } else if (b.type === "columns") {
       yield* walkNestedContent(b);
     } else {
@@ -100,6 +105,12 @@ export function findProposalBlockById(blocks: ProposalBlock[], id: string): Prop
     if (b.type === "section") {
       for (const c of b.children) {
         const hit = findNestedContentSubtree(c, id);
+        if (hit) return hit;
+      }
+    }
+    if (b.type === "agreement") {
+      for (const c of b.children) {
+        const hit = findNestedContentSubtree(c as ProposalContentBlock, id);
         if (hit) return hit;
       }
     }

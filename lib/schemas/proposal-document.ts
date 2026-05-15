@@ -5,6 +5,7 @@ import {
   normalizeColumnFlexForStorage,
 } from "@/lib/proposal-columns";
 import { normalizePackagesTotalSectionLabelForPersistence } from "@/lib/proposal-packages-totals";
+import { escapeHtml } from "@/lib/escape-html";
 import type { ProposalBlock, ProposalContentBlock, ProposalDocument, SectionBackground } from "@/types/proposal";
 
 const idSchema = z.string().min(4);
@@ -329,21 +330,6 @@ const signatureBlockSchema = z.object({
   termsSummary: z.string().optional(),
 });
 
-const agreementBlockSchema = z.object({
-  id: idSchema,
-  type: z.literal("agreement"),
-  contractTemplateId: z.string().max(128).optional(),
-  contractTemplateLabel: z.string().max(200).optional(),
-  heading: z.string().max(200).optional(),
-  buttonLabel: z.string().max(80).optional(),
-  agreementTitle: z.string().max(200).optional(),
-  introHtml: z.string().max(20_000).optional(),
-  legalHtml: z.string().max(120_000).optional(),
-  requireAcceptTerms: z.boolean().optional(),
-  style: blockStyleSchema.optional(),
-  background: sectionBackgroundSchema.optional(),
-});
-
 const embedBlockSchema = z.object({
   id: idSchema,
   type: z.literal("embed"),
@@ -390,23 +376,77 @@ const iconBlockSchema = z.object({
   label: z.string().optional(),
 });
 
+function newAgreementMigrationChildId(): string {
+  if (typeof globalThis.crypto !== "undefined" && "randomUUID" in globalThis.crypto) {
+    return globalThis.crypto.randomUUID();
+  }
+  return `blk_${Math.random().toString(36).slice(2, 12)}`;
+}
+
+/** Migrates legacy `heading` into a header child; ensures `children` is an array. */
+function normalizeAgreementBlockInput(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object") return raw;
+  const o = raw as Record<string, unknown>;
+  if (o.type !== "agreement") return raw;
+  const headingLegacy = typeof o.heading === "string" ? o.heading.trim() : "";
+  let children = Array.isArray(o.children) ? [...o.children] : [];
+  if (children.length === 0 && headingLegacy) {
+    children = [
+      {
+        id: newAgreementMigrationChildId(),
+        type: "header",
+        text: headingLegacy,
+        html: `<h2>${escapeHtml(headingLegacy)}</h2>`,
+      },
+    ];
+  }
+  const next: Record<string, unknown> = { ...o, children };
+  delete next.heading;
+  return next;
+}
+
+let agreementNestedBlockSchema: z.ZodTypeAny;
+
+const agreementBlockSchema: z.ZodTypeAny = z.lazy(() =>
+  z.preprocess(
+    normalizeAgreementBlockInput,
+    z.object({
+      id: idSchema,
+      type: z.literal("agreement"),
+      contractTemplateId: z.string().max(128).optional(),
+      contractTemplateLabel: z.string().max(200).optional(),
+      buttonLabel: z.string().max(80).optional(),
+      agreementTitle: z.string().max(200).optional(),
+      introHtml: z.string().max(20_000).optional(),
+      legalHtml: z.string().max(120_000).optional(),
+      requireAcceptTerms: z.boolean().optional(),
+      style: blockStyleSchema.optional(),
+      background: sectionBackgroundSchema.optional(),
+      children: z.array(agreementNestedBlockSchema).default([]),
+    }),
+  ),
+);
+
 /** Blocks allowed inside each column pane (cannot nest columns or accordion). */
-const columnInnerUnionSchema = z.discriminatedUnion("type", [
-  headerBlockSchema,
-  textBlockSchema,
-  imageBlockSchema,
-  videoBlockSchema,
-  pricingBlockSchema,
-  packagesBlockSchema,
-  formBlockSchema,
-  signatureBlockSchema,
-  agreementBlockSchema,
-  embedBlockSchema,
-  paymentBlockSchema,
-  dividerBlockSchema,
-  spacerBlockSchema,
-  iconBlockSchema,
-]);
+const columnInnerUnionSchema = z.discriminatedUnion(
+  "type",
+  [
+    headerBlockSchema,
+    textBlockSchema,
+    imageBlockSchema,
+    videoBlockSchema,
+    pricingBlockSchema,
+    packagesBlockSchema,
+    formBlockSchema,
+    signatureBlockSchema,
+    agreementBlockSchema,
+    embedBlockSchema,
+    paymentBlockSchema,
+    dividerBlockSchema,
+    spacerBlockSchema,
+    iconBlockSchema,
+  ] as unknown as [z.ZodDiscriminatedUnionOption<"type">, ...z.ZodDiscriminatedUnionOption<"type">[]],
+);
 
 const columnInnerSchema = z.preprocess((raw) => {
   if (raw && typeof raw === "object" && (raw as Record<string, unknown>).type === "packages") {
@@ -510,26 +550,65 @@ const columnsBlockSchema = z.object({
   insetPaddingPx: z.number().int().min(0).max(64).optional(),
 });
 
+/** Blocks inside an Accept block — same as section contents except no nested `agreement`. */
+const agreementNestedBlockUnionSchema = z.discriminatedUnion(
+  "type",
+  [
+    splashBlockSchema,
+    headerBlockSchema,
+    textBlockSchema,
+    imageBlockSchema,
+    videoBlockSchema,
+    pricingBlockSchema,
+    packagesBlockSchema,
+    formBlockSchema,
+    signatureBlockSchema,
+    embedBlockSchema,
+    paymentBlockSchema,
+    dividerBlockSchema,
+    spacerBlockSchema,
+    accordionBlockSchema,
+    columnsBlockSchema,
+    iconBlockSchema,
+  ] as unknown as [z.ZodDiscriminatedUnionOption<"type">, ...z.ZodDiscriminatedUnionOption<"type">[]],
+);
+
+agreementNestedBlockSchema = z.preprocess((raw) => {
+  if (raw && typeof raw === "object") {
+    const r = raw as Record<string, unknown>;
+    if (r.type === "packages") {
+      return normalizePackagesBlockInput(raw);
+    }
+    if (r.type === "columns") {
+      return normalizeColumnsBlockInput(raw);
+    }
+  }
+  return raw;
+}, agreementNestedBlockUnionSchema);
+
 /** Blocks inside a section — same as top-level except no nested `section`. */
-const nestedBlockUnionSchema = z.discriminatedUnion("type", [
-  splashBlockSchema,
-  headerBlockSchema,
-  textBlockSchema,
-  imageBlockSchema,
-  videoBlockSchema,
-  pricingBlockSchema,
-  packagesBlockSchema,
-  formBlockSchema,
-  signatureBlockSchema,
-  agreementBlockSchema,
-  embedBlockSchema,
-  paymentBlockSchema,
-  dividerBlockSchema,
-  spacerBlockSchema,
-  accordionBlockSchema,
-  columnsBlockSchema,
-  iconBlockSchema,
-]);
+const nestedBlockUnionSchema = z.discriminatedUnion(
+  "type",
+  [
+    splashBlockSchema,
+    headerBlockSchema,
+    textBlockSchema,
+    imageBlockSchema,
+    videoBlockSchema,
+    pricingBlockSchema,
+    packagesBlockSchema,
+    formBlockSchema,
+    signatureBlockSchema,
+    agreementBlockSchema,
+    embedBlockSchema,
+    paymentBlockSchema,
+    dividerBlockSchema,
+    spacerBlockSchema,
+    accordionBlockSchema,
+    columnsBlockSchema,
+    iconBlockSchema,
+  ] as unknown as [z.ZodDiscriminatedUnionOption<"type">, ...z.ZodDiscriminatedUnionOption<"type">[]],
+);
 
 const nestedBlockSchema = z.preprocess((raw) => {
   if (raw && typeof raw === "object") {
@@ -552,26 +631,29 @@ const sectionBlockSchema = z.object({
   background: sectionBackgroundSchema.optional(),
 });
 
-const blockUnionSchema = z.discriminatedUnion("type", [
-  splashBlockSchema,
-  headerBlockSchema,
-  textBlockSchema,
-  imageBlockSchema,
-  videoBlockSchema,
-  pricingBlockSchema,
-  packagesBlockSchema,
-  formBlockSchema,
-  signatureBlockSchema,
-  agreementBlockSchema,
-  embedBlockSchema,
-  paymentBlockSchema,
-  dividerBlockSchema,
-  spacerBlockSchema,
-  accordionBlockSchema,
-  columnsBlockSchema,
-  iconBlockSchema,
-  sectionBlockSchema,
-]);
+const blockUnionSchema = z.discriminatedUnion(
+  "type",
+  [
+    splashBlockSchema,
+    headerBlockSchema,
+    textBlockSchema,
+    imageBlockSchema,
+    videoBlockSchema,
+    pricingBlockSchema,
+    packagesBlockSchema,
+    formBlockSchema,
+    signatureBlockSchema,
+    agreementBlockSchema,
+    embedBlockSchema,
+    paymentBlockSchema,
+    dividerBlockSchema,
+    spacerBlockSchema,
+    accordionBlockSchema,
+    columnsBlockSchema,
+    iconBlockSchema,
+    sectionBlockSchema,
+  ] as unknown as [z.ZodDiscriminatedUnionOption<"type">, ...z.ZodDiscriminatedUnionOption<"type">[]],
+);
 
 /** Migrates legacy packages / columns shapes before discriminatedUnion matching. */
 const blockSchema = z.preprocess((raw) => {

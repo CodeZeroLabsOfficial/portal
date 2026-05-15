@@ -70,6 +70,7 @@ import type {
   PackagesBlock,
   PricingBlock,
   ProposalBlock,
+  ProposalAgreementChildBlock,
   ProposalColumnChildBlock,
   ProposalContentBlock,
   ProposalDocument,
@@ -234,6 +235,14 @@ function cloneBlockWithFreshIds(block: ProposalBlock): ProposalBlock {
         ...block,
         id: newId(),
         children: block.children.map((c) => cloneBlockWithFreshIds(c as ProposalBlock) as ProposalContentBlock),
+      };
+    case "agreement":
+      return {
+        ...block,
+        id: newId(),
+        children: (block as AgreementBlock).children.map(
+          (c) => cloneBlockWithFreshIds(c as ProposalBlock) as ProposalAgreementChildBlock,
+        ),
       };
     default:
       return { ...block, id: newId() } as ProposalBlock;
@@ -472,9 +481,8 @@ function createBlock(type: ProposalBlock["type"]): ProposalBlock {
       return {
         id,
         type: "agreement",
-        heading: "Ready to get started?",
+        children: [],
         buttonLabel: "View Agreement",
-        agreementTitle: "Services Agreement",
         requireAcceptTerms: true,
       };
     case "embed":
@@ -1672,17 +1680,15 @@ function applyContractTemplatePickToAgreementBlock(block: AgreementBlock, pick: 
     ...block,
     contractTemplateId: pick.id,
     contractTemplateLabel: pick.name.trim() || undefined,
-    agreementTitle: pick.agreementTitle.trim() || block.agreementTitle,
+    agreementTitle: pick.agreementTitle.trim() || block.agreementTitle?.trim() || undefined,
     introHtml: pick.introHtml.trim() ? pick.introHtml.trim() : undefined,
     legalHtml: pick.legalHtml,
   };
 }
 
 /**
- * Services Agreement editor: edits the CTA heading + button label, the modal
- * title, and the agreement body (legal HTML). When `legalHtml` is empty the
- * public modal renders a sensible default with sections for Parties, Scope,
- * Pricing, Term, Termination, Confidentiality, and Governing Law.
+ * Accept block settings: sign button label, contract template, acknowledgement
+ * option. Layout above the button is edited as nested blocks in the Accept surface.
  */
 function AgreementBlockEditor({
   block,
@@ -1695,15 +1701,12 @@ function AgreementBlockEditor({
   const ctaColor = resolveAgreementButtonColor(block.style);
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl border border-dashed border-border/70 bg-muted/15 px-6 py-8 text-center">
+      <div className="rounded-2xl border border-dashed border-border/70 bg-muted/15 px-6 py-6 text-center">
         <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-          CTA preview
-        </p>
-        <p className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
-          {block.heading?.trim() || "Ready to get started?"}
+          Sign button
         </p>
         <div
-          className="mt-4 inline-flex h-10 items-center rounded-lg px-5 text-sm font-semibold shadow-sm"
+          className="mt-3 inline-flex h-10 items-center rounded-lg px-5 text-sm font-semibold shadow-sm"
           style={{
             backgroundColor: ctaColor,
             color: readableForeground(ctaColor),
@@ -1712,7 +1715,14 @@ function AgreementBlockEditor({
           {block.buttonLabel?.trim() || "View Agreement"}
         </div>
         <p className="mt-3 text-[11px] text-muted-foreground">
-          Opens the “{block.agreementTitle?.trim() || "Services Agreement"}” modal for the buyer to review &amp; sign.
+          {block.contractTemplateLabel?.trim() ? (
+            <>
+              Opens the “{block.agreementTitle?.trim() || "Services Agreement"}” modal for the buyer to review
+              &amp; sign.
+            </>
+          ) : (
+            <>Attach a contract template to set the modal title and agreement copy. Buyers review &amp; sign in the modal.</>
+          )}
           <span className="block">Use the palette in the block toolbar to change the button color.</span>
         </p>
       </div>
@@ -1726,7 +1736,7 @@ function AgreementBlockEditor({
                 <span className="font-medium text-foreground">{block.contractTemplateLabel.trim()}</span>
               </>
             ) : (
-              <>Attach copy from your org&apos;s contract library, or edit HTML manually below.</>
+              <>Attach a template from your org&apos;s contract library — title, intro, and legal text are copied onto this block.</>
             )}
           </p>
           <Button
@@ -1746,61 +1756,14 @@ function AgreementBlockEditor({
         </div>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <Label htmlFor={`agreement-heading-${block.id}`}>CTA heading</Label>
-          <Input
-            id={`agreement-heading-${block.id}`}
-            value={block.heading ?? ""}
-            placeholder="Ready to get started?"
-            onChange={(e) => onChange({ ...block, heading: e.target.value })}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor={`agreement-button-${block.id}`}>Button label</Label>
-          <Input
-            id={`agreement-button-${block.id}`}
-            value={block.buttonLabel ?? ""}
-            placeholder="View Agreement"
-            onChange={(e) => onChange({ ...block, buttonLabel: e.target.value })}
-          />
-        </div>
-      </div>
-
       <div className="space-y-1.5">
-        <Label htmlFor={`agreement-title-${block.id}`}>Modal title</Label>
+        <Label htmlFor={`agreement-button-${block.id}`}>Button label</Label>
         <Input
-          id={`agreement-title-${block.id}`}
-          value={block.agreementTitle ?? ""}
-          placeholder="Services Agreement"
-          onChange={(e) => onChange({ ...block, agreementTitle: e.target.value })}
+          id={`agreement-button-${block.id}`}
+          value={block.buttonLabel ?? ""}
+          placeholder="View Agreement"
+          onChange={(e) => onChange({ ...block, buttonLabel: e.target.value })}
         />
-      </div>
-
-      <div className="space-y-1.5">
-        <Label htmlFor={`agreement-intro-${block.id}`}>Modal intro (optional, plain text or HTML)</Label>
-        <textarea
-          id={`agreement-intro-${block.id}`}
-          className="min-h-[72px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-          value={block.introHtml ?? ""}
-          placeholder="e.g. Please review the terms below before signing."
-          onChange={(e) => onChange({ ...block, introHtml: e.target.value })}
-        />
-      </div>
-
-      <div className="space-y-1.5">
-        <Label htmlFor={`agreement-legal-${block.id}`}>Legal terms (HTML — leave blank for the standard template)</Label>
-        <textarea
-          id={`agreement-legal-${block.id}`}
-          className="min-h-[220px] w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-xs leading-relaxed"
-          value={block.legalHtml ?? ""}
-          placeholder={`<h3>1. Parties</h3>\n<p>...</p>\n<h3>2. Scope of Services</h3>\n<p>...</p>`}
-          onChange={(e) => onChange({ ...block, legalHtml: e.target.value })}
-        />
-        <p className="text-[11px] text-muted-foreground">
-          When empty, the modal shows a default agreement with sections for Parties, Scope, Pricing, Term,
-          Termination, Confidentiality and Governing Law.
-        </p>
       </div>
 
       <label className="flex items-center gap-2 text-sm">
@@ -1812,6 +1775,335 @@ function AgreementBlockEditor({
         Require &quot;I have read and agree&quot; checkbox before signing
       </label>
     </div>
+  );
+}
+
+function AgreementBlockFields({
+  block,
+  onChange,
+  selectedBlockId,
+  onSelectBlock,
+  getBlockStyle,
+  applyBlockStyle,
+}: {
+  block: AgreementBlock;
+  onChange: (next: ProposalBlock) => void;
+  selectedBlockId: string | null;
+  onSelectBlock: (id: string | null) => void;
+  getBlockStyle: (b: ProposalBlock) => BlockStyle | undefined;
+  applyBlockStyle: (id: string, style: BlockStyle | undefined) => void;
+}) {
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  const children = block.children;
+  const sortableChildIds = React.useMemo(() => children.map((c) => c.id), [children]);
+  const [columnsLayoutEditingId, setColumnsLayoutEditingId] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (columnsLayoutEditingId && !children.some((c) => c.id === columnsLayoutEditingId)) {
+      setColumnsLayoutEditingId(null);
+    }
+  }, [children, columnsLayoutEditingId]);
+
+  function setChildren(nextChildren: ProposalAgreementChildBlock[]) {
+    onChange({ ...block, children: nextChildren });
+  }
+
+  function updateChild(childId: string, next: ProposalAgreementChildBlock) {
+    setChildren(children.map((c) => (c.id === childId ? next : c)));
+  }
+
+  function removeChild(childId: string) {
+    setChildren(children.filter((c) => c.id !== childId));
+    if (selectedBlockId === childId) onSelectBlock(null);
+    if (columnsLayoutEditingId === childId) setColumnsLayoutEditingId(null);
+  }
+
+  function addChildAt(b: ProposalBlock, index: number) {
+    if (b.type === "agreement") return;
+    const c = b as ProposalAgreementChildBlock;
+    const next = [...children];
+    next.splice(Math.max(0, Math.min(index, next.length)), 0, c);
+    setChildren(next);
+  }
+
+  function moveChild(childId: string, direction: -1 | 1) {
+    const idx = children.findIndex((c) => c.id === childId);
+    if (idx < 0) return;
+    const target = idx + direction;
+    if (target < 0 || target >= children.length) return;
+    setChildren(arrayMove(children, idx, target));
+  }
+
+  function duplicateChild(childId: string) {
+    const idx = children.findIndex((c) => c.id === childId);
+    if (idx < 0) return;
+    const cloned = cloneBlockWithFreshIds(children[idx] as ProposalBlock) as ProposalAgreementChildBlock;
+    const next = [...children];
+    next.splice(idx + 1, 0, cloned);
+    setChildren(next);
+    onSelectBlock(null);
+  }
+
+  function onChildDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = children.findIndex((c) => c.id === active.id);
+    const newIndex = children.findIndex((c) => c.id === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+    setChildren(arrayMove(children, oldIndex, newIndex));
+  }
+
+  const resolvedBg = resolveSectionBackground(block.background);
+  const backdropOn = resolvedBg.active;
+
+  const acceptStack =
+    children.length === 0 ? (
+      <div className="flex flex-col items-center gap-5 py-14 text-center">
+        <div className="max-w-[20rem] space-y-1">
+          <p className="text-sm font-medium text-foreground">Accept surface</p>
+          <p className="text-xs text-muted-foreground">
+            Add headings, prose, columns, dividers, and spacers above the sign button — the same building blocks as in a
+            Section.
+          </p>
+        </div>
+        <SectionInsertMenu
+          align="center"
+          onAdd={(b) => addChildAt(b, 0)}
+          trigger={
+            <button
+              type="button"
+              className={cn(
+                "inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold text-white shadow-lg",
+                "bg-gradient-to-b from-zinc-800 to-black ring-2 ring-black/85 transition-colors hover:to-zinc-900",
+              )}
+            >
+              <Plus className="h-4 w-4" /> Content
+            </button>
+          }
+        />
+      </div>
+    ) : (
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onChildDragEnd}>
+        <SortableContext items={sortableChildIds} strategy={verticalListSortingStrategy}>
+          <InsertBlockSlot context="section" variant="between" onAdd={(b) => addChildAt(b, 0)} />
+          {children.map((child, idx) => {
+            const isSelected = selectedBlockId === child.id;
+            const supportsStyle = child.type === "packages";
+            return (
+              <div key={child.id}>
+                <SortableShell
+                  id={child.id}
+                  selected={isSelected}
+                  toolbarShowOnHover={child.type !== "image"}
+                  onSelect={() => {
+                    setColumnsLayoutEditingId((prev) =>
+                      prev !== null && prev !== child.id ? null : prev,
+                    );
+                    onSelectBlock(child.id);
+                  }}
+                  toolbar={({ dragAttributes, dragListeners }) => {
+                    const dragHandle = (
+                      <Tooltip delayDuration={320}>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            className="touch-none inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+                            aria-label={`Reorder ${blockLabel(child.type)}`}
+                            {...dragAttributes}
+                            {...dragListeners}
+                          >
+                            <GripVertical className="h-4 w-4" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="text-xs">
+                          Drag to move · arrows nudge precisely
+                        </TooltipContent>
+                      </Tooltip>
+                    );
+                    const compactColumnsChrome = child.type === "columns";
+                    if (child.type === "image") {
+                      const ib = child as ImageBlock;
+                      return (
+                        <div className="flex w-full items-start gap-1.5">
+                          {dragHandle}
+                          <ProposalImageBlockToolbar
+                            variant="shell"
+                            block={ib}
+                            onChange={(next) => updateChild(child.id, next as ProposalAgreementChildBlock)}
+                            onDelete={() => removeChild(child.id)}
+                          />
+                        </div>
+                      );
+                    }
+                    return (
+                      <BlockToolbar
+                        appearance="surface"
+                        blockType={
+                          child.type === "pricing"
+                            ? "pricing"
+                            : child.type === "packages"
+                              ? "packages"
+                              : "other"
+                        }
+                        canMoveUp={idx > 0}
+                        canMoveDown={idx < children.length - 1}
+                        onMoveUp={() => moveChild(child.id, -1)}
+                        onMoveDown={() => moveChild(child.id, 1)}
+                        onDuplicate={() => duplicateChild(child.id)}
+                        deleteLabel="Remove block"
+                        onDelete={() => removeChild(child.id)}
+                        compactChrome={compactColumnsChrome}
+                        compactPrimarySlot={
+                          compactColumnsChrome ? (
+                            columnsLayoutEditingId === child.id ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setColumnsLayoutEditingId(null);
+                                  }}
+                                  className="inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium text-teal-700 transition-colors hover:bg-teal-500/15 dark:text-teal-400 dark:hover:bg-teal-500/10"
+                                >
+                                  <Check className="h-4 w-4 shrink-0" aria-hidden />
+                                  Done
+                                </button>
+                                <ColumnsBlockLayoutControls
+                                  block={child as ColumnsBlock}
+                                  onPatch={(patch) => {
+                                    if (child.type !== "columns") return;
+                                    updateChild(child.id, { ...child, ...patch } as ProposalAgreementChildBlock);
+                                  }}
+                                />
+                              </>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setColumnsLayoutEditingId(child.id);
+                                }}
+                                className="inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+                              >
+                                <Pencil className="h-4 w-4 shrink-0" aria-hidden />
+                                Edit columns
+                              </button>
+                            )
+                          ) : undefined
+                        }
+                        showOverflowMenu={false}
+                        auxiliarySlot={(() => {
+                          const packagesSlot =
+                            child.type === "packages" &&
+                            packagesAddonsSectionActive(child as PackagesBlock) ? (
+                              <Tooltip delayDuration={320}>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    type="button"
+                                    className="inline-flex h-8 items-center gap-1 rounded-full px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+                                    onClick={() => {
+                                      const p = child as PackagesBlock;
+                                      updateChild(child.id, {
+                                        ...p,
+                                        addonsSectionEnabled: false,
+                                      } as ProposalAgreementChildBlock);
+                                    }}
+                                    aria-label="Remove add-ons table"
+                                  >
+                                    Remove add-ons
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent side="bottom" className="text-xs">
+                                  Remove the add-ons sub-table from this Packages block
+                                </TooltipContent>
+                              </Tooltip>
+                            ) : null;
+                          return packagesSlot ?? undefined;
+                        })()}
+                        style={supportsStyle ? getBlockStyle(child) : undefined}
+                        onStyleChange={
+                          supportsStyle ? (next) => applyBlockStyle(child.id, next) : undefined
+                        }
+                        backdropPickerSlot={
+                          child.type === "splash" ? (
+                            <ProposalSplashBackgroundPicker
+                              block={child as SplashBlock}
+                              onChange={(next) =>
+                                updateChild(child.id, next as ProposalAgreementChildBlock)
+                              }
+                            />
+                          ) : child.type === "packages" ? (
+                            <ProposalSectionBackgroundPicker
+                              background={(child as PackagesBlock).background}
+                              onChange={(next) => {
+                                const p = child as PackagesBlock;
+                                if (!next) {
+                                  const { background: _b, ...rest } = p;
+                                  void _b;
+                                  updateChild(child.id, rest as ProposalAgreementChildBlock);
+                                } else {
+                                  updateChild(child.id, { ...p, background: next } as ProposalAgreementChildBlock);
+                                }
+                              }}
+                            />
+                          ) : undefined
+                        }
+                        leadingSlot={dragHandle}
+                      />
+                    );
+                  }}
+                >
+                  <BlockFields
+                    block={child}
+                    onChange={(next) => updateChild(child.id, next as ProposalAgreementChildBlock)}
+                    selection={{
+                      selectedId: selectedBlockId,
+                      onSelect: onSelectBlock,
+                    }}
+                    getBlockStyle={getBlockStyle}
+                    applyBlockStyle={applyBlockStyle}
+                    columnsLayoutEditing={{
+                      activeId: columnsLayoutEditingId,
+                      setActiveId: setColumnsLayoutEditingId,
+                    }}
+                  />
+                </SortableShell>
+                <InsertBlockSlot context="section" variant="between" onAdd={(b) => addChildAt(b, idx + 1)} />
+              </div>
+            );
+          })}
+        </SortableContext>
+      </DndContext>
+    );
+
+  const settingsFooter = (
+    <div className="border-t border-border/70 bg-muted/10 px-2 py-4 sm:px-3">
+      <AgreementBlockEditor block={block} onChange={(next) => onChange(next)} />
+    </div>
+  );
+
+  return (
+    <ProposalSectionShell background={block.background} variant="editor">
+      {backdropOn ? (
+        <div className="flex min-w-0 flex-col">
+          {acceptStack}
+          {settingsFooter}
+        </div>
+      ) : (
+        <div className="rounded-xl border border-dashed border-border/65 bg-muted/15 px-1 py-1 sm:bg-muted/[0.35]">
+          <div className="flex min-w-0 flex-col">
+            {acceptStack}
+            {settingsFooter}
+          </div>
+        </div>
+      )}
+    </ProposalSectionShell>
   );
 }
 
@@ -2066,9 +2358,14 @@ function BlockFields({
     case "agreement": {
       const b = block as AgreementBlock;
       return (
-        <ProposalSectionShell background={b.background} variant="editor">
-          <AgreementBlockEditor block={b} onChange={patch} />
-        </ProposalSectionShell>
+        <AgreementBlockFields
+          block={b}
+          onChange={patch}
+          selectedBlockId={selection?.selectedId ?? null}
+          onSelectBlock={selection?.onSelect ?? (() => {})}
+          getBlockStyle={getBlockStyle ?? (() => undefined)}
+          applyBlockStyle={applyBlockStyle ?? (() => {})}
+        />
       );
     }
     case "embed":
