@@ -90,7 +90,7 @@ export async function generatePortalPasswordResetLinkAction(
   if (!portalUid) {
     return {
       ok: false,
-      message: "No portal login is linked. Use Edit customer to link or create Firebase Auth for this email first.",
+      message: "No portal login is linked. Use Edit customer to link or create User Access for this email first.",
     };
   }
   const auth = getFirebaseAdminAuth();

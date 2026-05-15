@@ -24,7 +24,7 @@ export type ResolveOrCreateFirebaseUserResult =
   | { ok: false; message: string };
 
 /**
- * Looks up Firebase Auth by email, or creates an email/password user when `createIfMissing` is true.
+ * Looks up User Access by email, or creates an email/password user when `createIfMissing` is true.
  * Password setup links are generated on demand from the customer detail **Portal access** card.
  */
 export async function resolveOrCreateFirebaseUserByEmail(

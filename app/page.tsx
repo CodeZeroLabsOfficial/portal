@@ -63,7 +63,7 @@ export default function HomePage() {
                 <Shield className="mb-2 h-5 w-5 text-primary" aria-hidden />
                 <CardTitle className="text-base">Roles &amp; access</CardTitle>
                 <CardDescription>
-                  Admin, team, and customer portals with Firebase Auth aligned to your iOS app.
+                  Admin, team, and customer portals with User Access aligned to your iOS app.
                 </CardDescription>
               </CardHeader>
             </Card>

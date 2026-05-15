@@ -536,12 +536,12 @@ export function CustomerDetailView({
                 <LogIn className="h-5 w-5 text-muted-foreground" aria-hidden />
                 Portal access
               </CardTitle>
-              <CardDescription>Provide access to the customer portal.</CardDescription>
+              <CardDescription>Enable portal access for this customer.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 p-4 text-sm">
               <div className="rounded-xl border border-border/60 bg-background/40 p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-muted-foreground">Firebase Auth</span>
+                  <span className="text-muted-foreground">User Access</span>
                   {customer.portalUserId?.trim() ? (
                     <Badge variant="outline" className="border-emerald-500/40 text-emerald-600 dark:text-emerald-400">
                       Linked
@@ -552,18 +552,7 @@ export function CustomerDetailView({
                 </div>
                 {customer.portalUserId?.trim() ? (
                   <p className="mt-2 break-all font-mono text-[11px] text-muted-foreground">{customer.portalUserId}</p>
-                ) : (
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Open{" "}
-                    <Link
-                      className="font-medium text-primary underline-offset-4 hover:underline"
-                      href={`/admin/customers/${customer.id}/edit`}
-                    >
-                      Edit customer
-                    </Link>{" "}
-                    and enable portal login for this email.
-                  </p>
-                )}
+                ) : null}
               </div>
 
               {portalSetupError ? <p className="text-xs text-destructive">{portalSetupError}</p> : null}

@@ -1029,7 +1029,7 @@ export async function createCustomerDocument(
     await db.collection(COLLECTIONS.customerActivities).add({
       customerId: docRef.id,
       type: "auth_linked",
-      title: linkedNewFirebaseUser ? "Created Firebase Auth user" : "Linked Firebase Auth user",
+      title: linkedNewFirebaseUser ? "Created User Access" : "Linked User Access",
       detail: input.email.trim().toLowerCase(),
       actorUid: user.uid,
       createdAt: Timestamp.fromMillis(firstActivityAt.toMillis() + 1),
@@ -1138,7 +1138,7 @@ export async function updateCustomerDocument(
     await db.collection(COLLECTIONS.customerActivities).add({
       customerId,
       type: "auth_linked",
-      title: linkedNewFirebaseUser ? "Created Firebase Auth user" : "Linked Firebase Auth user",
+      title: linkedNewFirebaseUser ? "Created User Access" : "Linked User Access",
       detail: rest.email.trim().toLowerCase(),
       actorUid: user.uid,
       createdAt: Timestamp.fromMillis(updatedAt.toMillis() + 1),

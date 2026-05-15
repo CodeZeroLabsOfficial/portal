@@ -55,7 +55,7 @@ export const createCustomerSchema = z.object({
   country: optionalTrimmed,
   tags: z.array(trimmed.max(48)).max(20).default([]),
   customFields: z.array(customFieldPairSchema).max(15).default([]),
-  /** When true, sets `portalUserId` if a Firebase Auth user exists for `email`. */
+  /** When true, sets `portalUserId` if User Access already exists for `email`. */
   linkAuthByEmail: z.boolean().default(false),
   /**
    * When true (with `linkAuthByEmail` or alone), creates an email/password Firebase user if none exists,
