@@ -2669,7 +2669,7 @@ export function ProposalDocumentEditor({
                   rel="noopener noreferrer"
                 >
                   <ExternalLink className="h-4 w-4" aria-hidden />
-                  Open public viewer
+                  Preview
                 </Link>
               </Button>
               <Button type="button" size="sm" disabled={saving} onClick={() => void save()} className="gap-2">
@@ -2712,7 +2712,7 @@ export function ProposalDocumentEditor({
                     rel="noopener noreferrer"
                   >
                     <ExternalLink className="h-4 w-4" aria-hidden />
-                    Open public viewer
+                    Preview
                   </Link>
                 </Button>
               ) : null}
@@ -2725,7 +2725,7 @@ export function ProposalDocumentEditor({
                 className="gap-1.5 text-muted-foreground hover:text-foreground"
               >
                 {sending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Send className="h-4 w-4" aria-hidden />}
-                Save & publish
+                Publish
               </Button>
               <Button type="button" size="sm" disabled={saving} onClick={() => void save()} className="gap-2">
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
@@ -2736,7 +2736,7 @@ export function ProposalDocumentEditor({
           {message ? <span className="block text-sm text-muted-foreground">{message}</span> : null}
           {initialStatus === "draft" ? (
             <p className="text-xs text-muted-foreground">
-              Save &amp; publish sends the public link, records engagement, and moves a linked opportunity to the Proposal
+              Publish sends the public link, records engagement, and moves a linked opportunity to the Proposal
               stage.
             </p>
           ) : null}
@@ -2750,13 +2750,13 @@ export function ProposalDocumentEditor({
           {!isTemplate ? (
             <Button type="button" variant="secondary" disabled={sending} onClick={() => void send()} className="gap-2">
               {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              Save & publish
+              Publish
             </Button>
           ) : null}
           {message ? <span className="text-sm text-muted-foreground">{message}</span> : null}
           {!isTemplate && initialStatus === "draft" ? (
             <p className="w-full text-xs text-muted-foreground">
-              Save &amp; publish sends the public link, records engagement, and moves a linked opportunity to the Proposal
+              Publish sends the public link, records engagement, and moves a linked opportunity to the Proposal
               stage.
             </p>
           ) : null}
