@@ -1,3 +1,4 @@
+import { logError } from "@/lib/logging";
 import { getStripe } from "@/lib/stripe/server";
 import type { SubscriptionProductOption } from "@/types/subscription-product";
 import type Stripe from "stripe";
@@ -34,62 +35,68 @@ function productDisplayName(product: Stripe.Price["product"]): string {
 
 /** Active Stripe recurring prices grouped by product for admin subscription creation. */
 export async function listStripeSubscriptionProductOptions(): Promise<SubscriptionProductOption[]> {
-  const stripe = getStripe();
-  if (!stripe) return [];
+  try {
+    const stripe = getStripe();
+    if (!stripe) return [];
 
-  const prices = await stripe.prices.list({
-    active: true,
-    type: "recurring",
-    limit: 100,
-    expand: ["data.product"],
-  });
+    const prices = await stripe.prices.list({
+      active: true,
+      type: "recurring",
+      limit: 100,
+      expand: ["data.product"],
+    });
 
-  const grouped = new Map<string, SubscriptionProductOption>();
+    const grouped = new Map<string, SubscriptionProductOption>();
 
-  const rawByProduct = new Map<string, Stripe.Price[]>();
-  for (const p of prices.data) {
-    const productObj = p.product;
-    const productId = typeof productObj === "string" ? productObj : productObj?.id;
-    const productName = productDisplayName(productObj);
-    if (!productId || !productName) continue;
-    if (typeof p.unit_amount !== "number") continue;
-    const bucket = rawByProduct.get(productId) ?? [];
-    bucket.push(p);
-    rawByProduct.set(productId, bucket);
-    if (!grouped.has(productId)) {
-      grouped.set(
-        productId,
-        {
+    const rawByProduct = new Map<string, Stripe.Price[]>();
+    for (const p of prices.data) {
+      const productObj = p.product;
+      const productId = typeof productObj === "string" ? productObj : productObj?.id;
+      const productName = productDisplayName(productObj);
+      if (!productId || !productName) continue;
+      if (typeof p.unit_amount !== "number") continue;
+      const bucket = rawByProduct.get(productId) ?? [];
+      bucket.push(p);
+      rawByProduct.set(productId, bucket);
+      if (!grouped.has(productId)) {
+        grouped.set(
           productId,
-          productName,
-          durations: [],
-        } satisfies SubscriptionProductOption,
-      );
+          {
+            productId,
+            productName,
+            durations: [],
+          } satisfies SubscriptionProductOption,
+        );
+      }
     }
-  }
 
-  for (const [productId, productPrices] of rawByProduct) {
-    const current = grouped.get(productId);
-    if (!current) continue;
-    for (const price of productPrices) {
-      const months = durationMonthsFromPrice(price);
-      if (!months) continue;
-      const existing = current.durations.find((d) => d.months === months);
-      if (existing) continue;
-      current.durations.push({
-        months,
-        priceId: price.id,
-        currency: (price.currency ?? "aud").toLowerCase(),
-        unitAmountMinor: price.unit_amount ?? 0,
-      });
+    for (const [productId, productPrices] of rawByProduct) {
+      const current = grouped.get(productId);
+      if (!current) continue;
+      for (const price of productPrices) {
+        const months = durationMonthsFromPrice(price);
+        if (!months) continue;
+        const existing = current.durations.find((d) => d.months === months);
+        if (existing) continue;
+        current.durations.push({
+          months,
+          priceId: price.id,
+          currency: (price.currency ?? "aud").toLowerCase(),
+          unitAmountMinor: price.unit_amount ?? 0,
+        });
+      }
     }
-  }
 
-  return [...grouped.values()]
-    .map((g) => ({
-      ...g,
-      durations: [...g.durations].sort((a, b) => a.months - b.months),
-    }))
-    .filter((g) => g.durations.length > 0)
-    .sort((a, b) => a.productName.localeCompare(b.productName, undefined, { sensitivity: "base" }));
+    return [...grouped.values()]
+      .map((g) => ({
+        ...g,
+        durations: [...g.durations].sort((a, b) => a.months - b.months),
+      }))
+      .filter((g) => g.durations.length > 0)
+      .sort((a, b) => a.productName.localeCompare(b.productName, undefined, { sensitivity: "base" }));
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    logError("stripe_subscription_product_options_failed", { message });
+    return [];
+  }
 }
