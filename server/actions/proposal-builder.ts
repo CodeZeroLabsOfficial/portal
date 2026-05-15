@@ -20,6 +20,7 @@ import {
   applyProposalAcceptCrmSideEffects,
   persistCustomerSubscriptionIntentAfterAccept,
 } from "@/server/firestore/proposal-accept-crm";
+import { getProposalTemplateNameForOrganization } from "@/server/firestore/proposal-templates";
 import { updateOpportunityStage } from "@/server/firestore/crm-opportunities";
 import { PROPOSAL_UNLOCK_COOKIE } from "@/lib/proposal-public-session";
 import { cloneProposalDocument } from "@/lib/proposal-clone-document";
@@ -413,6 +414,14 @@ export async function acceptProposalPublicAction(
   }
 
   if (proposal.customerId) {
+    const signerDisplayName = parsed.data.signerName.trim();
+    const sourceTemplateId = proposal.sourceTemplateId?.trim();
+    const templateName =
+      sourceTemplateId
+        ? await getProposalTemplateNameForOrganization(db, proposal.organizationId, sourceTemplateId)
+        : null;
+    const activityDetail = (sourceTemplateId ? templateName : null) ?? proposal.title.trim();
+
     /** Activity entry is best-effort — failure here must not roll back the
      *  acceptance we just recorded. */
     await runAdminWrite(
@@ -424,8 +433,8 @@ export async function acceptProposalPublicAction(
           customerId: proposal.customerId,
           organizationId: proposal.organizationId,
           type: "other",
-          title: "Proposal accepted",
-          detail: `${proposal.title} — ${parsed.data.signerName}`,
+          title: `Proposal accepted by ${signerDisplayName}`,
+          detail: activityDetail,
           createdAt: Timestamp.now(),
         }),
     );

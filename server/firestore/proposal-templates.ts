@@ -1,3 +1,4 @@
+import type { Firestore } from "firebase-admin/firestore";
 import { isStaff } from "@/lib/auth/server-session";
 import { asNumber, asString } from "@/lib/firestore/coerce";
 import { COLLECTIONS } from "@/server/firestore/collections";
@@ -34,6 +35,31 @@ export function parseProposalTemplateRecord(id: string, data: Record<string, unk
     createdAtMs: asNumber(data.createdAtMs) ?? 0,
     updatedAtMs: asNumber(data.updatedAtMs) ?? 0,
   };
+}
+
+/**
+ * Admin read (e.g. public proposal acceptance) — returns the template `name` when
+ * the row exists and belongs to `organizationId`.
+ */
+export async function getProposalTemplateNameForOrganization(
+  db: Firestore,
+  organizationId: string,
+  templateId: string,
+): Promise<string | null> {
+  const tid = templateId.trim();
+  const org = organizationId.trim();
+  if (!tid || !org) return null;
+  try {
+    const snap = await db.collection(COLLECTIONS.proposalTemplates).doc(tid).get();
+    if (!snap.exists) return null;
+    const data = snap.data() as Record<string, unknown>;
+    const rowOrg = asString(data.organizationId)?.trim() ?? "";
+    if (rowOrg !== org) return null;
+    const name = asString(data.name)?.trim();
+    return name && name.length > 0 ? name : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function listProposalTemplatesForOrg(user: PortalUser): Promise<ProposalTemplateRecord[]> {

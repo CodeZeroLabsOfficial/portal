@@ -67,6 +67,8 @@ export type CreateSubscriptionScheduleParams = {
   /** When set, stored on `customerActivities.actorUid`. */
   activityActorUid?: string;
   activityTitle?: string;
+  /** When set, formats `customerActivities.detail` from the Stripe subscription or schedule id. */
+  activityDetail?: (stripeSubscriptionOrScheduleId: string) => string;
 };
 
 /**
@@ -89,6 +91,7 @@ export async function createSubscriptionScheduleForCustomer(
     extraScheduleMetadata,
     activityActorUid,
     activityTitle = "Stripe subscription schedule created",
+    activityDetail,
   } = params;
 
   const selectedPriceId = rawPriceId.trim();
@@ -204,11 +207,12 @@ export async function createSubscriptionScheduleForCustomer(
       await mirrorSubscriptionRowToLinkedPortalUser(db, stripeCustomerId, schedule.id, scheduleRecord);
     }
 
+    const stripeActivityRefId = subscriptionId ?? schedule.id;
     const activityPayload: Record<string, unknown> = {
       customerId: customer.id,
       type: "stripe_sync",
       title: activityTitle,
-      detail: subscriptionId ?? schedule.id,
+      detail: activityDetail ? activityDetail(stripeActivityRefId) : stripeActivityRefId,
       createdAt: FieldValue.serverTimestamp(),
     };
     if (organizationId) activityPayload.organizationId = organizationId;

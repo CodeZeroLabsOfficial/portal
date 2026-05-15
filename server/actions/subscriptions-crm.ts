@@ -93,6 +93,8 @@ export async function createSubscriptionAction(
           ? parsed.data.defaultPaymentMethodId?.trim() || undefined
           : undefined,
       activityActorUid: user.uid,
+      activityTitle: "New subscription created",
+      activityDetail: (id) => `Stripe subscription reference (${id})`,
     });
 
     if (!scheduleResult.ok) return scheduleResult;

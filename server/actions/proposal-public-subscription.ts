@@ -125,7 +125,8 @@ export async function createProposalPublicSubscriptionAction(
       proposal_id: proposal.id,
       ...(proposal.shareToken ? { proposal_share_token: proposal.shareToken } : {}),
     },
-    activityTitle: "Stripe subscription (from proposal)",
+    activityTitle: "Created subscription from proposal acceptance",
+    activityDetail: (id) => `Stripe subscription reference (${id})`,
   });
 
   if (!scheduleResult.ok) return scheduleResult;

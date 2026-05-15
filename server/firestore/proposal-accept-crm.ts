@@ -83,7 +83,7 @@ export async function applyProposalAcceptCrmSideEffects(
       ...(orgId ? { organizationId: orgId } : {}),
       type: "other",
       title: "Lead promoted to contact",
-      detail: `Services agreement signed — ${proposal.title} (${signerName})`,
+      detail: `Services agreement signed by ${signerName.trim()}`,
       createdAt: now,
     });
   } catch (e) {
