@@ -51,6 +51,8 @@ export interface BlockToolbarProps {
    * removing the Plans add-ons sub-table without deleting the whole block.
    */
   overflowLeadingAction?: { label: string; onClick: () => void };
+  /** Extra items after {@link overflowLeadingAction}, still before Duplicate. */
+  overflowExtraItems?: Array<{ label: string; onClick: () => void; destructive?: boolean }>;
   onOpenSettings?: () => void;
   style?: BlockStyle;
   onStyleChange?: (next: BlockStyle | undefined) => void;
@@ -79,6 +81,7 @@ export function BlockToolbar({
   trailingSlot,
   auxiliarySlot,
   overflowLeadingAction,
+  overflowExtraItems,
   onOpenSettings,
   style,
   onStyleChange,
@@ -153,6 +156,22 @@ export function BlockToolbar({
                       <DropdownMenuSeparator />
                     </>
                   ) : null}
+                  {overflowExtraItems?.map((item, itemIdx) => (
+                    <DropdownMenuItem
+                      key={`${item.label}-${itemIdx}`}
+                      className={cn(
+                        "cursor-pointer",
+                        item.destructive && "text-destructive focus:text-destructive",
+                      )}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        item.onClick();
+                      }}
+                    >
+                      {item.label}
+                    </DropdownMenuItem>
+                  ))}
+                  {overflowExtraItems && overflowExtraItems.length > 0 ? <DropdownMenuSeparator /> : null}
                   <DropdownMenuItem
                     className="cursor-pointer"
                     onClick={(e) => {

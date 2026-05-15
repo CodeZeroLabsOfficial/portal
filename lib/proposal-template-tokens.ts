@@ -181,6 +181,8 @@ function mapContentBlock(block: ProposalContentBlock, ctx: ProposalTokenContext)
     case "agreement":
       return {
         ...block,
+        contractTemplateId: block.contractTemplateId,
+        contractTemplateLabel: block.contractTemplateLabel,
         heading:
           block.heading !== undefined ? replaceProposalTokens(block.heading, ctx) : block.heading,
         buttonLabel:

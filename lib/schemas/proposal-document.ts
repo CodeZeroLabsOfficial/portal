@@ -332,6 +332,8 @@ const signatureBlockSchema = z.object({
 const agreementBlockSchema = z.object({
   id: idSchema,
   type: z.literal("agreement"),
+  contractTemplateId: z.string().max(128).optional(),
+  contractTemplateLabel: z.string().max(200).optional(),
   heading: z.string().max(200).optional(),
   buttonLabel: z.string().max(80).optional(),
   agreementTitle: z.string().max(200).optional(),

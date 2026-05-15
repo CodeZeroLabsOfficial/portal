@@ -32,6 +32,7 @@ import {
   Coins,
   CreditCard,
   ExternalLink,
+  FileText,
   GripVertical,
   Heading,
   Image as ImageIcon,
@@ -85,6 +86,11 @@ import { ProposalRichText } from "@/components/proposal/proposal-rich-text";
 import { ProposalDocumentView } from "@/components/proposal/proposal-document-view";
 import { ProposalSectionShell } from "@/components/proposal/proposal-section-shell";
 import { ProposalMediaLibraryProvider } from "@/components/proposal/proposal-media-library";
+import {
+  ProposalContractTemplateLibraryProvider,
+  useProposalContractTemplateLibraryOptional,
+  type ContractTemplatePick,
+} from "@/components/proposal/proposal-contract-template-library";
 import {
   PROPOSAL_IMAGE_BLOCK_PLACEHOLDER_URL,
   ProposalImageBlockEditor,
@@ -1207,6 +1213,7 @@ function SectionBlockFields({
   const children = block.children;
   const sortableChildIds = React.useMemo(() => children.map((c) => c.id), [children]);
   const [columnsLayoutEditingId, setColumnsLayoutEditingId] = React.useState<string | null>(null);
+  const contractTemplateLibrary = useProposalContractTemplateLibraryOptional();
 
   React.useEffect(() => {
     if (columnsLayoutEditingId && !children.some((c) => c.id === columnsLayoutEditingId)) {
@@ -1408,32 +1415,68 @@ function SectionBlockFields({
                         // overflow-only lever, so it's promoted into the visible row
                         // via `auxiliarySlot` when applicable.
                         showOverflowMenu={false}
-                        auxiliarySlot={
-                          child.type === "packages" &&
-                          packagesAddonsSectionActive(child as PackagesBlock) ? (
-                            <Tooltip delayDuration={320}>
-                              <TooltipTrigger asChild>
-                                <button
-                                  type="button"
-                                  className="inline-flex h-8 items-center gap-1 rounded-full px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
-                                  onClick={() => {
-                                    const p = child as PackagesBlock;
-                                    updateChild(child.id, {
-                                      ...p,
-                                      addonsSectionEnabled: false,
-                                    } as ProposalContentBlock);
-                                  }}
-                                  aria-label="Remove add-ons table"
-                                >
-                                  Remove add-ons
-                                </button>
-                              </TooltipTrigger>
-                              <TooltipContent side="bottom" className="text-xs">
-                                Remove the add-ons sub-table from this Packages block
-                              </TooltipContent>
-                            </Tooltip>
-                          ) : undefined
-                        }
+                        auxiliarySlot={(() => {
+                          const agreementSlot =
+                            child.type === "agreement" && contractTemplateLibrary ? (
+                              <Tooltip delayDuration={320}>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    type="button"
+                                    className="inline-flex h-8 items-center gap-1 rounded-full px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+                                    onClick={() => {
+                                      const ab = child as AgreementBlock;
+                                      contractTemplateLibrary.openSelection({
+                                        onSelect: (pick) =>
+                                          updateChild(
+                                            child.id,
+                                            applyContractTemplatePickToAgreementBlock(ab, pick),
+                                          ),
+                                      });
+                                    }}
+                                    aria-label="Open contract template library"
+                                  >
+                                    <FileText className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                                    Contract
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent side="bottom" className="text-xs">
+                                  Choose a contract from your library (snapshots legal text onto this block)
+                                </TooltipContent>
+                              </Tooltip>
+                            ) : null;
+                          const packagesSlot =
+                            child.type === "packages" &&
+                            packagesAddonsSectionActive(child as PackagesBlock) ? (
+                              <Tooltip delayDuration={320}>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    type="button"
+                                    className="inline-flex h-8 items-center gap-1 rounded-full px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+                                    onClick={() => {
+                                      const p = child as PackagesBlock;
+                                      updateChild(child.id, {
+                                        ...p,
+                                        addonsSectionEnabled: false,
+                                      } as ProposalContentBlock);
+                                    }}
+                                    aria-label="Remove add-ons table"
+                                  >
+                                    Remove add-ons
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent side="bottom" className="text-xs">
+                                  Remove the add-ons sub-table from this Packages block
+                                </TooltipContent>
+                              </Tooltip>
+                            ) : null;
+                          if (!agreementSlot && !packagesSlot) return undefined;
+                          return (
+                            <span className="inline-flex flex-wrap items-center gap-1">
+                              {agreementSlot}
+                              {packagesSlot}
+                            </span>
+                          );
+                        })()}
                         style={supportsStyle ? getBlockStyle(child) : undefined}
                         onStyleChange={
                           supportsStyle ? (next) => applyBlockStyle(child.id, next) : undefined
@@ -1624,6 +1667,17 @@ function SpacerBlockHeightEditor({
   );
 }
 
+function applyContractTemplatePickToAgreementBlock(block: AgreementBlock, pick: ContractTemplatePick): AgreementBlock {
+  return {
+    ...block,
+    contractTemplateId: pick.id,
+    contractTemplateLabel: pick.name.trim() || undefined,
+    agreementTitle: pick.agreementTitle.trim() || block.agreementTitle,
+    introHtml: pick.introHtml.trim() ? pick.introHtml.trim() : undefined,
+    legalHtml: pick.legalHtml,
+  };
+}
+
 /**
  * Services Agreement editor: edits the CTA heading + button label, the modal
  * title, and the agreement body (legal HTML). When `legalHtml` is empty the
@@ -1637,6 +1691,7 @@ function AgreementBlockEditor({
   block: AgreementBlock;
   onChange: (next: AgreementBlock) => void;
 }) {
+  const contractLib = useProposalContractTemplateLibraryOptional();
   const ctaColor = resolveAgreementButtonColor(block.style);
   return (
     <div className="space-y-4">
@@ -1661,6 +1716,35 @@ function AgreementBlockEditor({
           <span className="block">Use the palette in the block toolbar to change the button color.</span>
         </p>
       </div>
+
+      {contractLib ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border/70 bg-muted/20 px-3 py-2.5">
+          <p className="min-w-0 flex-1 text-xs text-muted-foreground">
+            {block.contractTemplateLabel?.trim() ? (
+              <>
+                Library template:{" "}
+                <span className="font-medium text-foreground">{block.contractTemplateLabel.trim()}</span>
+              </>
+            ) : (
+              <>Attach copy from your org&apos;s contract library, or edit HTML manually below.</>
+            )}
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="shrink-0 gap-1.5"
+            onClick={() =>
+              contractLib.openSelection({
+                onSelect: (pick) => onChange(applyContractTemplatePickToAgreementBlock(block, pick)),
+              })
+            }
+          >
+            <FileText className="h-3.5 w-3.5" aria-hidden />
+            Contract library…
+          </Button>
+        </div>
+      ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5">
@@ -2343,6 +2427,8 @@ export function ProposalDocumentEditor({
     }),
   );
 
+  const contractTemplateLibrary = useProposalContractTemplateLibraryOptional();
+
   React.useEffect(() => {
     if (rootColumnsLayoutEditingId && !blocks.some((b) => b.id === rootColumnsLayoutEditingId)) {
       setRootColumnsLayoutEditingId(null);
@@ -2637,6 +2723,7 @@ export function ProposalDocumentEditor({
   return (
     <EditorStripeCatalogContext.Provider value={subscriptionProductOptions}>
     <ProposalMediaLibraryProvider>
+    <ProposalContractTemplateLibraryProvider>
     <div className="space-y-6">
       {isTemplate && templateId ? (
         <>
@@ -2991,6 +3078,25 @@ export function ProposalDocumentEditor({
                                     }
                                   : undefined
                               }
+                              overflowExtraItems={
+                                block.type === "agreement" && contractTemplateLibrary
+                                  ? [
+                                      {
+                                        label: "Change contract…",
+                                        onClick: () => {
+                                          const ab = block as AgreementBlock;
+                                          contractTemplateLibrary.openSelection({
+                                            onSelect: (pick) =>
+                                              updateBlock(
+                                                block.id,
+                                                applyContractTemplatePickToAgreementBlock(ab, pick),
+                                              ),
+                                          });
+                                        },
+                                      },
+                                    ]
+                                  : undefined
+                              }
                               showOverflowMenu={!isSection && block.type !== "splash"}
                               style={supportsStyle ? getBlockStyle(block) : undefined}
                               onStyleChange={
@@ -3060,6 +3166,7 @@ export function ProposalDocumentEditor({
         </TabsContent>
       </Tabs>
     </div>
+    </ProposalContractTemplateLibraryProvider>
     </ProposalMediaLibraryProvider>
     </EditorStripeCatalogContext.Provider>
   );

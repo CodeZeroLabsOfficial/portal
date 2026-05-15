@@ -271,6 +271,13 @@ export interface SignatureBlock extends ProposalBlockBase {
  */
 export interface AgreementBlock extends ProposalBlockBase {
   type: "agreement";
+  /**
+   * When set, indicates the legal copy was last applied from this org contract template.
+   * `legalHtml` / titles are still snapshotted on the block for stable proposals.
+   */
+  contractTemplateId?: string;
+  /** Display name of {@link contractTemplateId} at attach time (optional, for editor hints). */
+  contractTemplateLabel?: string;
   /** CTA heading shown on the proposal page (default: "Ready to get started?"). */
   heading?: string;
   /** CTA button label (default: "View Agreement"). */
