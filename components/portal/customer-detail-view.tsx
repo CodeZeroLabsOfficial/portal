@@ -511,7 +511,6 @@ export function CustomerDetailView({
                 <CreditCard className="h-5 w-5 text-muted-foreground" aria-hidden />
                 Integrations
               </CardTitle>
-              <CardDescription>Stripe billing mirrors for this CRM record.</CardDescription>
             </CardHeader>
             <CardContent className="p-4 text-sm">
               <div className="rounded-xl border border-border/60 bg-background/40 p-3">
@@ -536,7 +535,6 @@ export function CustomerDetailView({
                 <LogIn className="h-5 w-5 text-muted-foreground" aria-hidden />
                 Portal access
               </CardTitle>
-              <CardDescription>Enable portal access for this customer.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 p-4 text-sm">
               <div className="rounded-xl border border-border/60 bg-background/40 p-3">
