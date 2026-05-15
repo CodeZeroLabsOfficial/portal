@@ -1,5 +1,16 @@
 import { iterateProposalContentBlocks } from "@/lib/proposal-blocks";
-import type { PackagesBlock, ProposalBlock, ProposalPublicSelections, ProposalRecord } from "@/types/proposal";
+import type {
+  PackagesBlock,
+  ProposalBlock,
+  ProposalPublicSelections,
+  ProposalRecord,
+  ProposalStatus,
+} from "@/types/proposal";
+
+/** After acceptance or other terminal outcomes, public viewers must not change package / add-on rows. */
+export function isPublicProposalPackageSelectionsLocked(status: ProposalStatus | undefined): boolean {
+  return status === "accepted" || status === "declined" || status === "expired";
+}
 
 /** Every `packages` block in the document (nested blocks included). */
 export function listPackagesBlocksInDocument(blocks: ProposalBlock[]): PackagesBlock[] {

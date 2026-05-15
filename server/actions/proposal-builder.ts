@@ -24,7 +24,10 @@ import { getProposalTemplateNameForOrganization } from "@/server/firestore/propo
 import { updateOpportunityStage } from "@/server/firestore/crm-opportunities";
 import { PROPOSAL_UNLOCK_COOKIE } from "@/lib/proposal-public-session";
 import { cloneProposalDocument } from "@/lib/proposal-clone-document";
-import { isProposalPackageSelectionComplete } from "@/lib/proposal-package-selection";
+import {
+  isProposalPackageSelectionComplete,
+  isPublicProposalPackageSelectionsLocked,
+} from "@/lib/proposal-package-selection";
 import { resolveSubscriptionStripePriceIdForProposalWithStripe } from "@/server/stripe/resolve-proposal-subscription-with-catalog";
 import { runAdminWrite } from "@/lib/firebase/admin-write";
 import { uploadSignedAgreementSignaturePng } from "@/lib/firebase/admin-storage";
@@ -488,6 +491,9 @@ export async function saveProposalPackageSelectionAction(
   const proposal = await getProposalRecordByShareToken(parsed.data.shareToken);
   if (!proposal || proposal.status === "draft") {
     return { ok: false, message: "Proposal not available." };
+  }
+  if (isPublicProposalPackageSelectionsLocked(proposal.status)) {
+    return { ok: false, message: "This proposal is locked — plan and add-on selections cannot be changed." };
   }
 
   const block = findProposalBlockById(proposal.document.blocks, parsed.data.blockId);

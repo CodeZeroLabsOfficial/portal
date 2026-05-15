@@ -46,6 +46,7 @@ import { ProposalSplashBlockCanvas } from "@/components/proposal/proposal-splash
 import { isProposalImagePlaceholderUrl } from "@/components/proposal/proposal-image-block-editor";
 import { isSectionBackgroundActive } from "@/lib/section-background";
 import { proposalEndsInFullBleedBand } from "@/lib/proposal-blocks";
+import { isPublicProposalPackageSelectionsLocked } from "@/lib/proposal-package-selection";
 
 export interface ProposalDocumentViewProps {
   document: ProposalDocument;
@@ -350,12 +351,14 @@ function BlockView({
       return <PricingBlockPublic block={block} />;
     case "packages": {
       const pb = block as PackagesBlock;
+      const packagesInteractive =
+        Boolean(shareToken) && !isPublicProposalPackageSelectionsLocked(proposalContext?.proposalStatus);
       const packagesInner = (
         <PackagesBlockPublic
           block={pb}
           shareToken={shareToken ?? ""}
           initialSelection={publicSelections?.[pb.id]}
-          interactive={Boolean(shareToken)}
+          interactive={packagesInteractive}
         />
       );
       const backdropActive = isSectionBackgroundActive(pb.background);

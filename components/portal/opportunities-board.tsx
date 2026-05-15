@@ -35,6 +35,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+function formatOpportunityCardDate(ms: number | undefined): string {
+  if (typeof ms !== "number" || !ms) return "—";
+  return new Date(ms).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 function stageTagClass(stage: OpportunityStage): string {
   switch (stage) {
     case "won":
@@ -180,6 +189,10 @@ function OpportunityCard({
         >
           {opp.leadContactName}
         </Link>
+        <div className="mt-1.5 space-y-0.5 text-[11px] leading-snug text-muted-foreground">
+          <p>Created: {formatOpportunityCardDate(opp.createdAtMs)}</p>
+          <p>Last update: {formatOpportunityCardDate(opp.updatedAtMs)}</p>
+        </div>
 
         {typeof opp.amountMinor === "number" ? (
           <p className="mt-2 text-[12px] tabular-nums text-muted-foreground">
@@ -287,6 +300,10 @@ export function OpportunitiesBoard({ opportunities }: OpportunitiesBoardProps) {
           <div className="pointer-events-none min-w-[240px] max-w-[280px] rounded-xl border border-border bg-card p-3 shadow-lg">
             <p className="text-[13px] font-semibold text-foreground">{activeOpp.name}</p>
             <p className="mt-1 text-[11px] text-muted-foreground">{activeOpp.leadContactName}</p>
+            <div className="mt-1.5 space-y-0.5 text-[11px] leading-snug text-muted-foreground">
+              <p>Created: {formatOpportunityCardDate(activeOpp.createdAtMs)}</p>
+              <p>Last update: {formatOpportunityCardDate(activeOpp.updatedAtMs)}</p>
+            </div>
           </div>
         ) : null}
       </DragOverlay>
