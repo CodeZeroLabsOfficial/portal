@@ -10,6 +10,7 @@ import {
   ArrowRight,
   Building2,
   Clock,
+  Copy,
   CreditCard,
   Download,
   ExternalLink,
@@ -19,6 +20,7 @@ import {
   KeyRound,
   ListChecks,
   Loader2,
+  LogIn,
   Mail,
   MapPin,
   MessageSquare,
@@ -40,6 +42,7 @@ import type { SubscriptionRecord } from "@/types/subscription";
 import type { TaskRecord } from "@/types/task";
 import {
   addCustomerNoteAction,
+  generatePortalPasswordResetLinkAction,
   getSignedAgreementModalPayloadAction,
 } from "@/server/actions/customers-crm";
 import { deleteProposalAction } from "@/server/actions/proposal-builder";
@@ -205,6 +208,15 @@ export function CustomerDetailView({
   const [noteKind, setNoteKind] = React.useState<CustomerNoteRecord["kind"]>("note");
   const [noteError, setNoteError] = React.useState<string | null>(null);
   const [deletingProposalId, setDeletingProposalId] = React.useState<string | null>(null);
+  const [portalSetupLink, setPortalSetupLink] = React.useState<string | null>(null);
+  const [portalSetupBusy, setPortalSetupBusy] = React.useState(false);
+  const [portalSetupError, setPortalSetupError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    setPortalSetupLink(null);
+    setPortalSetupError(null);
+    setPortalSetupBusy(false);
+  }, [customer.id]);
 
   const timeline = React.useMemo(() => {
     // Notes are also written to `customer_activities` (e.g. "Note added"); merging both sources
@@ -285,6 +297,21 @@ export function CustomerDetailView({
     }
     setNoteBody("");
     router.refresh();
+  }
+
+  async function generatePortalPasswordSetupLink() {
+    setPortalSetupError(null);
+    setPortalSetupBusy(true);
+    try {
+      const res = await generatePortalPasswordResetLinkAction(customer.id);
+      if (!res.ok) {
+        setPortalSetupError(res.message);
+        return;
+      }
+      setPortalSetupLink(res.link);
+    } finally {
+      setPortalSetupBusy(false);
+    }
   }
 
   const [signedAgreementModalOpen, setSignedAgreementModalOpen] = React.useState(false);
@@ -477,29 +504,114 @@ export function CustomerDetailView({
           </CardContent>
         </Card>
 
-        <Card className="border-border/80 bg-card/80 shadow-sm">
-          <CardHeader className="border-b border-border/60 bg-muted/20">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <CreditCard className="h-5 w-5 text-muted-foreground" aria-hidden />
-              Integrations
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 text-sm">
-            <div className="rounded-xl border border-border/60 bg-background/40 p-3">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-muted-foreground">Stripe</span>
-                {customer.stripeCustomerId?.trim() ? (
-                  <Badge variant="outline" className="border-emerald-500/40 text-emerald-600 dark:text-emerald-400">
-                    Linked
-                  </Badge>
+        <div className="flex flex-col gap-4">
+          <Card className="border-border/80 bg-card/80 shadow-sm">
+            <CardHeader className="border-b border-border/60 bg-muted/20">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <CreditCard className="h-5 w-5 text-muted-foreground" aria-hidden />
+                Integrations
+              </CardTitle>
+              <CardDescription>Stripe billing mirrors for this CRM record.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-4 text-sm">
+              <div className="rounded-xl border border-border/60 bg-background/40 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-muted-foreground">Stripe</span>
+                  {customer.stripeCustomerId?.trim() ? (
+                    <Badge variant="outline" className="border-emerald-500/40 text-emerald-600 dark:text-emerald-400">
+                      Linked
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary">Not linked</Badge>
+                  )}
+                </div>
+                <div className="mt-2 text-xs text-muted-foreground">{rollupFromSubscriptions(subscriptions)}</div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/80 bg-card/80 shadow-sm">
+            <CardHeader className="border-b border-border/60 bg-muted/20">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <LogIn className="h-5 w-5 text-muted-foreground" aria-hidden />
+                Portal access
+              </CardTitle>
+              <CardDescription>
+                Firebase login for the customer portal (web and app). Configure from Edit customer, then generate a
+                password setup link when inviting them to sign in.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 p-4 text-sm">
+              <div className="rounded-xl border border-border/60 bg-background/40 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-muted-foreground">Firebase Auth</span>
+                  {customer.portalUserId?.trim() ? (
+                    <Badge variant="outline" className="border-emerald-500/40 text-emerald-600 dark:text-emerald-400">
+                      Linked
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary">Not linked</Badge>
+                  )}
+                </div>
+                {customer.portalUserId?.trim() ? (
+                  <p className="mt-2 break-all font-mono text-[11px] text-muted-foreground">{customer.portalUserId}</p>
                 ) : (
-                  <Badge variant="secondary">Not linked</Badge>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Open{" "}
+                    <Link
+                      className="font-medium text-primary underline-offset-4 hover:underline"
+                      href={`/admin/customers/${customer.id}/edit`}
+                    >
+                      Edit customer
+                    </Link>{" "}
+                    and enable portal login for this email.
+                  </p>
                 )}
               </div>
-              <div className="mt-2 text-xs text-muted-foreground">{rollupFromSubscriptions(subscriptions)}</div>
-            </div>
-          </CardContent>
-        </Card>
+
+              {portalSetupError ? <p className="text-xs text-destructive">{portalSetupError}</p> : null}
+
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  className="gap-1.5"
+                  disabled={!customer.portalUserId?.trim() || portalSetupBusy}
+                  onClick={() => void generatePortalPasswordSetupLink()}
+                >
+                  {portalSetupBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : null}
+                  Generate password setup link
+                </Button>
+                {portalSetupLink ? (
+                  <Button type="button" size="sm" variant="ghost" onClick={() => setPortalSetupLink(null)}>
+                    Clear link
+                  </Button>
+                ) : null}
+              </div>
+
+              {portalSetupLink ? (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">
+                    Share through a secure channel. Anyone with the link can start the password flow for this login
+                    email.
+                  </p>
+                  <Textarea readOnly className="min-h-[5.5rem] resize-none font-mono text-xs" value={portalSetupLink} />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="gap-1.5"
+                    onClick={() => void navigator.clipboard.writeText(portalSetupLink)}
+                  >
+                    <Copy className="h-3.5 w-3.5" aria-hidden />
+                    Copy link
+                  </Button>
+                </div>
+              ) : null}
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       <Tabs value={tab} onValueChange={(v) => setTab(isCustomerDetailTab(v) ? v : "overview")} className="w-full">
@@ -595,7 +707,8 @@ export function CustomerDetailView({
         <TabsContent value="billing" className="space-y-6">
           {!customer.stripeCustomerId ? (
             <p className="text-sm text-muted-foreground">
-              Link a Stripe customer id above to hydrate subscriptions and invoices from your webhook mirrors.
+              Link a Stripe customer id under Integrations to hydrate subscriptions and invoices from your webhook
+              mirrors.
             </p>
           ) : null}
           <Card className="border-border/80 bg-card/60">

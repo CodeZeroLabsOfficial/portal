@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Copy, Link2, Loader2, Sparkles } from "lucide-react";
+import { ArrowLeft, Link2, Loader2, Sparkles } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -16,17 +16,9 @@ import {
 import type { CustomerRecord } from "@/types/customer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { FormServerError } from "@/components/ui/form-server-error";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 
 function customerToFormDefaults(customer: CustomerRecord): UpdateCustomerFormInput {
   const customFields = Object.entries(customer.customFields)
@@ -81,8 +73,6 @@ export function EditCustomerForm({ customer }: EditCustomerFormProps) {
     defaultValues: customerToFormDefaults(customer),
   });
 
-  const [postUpdateInvite, setPostUpdateInvite] = React.useState<string | null>(null);
-
   React.useEffect(() => {
     form.reset(customerToFormDefaults(customer));
     setStripeInput(customer.stripeCustomerId ?? "");
@@ -93,7 +83,6 @@ export function EditCustomerForm({ customer }: EditCustomerFormProps) {
         .map(([key, value]) => ({ key, value })),
     );
     setServerError(null);
-    setPostUpdateInvite(null);
   }, [customer, form]);
 
   async function runStripeAction(
@@ -127,10 +116,6 @@ export function EditCustomerForm({ customer }: EditCustomerFormProps) {
       setServerError(result.message);
       return;
     }
-    if (result.authPasswordResetLink) {
-      setPostUpdateInvite(result.authPasswordResetLink);
-      return;
-    }
     router.push(`/admin/customers/${customer.id}`);
     router.refresh();
   }
@@ -138,8 +123,7 @@ export function EditCustomerForm({ customer }: EditCustomerFormProps) {
   const busy = form.formState.isSubmitting;
 
   return (
-    <>
-      <div className="w-full min-w-0 space-y-8">
+    <div className="w-full min-w-0 space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <Button variant="ghost" size="sm" className="-ml-2 gap-1.5 text-muted-foreground hover:text-foreground" asChild>
           <Link href={`/admin/customers/${customer.id}`}>
@@ -319,8 +303,9 @@ export function EditCustomerForm({ customer }: EditCustomerFormProps) {
                 <span className="text-sm leading-snug text-muted-foreground">
                   <span className="font-medium text-foreground">Create Firebase login if none exists</span>
                   <span className="mt-0.5 block text-xs">
-                    Creates an email/password account when missing. You may receive a one-time password-reset link to
-                    share securely with the customer.
+                    Creates an email/password account when missing. On the customer profile, use{" "}
+                    <span className="font-medium text-foreground/90">Portal access</span> to generate a password setup
+                    link.
                   </span>
                 </span>
               </label>
@@ -386,57 +371,5 @@ export function EditCustomerForm({ customer }: EditCustomerFormProps) {
         </Card>
       </motion.div>
     </div>
-
-      <Dialog
-        open={Boolean(postUpdateInvite)}
-        onOpenChange={(next) => {
-          if (!next) {
-            setPostUpdateInvite(null);
-            router.push(`/admin/customers/${customer.id}`);
-            router.refresh();
-          }
-        }}
-      >
-        <DialogContent className="max-w-lg">
-          <DialogHeader className="text-left">
-            <DialogTitle className="text-lg font-semibold">Firebase login created</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            Share this password-reset link once with the customer through a secure channel. Anyone with the link can
-            start the reset flow for this email.
-          </p>
-          <Textarea
-            readOnly
-            className="min-h-[5.5rem] resize-none font-mono text-xs"
-            value={postUpdateInvite ?? ""}
-          />
-          <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-end">
-            <Button
-              type="button"
-              variant="secondary"
-              className="gap-2"
-              onClick={() => {
-                if (!postUpdateInvite) return;
-                void navigator.clipboard.writeText(postUpdateInvite);
-              }}
-            >
-              <Copy className="h-4 w-4" aria-hidden />
-              Copy link
-            </Button>
-            <Button
-              type="button"
-              className="gap-2"
-              onClick={() => {
-                setPostUpdateInvite(null);
-                router.push(`/admin/customers/${customer.id}`);
-                router.refresh();
-              }}
-            >
-              Done
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
   );
 }

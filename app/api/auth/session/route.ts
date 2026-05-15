@@ -1,3 +1,4 @@
+import { Timestamp } from "firebase-admin/firestore";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -59,6 +60,10 @@ export async function POST(request: Request) {
       {
         uid,
         email: decoded.email ?? existing?.email ?? "",
+        name:
+          [existing?.name, typeof decoded.name === "string" ? decoded.name : "", existing?.displayName]
+            .map((s) => (typeof s === "string" ? s.trim() : ""))
+            .find(Boolean) ?? "",
         displayName: decoded.name ?? existing?.displayName ?? "",
         photoURL: decoded.picture ?? existing?.photoURL ?? "",
         role,
@@ -66,7 +71,8 @@ export async function POST(request: Request) {
         stripeCustomerId: existing?.stripeCustomerId ?? "",
         createdAtMs: existing?.createdAtMs ?? nowMs,
         updatedAtMs: nowMs,
-      } satisfies PortalUser,
+        updatedAt: Timestamp.fromMillis(nowMs),
+      },
       { merge: true },
     );
 

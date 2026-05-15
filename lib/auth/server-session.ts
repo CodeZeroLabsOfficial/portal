@@ -20,6 +20,7 @@ function normalizePortalUser(uid: string, email: string, data?: Partial<PortalUs
   return {
     uid,
     email,
+    name: asString(data?.name),
     displayName: asString(data?.displayName),
     photoURL: asString(data?.photoURL),
     role: asRole(data?.role),

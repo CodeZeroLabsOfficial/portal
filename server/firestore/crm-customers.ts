@@ -884,8 +884,6 @@ export async function listTasksForCustomer(user: PortalUser, customerId: string)
 export interface CreateCustomerResult {
   ok: true;
   customerId: string;
-  /** Present when a new Firebase Auth user was created — share securely with the customer. */
-  authPasswordResetLink?: string;
 }
 
 export interface CreateCustomerError {
@@ -907,7 +905,7 @@ export async function createCustomerDocument(
   }
 
   let portalUserId: string | undefined;
-  let authPasswordResetLink: string | undefined;
+  let linkedNewFirebaseUser = false;
   const shouldResolveAuth = input.linkAuthByEmail || input.createAuthUserIfMissing;
   if (shouldResolveAuth) {
     const resolved = await resolveOrCreateFirebaseUserByEmail(input.email.trim().toLowerCase(), {
@@ -918,9 +916,7 @@ export async function createCustomerDocument(
       return { ok: false, message: resolved.message };
     }
     portalUserId = resolved.uid ?? undefined;
-    if (resolved.createdNew && resolved.passwordResetLink) {
-      authPasswordResetLink = resolved.passwordResetLink;
-    }
+    linkedNewFirebaseUser = resolved.createdNew;
   }
 
   const crmType: CustomerCrmType = input.saveAsLead ? "lead" : "contact";
@@ -1033,7 +1029,7 @@ export async function createCustomerDocument(
     await db.collection(COLLECTIONS.customerActivities).add({
       customerId: docRef.id,
       type: "auth_linked",
-      title: authPasswordResetLink ? "Created Firebase Auth user" : "Linked Firebase Auth user",
+      title: linkedNewFirebaseUser ? "Created Firebase Auth user" : "Linked Firebase Auth user",
       detail: input.email.trim().toLowerCase(),
       actorUid: user.uid,
       createdAt: Timestamp.fromMillis(firstActivityAt.toMillis() + 1),
@@ -1056,14 +1052,13 @@ export async function createCustomerDocument(
   return {
     ok: true,
     customerId: docRef.id,
-    ...(authPasswordResetLink ? { authPasswordResetLink } : {}),
   };
 }
 
 export async function updateCustomerDocument(
   user: PortalUser,
   input: UpdateCustomerFormInput,
-): Promise<{ ok: true; authPasswordResetLink?: string } | { ok: false; message: string }> {
+): Promise<{ ok: true } | { ok: false; message: string }> {
   const db = getFirebaseAdminFirestore();
   if (!db || !isStaff(user)) {
     return { ok: false, message: "CRM is only available to admin or team members." };
@@ -1083,7 +1078,7 @@ export async function updateCustomerDocument(
   }
 
   let portalUserId: string | null | undefined;
-  let authPasswordResetLink: string | undefined;
+  let linkedNewFirebaseUser = false;
   const shouldResolveAuth = rest.linkAuthByEmail || rest.createAuthUserIfMissing;
   if (shouldResolveAuth) {
     const resolved = await resolveOrCreateFirebaseUserByEmail(rest.email.trim().toLowerCase(), {
@@ -1094,9 +1089,7 @@ export async function updateCustomerDocument(
       return { ok: false, message: resolved.message };
     }
     portalUserId = resolved.uid;
-    if (resolved.createdNew && resolved.passwordResetLink) {
-      authPasswordResetLink = resolved.passwordResetLink;
-    }
+    linkedNewFirebaseUser = resolved.createdNew;
   }
 
   const payload: Record<string, unknown> = {
@@ -1145,7 +1138,7 @@ export async function updateCustomerDocument(
     await db.collection(COLLECTIONS.customerActivities).add({
       customerId,
       type: "auth_linked",
-      title: authPasswordResetLink ? "Created Firebase Auth user" : "Linked Firebase Auth user",
+      title: linkedNewFirebaseUser ? "Created Firebase Auth user" : "Linked Firebase Auth user",
       detail: rest.email.trim().toLowerCase(),
       actorUid: user.uid,
       createdAt: Timestamp.fromMillis(updatedAt.toMillis() + 1),
@@ -1154,10 +1147,7 @@ export async function updateCustomerDocument(
 
   await syncStripeCustomerIdFromCrmCustomerDoc(db, customerId);
 
-  return {
-    ok: true,
-    ...(authPasswordResetLink ? { authPasswordResetLink } : {}),
-  };
+  return { ok: true };
 }
 
 export async function appendCustomerNote(

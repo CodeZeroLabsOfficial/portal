@@ -4,6 +4,8 @@ export type UserRole = "admin" | "team" | "customer";
 export interface PortalUser {
   uid: string;
   email: string;
+  /** Same as `displayName` when provisioned from CRM; optional for client parity. */
+  name?: string;
   displayName?: string;
   photoURL?: string;
   role: UserRole;

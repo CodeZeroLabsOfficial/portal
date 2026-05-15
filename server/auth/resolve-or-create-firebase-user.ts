@@ -15,17 +15,17 @@ function temporaryFirebasePassword(): string {
 export interface ResolveOrCreateFirebaseUserOptions {
   /** When false, skip all work and return `uid: null`. */
   active: boolean;
-  /** When lookup finds no user, create one and return a password-reset link. */
+  /** When lookup finds no user, create an email/password Firebase user (temporary password; staff sends setup link from CRM). */
   createIfMissing: boolean;
 }
 
 export type ResolveOrCreateFirebaseUserResult =
-  | { ok: true; uid: string | null; createdNew: boolean; passwordResetLink?: string }
+  | { ok: true; uid: string | null; createdNew: boolean }
   | { ok: false; message: string };
 
 /**
  * Looks up Firebase Auth by email, or creates an email/password user when `createIfMissing` is true.
- * On create, returns a one-time `passwordResetLink` for staff to share with the customer securely.
+ * Password setup links are generated on demand from the customer detail **Portal access** card.
  */
 export async function resolveOrCreateFirebaseUserByEmail(
   emailRaw: string,
@@ -71,8 +71,7 @@ export async function resolveOrCreateFirebaseUserByEmail(
         emailVerified: false,
         disabled: false,
       });
-      const passwordResetLink = await auth.generatePasswordResetLink(email);
-      return { ok: true, uid: rec.uid, createdNew: true, passwordResetLink };
+      return { ok: true, uid: rec.uid, createdNew: true };
     } catch (createErr: unknown) {
       const createCode = authErrorCode(createErr);
       if (createCode === "auth/email-already-exists") {

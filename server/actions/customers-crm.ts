@@ -7,7 +7,7 @@ import { zodErrorToMessage } from "@/lib/zod-error";
 import { z } from "zod";
 import { getStorageFileSignedReadUrl } from "@/lib/firebase/admin-storage";
 import { FieldValue } from "firebase-admin/firestore";
-import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
+import { getFirebaseAdminAuth, getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import {
   appendCustomerNote,
@@ -32,7 +32,7 @@ function revalidateCrmCustomerPaths(customerId?: string) {
 
 export async function createCustomerAction(
   raw: unknown,
-): Promise<{ ok: true; customerId: string; authPasswordResetLink?: string } | { ok: false; message: string }> {
+): Promise<{ ok: true; customerId: string } | { ok: false; message: string }> {
   const user = await requireStaffSession();
   if (!user) {
     return { ok: false, message: "You need an admin or team session to manage customers." };
@@ -46,16 +46,12 @@ export async function createCustomerAction(
     return { ok: false, message: result.message };
   }
   revalidateCrmCustomerPaths(result.customerId);
-  return {
-    ok: true,
-    customerId: result.customerId,
-    ...(result.authPasswordResetLink ? { authPasswordResetLink: result.authPasswordResetLink } : {}),
-  };
+  return { ok: true, customerId: result.customerId };
 }
 
 export async function updateCustomerAction(
   raw: unknown,
-): Promise<{ ok: true; authPasswordResetLink?: string } | { ok: false; message: string }> {
+): Promise<{ ok: true } | { ok: false; message: string }> {
   const user = await requireStaffSession();
   if (!user) {
     return { ok: false, message: "You need an admin or team session to manage customers." };
@@ -71,10 +67,48 @@ export async function updateCustomerAction(
   const id = parsed.data.id;
   revalidateCrmCustomerPaths(id);
   revalidatePath(`/admin/customers/${id}/edit`);
-  return {
-    ok: true,
-    ...(result.authPasswordResetLink ? { authPasswordResetLink: result.authPasswordResetLink } : {}),
-  };
+  return { ok: true };
+}
+
+/** Staff-only: Firebase password-reset link for the Auth user linked to this CRM customer (sensitive — share securely). */
+export async function generatePortalPasswordResetLinkAction(
+  customerId: string,
+): Promise<{ ok: true; link: string } | { ok: false; message: string }> {
+  const user = await requireStaffSession();
+  if (!user) {
+    return { ok: false, message: "You need an admin or team session." };
+  }
+  const id = customerId.trim();
+  if (!id) {
+    return { ok: false, message: "Customer id is required." };
+  }
+  const customer = await getCustomerRecordForOrg(user, id);
+  if (!customer) {
+    return { ok: false, message: "Customer not found." };
+  }
+  const portalUid = customer.portalUserId?.trim();
+  if (!portalUid) {
+    return {
+      ok: false,
+      message: "No portal login is linked. Use Edit customer to link or create Firebase Auth for this email first.",
+    };
+  }
+  const auth = getFirebaseAdminAuth();
+  if (!auth) {
+    return { ok: false, message: "Firebase Admin is not configured." };
+  }
+  try {
+    const u = await auth.getUser(portalUid);
+    const email = u.email?.trim().toLowerCase();
+    if (!email) {
+      return { ok: false, message: "Linked Firebase user has no email address." };
+    }
+    const link = await auth.generatePasswordResetLink(email);
+    return { ok: true, link };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Could not generate password link.";
+    return { ok: false, message };
+  }
 }
 
 export async function addCustomerNoteAction(
