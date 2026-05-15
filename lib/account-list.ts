@@ -7,6 +7,10 @@ export interface AccountListRow {
   companyPhone: string;
   companyEmail: string;
   companyWebsite: string;
-  contactCount: number;
-  activeContactCount: number;
+  /** Newest active contact name, or newest contact when none are active. */
+  contactName: string;
+  /** Customer record id for the displayed contact, when present. */
+  contactId?: string;
+  /** Additional contacts beyond `contactName` (0 when only one or none). */
+  additionalContactCount: number;
 }

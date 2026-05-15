@@ -770,12 +770,13 @@ export function CustomerDetailView({
               {invoices.length === 0 ? (
                 <p className="py-6 text-center text-sm text-muted-foreground">No invoices for this customer.</p>
               ) : (
-                <table className="w-full min-w-[520px] text-left text-sm">
+                <table className="w-full min-w-[600px] text-left text-sm">
                   <thead className="text-muted-foreground">
                     <tr className="border-b border-border">
                       <th className="py-2 pr-4 font-medium">Status</th>
                       <th className="py-2 pr-4 font-medium">Amount</th>
-                      <th className="py-2 font-medium">Issued</th>
+                      <th className="py-2 pr-4 font-medium">Issued</th>
+                      <th className="py-2 font-medium">Open</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -783,8 +784,37 @@ export function CustomerDetailView({
                       <tr key={inv.id} className="border-b border-border/60 last:border-0">
                         <td className="py-2 pr-4 capitalize">{inv.status}</td>
                         <td className="py-2 pr-4">{formatMinor(inv.amountDue, inv.currency)}</td>
-                        <td className="py-2">
+                        <td className="py-2 pr-4">
                           {inv.issuedAtMs ? new Date(inv.issuedAtMs).toLocaleDateString() : "—"}
+                        </td>
+                        <td className="py-2">
+                          {inv.hostedInvoiceUrl || inv.invoicePdf ? (
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                              {inv.hostedInvoiceUrl ? (
+                                <Link
+                                  href={inv.hostedInvoiceUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-xs font-medium text-primary hover:underline"
+                                >
+                                  View
+                                </Link>
+                              ) : null}
+                              {inv.invoicePdf ? (
+                                <Link
+                                  href={inv.invoicePdf}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                                >
+                                  <Download className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                                  PDF
+                                </Link>
+                              ) : null}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
                         </td>
                       </tr>
                     ))}

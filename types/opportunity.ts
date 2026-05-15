@@ -33,8 +33,8 @@ export interface OpportunityRecord {
   /** Snapshot of `customers.customFields` at creation or last explicit sync; displayed on proposals. */
   customFieldsSnapshot: Record<string, string>;
   notes?: string;
-  createdAtMs: number;
-  updatedAtMs: number;
+  createdAt: number;
+  updatedAt: number;
   createdByUid?: string;
 }
 
@@ -45,8 +45,8 @@ export interface OpportunityNoteRecord {
   organizationId?: string;
   authorUid: string;
   body: string;
-  /** Derived from Firestore `createdAt` (Timestamp) or legacy `createdAtMs`. */
-  createdAtMs: number;
+  /** Epoch millis — Firestore `createdAt` (Timestamp) or legacy `createdAtMs`. */
+  createdAt: number;
 }
 
 export type OpportunityActivityKind = "meeting" | "call" | "email" | "other";
@@ -59,9 +59,9 @@ export interface OpportunityActivityRecord {
   kind: OpportunityActivityKind;
   title: string;
   detail?: string;
-  /** When the interaction took place. Derived from Firestore Timestamp or legacy ms. */
-  occurredAtMs: number;
+  /** When the interaction took place — epoch millis (`occurredAt` or legacy `occurredAtMs`). */
+  occurredAt: number;
   authorUid: string;
-  /** Derived from Firestore `createdAt` (Timestamp) or legacy `createdAtMs`. */
-  createdAtMs: number;
+  /** Epoch millis — Firestore `createdAt` (Timestamp) or legacy `createdAtMs`. */
+  createdAt: number;
 }

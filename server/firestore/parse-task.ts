@@ -1,5 +1,5 @@
 import { asNumber, asString } from "@/lib/firestore/coerce";
-import { coerceTimestampToMillis } from "@/lib/firestore/timestamp";
+import { millisFromFirestore } from "@/lib/firestore/timestamp";
 import type { TaskRecord } from "@/types/task";
 
 /** Normalizes reads from Admin SDK Timestamp, legacy ms, optional fields. */
@@ -16,9 +16,9 @@ export function parseTaskRecord(id: string, data: Record<string, unknown>): Task
     customerId: asString(data.customerId),
     title: asString(data.title) ?? "Task",
     status: asString(data.status) ?? "open",
-    dueAtMs: asNumber(data.dueAtMs),
-    startAtMs: asNumber(data.startAtMs),
-    updatedAtMs: coerceTimestampToMillis(data.updatedAt ?? data.updatedAtMs) || Date.now(),
+    dueAt: asNumber(data.dueAt ?? data.dueAtMs),
+    startAt: asNumber(data.startAt ?? data.startAtMs),
+    updatedAt: millisFromFirestore(data, "updatedAt", "updatedAtMs") || Date.now(),
     description: asString(data.description),
     priority: asString(data.priority),
     category: asString(data.category),

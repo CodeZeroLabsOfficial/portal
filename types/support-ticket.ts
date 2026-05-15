@@ -6,5 +6,5 @@ export interface SupportTicketRecord {
   organizationId?: string;
   status: string;
   urgency: SupportTicketUrgency;
-  updatedAtMs: number;
+  updatedAt: number;
 }

@@ -80,6 +80,25 @@ function displayCompanyNameForGroup(sortedNewestFirst: CustomerRecord[]): string
   return raw || "—";
 }
 
+function pickPrimaryContact(group: CustomerRecord[]): {
+  contactName: string;
+  contactId?: string;
+  additionalContactCount: number;
+} {
+  const realContacts = sortGroupNewestFirst(group.filter((r) => !r.accountOnly));
+  const active = realContacts.filter((r) => r.status === "active");
+  const pool = active.length > 0 ? active : realContacts;
+  const primary = pool[0];
+  if (!primary) {
+    return { contactName: "", additionalContactCount: 0 };
+  }
+  return {
+    contactName: primary.name.trim(),
+    contactId: primary.id,
+    additionalContactCount: Math.max(0, pool.length - 1),
+  };
+}
+
 function parseCustomerRecord(id: string, data: Record<string, unknown>): CustomerRecord | null {
   if (typeof data !== "object" || data === null) return null;
   const organizationId = asString(data.organizationId)?.trim();
@@ -334,7 +353,7 @@ export async function getAdminAccountListRows(user: PortalUser): Promise<Account
         break;
       }
     }
-    const realContacts = group.filter((r) => !r.accountOnly);
+    const { contactName, contactId, additionalContactCount } = pickPrimaryContact(group);
     rows.push({
       key,
       displayName,
@@ -342,8 +361,9 @@ export async function getAdminAccountListRows(user: PortalUser): Promise<Account
       companyPhone: pickLatestNonEmpty(sorted, (r) => r.companyPhone),
       companyEmail: pickLatestNonEmpty(sorted, (r) => r.companyEmail),
       companyWebsite: pickLatestNonEmpty(sorted, (r) => r.companyWebsite),
-      contactCount: realContacts.length,
-      activeContactCount: realContacts.filter((r) => r.status === "active").length,
+      contactName,
+      ...(contactId ? { contactId } : {}),
+      additionalContactCount,
     });
   }
 
@@ -1266,6 +1286,35 @@ export async function setCustomerArchived(
   return { ok: true };
 }
 
+async function deleteQueryDocsWhere(
+  db: AdminDb,
+  collection: string,
+  field: string,
+  value: string,
+): Promise<void> {
+  const snap = await db.collection(collection).where(field, "==", value).limit(400).get();
+  if (snap.empty) return;
+  const batch = db.batch();
+  for (const doc of snap.docs) {
+    batch.delete(doc.ref);
+  }
+  await batch.commit();
+  if (snap.size >= 400) await deleteQueryDocsWhere(db, collection, field, value);
+}
+
+/** Deletes proposals linked by `customerId` or legacy `recipientEmail` match. */
+export async function deleteProposalsForCustomerDb(
+  db: AdminDb,
+  customerId: string,
+  recipientEmail: string,
+): Promise<void> {
+  await deleteQueryDocsWhere(db, COLLECTIONS.proposals, "customerId", customerId);
+  const emailLower = recipientEmail.trim().toLowerCase();
+  if (emailLower) {
+    await deleteQueryDocsWhere(db, COLLECTIONS.proposals, "recipientEmail", emailLower);
+  }
+}
+
 export async function deleteCustomerDocument(
   user: PortalUser,
   customerId: string,
@@ -1285,20 +1334,21 @@ export async function deleteCustomerDocument(
 
   const database = db;
 
-  async function deleteQueryDocs(collection: string): Promise<void> {
-    const snap = await database.collection(collection).where("customerId", "==", customerId).limit(400).get();
-    if (snap.empty) return;
-    const batch = database.batch();
-    for (const doc of snap.docs) {
-      batch.delete(doc.ref);
-    }
-    await batch.commit();
-    if (snap.size >= 400) await deleteQueryDocs(collection);
+  await deleteQueryDocsWhere(database, COLLECTIONS.customerNotes, "customerId", customerId);
+  await deleteQueryDocsWhere(database, COLLECTIONS.customerActivities, "customerId", customerId);
+  await deleteQueryDocsWhere(database, COLLECTIONS.signedAgreements, "customerId", customerId);
+  await deleteQueryDocsWhere(database, COLLECTIONS.tasks, "customerId", customerId);
+  await deleteProposalsForCustomerDb(database, customerId, customer.email);
+  await deleteOpportunitiesForCustomerDb(database, customerId);
+
+  const stripeCustomerId = customer.stripeCustomerId?.trim();
+  if (stripeCustomerId) {
+    await deleteQueryDocsWhere(database, COLLECTIONS.subscriptions, "customerId", stripeCustomerId);
+    await deleteQueryDocsWhere(database, COLLECTIONS.invoices, "customerId", stripeCustomerId);
+    await deleteQueryDocsWhere(database, COLLECTIONS.payments, "customerId", stripeCustomerId);
+    await database.collection(COLLECTIONS.stripeCustomers).doc(stripeCustomerId).delete().catch(() => {});
   }
 
-  await deleteQueryDocs(COLLECTIONS.customerNotes);
-  await deleteQueryDocs(COLLECTIONS.customerActivities);
-  await deleteOpportunitiesForCustomerDb(database, customerId);
   await database.collection(COLLECTIONS.customers).doc(customerId).delete();
   return { ok: true };
 }

@@ -28,3 +28,10 @@ export function coerceTimestampToMillis(value: unknown): number {
   }
   return 0;
 }
+
+/**
+ * Epoch millis: prefer `primary` (Firestore Timestamp, number, or protobuf shape), then legacy `legacyMs` number field.
+ */
+export function millisFromFirestore(data: Record<string, unknown>, primary: string, legacyMs: string): number {
+  return coerceTimestampToMillis(data[primary] ?? data[legacyMs]);
+}

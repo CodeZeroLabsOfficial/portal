@@ -51,10 +51,10 @@ export interface CustomerRecord {
    */
   accountOnly?: boolean;
   status: CustomerLifecycleStatus;
-  /** Derived from Firestore `createdAt` (Timestamp) or legacy `createdAtMs`. */
-  createdAtMs: number;
-  /** Derived from Firestore `updatedAt` (Timestamp) or legacy `updatedAtMs`. */
-  updatedAtMs: number;
+  /** Epoch millis — Firestore `createdAt` (Timestamp) or number (legacy: `createdAtMs`). */
+  createdAt: number;
+  /** Epoch millis — Firestore `updatedAt` (Timestamp) or number (legacy: `updatedAtMs`). */
+  updatedAt: number;
   createdByUid?: string;
 }
 
@@ -67,8 +67,8 @@ export interface CustomerNoteRecord {
   authorUid: string;
   body: string;
   kind: CustomerNoteKind;
-  /** Derived from Firestore `createdAt` or legacy `createdAtMs`. */
-  createdAtMs: number;
+  /** Epoch millis — Firestore `createdAt` or legacy `createdAtMs`. */
+  createdAt: number;
 }
 
 export interface CustomerActivityRecord {
@@ -88,6 +88,6 @@ export interface CustomerActivityRecord {
   title: string;
   detail?: string;
   actorUid?: string;
-  /** Derived from Firestore `createdAt` or legacy `createdAtMs`. */
-  createdAtMs: number;
+  /** Epoch millis — Firestore `createdAt` or legacy `createdAtMs`. */
+  createdAt: number;
 }

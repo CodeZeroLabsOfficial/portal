@@ -227,7 +227,7 @@ export interface PackagesPublicSelection {
   kind: "packages";
   tierId: string;
   term: "12_months" | "24_months";
-  updatedAtMs: number;
+  updatedAt: number;
   /** Buyer quantity overrides keyed by add-on line id. */
   addonQuantities?: Record<string, number>;
   /** Buyer opted out of optional add-ons keyed by line id. */
@@ -464,28 +464,28 @@ export interface ProposalRecord {
   /** PBKDF2 string from `hashSharePassword` — if set, public link requires password once per browser. */
   sharePasswordHash?: string;
   /** When the proposal was first sent to the client. */
-  sentAtMs?: number;
+  sentAt?: number;
   /** Public engagement (updated from analytics API). */
   viewCount?: number;
   totalEngagementSeconds?: number;
-  lastViewedAtMs?: number;
+  lastViewedAt?: number;
   /** After explicit acceptance on the public page. */
-  acceptedAtMs?: number;
+  acceptedAt?: number;
   acceptedByName?: string;
   /** PNG data URL captured at acceptance when the buyer signs via the agreement modal. */
   acceptedSignatureDataUrl?: string;
   /** How the signature image was produced (`draw`, `type`, or `upload`). */
   acceptedSignatureMethod?: "draw" | "type" | "upload";
-  /** Optional client clock at sign (ms); server `acceptedAtMs` remains authoritative. */
-  acceptedClientSignedAtMs?: number;
+  /** Optional client clock at sign (ms); server `acceptedAt` remains authoritative. */
+  acceptedClientSignedAt?: number;
   /** Stripe Checkout / PaymentIntent linkage when collecting payment in-proposal. */
   stripePaymentIntentId?: string;
   /** Customer choices from public viewer (e.g. selected package tier). Keyed by block id. */
   publicSelections?: ProposalPublicSelections;
   /** When created from a template (audit). */
   sourceTemplateId?: string;
-  createdAtMs: number;
-  updatedAtMs: number;
+  createdAt: number;
+  updatedAt: number;
 }
 
 /** Staff proposals hub row — account label from linked CRM customer (see pipeline `accountCompanyName`). */

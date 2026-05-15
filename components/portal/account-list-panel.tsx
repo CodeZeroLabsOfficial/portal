@@ -41,11 +41,11 @@ export function AccountListPanel({ rows }: AccountListPanelProps) {
     return rows.filter((row) => {
       const hay = [
         row.displayName,
+        row.contactName,
         row.addressSummary,
         row.companyPhone,
         row.companyEmail,
         row.companyWebsite,
-        String(row.contactCount),
       ]
         .join(" ")
         .toLowerCase();
@@ -92,7 +92,7 @@ export function AccountListPanel({ rows }: AccountListPanelProps) {
               <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search company, address, email, website…"
+                placeholder="Search company, contact, address, email…"
                 className="h-9 rounded-full border-border/80 bg-background/60 pl-9 text-[14px] text-foreground placeholder:text-muted-foreground"
                 aria-label="Search accounts"
               />
@@ -116,11 +116,11 @@ export function AccountListPanel({ rows }: AccountListPanelProps) {
             <thead>
               <tr className="border-b border-border text-muted-foreground">
                 <th className="px-4 py-2.5 font-medium">Company</th>
+                <th className="px-4 py-2.5 font-medium">Contact</th>
                 <th className="px-4 py-2.5 font-medium">Address</th>
                 <th className="px-4 py-2.5 font-medium">Phone</th>
                 <th className="px-4 py-2.5 font-medium">Email</th>
                 <th className="px-4 py-2.5 font-medium">Website</th>
-                <th className="px-4 py-2.5 font-medium">Contacts</th>
                 <th className="w-14 px-2 py-2.5 text-center font-medium">Action</th>
               </tr>
             </thead>
@@ -160,6 +160,29 @@ export function AccountListPanel({ rows }: AccountListPanelProps) {
                           {row.displayName}
                         </Link>
                       </td>
+                      <td className="max-w-[180px] px-4 py-3 align-middle text-muted-foreground">
+                        {row.contactName.trim() ? (
+                          <span className="inline-flex min-w-0 items-baseline gap-1">
+                            {row.contactId ? (
+                              <Link
+                                href={`/admin/customers/${row.contactId}`}
+                                className="truncate font-medium text-foreground underline-offset-4 hover:underline"
+                              >
+                                {row.contactName}
+                              </Link>
+                            ) : (
+                              <span className="truncate">{row.contactName}</span>
+                            )}
+                            {row.additionalContactCount > 0 ? (
+                              <span className="shrink-0 text-[11px] text-muted-foreground/80">
+                                +{row.additionalContactCount}
+                              </span>
+                            ) : null}
+                          </span>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
                       <td className="max-w-[220px] px-4 py-3 align-middle text-muted-foreground">
                         <span className="line-clamp-2">{row.addressSummary}</span>
                       </td>
@@ -182,14 +205,6 @@ export function AccountListPanel({ rows }: AccountListPanelProps) {
                         ) : (
                           <span className="text-muted-foreground">—</span>
                         )}
-                      </td>
-                      <td className="px-4 py-3 align-middle text-muted-foreground">
-                        <span className="tabular-nums">{row.contactCount}</span>
-                        {row.activeContactCount !== row.contactCount ? (
-                          <span className="ml-1 text-[11px] text-muted-foreground/80">
-                            ({row.activeContactCount} active)
-                          </span>
-                        ) : null}
                       </td>
                       <td className="px-2 py-3 text-center align-middle">
                         <DropdownMenu>

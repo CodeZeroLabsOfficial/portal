@@ -20,6 +20,6 @@ export interface PaymentRecord {
   status: PaymentIntentWebhookStatus | string;
   /** Optional description from metadata or invoice linkage. */
   description?: string;
-  createdAtMs: number;
-  updatedAtMs: number;
+  createdAt: number;
+  updatedAt: number;
 }

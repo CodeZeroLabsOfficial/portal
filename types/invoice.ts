@@ -10,6 +10,8 @@ export interface InvoiceRecord {
   amountDue: number;
   hostedInvoiceUrl?: string;
   invoicePdf?: string;
-  issuedAtMs: number;
-  paidAtMs?: number;
+  /** Epoch millis — Firestore `issuedAt` (legacy: `issuedAtMs`). */
+  issuedAt: number;
+  /** Epoch millis — Firestore `paidAt` (legacy: `paidAtMs`). */
+  paidAt?: number;
 }

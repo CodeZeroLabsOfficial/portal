@@ -6,10 +6,10 @@ export interface TaskRecord {
   customerId?: string;
   title: string;
   status: string;
-  dueAtMs?: number;
+  dueAt?: number;
   /** Optional schedule start (epoch ms) for board display. */
-  startAtMs?: number;
-  updatedAtMs: number;
+  startAt?: number;
+  updatedAt: number;
   description?: string;
   priority?: string;
   category?: string;

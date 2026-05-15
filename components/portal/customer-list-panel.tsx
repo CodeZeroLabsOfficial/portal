@@ -119,7 +119,11 @@ export function CustomerListPanel({ rows }: CustomerListPanelProps) {
   }
 
   async function handleDelete(id: string) {
-    if (!window.confirm("Permanently delete this customer and related notes? This cannot be undone.")) {
+    if (
+      !window.confirm(
+        "Permanently delete this customer and all related records (proposals, opportunities, notes, etc.)? This cannot be undone.",
+      )
+    ) {
       return;
     }
     setPendingId(id);
@@ -132,7 +136,11 @@ export function CustomerListPanel({ rows }: CustomerListPanelProps) {
   async function handleBulkDelete() {
     const ids = Array.from(selected);
     if (ids.length === 0) return;
-    if (!window.confirm(`Delete ${ids.length} selected customer${ids.length === 1 ? "" : "s"}? This cannot be undone.`)) {
+    if (
+      !window.confirm(
+        `Delete ${ids.length} selected customer${ids.length === 1 ? "" : "s"} and all related records? This cannot be undone.`,
+      )
+    ) {
       return;
     }
     setBulkBusy(true);

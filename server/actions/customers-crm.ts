@@ -173,6 +173,8 @@ export async function deleteCustomerAction(
   const result = await deleteCustomerDocument(user, customerId);
   if (!result.ok) return { ok: false, message: result.message };
   revalidateCrmCustomerPaths();
+  revalidatePath("/admin/proposals", "layout");
+  revalidatePath("/admin/subscriptions", "layout");
   return { ok: true };
 }
 

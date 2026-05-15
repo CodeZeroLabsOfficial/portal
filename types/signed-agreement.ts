@@ -34,8 +34,8 @@ export interface SignedAgreementRecord {
   /** Organization entered on the public Accept form (optional). */
   signerOrganization?: string;
   signatureMethod: "draw" | "type" | "upload" | null;
-  signedAtMs: number;
-  clientSignedAtMs?: number;
+  signedAt: number;
+  clientSignedAt?: number;
   fullAgreementText?: string;
   /** Inline PNG data URL when Storage upload was skipped or failed (small images). */
   signatureImage?: string;

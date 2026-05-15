@@ -16,5 +16,5 @@ export interface WorkspaceCompanySettings {
   region: string;
   postalCode: string;
   country: string;
-  updatedAtMs: number;
+  updatedAt: number;
 }

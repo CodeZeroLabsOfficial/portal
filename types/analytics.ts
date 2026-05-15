@@ -14,5 +14,5 @@ export interface AnalyticsEvent {
   sectionId?: string;
   durationMs?: number;
   meta?: Record<string, unknown>;
-  createdAtMs: number;
+  createdAt: number;
 }

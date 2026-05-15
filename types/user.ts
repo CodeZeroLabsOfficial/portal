@@ -39,7 +39,7 @@ export interface PortalUser {
   currencyCode?: string;
   /**
    * When this profile was first created (ms since epoch). Derived from Firestore `createdAt`
-   * (Timestamp) or legacy `createdAtMs` when loading — not written back under `joinedAtMs`.
+   * (Timestamp) or legacy `createdAtMs` when loading — not written back under `joinedAt`.
    */
-  joinedAtMs: number;
+  joinedAt: number;
 }

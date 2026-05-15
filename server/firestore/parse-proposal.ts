@@ -1,6 +1,7 @@
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import { asNumber, asString } from "@/lib/firestore/coerce";
+import { millisFromFirestore } from "@/lib/firestore/timestamp";
 import { parseProposalDocument } from "@/lib/schemas/proposal-document";
 import type {
   ProposalBlock,
@@ -87,7 +88,7 @@ function parsePublicSelections(raw: unknown): ProposalPublicSelections | undefin
       kind: "packages",
       tierId,
       term,
-      updatedAtMs: asNumber(o.updatedAtMs) ?? Date.now(),
+      updatedAt: asNumber(o.updatedAt ?? o.updatedAtMs) ?? Date.now(),
       ...(Object.keys(addonQuantities).length > 0 ? { addonQuantities } : {}),
       ...(Object.keys(addonOptionalOff).length > 0 ? { addonOptionalOff } : {}),
     };
@@ -119,11 +120,11 @@ export function parseProposalRecord(id: string, data: Record<string, unknown>): 
     branding: parseBranding(data.branding),
     documentVersion: asNumber(data.documentVersion),
     sharePasswordHash: asString(data.sharePasswordHash),
-    sentAtMs: asNumber(data.sentAtMs),
+    sentAt: asNumber(data.sentAt ?? data.sentAtMs),
     viewCount: asNumber(data.viewCount),
     totalEngagementSeconds: asNumber(data.totalEngagementSeconds),
-    lastViewedAtMs: asNumber(data.lastViewedAtMs),
-    acceptedAtMs: asNumber(data.acceptedAtMs),
+    lastViewedAt: asNumber(data.lastViewedAt ?? data.lastViewedAtMs),
+    acceptedAt: asNumber(data.acceptedAt ?? data.acceptedAtMs),
     acceptedByName: asString(data.acceptedByName),
     acceptedSignatureDataUrl: asString(data.acceptedSignatureDataUrl),
     acceptedSignatureMethod:
@@ -132,12 +133,12 @@ export function parseProposalRecord(id: string, data: Record<string, unknown>): 
       data.acceptedSignatureMethod === "upload"
         ? data.acceptedSignatureMethod
         : undefined,
-    acceptedClientSignedAtMs: asNumber(data.acceptedClientSignedAtMs),
+    acceptedClientSignedAt: asNumber(data.acceptedClientSignedAt ?? data.acceptedClientSignedAtMs),
     stripePaymentIntentId: asString(data.stripePaymentIntentId),
     publicSelections: parsePublicSelections(data.publicSelections),
     sourceTemplateId: asString(data.sourceTemplateId),
-    createdAtMs: asNumber(data.createdAtMs) ?? 0,
-    updatedAtMs: asNumber(data.updatedAtMs) ?? 0,
+    createdAt: millisFromFirestore(data, "createdAt", "createdAtMs"),
+    updatedAt: millisFromFirestore(data, "updatedAt", "updatedAtMs"),
   };
 }
 

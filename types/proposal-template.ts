@@ -19,6 +19,6 @@ export interface ProposalTemplateRecord {
   stage: ProposalTemplateStage;
   document: ProposalDocument;
   branding?: ProposalBranding;
-  createdAtMs: number;
-  updatedAtMs: number;
+  createdAt: number;
+  updatedAt: number;
 }
