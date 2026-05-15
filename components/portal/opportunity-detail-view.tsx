@@ -107,8 +107,8 @@ function OpportunityStageProgress({ opportunity, customer }: OpportunityStagePro
   const busy = pendingId === opportunity.id;
   const currentIndex = OPPORTUNITY_STAGES.indexOf(opportunity.stage);
 
-  const startDate = opportunity.createdAtMs
-    ? new Date(opportunity.createdAtMs).toLocaleDateString(undefined, {
+  const startDate = opportunity.createdAt
+    ? new Date(opportunity.createdAt).toLocaleDateString(undefined, {
         day: "2-digit",
         month: "2-digit",
         year: "numeric",
@@ -263,7 +263,7 @@ function NotesSection({ opportunityId, notes }: NotesSectionProps) {
   }
 
   const sorted = React.useMemo(
-    () => [...notes].sort((a, b) => b.createdAtMs - a.createdAtMs),
+    () => [...notes].sort((a, b) => b.createdAt - a.createdAt),
     [notes],
   );
 
@@ -322,8 +322,8 @@ function NotesSection({ opportunityId, notes }: NotesSectionProps) {
                     <StickyNote className="h-3.5 w-3.5" aria-hidden />
                     Note
                   </span>
-                  <time dateTime={new Date(n.createdAtMs).toISOString()}>
-                    {new Date(n.createdAtMs).toLocaleString(undefined, {
+                  <time dateTime={new Date(n.createdAt).toISOString()}>
+                    {new Date(n.createdAt).toLocaleString(undefined, {
                       dateStyle: "medium",
                       timeStyle: "short",
                     })}
@@ -372,7 +372,7 @@ function ActivitySection({ opportunityId, activities }: ActivitySectionProps) {
         kind,
         title,
         detail: detail.trim() ? detail : undefined,
-        occurredAtMs:
+        occurredAt:
           typeof occurredAtMs === "number" && Number.isFinite(occurredAtMs)
             ? occurredAtMs
             : undefined,
@@ -393,7 +393,7 @@ function ActivitySection({ opportunityId, activities }: ActivitySectionProps) {
   }
 
   const sorted = React.useMemo(
-    () => [...activities].sort((a, b) => b.occurredAtMs - a.occurredAtMs),
+    () => [...activities].sort((a, b) => b.occurredAt - a.occurredAt),
     [activities],
   );
 
@@ -497,8 +497,8 @@ function ActivitySection({ opportunityId, activities }: ActivitySectionProps) {
                   </span>
                   <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
                     <span className="font-medium uppercase tracking-wide">{meta.label}</span>
-                    <time dateTime={new Date(a.occurredAtMs).toISOString()}>
-                      {new Date(a.occurredAtMs).toLocaleString(undefined, {
+                    <time dateTime={new Date(a.occurredAt).toISOString()}>
+                      {new Date(a.occurredAt).toLocaleString(undefined, {
                         dateStyle: "medium",
                         timeStyle: "short",
                       })}

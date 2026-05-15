@@ -186,7 +186,7 @@ export const setDefaultPaymentMethod = functions.region("australia-southeast1").
       expYear: card?.exp_year ?? 0,
       isDefault: true,
       stripePmId,
-      updatedAtMs: nowMs,
+      updatedAt: nowMs,
     },
     {merge: true},
   );
@@ -254,7 +254,7 @@ export const updatePaymentMethod = functions.region("australia-southeast1").http
     expYear: expYearInput ?? card?.exp_year ?? 0,
     isDefault,
     stripePmId: stripePaymentMethodId,
-    updatedAtMs: nowMs,
+    updatedAt: nowMs,
   }, {merge: true});
 
   return {ok: true, stripePmId: stripePaymentMethodId, isDefault};

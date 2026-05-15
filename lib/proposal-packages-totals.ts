@@ -91,7 +91,7 @@ export function computeProposalDealValue(
       kind: "packages",
       tierId: fallbackTier.id,
       term: "12_months",
-      updatedAtMs: 0,
+      updatedAt: 0,
     };
     const tier = block.tiers.find((t) => t.id === sel.tierId) ?? fallbackTier;
     const effective: PackagesPublicSelection = { ...sel, tierId: tier.id };

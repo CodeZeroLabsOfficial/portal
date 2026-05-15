@@ -70,7 +70,7 @@ export function TasksList({ tasks }: TasksListProps) {
                     </select>
                   </td>
                   <td className="px-4 py-3 align-middle text-muted-foreground tabular-nums">
-                    {new Date(task.updatedAtMs).toLocaleString()}
+                    {new Date(task.updatedAt).toLocaleString()}
                   </td>
                   <td className="px-4 py-3 align-middle">
                     {task.customerId ? (

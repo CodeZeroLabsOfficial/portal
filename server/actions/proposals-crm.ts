@@ -184,10 +184,7 @@ export async function createDraftProposalFromCustomerAction(
       recipientEmail,
       status: "draft",
       shareToken,
-      document: omitUndefinedDeep(encodeProposalDocumentForFirestore(document)),
-      createdAtMs: now,
-      updatedAtMs: now,
-      createdAt: FieldValue.serverTimestamp(),
+      document: omitUndefinedDeep(encodeProposalDocumentForFirestore(document)),      createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     };
     if (branding) {
@@ -273,10 +270,7 @@ export async function createDraftProposalFromOpportunityAction(
       recipientEmail,
       status: "draft",
       shareToken,
-      document: omitUndefinedDeep(encodeProposalDocumentForFirestore(document)),
-      createdAtMs: now,
-      updatedAtMs: now,
-      createdAt: FieldValue.serverTimestamp(),
+      document: omitUndefinedDeep(encodeProposalDocumentForFirestore(document)),      createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     };
     if (branding) {

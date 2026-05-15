@@ -116,7 +116,7 @@ export async function persistCustomerSubscriptionIntentAfterAccept(
           proposalTitle: proposal.title,
           stripePriceId: stripePriceId.trim(),
           planSummary: planSummary.trim() || proposal.title,
-          recordedAtMs: nowMs,
+          recordedAt: nowMs,
         },
         updatedAt: FieldValue.serverTimestamp(),
       },

@@ -135,7 +135,7 @@ export async function addOpportunityActivityAction(
     kind: parsed.data.kind,
     title: parsed.data.title,
     detail: parsed.data.detail,
-    occurredAtMs: parsed.data.occurredAtMs,
+    occurredAt: parsed.data.occurredAt,
   });
   if (!result.ok) return { ok: false, message: result.message };
 

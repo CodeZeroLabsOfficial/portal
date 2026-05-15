@@ -62,7 +62,7 @@ export async function listTasksForStaff(user: PortalUser): Promise<TaskRecord[]>
       .get();
     return snap.docs
       .map((d) => parseTaskRecord(d.id, d.data() as Record<string, unknown>))
-      .sort((a, b) => b.updatedAtMs - a.updatedAtMs);
+      .sort((a, b) => b.updatedAt - a.updatedAt);
   } catch (error) {
     logError("crm_list_tasks_failed", {
       message: error instanceof Error ? error.message : "unknown",
@@ -87,7 +87,6 @@ export async function updateTaskBoardColumn(
     .update({
       status: boardColumnToStatus(column),
       updatedAt: FieldValue.serverTimestamp(),
-      updatedAtMs: Date.now(),
     });
 
   return { ok: true };
@@ -121,7 +120,6 @@ export async function updateTaskForStaff(
     priority: normalizeTaskPriority(input.priority),
     progressPercent: clampProgressPercent(input.progressPercent),
     updatedAt: FieldValue.serverTimestamp(),
-    updatedAtMs: Date.now(),
   };
   if (descTrimmed.length > 0) {
     payload.description = descTrimmed;
@@ -181,7 +179,6 @@ export async function createTaskForStaff(
     assigneeCount: 1,
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
-    updatedAtMs: now,
   });
 
   return { ok: true, taskId: docRef.id };

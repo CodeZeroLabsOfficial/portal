@@ -76,8 +76,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
   if (event === "view") {
     const pack: Record<string, unknown> = {
       viewCount: FieldValue.increment(1),
-      lastViewedAtMs: now,
-      updatedAtMs: now,
+      lastViewedAt: now,
       updatedAt: FieldValue.serverTimestamp(),
     };
     if (proposal.status === "published") {
@@ -91,8 +90,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
     }
     await ref.update({
       totalEngagementSeconds: FieldValue.increment(delta),
-      lastViewedAtMs: now,
-      updatedAtMs: now,
+      lastViewedAt: now,
       updatedAt: FieldValue.serverTimestamp(),
     });
   }

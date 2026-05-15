@@ -69,7 +69,7 @@ export async function createProposalPublicSubscriptionAction(
   if (!proposal.customerId?.trim()) {
     return { ok: false, message: "This proposal is not linked to a customer." };
   }
-  if (typeof proposal.acceptedAtMs !== "number" || !Number.isFinite(proposal.acceptedAtMs)) {
+  if (typeof proposal.acceptedAt !== "number" || !Number.isFinite(proposal.acceptedAt)) {
     return { ok: false, message: "Missing acceptance timestamp." };
   }
 
@@ -98,7 +98,7 @@ export async function createProposalPublicSubscriptionAction(
     };
   }
 
-  const startDateIso = utcDateIsoFromMillis(proposal.acceptedAtMs);
+  const startDateIso = utcDateIsoFromMillis(proposal.acceptedAt);
 
   const { stripeCustomerId, created } = await ensureStripeCustomer(stripe, crm, proposal.organizationId);
   if (created || crm.stripeCustomerId !== stripeCustomerId) {

@@ -17,7 +17,7 @@ export const addOpportunityActivitySchema = z.object({
   title: trimmed.min(1, "Title is required").max(240),
   detail: trimmed.max(4000).optional(),
   /** When the interaction took place. Defaults to "now" server-side when omitted. */
-  occurredAtMs: z
+  occurredAt: z
     .number()
     .int()
     .finite()

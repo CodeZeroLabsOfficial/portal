@@ -190,8 +190,8 @@ function OpportunityCard({
           {opp.leadContactName}
         </Link>
         <div className="mt-1.5 space-y-0.5 text-[11px] leading-snug text-muted-foreground">
-          <p>Created: {formatOpportunityCardDate(opp.createdAtMs)}</p>
-          <p>Last update: {formatOpportunityCardDate(opp.updatedAtMs)}</p>
+          <p>Created: {formatOpportunityCardDate(opp.createdAt)}</p>
+          <p>Last update: {formatOpportunityCardDate(opp.updatedAt)}</p>
         </div>
 
         {typeof opp.amountMinor === "number" ? (
@@ -301,8 +301,8 @@ export function OpportunitiesBoard({ opportunities }: OpportunitiesBoardProps) {
             <p className="text-[13px] font-semibold text-foreground">{activeOpp.name}</p>
             <p className="mt-1 text-[11px] text-muted-foreground">{activeOpp.leadContactName}</p>
             <div className="mt-1.5 space-y-0.5 text-[11px] leading-snug text-muted-foreground">
-              <p>Created: {formatOpportunityCardDate(activeOpp.createdAtMs)}</p>
-              <p>Last update: {formatOpportunityCardDate(activeOpp.updatedAtMs)}</p>
+              <p>Created: {formatOpportunityCardDate(activeOpp.createdAt)}</p>
+              <p>Last update: {formatOpportunityCardDate(activeOpp.updatedAt)}</p>
             </div>
           </div>
         ) : null}

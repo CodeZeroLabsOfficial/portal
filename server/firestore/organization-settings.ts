@@ -1,6 +1,7 @@
 import type { PortalUser } from "@/types/user";
 import type { WorkspaceCompanySettings } from "@/types/organization";
 import { asNumber, asString } from "@/lib/firestore/coerce";
+import { millisFromFirestore } from "@/lib/firestore/timestamp";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import { COLLECTIONS } from "@/server/firestore/collections";
 
@@ -24,7 +25,7 @@ const emptySettings = (organizationDocId: string): WorkspaceCompanySettings => (
   region: "",
   postalCode: "",
   country: "",
-  updatedAtMs: 0,
+  updatedAt: 0,
 });
 
 export async function getWorkspaceCompanySettings(user: PortalUser): Promise<WorkspaceCompanySettings | null> {
@@ -54,6 +55,6 @@ export async function getWorkspaceCompanySettings(user: PortalUser): Promise<Wor
     region: asString(data.region) ?? "",
     postalCode: asString(data.postalCode) ?? "",
     country: asString(data.country) ?? "",
-    updatedAtMs: asNumber(data.updatedAtMs) ?? 0,
+    updatedAt: millisFromFirestore(data, "updatedAt", "updatedAtMs"),
   };
 }

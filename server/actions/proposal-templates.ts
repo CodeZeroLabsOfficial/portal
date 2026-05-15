@@ -46,10 +46,7 @@ export async function createProposalTemplateAction(): Promise<
         document: {
           title: "Untitled proposal",
           blocks: [],
-        },
-        createdAtMs: now,
-        updatedAtMs: now,
-        createdAt: FieldValue.serverTimestamp(),
+        },        createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       }),
   );
@@ -90,10 +87,7 @@ export async function cloneProposalTemplateAction(
     description: source.description?.trim() ? source.description.trim() : "",
     templateType: source.templateType,
     stage: "draft",
-    document: omitUndefinedDeep(encodeProposalDocumentForFirestore(source.document)) as Record<string, unknown>,
-    createdAtMs: now,
-    updatedAtMs: now,
-    createdAt: FieldValue.serverTimestamp(),
+    document: omitUndefinedDeep(encodeProposalDocumentForFirestore(source.document)) as Record<string, unknown>,    createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   };
   if (source.branding && Object.keys(source.branding).length > 0) {
@@ -149,9 +143,7 @@ export async function saveProposalTemplateAction(
           description: parsed.data.description?.trim()
             ? parsed.data.description.trim()
             : FieldValue.delete(),
-          document: omitUndefinedDeep(encodeProposalDocumentForFirestore(normalized)) as Record<string, unknown>,
-          updatedAtMs: Date.now(),
-          updatedAt: FieldValue.serverTimestamp(),
+          document: omitUndefinedDeep(encodeProposalDocumentForFirestore(normalized)) as Record<string, unknown>,          updatedAt: FieldValue.serverTimestamp(),
         }),
   );
   if (!write.ok) return write;
@@ -186,9 +178,7 @@ export async function setProposalTemplateStageAction(
     "Could not update template stage.",
     () =>
       db.collection(COLLECTIONS.proposalTemplates).doc(templateId).update({
-        stage: parsedStage.data,
-        updatedAtMs: Date.now(),
-        updatedAt: FieldValue.serverTimestamp(),
+        stage: parsedStage.data,        updatedAt: FieldValue.serverTimestamp(),
       }),
   );
   if (!write.ok) return write;

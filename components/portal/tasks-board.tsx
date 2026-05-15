@@ -147,8 +147,8 @@ function TaskCard({
     : undefined;
 
   const pct = Math.min(100, Math.max(0, task.progressPercent ?? 0));
-  const showStart = typeof task.startAtMs === "number";
-  const showDue = !showStart && typeof task.dueAtMs === "number";
+  const showStart = typeof task.startAt === "number";
+  const showDue = !showStart && typeof task.dueAt === "number";
   const attachments = task.attachmentCount ?? 0;
   const comments = task.commentCount ?? 0;
   const assignees = task.assigneeCount ?? 0;
@@ -223,8 +223,8 @@ function TaskCard({
           <div className="mt-2 flex items-center gap-1.5 text-[11px] text-muted-foreground">
             <Clock className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
             <span>
-              {showStart ? `Start Date: ${formatBoardDate(task.startAtMs!)}` : null}
-              {showDue ? `Due: ${formatBoardDate(task.dueAtMs!)}` : null}
+              {showStart ? `Start Date: ${formatBoardDate(task.startAt!)}` : null}
+              {showDue ? `Due: ${formatBoardDate(task.dueAt!)}` : null}
             </span>
           </div>
         ) : null}

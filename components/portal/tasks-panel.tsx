@@ -44,7 +44,7 @@ function filterTasksForTab(tasks: TaskRecord[], tab: TaskHubFilterTab, viewerUid
       return tasks.filter((t) => {
         const col = statusToBoardColumn(t.status);
         const dueSoon =
-          typeof t.dueAtMs === "number" && t.dueAtMs <= now + weekMs && t.dueAtMs >= now - DAY_MS;
+          typeof t.dueAt === "number" && t.dueAt <= now + weekMs && t.dueAt >= now - DAY_MS;
         return col === "review" || dueSoon;
       });
     default:

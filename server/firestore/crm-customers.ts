@@ -2,7 +2,7 @@ import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { isStaff } from "@/lib/auth/server-session";
 import { asNumber, asString, asStringStringMap } from "@/lib/firestore/coerce";
 import { logError } from "@/lib/logging";
-import { coerceTimestampToMillis } from "@/lib/firestore/timestamp";
+import { coerceTimestampToMillis, millisFromFirestore } from "@/lib/firestore/timestamp";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import { resolveOrCreateFirebaseUserByEmail } from "@/server/auth/resolve-or-create-firebase-user";
@@ -61,7 +61,7 @@ function companyAddressSummary(c: CustomerRecord): string {
  * per group in `getAdminAccountListRows` / `getAccountDetailForKey`).
  */
 function sortGroupNewestFirst(customers: CustomerRecord[]): CustomerRecord[] {
-  return [...customers].sort((a, b) => (b.updatedAtMs || 0) - (a.updatedAtMs || 0));
+  return [...customers].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
 }
 
 function pickLatestNonEmpty(
@@ -142,8 +142,8 @@ function parseCustomerRecord(id: string, data: Record<string, unknown>): Custome
     avatarUrl: asString(data.avatarUrl),
     crmType,
     status,
-    createdAtMs: coerceTimestampToMillis(data.createdAt ?? data.createdAtMs),
-    updatedAtMs: coerceTimestampToMillis(data.updatedAt ?? data.updatedAtMs),
+    createdAt: coerceTimestampToMillis(data.createdAt ?? data.createdAtMs),
+    updatedAt: coerceTimestampToMillis(data.updatedAt ?? data.updatedAtMs),
     createdByUid: asString(data.createdByUid),
   };
 }
@@ -213,17 +213,20 @@ function parseSubscriptionFirestore(id: string, data: Record<string, unknown>): 
     interval: data.interval === "year" ? "year" : data.interval === "month" ? "month" : undefined,
     subscriptionStart: asNumber(data.subscriptionStart) ?? asNumber(data.plannedSubscriptionStartMs),
     subscriptionEnd: asNumber(data.subscriptionEnd) ?? asNumber(data.subscriptionEndMs),
-    currentPeriodEndMs: asNumber(data.currentPeriodEndMs),
+    currentPeriodEnd:
+      asNumber(data.currentPeriodEnd ?? data.currentPeriodEndMs) ?? undefined,
     cancelAtPeriodEnd: typeof data.cancelAtPeriodEnd === "boolean" ? data.cancelAtPeriodEnd : undefined,
     monthlyAmountMinor: asNumber(data.monthlyAmountMinor),
-    createdAtMs: asNumber(data.createdAtMs),
+    ...(millisFromFirestore(data, "createdAt", "createdAtMs") > 0
+      ? { createdAt: millisFromFirestore(data, "createdAt", "createdAtMs") }
+      : {}),
     collectionMethod:
       data.collectionMethod === "charge_automatically" || data.collectionMethod === "send_invoice"
         ? data.collectionMethod
         : undefined,
     defaultPaymentMethodType: asString(data.defaultPaymentMethodType),
     mrrAmount: asNumber(data.mrrAmount),
-    updatedAtMs: asNumber(data.updatedAtMs) ?? Date.now(),
+    updatedAt: millisFromFirestore(data, "updatedAt", "updatedAtMs") || Date.now(),
   };
 }
 
@@ -271,7 +274,7 @@ export async function getAdminSubscriptionsSnapshot(
     }
 
     const subscriptions = await listAllSubscriptionsForStaff(db);
-    subscriptions.sort((a, b) => (b.updatedAtMs ?? 0) - (a.updatedAtMs ?? 0));
+    subscriptions.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
 
     return { subscriptions, stripeCustomerLinks };
   } catch (error) {
@@ -294,7 +297,7 @@ async function listCustomerRecordsForStaffSorted(
     return customerSnap.docs
       .map((doc) => parseCustomerRecord(doc.id, doc.data() as Record<string, unknown>))
       .filter((c): c is CustomerRecord => c !== null)
-      .sort((a, b) => (b.updatedAtMs || b.createdAtMs) - (a.updatedAtMs || a.createdAtMs));
+      .sort((a, b) => (b.updatedAt || b.createdAt) - (a.updatedAt || a.createdAt));
   } catch (error) {
     logError("crm_list_customers_failed", {
       message: error instanceof Error ? error.message : "unknown",
@@ -638,7 +641,7 @@ function parseNote(id: string, data: Record<string, unknown>): CustomerNoteRecor
     authorUid: asString(data.authorUid) ?? "",
     body: asString(data.body) ?? "",
     kind,
-    createdAtMs: coerceTimestampToMillis(data.createdAt ?? data.createdAtMs),
+    createdAt: coerceTimestampToMillis(data.createdAt ?? data.createdAtMs),
   };
 }
 
@@ -666,7 +669,7 @@ function parseActivity(id: string, data: Record<string, unknown>): CustomerActiv
     title: asString(data.title) ?? "Activity",
     detail: asString(data.detail),
     actorUid: asString(data.actorUid),
-    createdAtMs: coerceTimestampToMillis(data.createdAt ?? data.createdAtMs),
+    createdAt: coerceTimestampToMillis(data.createdAt ?? data.createdAtMs),
   };
 }
 
@@ -688,7 +691,7 @@ export async function listCustomerNotes(
     const rows = snap.docs
       .map((d) => parseNote(d.id, d.data() as Record<string, unknown>))
       .filter((n): n is CustomerNoteRecord => n !== null);
-    return rows.sort((a, b) => b.createdAtMs - a.createdAtMs);
+    return rows.sort((a, b) => b.createdAt - a.createdAt);
   } catch {
     return [];
   }
@@ -712,7 +715,7 @@ export async function listCustomerActivities(
     const rows = snap.docs
       .map((d) => parseActivity(d.id, d.data() as Record<string, unknown>))
       .filter((a): a is CustomerActivityRecord => a !== null);
-    return rows.sort((a, b) => b.createdAtMs - a.createdAtMs);
+    return rows.sort((a, b) => b.createdAt - a.createdAt);
   } catch {
     return [];
   }
@@ -735,8 +738,8 @@ function parseInvoice(id: string, data: Record<string, unknown>): InvoiceRecord 
     amountDue: asNumber(data.amountDue) ?? 0,
     hostedInvoiceUrl: asString(data.hostedInvoiceUrl),
     invoicePdf: asString(data.invoicePdf),
-    issuedAtMs: asNumber(data.issuedAtMs) ?? 0,
-    paidAtMs: asNumber(data.paidAtMs),
+    issuedAt: millisFromFirestore(data, "issuedAt", "issuedAtMs"),
+    paidAt: asNumber(data.paidAt ?? data.paidAtMs),
   };
 }
 
@@ -753,7 +756,7 @@ export async function listInvoicesForStripeCustomer(
       .limit(50)
       .get();
     const rows = snap.docs.map((d) => parseInvoice(d.id, d.data() as Record<string, unknown>));
-    return rows.sort((a, b) => (b.issuedAtMs ?? 0) - (a.issuedAtMs ?? 0));
+    return rows.sort((a, b) => (b.issuedAt ?? 0) - (a.issuedAt ?? 0));
   } catch {
     return [];
   }
@@ -772,7 +775,7 @@ export async function listSubscriptionsForStripeCustomer(
       .limit(50)
       .get();
     const rows = snap.docs.map((d) => parseSubscriptionFirestore(d.id, d.data() as Record<string, unknown>));
-    return rows.sort((a, b) => (b.updatedAtMs ?? 0) - (a.updatedAtMs ?? 0));
+    return rows.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
   } catch {
     return [];
   }
@@ -815,7 +818,7 @@ export async function listProposalsLinkedToCustomer(
       seen.add(doc.id);
       rows.push(parseProposalRecord(doc.id, doc.data() as Record<string, unknown>));
     }
-    return rows.sort((a, b) => (b.updatedAtMs ?? 0) - (a.updatedAtMs ?? 0));
+    return rows.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
   } catch (err) {
     logError("listProposalsLinkedToCustomer", { err: err instanceof Error ? err.message : String(err) });
     return [];
@@ -842,7 +845,7 @@ export async function listSignedAgreementsForCustomer(
       const parsed = parseSignedAgreementRecord(d.id, d.data() as Record<string, unknown>);
       if (parsed) rows.push(parsed);
     }
-    return rows.sort((a, b) => b.signedAtMs - a.signedAtMs);
+    return rows.sort((a, b) => b.signedAt - a.signedAt);
   } catch (err) {
     logError("list_signed_agreements_for_customer_failed", {
       customerId,
@@ -1017,8 +1020,8 @@ export async function createCustomerDocument(
         customFields,
         crmType,
         status: "active",
-        createdAtMs: Date.now(),
-        updatedAtMs: Date.now(),
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
       };
       const { stripeCustomerId, created } = await ensureStripeCustomer(stripe, crmForStripe);
       if (created) {

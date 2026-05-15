@@ -128,10 +128,10 @@ function newCustomersMomStats(customers: PortalUser[], now: Date): {
   const lastMonthStart = startOfPreviousMonthMs(now);
   const nowMs = now.getTime();
   const newThisMonth = customers.filter(
-    (c) => c.joinedAtMs >= thisMonthStart && c.joinedAtMs <= nowMs,
+    (c) => c.joinedAt >= thisMonthStart && c.joinedAt <= nowMs,
   ).length;
   const newLastMonth = customers.filter(
-    (c) => c.joinedAtMs >= lastMonthStart && c.joinedAtMs < thisMonthStart,
+    (c) => c.joinedAt >= lastMonthStart && c.joinedAt < thisMonthStart,
   ).length;
   if (newLastMonth === 0 && newThisMonth === 0) {
     return { pct: 0, neutral: true, lastMonthNew: 0 };
@@ -176,9 +176,9 @@ function paidInvoicesInRange(invoices: InvoiceRecord[], startMs: number, endMs: 
   return invoices.filter(
     (inv) =>
       inv.status === "paid" &&
-      typeof inv.paidAtMs === "number" &&
-      inv.paidAtMs >= startMs &&
-      inv.paidAtMs <= endMs,
+      typeof inv.paidAt === "number" &&
+      inv.paidAt >= startMs &&
+      inv.paidAt <= endMs,
   );
 }
 
@@ -281,7 +281,7 @@ function countTasksDueAndOverdue(tasks: TaskRecord[], now: Date): { dueThisWeek:
     if (!isTaskOpenStatus(t.status)) {
       continue;
     }
-    const due = t.dueAtMs;
+    const due = t.dueAt;
     if (due === undefined || !Number.isFinite(due)) {
       continue;
     }
@@ -343,11 +343,11 @@ function paidRevenueMomStats(invoices: InvoiceRecord[], now: Date): {
 
 export function AdminHomeRightAside({ data }: { data: AdminPortalData }) {
   const proposals = [...data.proposals]
-    .sort((a, b) => b.updatedAtMs - a.updatedAtMs)
+    .sort((a, b) => b.updatedAt - a.updatedAt)
     .slice(0, 5);
 
   const activities = [...data.proposals]
-    .sort((a, b) => b.updatedAtMs - a.updatedAtMs)
+    .sort((a, b) => b.updatedAt - a.updatedAt)
     .slice(0, 4);
 
   return (

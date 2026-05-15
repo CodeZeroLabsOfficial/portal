@@ -147,8 +147,8 @@ export function OpportunitiesList({ opportunities }: OpportunitiesListProps) {
                         : "—"}
                     </td>
                     <td className="px-4 py-3 align-middle text-muted-foreground">
-                      {opp.updatedAtMs
-                        ? new Date(opp.updatedAtMs).toLocaleDateString(undefined, {
+                      {opp.updatedAt
+                        ? new Date(opp.updatedAt).toLocaleDateString(undefined, {
                             day: "numeric",
                             month: "short",
                           })

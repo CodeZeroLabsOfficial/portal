@@ -2,6 +2,7 @@ import { unstable_noStore as noStore } from "next/cache";
 import { isStaff } from "@/lib/auth/server-session";
 import { asBoolean, asNumber, asString } from "@/lib/firestore/coerce";
 import { profileJoinedAtMillisFromRawUser } from "@/lib/firestore/profile-joined-at";
+import { millisFromFirestore } from "@/lib/firestore/timestamp";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import type { InvoiceRecord } from "@/types/invoice";
@@ -87,17 +88,20 @@ function parseSubscription(id: string, data: Record<string, unknown>): Subscript
     interval: data.interval === "year" ? "year" : data.interval === "month" ? "month" : undefined,
     subscriptionStart: asNumber(data.subscriptionStart) ?? asNumber(data.plannedSubscriptionStartMs),
     subscriptionEnd: asNumber(data.subscriptionEnd) ?? asNumber(data.subscriptionEndMs),
-    currentPeriodEndMs: asNumber(data.currentPeriodEndMs),
+    currentPeriodEnd:
+      asNumber(data.currentPeriodEnd ?? data.currentPeriodEndMs) ?? undefined,
     cancelAtPeriodEnd: asBoolean(data.cancelAtPeriodEnd),
     monthlyAmountMinor: asNumber(data.monthlyAmountMinor),
-    createdAtMs: asNumber(data.createdAtMs),
+    ...(millisFromFirestore(data, "createdAt", "createdAtMs") > 0
+      ? { createdAt: millisFromFirestore(data, "createdAt", "createdAtMs") }
+      : {}),
     collectionMethod:
       data.collectionMethod === "charge_automatically" || data.collectionMethod === "send_invoice"
         ? data.collectionMethod
         : undefined,
     defaultPaymentMethodType: asString(data.defaultPaymentMethodType),
     mrrAmount: asNumber(data.mrrAmount),
-    updatedAtMs: asNumber(data.updatedAtMs) ?? Date.now(),
+    updatedAt: millisFromFirestore(data, "updatedAt", "updatedAtMs") || Date.now(),
   };
 }
 
@@ -111,8 +115,8 @@ function parsePayment(id: string, data: Record<string, unknown>): PaymentRecord 
     amount: asNumber(data.amount) ?? 0,
     status: asString(data.status) ?? "processing",
     description: asString(data.description),
-    createdAtMs: asNumber(data.createdAtMs) ?? 0,
-    updatedAtMs: asNumber(data.updatedAtMs) ?? Date.now(),
+    createdAt: millisFromFirestore(data, "createdAt", "createdAtMs"),
+    updatedAt: millisFromFirestore(data, "updatedAt", "updatedAtMs") || Date.now(),
   };
 }
 
@@ -134,8 +138,8 @@ function parseInvoice(id: string, data: Record<string, unknown>): InvoiceRecord 
     amountDue: asNumber(data.amountDue) ?? 0,
     hostedInvoiceUrl: asString(data.hostedInvoiceUrl),
     invoicePdf: asString(data.invoicePdf),
-    issuedAtMs: asNumber(data.issuedAtMs) ?? 0,
-    paidAtMs: asNumber(data.paidAtMs),
+    issuedAt: millisFromFirestore(data, "issuedAt", "issuedAtMs"),
+    paidAt: asNumber(data.paidAt ?? data.paidAtMs),
   };
 }
 
@@ -151,7 +155,7 @@ function parsePortalUser(id: string, data: Record<string, unknown>): PortalUser 
     role,
     organizationId: asString(data.organizationId),
     stripeCustomerId: asString(data.stripeCustomerId),
-    joinedAtMs: profileJoinedAtMillisFromRawUser(data, nowMs),
+    joinedAt: profileJoinedAtMillisFromRawUser(data, nowMs),
   };
 }
 
@@ -327,7 +331,7 @@ function parseSupportTicket(id: string, data: Record<string, unknown>): SupportT
     organizationId: asString(data.organizationId),
     status: asString(data.status) ?? "open",
     urgency,
-    updatedAtMs: asNumber(data.updatedAtMs) ?? Date.now(),
+    updatedAt: millisFromFirestore(data, "updatedAt", "updatedAtMs") || Date.now(),
   };
 }
 
@@ -395,21 +399,21 @@ export async function getDashboardData(user: PortalUser): Promise<DashboardData>
       type: "subscription" as const,
       title: item.productName ? `Subscription: ${item.productName}` : "Subscription updated",
       detail: `${item.status} · ${item.currency.toUpperCase()}`,
-      timestampMs: item.updatedAtMs,
+      timestampMs: item.updatedAt,
     })),
     ...invoices.map((item) => ({
       id: `invoice-${item.id}`,
       type: "invoice" as const,
       title: `Invoice ${item.status}`,
       detail: `${item.currency.toUpperCase()} ${Math.round(item.amountDue / 100)}`,
-      timestampMs: item.paidAtMs ?? item.issuedAtMs,
+      timestampMs: item.paidAt ?? item.issuedAt,
     })),
     ...proposals.map((item) => ({
       id: `proposal-${item.id}`,
       type: "proposal" as const,
       title: item.title,
       detail: `Status: ${item.status}`,
-      timestampMs: getTimestampMs(item as unknown as Record<string, unknown>, "updatedAtMs", "createdAtMs"),
+      timestampMs: getTimestampMs(item as unknown as Record<string, unknown>, "updatedAt", "createdAt"),
     })),
   ]
     .sort((a, b) => b.timestampMs - a.timestampMs)

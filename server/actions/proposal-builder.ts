@@ -71,7 +71,7 @@ const acceptSchema = z.object({
       "Invalid signature image.",
     ),
   signatureMethod: z.enum(["draw", "type", "upload"]).optional(),
-  clientSignedAtMs: z.number().int().min(1).max(Number.MAX_SAFE_INTEGER).optional(),
+  clientSignedAt: z.number().int().min(1).max(Number.MAX_SAFE_INTEGER).optional(),
 });
 
 const packageSelectionSchema = z.object({
@@ -120,9 +120,7 @@ export async function saveProposalDocumentAction(
         .update({
           title: parsed.data.title,
           document: omitUndefinedDeep(encodeProposalDocumentForFirestore(normalized)) as Record<string, unknown>,
-          documentVersion: FieldValue.increment(1),
-          updatedAtMs: Date.now(),
-          updatedAt: FieldValue.serverTimestamp(),
+          documentVersion: FieldValue.increment(1),          updatedAt: FieldValue.serverTimestamp(),
         }),
   );
   if (!write.ok) return write;
@@ -148,7 +146,7 @@ export async function sendProposalAction(
   const now = Date.now();
   const ref = db.collection(COLLECTIONS.proposals).doc(proposalId);
   const snap = await ref.get();
-  const prevSent = (snap.data() as Record<string, unknown> | undefined)?.sentAtMs;
+  const prevSent = (snap.data() as Record<string, unknown> | undefined)?.sentAt;
 
   const write = await runAdminWrite(
     "proposal_send_failed",
@@ -157,8 +155,7 @@ export async function sendProposalAction(
     () =>
       ref.update({
         status: "published",
-        sentAtMs: typeof prevSent === "number" ? prevSent : now,
-        updatedAtMs: now,
+        sentAt: typeof prevSent === "number" ? prevSent : now,
         updatedAt: FieldValue.serverTimestamp(),
       }),
   );
@@ -204,9 +201,7 @@ export async function setProposalSharePasswordAction(
           .collection(COLLECTIONS.proposals)
           .doc(proposalId)
           .update({
-            sharePasswordHash: FieldValue.delete(),
-            updatedAtMs: Date.now(),
-            updatedAt: FieldValue.serverTimestamp(),
+            sharePasswordHash: FieldValue.delete(),            updatedAt: FieldValue.serverTimestamp(),
           }),
     );
     if (!write.ok) return write;
@@ -222,9 +217,7 @@ export async function setProposalSharePasswordAction(
           .collection(COLLECTIONS.proposals)
           .doc(proposalId)
           .update({
-            sharePasswordHash,
-            updatedAtMs: Date.now(),
-            updatedAt: FieldValue.serverTimestamp(),
+            sharePasswordHash,            updatedAt: FieldValue.serverTimestamp(),
           }),
     );
     if (!write.ok) return write;
@@ -297,7 +290,7 @@ export async function acceptProposalPublicAction(
   const now = Date.now();
   const sigUrl = parsed.data.signatureDataUrl;
   const sigMethod = parsed.data.signatureMethod;
-  const clientSignedAtMs = parsed.data.clientSignedAtMs;
+  const clientSignedAt = parsed.data.clientSignedAt;
   const hasSignaturePayload = Boolean(sigUrl && sigMethod);
   if (sigUrl && !sigMethod) {
     return { ok: false, message: "Invalid signature payload." };
@@ -316,18 +309,17 @@ export async function acceptProposalPublicAction(
         .doc(proposal.id)
         .update({
           status: "accepted",
-          acceptedAtMs: now,
+          acceptedAt: now,
           acceptedByName: parsed.data.signerName,
           ...(hasSignaturePayload
             ? {
                 acceptedSignatureDataUrl: sigUrl,
                 acceptedSignatureMethod: sigMethod,
-                ...(typeof clientSignedAtMs === "number"
-                  ? { acceptedClientSignedAtMs: clientSignedAtMs }
+                ...(typeof clientSignedAt === "number"
+                  ? { acceptedClientSignedAt: clientSignedAt }
                   : {}),
               }
             : {}),
-          updatedAtMs: now,
           updatedAt: FieldValue.serverTimestamp(),
         }),
   );
@@ -400,9 +392,8 @@ export async function acceptProposalPublicAction(
         null,
       signerOrganization: parsed.data.signerOrganization?.trim() || null,
       signatureMethod: sigMethod ?? null,
-      signedAt: FieldValue.serverTimestamp(),
-      signedAtMs: now,
-      clientSignedAtMs: typeof clientSignedAtMs === "number" ? clientSignedAtMs : null,
+      signedAt: now,
+      clientSignedAt: typeof clientSignedAt === "number" ? clientSignedAt : null,
       fullAgreementText: fullAgreementText ?? null,
       signatureImage,
       signatureImageStoragePath,
@@ -460,7 +451,7 @@ export async function acceptProposalPublicAction(
           atMs: now,
           signatureMethod: sigMethod ?? null,
           hasSignatureImage: Boolean(sigUrl),
-          clientSignedAtMs: clientSignedAtMs ?? null,
+          clientSignedAt: clientSignedAt ?? null,
         }),
       });
     } catch {
@@ -562,7 +553,7 @@ export async function saveProposalPackageSelectionAction(
     kind: "packages",
     tierId: nextTierId,
     term: nextTerm,
-    updatedAtMs: now,
+    updatedAt: now,
   };
   if (addonLines.length > 0 && Object.keys(mergedQty).length > 0) {
     selectionPayload.addonQuantities = mergedQty;
@@ -581,7 +572,6 @@ export async function saveProposalPackageSelectionAction(
           ...prev,
           [parsed.data.blockId]: selectionPayload,
         },
-        updatedAtMs: now,
         updatedAt: FieldValue.serverTimestamp(),
       }),
   );
@@ -676,8 +666,6 @@ export async function cloneProposalAction(
     status: "draft",
     shareToken,
     document: omitUndefinedDeep(encodeProposalDocumentForFirestore(clonedDoc)),
-    createdAtMs: now,
-    updatedAtMs: now,
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   };

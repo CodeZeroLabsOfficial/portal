@@ -45,7 +45,7 @@ function normalizePortalUser(uid: string, email: string, data?: Record<string, u
     timeFormatPreset: asString(data?.timeFormatPreset),
     localeRegionCode: asString(data?.localeRegionCode),
     currencyCode: asString(data?.currencyCode),
-    joinedAtMs: profileJoinedAtMillisFromRawUser(data, nowMs),
+    joinedAt: profileJoinedAtMillisFromRawUser(data, nowMs),
   };
 }
 

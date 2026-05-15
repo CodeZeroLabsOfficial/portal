@@ -32,8 +32,8 @@ function parseOpportunity(id: string, data: Record<string, unknown>): Opportunit
     currency: (asString(data.currency) ?? "aud").toLowerCase(),
     customFieldsSnapshot: asStringStringMap(data.customFieldsSnapshot),
     notes: asString(data.notes),
-    createdAtMs: coerceTimestampToMillis(data.createdAt ?? data.createdAtMs),
-    updatedAtMs: coerceTimestampToMillis(data.updatedAt ?? data.updatedAtMs),
+    createdAt: coerceTimestampToMillis(data.createdAt ?? data.createdAt),
+    updatedAt: coerceTimestampToMillis(data.updatedAt ?? data.updatedAt),
     createdByUid: asString(data.createdByUid),
   };
 }
@@ -46,7 +46,7 @@ export async function listOpportunitiesForStaff(user: PortalUser): Promise<Oppor
     const rows = snap.docs
       .map((d) => parseOpportunity(d.id, d.data() as Record<string, unknown>))
       .filter((r): r is OpportunityRecord => r !== null);
-    return rows.sort((a, b) => b.updatedAtMs - a.updatedAtMs);
+    return rows.sort((a, b) => b.updatedAt - a.updatedAt);
   } catch (error) {
     logError("crm_list_opportunities_failed", {
       message: error instanceof Error ? error.message : "unknown",
@@ -192,7 +192,7 @@ export async function listOpportunitiesForCustomer(
     const rows = snap.docs
       .map((d) => parseOpportunity(d.id, d.data() as Record<string, unknown>))
       .filter((r): r is OpportunityRecord => r !== null);
-    return rows.sort((a, b) => b.updatedAtMs - a.updatedAtMs);
+    return rows.sort((a, b) => b.updatedAt - a.updatedAt);
   } catch {
     return [];
   }
@@ -357,7 +357,7 @@ function parseOpportunityNote(id: string, data: Record<string, unknown>): Opport
     ...(organizationId ? { organizationId } : {}),
     authorUid: asString(data.authorUid) ?? "",
     body: asString(data.body) ?? "",
-    createdAtMs: coerceTimestampToMillis(data.createdAt ?? data.createdAtMs),
+    createdAt: coerceTimestampToMillis(data.createdAt ?? data.createdAt),
   };
 }
 
@@ -373,8 +373,8 @@ function parseOpportunityActivity(
     kindRaw === "meeting" || kindRaw === "call" || kindRaw === "email" || kindRaw === "other"
       ? kindRaw
       : "other";
-  const createdAtMs = coerceTimestampToMillis(data.createdAt ?? data.createdAtMs);
-  const occurredAtMs = coerceTimestampToMillis(data.occurredAt ?? data.occurredAtMs) || createdAtMs;
+  const createdAt = coerceTimestampToMillis(data.createdAt ?? data.createdAt);
+  const occurredAt = coerceTimestampToMillis(data.occurredAt ?? data.occurredAt) || createdAt;
   return {
     id,
     opportunityId,
@@ -382,9 +382,9 @@ function parseOpportunityActivity(
     kind,
     title: asString(data.title) ?? "Activity",
     detail: asString(data.detail),
-    occurredAtMs,
+    occurredAt,
     authorUid: asString(data.authorUid) ?? "",
-    createdAtMs,
+    createdAt,
   };
 }
 
@@ -406,7 +406,7 @@ export async function listOpportunityNotes(
     const rows = snap.docs
       .map((d) => parseOpportunityNote(d.id, d.data() as Record<string, unknown>))
       .filter((n): n is OpportunityNoteRecord => n !== null);
-    return rows.sort((a, b) => b.createdAtMs - a.createdAtMs);
+    return rows.sort((a, b) => b.createdAt - a.createdAt);
   } catch (error) {
     logError("crm_list_opportunity_notes_failed", {
       opportunityId,
@@ -434,7 +434,7 @@ export async function listOpportunityActivities(
     const rows = snap.docs
       .map((d) => parseOpportunityActivity(d.id, d.data() as Record<string, unknown>))
       .filter((a): a is OpportunityActivityRecord => a !== null);
-    return rows.sort((a, b) => b.occurredAtMs - a.occurredAtMs);
+    return rows.sort((a, b) => b.occurredAt - a.occurredAt);
   } catch (error) {
     logError("crm_list_opportunity_activities_failed", {
       opportunityId,
@@ -482,7 +482,7 @@ export async function appendOpportunityActivity(
     kind: OpportunityActivityKind;
     title: string;
     detail?: string;
-    occurredAtMs?: number;
+    occurredAt?: number;
   },
 ): Promise<{ ok: true; activityId: string } | { ok: false; message: string }> {
   const db = getFirebaseAdminFirestore();
@@ -496,8 +496,8 @@ export async function appendOpportunityActivity(
   if (!trimmedTitle) return { ok: false, message: "Title is required." };
 
   const occurredAt =
-    typeof input.occurredAtMs === "number" && Number.isFinite(input.occurredAtMs)
-      ? Timestamp.fromMillis(input.occurredAtMs)
+    typeof input.occurredAt === "number" && Number.isFinite(input.occurredAt)
+      ? Timestamp.fromMillis(input.occurredAt)
       : Timestamp.now();
   const now = Timestamp.now();
 

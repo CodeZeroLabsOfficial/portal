@@ -51,9 +51,9 @@ export async function loadProposalPublicSubscriptionUi(
 
   const startsOnLabel =
     proposal.status === "accepted" &&
-    typeof proposal.acceptedAtMs === "number" &&
-    Number.isFinite(proposal.acceptedAtMs)
-      ? utcDateIsoFromMillis(proposal.acceptedAtMs)
+    typeof proposal.acceptedAt === "number" &&
+    Number.isFinite(proposal.acceptedAt)
+      ? utcDateIsoFromMillis(proposal.acceptedAt)
       : "Upon acceptance";
 
   return {

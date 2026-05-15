@@ -359,7 +359,7 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
           kind: "packages",
           tierId: previewTierId,
           term,
-          updatedAtMs: 0,
+          updatedAt: 0,
           addonQuantities: mockAddonQty,
           addonOptionalOff: {},
         }

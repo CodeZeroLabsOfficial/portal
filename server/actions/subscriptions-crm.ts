@@ -54,8 +54,8 @@ export async function createSubscriptionAction(
     return { ok: false, message: "Customer not found." };
   }
 
-  const startAtMs = parseStartDateToUtcMs(parsed.data.startDate);
-  if (!startAtMs) {
+  const startAt = parseStartDateToUtcMs(parsed.data.startDate);
+  if (!startAt) {
     return { ok: false, message: "Invalid subscription start date." };
   }
   const nowMs = Date.now();
@@ -64,7 +64,7 @@ export async function createSubscriptionAction(
     new Date(nowMs).getUTCMonth(),
     new Date(nowMs).getUTCDate(),
   );
-  if (startAtMs < todayStartMs) {
+  if (startAt < todayStartMs) {
     return { ok: false, message: "Start date cannot be in the past." };
   }
 
@@ -124,9 +124,7 @@ export async function cancelSubscriptionAction(
       await stripe.subscriptionSchedules.cancel(subId);
       await db.collection(COLLECTIONS.subscriptions).doc(subId).set(
         {
-          status: "canceled",
-          updatedAtMs: Date.now(),
-          updatedAt: FieldValue.serverTimestamp(),
+          status: "canceled",          updatedAt: FieldValue.serverTimestamp(),
         },
         { merge: true },
       );

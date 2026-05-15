@@ -141,9 +141,7 @@ export async function upsertStripeCustomerMirror(db: Firestore, customer: Stripe
       email: customer.email ?? null,
       name: customer.name ?? null,
       metadata: customer.metadata ?? {},
-      livemode: customer.livemode,
-      updatedAtMs: Date.now(),
-      updatedAt: FieldValue.serverTimestamp(),
+      livemode: customer.livemode,      updatedAt: FieldValue.serverTimestamp(),
     },
     { merge: true },
   );
@@ -194,22 +192,20 @@ export async function upsertSubscriptionMirror(db: Firestore, sub: Stripe.Subscr
     ...(typeof sub.start_date === "number" ? { subscriptionStart: sub.start_date * 1000 } : {}),
     ...(typeof sub.cancel_at === "number" ? { subscriptionEnd: sub.cancel_at * 1000 } : {}),
     ...(typeof sub.current_period_end === "number"
-      ? { currentPeriodEndMs: sub.current_period_end * 1000 }
+      ? { currentPeriodEnd: sub.current_period_end * 1000 }
       : {}),
     cancelAtPeriodEnd: Boolean(sub.cancel_at_period_end),
     ...(typeof subscriptionMrrMinor(sub) === "number" ? { mrrAmount: subscriptionMrrMinor(sub) } : {}),
     ...(typeof subscriptionMonthlyAmountMinor(sub) === "number"
       ? { monthlyAmountMinor: subscriptionMonthlyAmountMinor(sub) }
       : {}),
-    ...(typeof sub.created === "number" ? { createdAtMs: sub.created * 1000 } : {}),
+    ...(typeof sub.created === "number" ? { createdAt: sub.created * 1000 } : {}),
     ...(mapCollectionMethod(sub.collection_method)
       ? { collectionMethod: mapCollectionMethod(sub.collection_method) }
       : {}),
     ...(defaultPaymentMethodTypeFromSubscription(sub)
       ? { defaultPaymentMethodType: defaultPaymentMethodTypeFromSubscription(sub) }
-      : {}),
-    updatedAtMs: Date.now(),
-    updatedAt: FieldValue.serverTimestamp(),
+      : {}),    updatedAt: FieldValue.serverTimestamp(),
   };
 
   await ref.set(record, { merge: true });
@@ -251,10 +247,8 @@ export async function upsertInvoiceMirror(db: Firestore, invoice: Stripe.Invoice
     amountDue: typeof invoice.amount_due === "number" ? invoice.amount_due : 0,
     hostedInvoiceUrl: invoice.hosted_invoice_url ?? undefined,
     invoicePdf: invoice.invoice_pdf ?? undefined,
-    issuedAtMs: issued,
-    paidAtMs: paidAt,
-    updatedAtMs: Date.now(),
-    updatedAt: FieldValue.serverTimestamp(),
+    issuedAt: issued,
+    paidAt: paidAt,    updatedAt: FieldValue.serverTimestamp(),
   };
 
   await ref.set(invoiceRecord, { merge: true });
@@ -283,9 +277,7 @@ export async function upsertPaymentIntentMirror(db: Firestore, pi: Stripe.Paymen
     amount: typeof pi.amount_received === "number" ? pi.amount_received : pi.amount,
     status: pi.status,
     description: pi.description ?? undefined,
-    createdAtMs: typeof pi.created === "number" ? pi.created * 1000 : Date.now(),
-    updatedAtMs: Date.now(),
-    updatedAt: FieldValue.serverTimestamp(),
+    createdAt: typeof pi.created === "number" ? pi.created * 1000 : Date.now(),    updatedAt: FieldValue.serverTimestamp(),
   };
 
   await ref.set(paymentRecord, { merge: true });
@@ -342,9 +334,7 @@ export async function applyStripeWebhookEvent(db: Firestore, event: Stripe.Event
         const sub = event.data.object as Stripe.Subscription;
         if (event.type === "customer.subscription.deleted") {
           const patch = {
-            status: "canceled" as const,
-            updatedAtMs: Date.now(),
-            updatedAt: FieldValue.serverTimestamp(),
+            status: "canceled" as const,            updatedAt: FieldValue.serverTimestamp(),
           };
           await db.collection(COLLECTIONS.subscriptions).doc(sub.id).set(patch, { merge: true });
           const cus = typeof sub.customer === "string" ? sub.customer : sub.customer?.id ?? "";

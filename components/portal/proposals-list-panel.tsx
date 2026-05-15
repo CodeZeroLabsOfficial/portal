@@ -27,7 +27,7 @@ function proposalLifecyclePhase(p: ProposalRecord): ProposalLifecyclePhase {
     p.status === "accepted" ||
     p.status === "declined" ||
     (typeof p.viewCount === "number" && p.viewCount > 0) ||
-    (typeof p.lastViewedAtMs === "number" && p.lastViewedAtMs > 0);
+    (typeof p.lastViewedAt === "number" && p.lastViewedAt > 0);
   if (viewed) return "viewed";
   if (p.status !== "draft") return "published";
   return "draft";
@@ -95,7 +95,7 @@ function proposalHubStageDisplay(p: ProposalRecord): {
 }
 
 function lastEditedMs(p: ProposalRecord): number {
-  return (typeof p.updatedAtMs === "number" && p.updatedAtMs > 0 ? p.updatedAtMs : p.createdAtMs) || 0;
+  return (typeof p.updatedAt === "number" && p.updatedAt > 0 ? p.updatedAt : p.createdAt) || 0;
 }
 
 function editHref(p: ProposalRecord): string {

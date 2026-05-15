@@ -99,8 +99,8 @@ export async function createSubscriptionScheduleForCustomer(
     return { ok: false, message: "Invalid Stripe price selected for this subscription." };
   }
 
-  const startAtMs = parseStartDateToUtcMs(startDateIso);
-  if (!startAtMs) {
+  const startAt = parseStartDateToUtcMs(startDateIso);
+  if (!startAt) {
     return { ok: false, message: "Invalid subscription start date." };
   }
   const nowMs = Date.now();
@@ -109,10 +109,10 @@ export async function createSubscriptionScheduleForCustomer(
     new Date(nowMs).getUTCMonth(),
     new Date(nowMs).getUTCDate(),
   );
-  if (startAtMs < todayStartMs) {
+  if (startAt < todayStartMs) {
     return { ok: false, message: "Start date cannot be in the past." };
   }
-  const startAtUnix = Math.floor(startAtMs / 1000);
+  const startAtUnix = Math.floor(startAt / 1000);
 
   try {
     const { stripeCustomerId } = await ensureStripeCustomer(stripe, customer, organizationId);
@@ -129,11 +129,11 @@ export async function createSubscriptionScheduleForCustomer(
       };
     }
     const iterations = Math.max(1, Math.floor(durationMonths / intervalMonths));
-    const subscriptionEnd = addUtcMonthsClamped(startAtMs, durationMonths);
+    const subscriptionEnd = addUtcMonthsClamped(startAt, durationMonths);
 
     const schedule = await stripe.subscriptionSchedules.create({
       customer: stripeCustomerId,
-      start_date: startAtMs <= nowMs ? "now" : startAtUnix,
+      start_date: startAt <= nowMs ? "now" : startAtUnix,
       end_behavior: "cancel",
       phases: [
         {
@@ -165,11 +165,9 @@ export async function createSubscriptionScheduleForCustomer(
       await upsertSubscriptionMirror(db, subscription);
       const mergeFields = {
         stripeScheduleId: schedule.id,
-        subscriptionStart: startAtMs,
+        subscriptionStart: startAt,
         plannedDurationMonths: durationMonths,
-        subscriptionEnd,
-        updatedAtMs: Date.now(),
-        updatedAt: FieldValue.serverTimestamp(),
+        subscriptionEnd,        updatedAt: FieldValue.serverTimestamp(),
       };
       await db.collection(COLLECTIONS.subscriptions).doc(subscriptionId).set(mergeFields, { merge: true });
       await mirrorSubscriptionRowToLinkedPortalUser(db, stripeCustomerId, subscriptionId, mergeFields);
@@ -195,11 +193,9 @@ export async function createSubscriptionScheduleForCustomer(
         ...(typeof scheduledMonthlyAmountMinor === "number"
           ? { monthlyAmountMinor: scheduledMonthlyAmountMinor }
           : {}),
-        createdAtMs: startAtMs,
-        updatedAtMs: Date.now(),
-        updatedAt: FieldValue.serverTimestamp(),
+        createdAt: startAt,        updatedAt: FieldValue.serverTimestamp(),
         stripeScheduleId: schedule.id,
-        subscriptionStart: startAtMs,
+        subscriptionStart: startAt,
         plannedDurationMonths: durationMonths,
         subscriptionEnd,
       };

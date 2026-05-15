@@ -33,7 +33,7 @@ export interface ProposalTemplatesListPanelProps {
 }
 
 function lastEditedMs(t: ProposalTemplateRecord): number {
-  return (typeof t.updatedAtMs === "number" && t.updatedAtMs > 0 ? t.updatedAtMs : t.createdAtMs) || 0;
+  return (typeof t.updatedAt === "number" && t.updatedAt > 0 ? t.updatedAt : t.createdAt) || 0;
 }
 
 const TEMPLATE_STAGE_BADGE: Record<ProposalTemplateStage, string> = {

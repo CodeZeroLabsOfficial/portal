@@ -378,7 +378,7 @@ export function AgreementBlockPublic({
       signerOrganization?: string;
       signatureDataUrl: string;
       signatureMethod: "draw" | "type" | "upload";
-      clientSignedAtMs: number;
+      clientSignedAt: number;
     },
     meta?: { subscriptionError?: string | null },
   ) {

@@ -173,7 +173,7 @@ exports.setDefaultPaymentMethod = functions.region("australia-southeast1").https
         expYear: card?.exp_year ?? 0,
         isDefault: true,
         stripePmId,
-        updatedAtMs: nowMs,
+        updatedAt: nowMs,
     }, { merge: true });
     return { ok: true, stripePmId };
 });
@@ -227,7 +227,7 @@ exports.updatePaymentMethod = functions.region("australia-southeast1").https.onC
         expYear: expYearInput ?? card?.exp_year ?? 0,
         isDefault,
         stripePmId: stripePaymentMethodId,
-        updatedAtMs: nowMs,
+        updatedAt: nowMs,
     }, { merge: true });
     return { ok: true, stripePmId: stripePaymentMethodId, isDefault };
 });

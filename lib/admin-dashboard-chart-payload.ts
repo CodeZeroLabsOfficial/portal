@@ -52,8 +52,8 @@ function binTimestampsInDayBuckets(timestamps: number[], dayStarts: number[]): n
 }
 
 /**
- * Activity per day (last 14 days): subscriptions/proposals/tickets/tasks by `updatedAtMs`
- * (proposals also consider `createdAtMs` as activity signal).
+ * Activity per day (last 14 days): subscriptions/proposals/tickets/tasks by `updatedAt`
+ * (proposals also consider `createdAt` as activity signal).
  */
 export function buildAdminDashboardChartTabs(
   data: AdminPortalData,
@@ -69,22 +69,22 @@ export function buildAdminDashboardChartTabs(
   const { starts, labels } = buildDayStarts(now, 14);
 
   const subPoints = binTimestampsInDayBuckets(
-    data.subscriptions.map((s) => s.updatedAtMs),
+    data.subscriptions.map((s) => s.updatedAt),
     starts,
   );
 
   const proposalPoints = binTimestampsInDayBuckets(
-    data.proposals.map((p) => Math.max(p.createdAtMs, p.updatedAtMs)),
+    data.proposals.map((p) => Math.max(p.createdAt, p.updatedAt)),
     starts,
   );
 
   const ticketPoints = binTimestampsInDayBuckets(
-    data.supportTickets.map((t) => t.updatedAtMs),
+    data.supportTickets.map((t) => t.updatedAt),
     starts,
   );
 
   const taskPoints = binTimestampsInDayBuckets(
-    data.tasks.map((t) => t.updatedAtMs),
+    data.tasks.map((t) => t.updatedAt),
     starts,
   );
 

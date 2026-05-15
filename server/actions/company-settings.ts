@@ -51,7 +51,7 @@ export async function updateWorkspaceCompanySettingsAction(
           region: v.region.trim(),
           postalCode: v.postalCode.trim(),
           country: v.country.trim(),
-          updatedAtMs: nowMs,
+          updatedAt: nowMs,
         },
         { merge: true },
       ),

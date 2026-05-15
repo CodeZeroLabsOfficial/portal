@@ -1,6 +1,7 @@
 import type { Firestore } from "firebase-admin/firestore";
 import { isStaff } from "@/lib/auth/server-session";
 import { asNumber, asString } from "@/lib/firestore/coerce";
+import { millisFromFirestore } from "@/lib/firestore/timestamp";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import { parseProposalDocument } from "@/lib/schemas/proposal-document";
@@ -43,8 +44,8 @@ export function parseProposalTemplateRecord(id: string, data: Record<string, unk
     stage,
     document,
     branding: parseBranding(data.branding),
-    createdAtMs: asNumber(data.createdAtMs) ?? 0,
-    updatedAtMs: asNumber(data.updatedAtMs) ?? 0,
+    createdAt: millisFromFirestore(data, "createdAt", "createdAtMs"),
+    updatedAt: millisFromFirestore(data, "updatedAt", "updatedAtMs"),
   };
 }
 

@@ -53,7 +53,7 @@ export interface AgreementSignaturePayload {
   signerOrganization?: string;
   signatureDataUrl: string;
   signatureMethod: AgreementSignatureMethod;
-  clientSignedAtMs: number;
+  clientSignedAt: number;
 }
 
 function getCanvasPoint(canvas: HTMLCanvasElement, clientX: number, clientY: number) {
@@ -503,14 +503,14 @@ export function AgreementSignatureForm({
       setLocalError("Add payment details and save your card before signing the agreement.");
       return;
     }
-    const clientSignedAtMs = Date.now();
+    const clientSignedAt = Date.now();
     const payload: AgreementSignaturePayload = {
       signerName: name,
       signerEmail: email,
       signerOrganization: acceptOrg.trim() || undefined,
       signatureDataUrl: capturedDataUrl,
       signatureMethod: capturedMethod,
-      clientSignedAtMs,
+      clientSignedAt,
     };
     setSigningBusy(true);
     try {
@@ -521,7 +521,7 @@ export function AgreementSignatureForm({
         signerOrganization: payload.signerOrganization,
         signatureDataUrl: payload.signatureDataUrl,
         signatureMethod: payload.signatureMethod,
-        clientSignedAtMs: payload.clientSignedAtMs,
+        clientSignedAt: payload.clientSignedAt,
       });
       if (!acceptRes.ok) {
         setLocalError(acceptRes.message);

@@ -89,8 +89,8 @@ export function PackagesBlockPublic({
     setAddonOptOff(
       initialSelection?.addonOptionalOff ? { ...initialSelection.addonOptionalOff } : {},
     );
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only rehydrate after server refresh (`updatedAtMs`) or add-on line set changes
-  }, [addonIdsKey, initialSelection?.updatedAtMs]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only rehydrate after server refresh (`updatedAt`) or add-on line set changes
+  }, [addonIdsKey, initialSelection?.updatedAt]);
 
   const label12 = block.plan12Label ?? "12 months";
   const label24 = block.plan24Label ?? "24 months";
@@ -114,7 +114,7 @@ export function PackagesBlockPublic({
         kind: "packages",
         tierId: selectedTierId,
         term,
-        updatedAtMs: initialSelection?.updatedAtMs ?? 0,
+        updatedAt: initialSelection?.updatedAt ?? 0,
         addonQuantities: addonQty,
         addonOptionalOff: addonOptOff,
       }

@@ -97,7 +97,7 @@ function proposalLifecyclePhase(p: ProposalRecord): ProposalLifecyclePhase {
     p.status === "accepted" ||
     p.status === "declined" ||
     (typeof p.viewCount === "number" && p.viewCount > 0) ||
-    (typeof p.lastViewedAtMs === "number" && p.lastViewedAtMs > 0);
+    (typeof p.lastViewedAt === "number" && p.lastViewedAt > 0);
   if (viewed) return "viewed";
   if (p.status !== "draft") return "published";
   return "draft";
@@ -227,7 +227,7 @@ export function CustomerDetailView({
     return activities
       .map((a) => ({
         id: `a-${a.id}`,
-        at: a.createdAtMs,
+        at: a.createdAt,
         label: a.title,
         sub: a.detail ?? a.type,
       }))
@@ -751,8 +751,8 @@ export function CustomerDetailView({
                         <td className="py-2 pr-4">{s.productName ?? "—"}</td>
                         <td className="py-2 pr-4 capitalize">{s.status}</td>
                         <td className="py-2 text-muted-foreground">
-                          {s.subscriptionEnd || s.currentPeriodEndMs
-                            ? new Date(s.subscriptionEnd ?? s.currentPeriodEndMs ?? 0).toLocaleDateString()
+                          {s.subscriptionEnd || s.currentPeriodEnd
+                            ? new Date(s.subscriptionEnd ?? s.currentPeriodEnd ?? 0).toLocaleDateString()
                             : "—"}
                         </td>
                       </tr>
@@ -785,7 +785,7 @@ export function CustomerDetailView({
                         <td className="py-2 pr-4 capitalize">{inv.status}</td>
                         <td className="py-2 pr-4">{formatMinor(inv.amountDue, inv.currency)}</td>
                         <td className="py-2 pr-4">
-                          {inv.issuedAtMs ? new Date(inv.issuedAtMs).toLocaleDateString() : "—"}
+                          {inv.issuedAt ? new Date(inv.issuedAt).toLocaleDateString() : "—"}
                         </td>
                         <td className="py-2">
                           {inv.hostedInvoiceUrl || inv.invoicePdf ? (
@@ -996,13 +996,13 @@ export function CustomerDetailView({
               ) : (
                 <ul className="space-y-4">
                   {[...notes]
-                    .sort((a, b) => b.createdAtMs - a.createdAtMs)
+                    .sort((a, b) => b.createdAt - a.createdAt)
                     .map((n) => (
                       <li key={n.id} className="rounded-xl border border-border/50 bg-background/40 p-4">
                         <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
                           <span className="capitalize">{n.kind}</span>
-                          <time dateTime={new Date(n.createdAtMs).toISOString()}>
-                            {new Date(n.createdAtMs).toLocaleString()}
+                          <time dateTime={new Date(n.createdAt).toISOString()}>
+                            {new Date(n.createdAt).toLocaleString()}
                           </time>
                         </div>
                         <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">{n.body}</p>
@@ -1028,8 +1028,8 @@ export function CustomerDetailView({
             <ul className="space-y-2">
               {signedAgreements.map((doc) => {
                 const signedLabel =
-                  doc.signedAtMs > 0
-                    ? new Date(doc.signedAtMs).toLocaleString(undefined, {
+                  doc.signedAt > 0
+                    ? new Date(doc.signedAt).toLocaleString(undefined, {
                         dateStyle: "medium",
                         timeStyle: "short",
                       })
@@ -1184,8 +1184,8 @@ export function CustomerDetailView({
                     </p>
                     <p className="mt-3 text-xs text-zinc-500">
                       Signed{" "}
-                      {signedAgreementModalData.record.signedAtMs > 0
-                        ? new Date(signedAgreementModalData.record.signedAtMs).toLocaleString(undefined, {
+                      {signedAgreementModalData.record.signedAt > 0
+                        ? new Date(signedAgreementModalData.record.signedAt).toLocaleString(undefined, {
                             dateStyle: "medium",
                             timeStyle: "short",
                           })
