@@ -88,7 +88,7 @@ function parsePublicSelections(raw: unknown): ProposalPublicSelections | undefin
       kind: "packages",
       tierId,
       term,
-      updatedAt: asNumber(o.updatedAt ?? o.updatedAtMs) ?? Date.now(),
+      updatedAt: asNumber(o.updatedAt) ?? Date.now(),
       ...(Object.keys(addonQuantities).length > 0 ? { addonQuantities } : {}),
       ...(Object.keys(addonOptionalOff).length > 0 ? { addonOptionalOff } : {}),
     };
@@ -120,11 +120,11 @@ export function parseProposalRecord(id: string, data: Record<string, unknown>): 
     branding: parseBranding(data.branding),
     documentVersion: asNumber(data.documentVersion),
     sharePasswordHash: asString(data.sharePasswordHash),
-    sentAt: asNumber(data.sentAt ?? data.sentAtMs),
+    sentAt: asNumber(data.sentAt),
     viewCount: asNumber(data.viewCount),
     totalEngagementSeconds: asNumber(data.totalEngagementSeconds),
-    lastViewedAt: asNumber(data.lastViewedAt ?? data.lastViewedAtMs),
-    acceptedAt: asNumber(data.acceptedAt ?? data.acceptedAtMs),
+    lastViewedAt: asNumber(data.lastViewedAt),
+    acceptedAt: asNumber(data.acceptedAt),
     acceptedByName: asString(data.acceptedByName),
     acceptedSignatureDataUrl: asString(data.acceptedSignatureDataUrl),
     acceptedSignatureMethod:
@@ -133,12 +133,12 @@ export function parseProposalRecord(id: string, data: Record<string, unknown>): 
       data.acceptedSignatureMethod === "upload"
         ? data.acceptedSignatureMethod
         : undefined,
-    acceptedClientSignedAt: asNumber(data.acceptedClientSignedAt ?? data.acceptedClientSignedAtMs),
+    acceptedClientSignedAt: asNumber(data.acceptedClientSignedAt),
     stripePaymentIntentId: asString(data.stripePaymentIntentId),
     publicSelections: parsePublicSelections(data.publicSelections),
     sourceTemplateId: asString(data.sourceTemplateId),
-    createdAt: millisFromFirestore(data, "createdAt", "createdAtMs"),
-    updatedAt: millisFromFirestore(data, "updatedAt", "updatedAtMs"),
+    createdAt: millisFromFirestore(data, "createdAt"),
+    updatedAt: millisFromFirestore(data, "updatedAt"),
   };
 }
 

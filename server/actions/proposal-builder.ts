@@ -120,7 +120,8 @@ export async function saveProposalDocumentAction(
         .update({
           title: parsed.data.title,
           document: omitUndefinedDeep(encodeProposalDocumentForFirestore(normalized)) as Record<string, unknown>,
-          documentVersion: FieldValue.increment(1),          updatedAt: FieldValue.serverTimestamp(),
+          documentVersion: FieldValue.increment(1),
+          updatedAt: FieldValue.serverTimestamp(),
         }),
   );
   if (!write.ok) return write;
@@ -201,7 +202,8 @@ export async function setProposalSharePasswordAction(
           .collection(COLLECTIONS.proposals)
           .doc(proposalId)
           .update({
-            sharePasswordHash: FieldValue.delete(),            updatedAt: FieldValue.serverTimestamp(),
+            sharePasswordHash: FieldValue.delete(),
+            updatedAt: FieldValue.serverTimestamp(),
           }),
     );
     if (!write.ok) return write;
@@ -217,7 +219,8 @@ export async function setProposalSharePasswordAction(
           .collection(COLLECTIONS.proposals)
           .doc(proposalId)
           .update({
-            sharePasswordHash,            updatedAt: FieldValue.serverTimestamp(),
+            sharePasswordHash,
+            updatedAt: FieldValue.serverTimestamp(),
           }),
     );
     if (!write.ok) return write;

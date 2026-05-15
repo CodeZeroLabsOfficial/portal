@@ -2,7 +2,7 @@ import { asNumber, asString } from "@/lib/firestore/coerce";
 import { millisFromFirestore } from "@/lib/firestore/timestamp";
 import type { TaskRecord } from "@/types/task";
 
-/** Normalizes reads from Admin SDK Timestamp, legacy ms, optional fields. */
+/** Normalizes reads from Admin SDK Timestamp or epoch ms, optional fields. */
 export function parseTaskRecord(id: string, data: Record<string, unknown>): TaskRecord {
   const progressRaw = asNumber(data.progressPercent ?? data.progress);
   let progressPercent: number | undefined;
@@ -16,9 +16,9 @@ export function parseTaskRecord(id: string, data: Record<string, unknown>): Task
     customerId: asString(data.customerId),
     title: asString(data.title) ?? "Task",
     status: asString(data.status) ?? "open",
-    dueAt: asNumber(data.dueAt ?? data.dueAtMs),
-    startAt: asNumber(data.startAt ?? data.startAtMs),
-    updatedAt: millisFromFirestore(data, "updatedAt", "updatedAtMs") || Date.now(),
+    dueAt: asNumber(data.dueAt),
+    startAt: asNumber(data.startAt),
+    updatedAt: millisFromFirestore(data, "updatedAt") || Date.now(),
     description: asString(data.description),
     priority: asString(data.priority),
     category: asString(data.category),

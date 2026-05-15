@@ -20,7 +20,7 @@ function isTimestampLike(v: unknown): v is Timestamp {
 /**
  * Provisions / updates `users/{portalUserId}` from `customers/{customerId}` when `portalUserId` is set:
  * `uid`, `email`, `name`, `displayName`, `role: customer` (unless existing staff), `stripeCustomerId`,
- * `organizationId`, and Firestore Timestamps `createdAt` / `updatedAt` (no `createdAtMs` / `updatedAtMs`).
+ * `organizationId`, and Firestore Timestamps `createdAt` / `updatedAt`.
  */
 export async function syncPortalUserFromCrmCustomerDoc(db: Firestore, customerId: string): Promise<void> {
   const id = customerId.trim();
@@ -76,9 +76,7 @@ export async function syncPortalUserFromCrmCustomerDoc(db: Firestore, customerId
       if (!ex) return;
       const hasCreatedAt = ex.createdAt != null && isTimestampLike(ex.createdAt);
       if (!hasCreatedAt) {
-        const legacyMs =
-          typeof ex.createdAtMs === "number" && Number.isFinite(ex.createdAtMs) ? (ex.createdAtMs as number) : nowTs.toMillis();
-        payload.createdAt = Timestamp.fromMillis(legacyMs);
+        payload.createdAt = nowTs;
       }
     }
 

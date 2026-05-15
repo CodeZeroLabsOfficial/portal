@@ -55,6 +55,6 @@ export async function getWorkspaceCompanySettings(user: PortalUser): Promise<Wor
     region: asString(data.region) ?? "",
     postalCode: asString(data.postalCode) ?? "",
     country: asString(data.country) ?? "",
-    updatedAt: millisFromFirestore(data, "updatedAt", "updatedAtMs"),
+    updatedAt: millisFromFirestore(data, "updatedAt"),
   };
 }

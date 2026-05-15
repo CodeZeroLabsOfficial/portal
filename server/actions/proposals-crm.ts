@@ -172,7 +172,6 @@ export async function createDraftProposalFromCustomerAction(
 
   try {
     const organizationId = user.organizationId ?? "default";
-    const now = Date.now();
     const shareToken = randomUUID().replace(/-/g, "");
 
     const ref = db.collection(COLLECTIONS.proposals).doc();
@@ -184,7 +183,8 @@ export async function createDraftProposalFromCustomerAction(
       recipientEmail,
       status: "draft",
       shareToken,
-      document: omitUndefinedDeep(encodeProposalDocumentForFirestore(document)),      createdAt: FieldValue.serverTimestamp(),
+      document: omitUndefinedDeep(encodeProposalDocumentForFirestore(document)),
+      createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     };
     if (branding) {
@@ -257,7 +257,6 @@ export async function createDraftProposalFromOpportunityAction(
 
   try {
     const organizationId = user.organizationId ?? "default";
-    const now = Date.now();
     const shareToken = randomUUID().replace(/-/g, "");
 
     const ref = db.collection(COLLECTIONS.proposals).doc();
@@ -270,7 +269,8 @@ export async function createDraftProposalFromOpportunityAction(
       recipientEmail,
       status: "draft",
       shareToken,
-      document: omitUndefinedDeep(encodeProposalDocumentForFirestore(document)),      createdAt: FieldValue.serverTimestamp(),
+      document: omitUndefinedDeep(encodeProposalDocumentForFirestore(document)),
+      createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     };
     if (branding) {

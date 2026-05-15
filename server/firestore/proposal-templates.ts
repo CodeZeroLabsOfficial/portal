@@ -44,8 +44,8 @@ export function parseProposalTemplateRecord(id: string, data: Record<string, unk
     stage,
     document,
     branding: parseBranding(data.branding),
-    createdAt: millisFromFirestore(data, "createdAt", "createdAtMs"),
-    updatedAt: millisFromFirestore(data, "updatedAt", "updatedAtMs"),
+    createdAt: millisFromFirestore(data, "createdAt"),
+    updatedAt: millisFromFirestore(data, "updatedAt"),
   };
 }
 

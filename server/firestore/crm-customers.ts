@@ -142,8 +142,8 @@ function parseCustomerRecord(id: string, data: Record<string, unknown>): Custome
     avatarUrl: asString(data.avatarUrl),
     crmType,
     status,
-    createdAt: coerceTimestampToMillis(data.createdAt ?? data.createdAtMs),
-    updatedAt: coerceTimestampToMillis(data.updatedAt ?? data.updatedAtMs),
+    createdAt: coerceTimestampToMillis(data.createdAt),
+    updatedAt: coerceTimestampToMillis(data.updatedAt),
     createdByUid: asString(data.createdByUid),
   };
 }
@@ -211,14 +211,13 @@ function parseSubscriptionFirestore(id: string, data: Record<string, unknown>): 
     productName: asString(data.productName),
     currency: asString(data.currency) ?? "aud",
     interval: data.interval === "year" ? "year" : data.interval === "month" ? "month" : undefined,
-    subscriptionStart: asNumber(data.subscriptionStart) ?? asNumber(data.plannedSubscriptionStartMs),
-    subscriptionEnd: asNumber(data.subscriptionEnd) ?? asNumber(data.subscriptionEndMs),
-    currentPeriodEnd:
-      asNumber(data.currentPeriodEnd ?? data.currentPeriodEndMs) ?? undefined,
+    subscriptionStart: asNumber(data.subscriptionStart),
+    subscriptionEnd: asNumber(data.subscriptionEnd),
+    currentPeriodEnd: asNumber(data.currentPeriodEnd),
     cancelAtPeriodEnd: typeof data.cancelAtPeriodEnd === "boolean" ? data.cancelAtPeriodEnd : undefined,
     monthlyAmountMinor: asNumber(data.monthlyAmountMinor),
-    ...(millisFromFirestore(data, "createdAt", "createdAtMs") > 0
-      ? { createdAt: millisFromFirestore(data, "createdAt", "createdAtMs") }
+    ...(millisFromFirestore(data, "createdAt") > 0
+      ? { createdAt: millisFromFirestore(data, "createdAt") }
       : {}),
     collectionMethod:
       data.collectionMethod === "charge_automatically" || data.collectionMethod === "send_invoice"
@@ -226,7 +225,7 @@ function parseSubscriptionFirestore(id: string, data: Record<string, unknown>): 
         : undefined,
     defaultPaymentMethodType: asString(data.defaultPaymentMethodType),
     mrrAmount: asNumber(data.mrrAmount),
-    updatedAt: millisFromFirestore(data, "updatedAt", "updatedAtMs") || Date.now(),
+    updatedAt: millisFromFirestore(data, "updatedAt") || Date.now(),
   };
 }
 
@@ -641,7 +640,7 @@ function parseNote(id: string, data: Record<string, unknown>): CustomerNoteRecor
     authorUid: asString(data.authorUid) ?? "",
     body: asString(data.body) ?? "",
     kind,
-    createdAt: coerceTimestampToMillis(data.createdAt ?? data.createdAtMs),
+    createdAt: coerceTimestampToMillis(data.createdAt),
   };
 }
 
@@ -669,7 +668,7 @@ function parseActivity(id: string, data: Record<string, unknown>): CustomerActiv
     title: asString(data.title) ?? "Activity",
     detail: asString(data.detail),
     actorUid: asString(data.actorUid),
-    createdAt: coerceTimestampToMillis(data.createdAt ?? data.createdAtMs),
+    createdAt: coerceTimestampToMillis(data.createdAt),
   };
 }
 
@@ -738,8 +737,8 @@ function parseInvoice(id: string, data: Record<string, unknown>): InvoiceRecord 
     amountDue: asNumber(data.amountDue) ?? 0,
     hostedInvoiceUrl: asString(data.hostedInvoiceUrl),
     invoicePdf: asString(data.invoicePdf),
-    issuedAt: millisFromFirestore(data, "issuedAt", "issuedAtMs"),
-    paidAt: asNumber(data.paidAt ?? data.paidAtMs),
+    issuedAt: millisFromFirestore(data, "issuedAt"),
+    paidAt: asNumber(data.paidAt),
   };
 }
 

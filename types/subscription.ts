@@ -25,12 +25,12 @@ export interface SubscriptionRecord {
   subscriptionStart?: number;
   /** Fixed contract term end (epoch millis), when known. */
   subscriptionEnd?: number;
-  /** Epoch millis — Firestore `currentPeriodEnd` (legacy: `currentPeriodEndMs`). */
+  /** Epoch millis — Firestore `currentPeriodEnd`. */
   currentPeriodEnd?: number;
   cancelAtPeriodEnd?: boolean;
   /** Normalized recurring amount per month (minor units), including from annual prices (÷12). */
   monthlyAmountMinor?: number;
-  /** Stripe subscription.created — epoch millis; Firestore `createdAt` Timestamp or number (legacy: `createdAtMs`). */
+  /** Stripe subscription.created — epoch millis (`createdAt` Timestamp or number). */
   createdAt?: number;
   /** Stripe Subscription.collection_method */
   collectionMethod?: SubscriptionCollectionMethod;
@@ -38,6 +38,6 @@ export interface SubscriptionRecord {
   defaultPaymentMethodType?: string;
   /** Denormalized recurring amount in minor units (optional — dashboard heuristics; month-interval lines only unless backfilled). */
   mrrAmount?: number;
-  /** Epoch millis — from Firestore `updatedAt` Timestamp or number (legacy: `updatedAtMs`). */
+  /** Epoch millis — Firestore `updatedAt` (Timestamp or number). */
   updatedAt: number;
 }

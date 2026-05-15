@@ -45,7 +45,7 @@ export interface OpportunityNoteRecord {
   organizationId?: string;
   authorUid: string;
   body: string;
-  /** Epoch millis — Firestore `createdAt` (Timestamp) or legacy `createdAtMs`. */
+  /** Epoch millis — Firestore `createdAt` (Timestamp or number). */
   createdAt: number;
 }
 
@@ -59,9 +59,9 @@ export interface OpportunityActivityRecord {
   kind: OpportunityActivityKind;
   title: string;
   detail?: string;
-  /** When the interaction took place — epoch millis (`occurredAt` or legacy `occurredAtMs`). */
+  /** When the interaction took place — epoch millis (`occurredAt`). */
   occurredAt: number;
   authorUid: string;
-  /** Epoch millis — Firestore `createdAt` (Timestamp) or legacy `createdAtMs`. */
+  /** Epoch millis — Firestore `createdAt` (Timestamp or number). */
   createdAt: number;
 }

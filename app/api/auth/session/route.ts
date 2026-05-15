@@ -82,11 +82,7 @@ export async function POST(request: Request) {
     };
 
     if (!hasCreatedAt) {
-      const legacyMs =
-        typeof existingRaw?.createdAtMs === "number" && Number.isFinite(existingRaw.createdAtMs)
-          ? (existingRaw.createdAtMs as number)
-          : nowMs;
-      payload.createdAt = Timestamp.fromMillis(legacyMs);
+      payload.createdAt = nowTs;
     }
 
     await userRef.set(payload, { merge: true });

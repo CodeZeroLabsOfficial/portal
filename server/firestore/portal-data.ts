@@ -86,14 +86,13 @@ function parseSubscription(id: string, data: Record<string, unknown>): Subscript
     productName: asString(data.productName),
     currency: asString(data.currency) ?? "aud",
     interval: data.interval === "year" ? "year" : data.interval === "month" ? "month" : undefined,
-    subscriptionStart: asNumber(data.subscriptionStart) ?? asNumber(data.plannedSubscriptionStartMs),
-    subscriptionEnd: asNumber(data.subscriptionEnd) ?? asNumber(data.subscriptionEndMs),
-    currentPeriodEnd:
-      asNumber(data.currentPeriodEnd ?? data.currentPeriodEndMs) ?? undefined,
+    subscriptionStart: asNumber(data.subscriptionStart),
+    subscriptionEnd: asNumber(data.subscriptionEnd),
+    currentPeriodEnd: asNumber(data.currentPeriodEnd),
     cancelAtPeriodEnd: asBoolean(data.cancelAtPeriodEnd),
     monthlyAmountMinor: asNumber(data.monthlyAmountMinor),
-    ...(millisFromFirestore(data, "createdAt", "createdAtMs") > 0
-      ? { createdAt: millisFromFirestore(data, "createdAt", "createdAtMs") }
+    ...(millisFromFirestore(data, "createdAt") > 0
+      ? { createdAt: millisFromFirestore(data, "createdAt") }
       : {}),
     collectionMethod:
       data.collectionMethod === "charge_automatically" || data.collectionMethod === "send_invoice"
@@ -101,7 +100,7 @@ function parseSubscription(id: string, data: Record<string, unknown>): Subscript
         : undefined,
     defaultPaymentMethodType: asString(data.defaultPaymentMethodType),
     mrrAmount: asNumber(data.mrrAmount),
-    updatedAt: millisFromFirestore(data, "updatedAt", "updatedAtMs") || Date.now(),
+    updatedAt: millisFromFirestore(data, "updatedAt") || Date.now(),
   };
 }
 
@@ -115,8 +114,8 @@ function parsePayment(id: string, data: Record<string, unknown>): PaymentRecord 
     amount: asNumber(data.amount) ?? 0,
     status: asString(data.status) ?? "processing",
     description: asString(data.description),
-    createdAt: millisFromFirestore(data, "createdAt", "createdAtMs"),
-    updatedAt: millisFromFirestore(data, "updatedAt", "updatedAtMs") || Date.now(),
+    createdAt: millisFromFirestore(data, "createdAt"),
+    updatedAt: millisFromFirestore(data, "updatedAt") || Date.now(),
   };
 }
 
@@ -138,8 +137,8 @@ function parseInvoice(id: string, data: Record<string, unknown>): InvoiceRecord 
     amountDue: asNumber(data.amountDue) ?? 0,
     hostedInvoiceUrl: asString(data.hostedInvoiceUrl),
     invoicePdf: asString(data.invoicePdf),
-    issuedAt: millisFromFirestore(data, "issuedAt", "issuedAtMs"),
-    paidAt: asNumber(data.paidAt ?? data.paidAtMs),
+    issuedAt: millisFromFirestore(data, "issuedAt"),
+    paidAt: asNumber(data.paidAt),
   };
 }
 
@@ -331,7 +330,7 @@ function parseSupportTicket(id: string, data: Record<string, unknown>): SupportT
     organizationId: asString(data.organizationId),
     status: asString(data.status) ?? "open",
     urgency,
-    updatedAt: millisFromFirestore(data, "updatedAt", "updatedAtMs") || Date.now(),
+    updatedAt: millisFromFirestore(data, "updatedAt") || Date.now(),
   };
 }
 

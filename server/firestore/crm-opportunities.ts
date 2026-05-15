@@ -32,8 +32,8 @@ function parseOpportunity(id: string, data: Record<string, unknown>): Opportunit
     currency: (asString(data.currency) ?? "aud").toLowerCase(),
     customFieldsSnapshot: asStringStringMap(data.customFieldsSnapshot),
     notes: asString(data.notes),
-    createdAt: coerceTimestampToMillis(data.createdAt ?? data.createdAt),
-    updatedAt: coerceTimestampToMillis(data.updatedAt ?? data.updatedAt),
+    createdAt: coerceTimestampToMillis(data.createdAt),
+    updatedAt: coerceTimestampToMillis(data.updatedAt),
     createdByUid: asString(data.createdByUid),
   };
 }
@@ -357,7 +357,7 @@ function parseOpportunityNote(id: string, data: Record<string, unknown>): Opport
     ...(organizationId ? { organizationId } : {}),
     authorUid: asString(data.authorUid) ?? "",
     body: asString(data.body) ?? "",
-    createdAt: coerceTimestampToMillis(data.createdAt ?? data.createdAt),
+    createdAt: coerceTimestampToMillis(data.createdAt),
   };
 }
 
@@ -373,8 +373,8 @@ function parseOpportunityActivity(
     kindRaw === "meeting" || kindRaw === "call" || kindRaw === "email" || kindRaw === "other"
       ? kindRaw
       : "other";
-  const createdAt = coerceTimestampToMillis(data.createdAt ?? data.createdAt);
-  const occurredAt = coerceTimestampToMillis(data.occurredAt ?? data.occurredAt) || createdAt;
+  const createdAt = coerceTimestampToMillis(data.createdAt);
+  const occurredAt = coerceTimestampToMillis(data.occurredAt) || createdAt;
   return {
     id,
     opportunityId,

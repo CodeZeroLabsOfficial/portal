@@ -1,6 +1,5 @@
 /**
- * Normalize Firestore timestamp values (Admin SDK, client SDK, legacy epoch ms) to milliseconds.
- * Use for reads so iOS (Timestamp) and existing web rows (number) stay compatible.
+ * Normalize Firestore timestamp values (Admin SDK, client SDK, or epoch ms number) to milliseconds.
  */
 export function coerceTimestampToMillis(value: unknown): number {
   if (value == null) return 0;
@@ -29,9 +28,7 @@ export function coerceTimestampToMillis(value: unknown): number {
   return 0;
 }
 
-/**
- * Epoch millis: prefer `primary` (Firestore Timestamp, number, or protobuf shape), then legacy `legacyMs` number field.
- */
-export function millisFromFirestore(data: Record<string, unknown>, primary: string, legacyMs: string): number {
-  return coerceTimestampToMillis(data[primary] ?? data[legacyMs]);
+/** Epoch millis from a document field (`Timestamp`, protobuf shape, or number). */
+export function millisFromFirestore(data: Record<string, unknown>, field: string): number {
+  return coerceTimestampToMillis(data[field]);
 }
