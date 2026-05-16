@@ -21,6 +21,7 @@ import { ProposalPublicSubscriptionFormPanel } from "@/components/proposal/propo
 import type { ProposalPublicSubscriptionUi } from "@/server/proposal/public-proposal-subscription-ui";
 import { acceptProposalPublicAction } from "@/server/actions/proposal-builder";
 import { createProposalPublicSubscriptionAction } from "@/server/actions/proposal-public-subscription";
+import type { ProposalCustomerSignerPrefill } from "@/types/proposal";
 
 const INK = "#1a1a5e";
 const LOGICAL_W = 640;
@@ -45,6 +46,17 @@ function signatureBannerDateLabel(
     return new Date(`${iso}T12:00:00`).toLocaleDateString("en-US", opts);
   }
   return new Date().toLocaleDateString("en-US", opts);
+}
+
+function agreementPrefillField(
+  enabled: boolean,
+  customerValue: string | undefined,
+  legacyBlockValue: string | undefined,
+): string {
+  if (!enabled) return "";
+  const fromCustomer = customerValue?.trim();
+  if (fromCustomer) return fromCustomer;
+  return legacyBlockValue?.trim() ?? "";
 }
 
 export interface AgreementSignaturePayload {
@@ -243,6 +255,8 @@ export interface AgreementSignatureFormProps {
   prefillSignerName?: string;
   prefillSignerEmail?: string;
   prefillSignerOrganization?: string;
+  /** When set (public page with linked customer), prefill fields prefer these values over legacy block strings. */
+  customerSignerPrefill?: ProposalCustomerSignerPrefill | null;
   agreementTitle: string;
   proposalTitle?: string;
   ctaColor: string;
@@ -274,6 +288,7 @@ export function AgreementSignatureForm({
   prefillSignerName,
   prefillSignerEmail,
   prefillSignerOrganization,
+  customerSignerPrefill = null,
   agreementTitle,
   proposalTitle,
   ctaColor,
@@ -288,16 +303,52 @@ export function AgreementSignatureForm({
   monthlyCurrency,
 }: AgreementSignatureFormProps) {
   const [acceptName, setAcceptName] = React.useState(() =>
-    prefillSignerNameEnabled && prefillSignerName?.trim() ? prefillSignerName.trim() : "",
+    agreementPrefillField(
+      prefillSignerNameEnabled,
+      customerSignerPrefill?.name,
+      prefillSignerName,
+    ),
   );
   const [acceptEmail, setAcceptEmail] = React.useState(() =>
-    prefillSignerEmailEnabled && prefillSignerEmail?.trim() ? prefillSignerEmail.trim() : "",
+    agreementPrefillField(
+      prefillSignerEmailEnabled,
+      customerSignerPrefill?.email,
+      prefillSignerEmail,
+    ),
   );
   const [acceptOrg, setAcceptOrg] = React.useState(() =>
-    prefillSignerOrganizationEnabled && prefillSignerOrganization?.trim()
-      ? prefillSignerOrganization.trim()
-      : "",
+    agreementPrefillField(
+      prefillSignerOrganizationEnabled,
+      customerSignerPrefill?.organization,
+      prefillSignerOrganization,
+    ),
   );
+
+  React.useEffect(() => {
+    setAcceptName(
+      agreementPrefillField(prefillSignerNameEnabled, customerSignerPrefill?.name, prefillSignerName),
+    );
+    setAcceptEmail(
+      agreementPrefillField(prefillSignerEmailEnabled, customerSignerPrefill?.email, prefillSignerEmail),
+    );
+    setAcceptOrg(
+      agreementPrefillField(
+        prefillSignerOrganizationEnabled,
+        customerSignerPrefill?.organization,
+        prefillSignerOrganization,
+      ),
+    );
+  }, [
+    prefillSignerNameEnabled,
+    prefillSignerEmailEnabled,
+    prefillSignerOrganizationEnabled,
+    customerSignerPrefill?.name,
+    customerSignerPrefill?.email,
+    customerSignerPrefill?.organization,
+    prefillSignerName,
+    prefillSignerEmail,
+    prefillSignerOrganization,
+  ]);
 
   const [adoptOpen, setAdoptOpen] = React.useState(false);
   const [adoptTab, setAdoptTab] = React.useState<AgreementSignatureMethod>("type");

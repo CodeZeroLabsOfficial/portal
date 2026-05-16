@@ -298,12 +298,18 @@ export interface AgreementBlock extends ProposalBlockBase {
    * Default true.
    */
   eSignaturesEnabled?: boolean;
-  /** When true, the name field opens pre-filled from {@link prefillSignerName} when set. */
+  /**
+   * When true, the public agreement modal pre-fills the name from the CRM customer linked via
+   * {@link ProposalRecord.customerId} (legacy {@link prefillSignerName} is used only if that customer is missing).
+   */
   prefillSignerNameEnabled?: boolean;
   prefillSignerEmailEnabled?: boolean;
   prefillSignerOrganizationEnabled?: boolean;
+  /** @deprecated Prefer CRM customer on the proposal; kept for older documents and editor preview fallback. */
   prefillSignerName?: string;
+  /** @deprecated Prefer CRM customer on the proposal. */
   prefillSignerEmail?: string;
+  /** @deprecated Prefer CRM customer on the proposal. */
   prefillSignerOrganization?: string;
   /**
    * When false, hides the “electronic signature is as valid as handwritten” acknowledgement
@@ -477,6 +483,14 @@ export interface ProposalBranding {
   logoUrl?: string;
   primaryColor?: string;
   fontFamily?: string;
+}
+
+/** CRM fields used to pre-fill agreement name / email / organisation on the public proposal page. */
+export interface ProposalCustomerSignerPrefill {
+  name: string;
+  email: string;
+  /** Company / organisation from the customer record. */
+  organization: string;
 }
 
 export interface ProposalRecord {

@@ -13,6 +13,7 @@ import {
 } from "@/lib/proposal-public-layout";
 import { getProposalRecordByShareToken } from "@/server/firestore/parse-proposal";
 import { getUserStoredTimeZone } from "@/server/firestore/user-locality";
+import { loadProposalCustomerSignerPrefill } from "@/server/proposal/public-proposal-customer-signer-prefill";
 import { loadProposalPublicSubscriptionUi } from "@/server/proposal/public-proposal-subscription-ui";
 
 interface PublicProposalPageProps {
@@ -58,8 +59,14 @@ export default async function PublicProposalPage(props: PublicProposalPageProps)
   const unlocked = !requiresPassword || (await isProposalUnlockedForRequest(proposal.id));
 
   const agreementPresent = hasAgreementBlock(proposal.document.blocks);
-  const publicSubscriptionUi =
-    unlocked && agreementPresent ? await loadProposalPublicSubscriptionUi(proposal) : null;
+  const [publicSubscriptionUi, customerSignerPrefill] = unlocked
+    ? await Promise.all([
+        agreementPresent ? loadProposalPublicSubscriptionUi(proposal) : Promise.resolve(null),
+        proposal.customerId?.trim()
+          ? loadProposalCustomerSignerPrefill(proposal)
+          : Promise.resolve(null),
+      ])
+    : [null, null];
   /**
    * Mirror {@link ProposalPublicFooter}'s null-return condition: when an agreement
    * block drives signing and the proposal hasn't been accepted yet, the footer
@@ -95,6 +102,7 @@ export default async function PublicProposalPage(props: PublicProposalPageProps)
               acceptedByName={proposal.acceptedByName}
               localityTimeZone={localityTimeZone}
               publicSubscriptionUi={publicSubscriptionUi}
+              customerSignerPrefill={customerSignerPrefill}
             />
           </div>
           {showFooter ? (

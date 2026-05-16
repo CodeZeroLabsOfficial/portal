@@ -9,6 +9,7 @@ import type {
   ProposalBlock,
   ProposalBranding,
   ProposalContentBlock,
+  ProposalCustomerSignerPrefill,
   ProposalDocument,
   ProposalPublicSelections,
   ProposalStatus,
@@ -65,6 +66,8 @@ export interface ProposalDocumentViewProps {
   localityTimeZone?: string;
   /** Prefilled subscription summary for the agreement success flow (public page only). */
   publicSubscriptionUi?: ProposalPublicSubscriptionUi | null;
+  /** CRM customer name / email / company for agreement field prefill (public page when `customerId` is set). */
+  customerSignerPrefill?: ProposalCustomerSignerPrefill | null;
 }
 
 function AccordionPublicView({ block }: { block: AccordionBlock }) {
@@ -132,6 +135,7 @@ interface ProposalRenderContext {
   acceptedByName?: string;
   localityTimeZone?: string;
   publicSubscriptionUi?: ProposalPublicSubscriptionUi | null;
+  customerSignerPrefill?: ProposalCustomerSignerPrefill | null;
 }
 
 function BlockView({
@@ -443,6 +447,7 @@ function BlockView({
           localityTimeZone={proposalContext?.localityTimeZone}
           interactive={Boolean(shareToken)}
           publicSubscriptionUi={proposalContext?.publicSubscriptionUi}
+          customerSignerPrefill={proposalContext?.customerSignerPrefill}
           renderAgreementChild={(child) => (
             <BlockView
               key={child.id}
@@ -567,6 +572,7 @@ export function ProposalDocumentView({
   acceptedByName,
   localityTimeZone,
   publicSubscriptionUi = null,
+  customerSignerPrefill = null,
 }: ProposalDocumentViewProps) {
   const style = React.useMemo(() => {
     if (!branding?.primaryColor && !branding?.fontFamily) return undefined;
@@ -586,8 +592,17 @@ export function ProposalDocumentView({
       acceptedByName,
       localityTimeZone,
       publicSubscriptionUi,
+      customerSignerPrefill,
     }),
-    [document.blocks, document.title, proposalStatus, acceptedByName, localityTimeZone, publicSubscriptionUi],
+    [
+      document.blocks,
+      document.title,
+      proposalStatus,
+      acceptedByName,
+      localityTimeZone,
+      publicSubscriptionUi,
+      customerSignerPrefill,
+    ],
   );
 
   /**

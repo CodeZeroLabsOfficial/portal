@@ -17,6 +17,7 @@ import type {
   PackagesPublicSelection,
   ProposalAgreementChildBlock,
   ProposalBlock,
+  ProposalCustomerSignerPrefill,
   ProposalPublicSelections,
   ProposalStatus,
 } from "@/types/proposal";
@@ -51,6 +52,8 @@ export interface AgreementBlockPublicProps {
   localityTimeZone?: string;
   /** When set after acceptance, buyer can complete the same subscription flow as admin (prefilled). */
   publicSubscriptionUi?: ProposalPublicSubscriptionUi | null;
+  /** CRM-linked customer fields for agreement pre-fill (public page only). */
+  customerSignerPrefill?: ProposalCustomerSignerPrefill | null;
   /** When false (editor / preview) the CTA is disabled and the sign form is read-only. */
   interactive?: boolean;
   /** Renders nested blocks above the sign button (same pipeline as the public document viewer). */
@@ -291,6 +294,7 @@ export function AgreementBlockPublic({
   localityTimeZone,
   interactive = true,
   publicSubscriptionUi = null,
+  customerSignerPrefill = null,
   renderAgreementChild,
 }: AgreementBlockPublicProps) {
   const router = useRouter();
@@ -684,6 +688,7 @@ export function AgreementBlockPublic({
                     prefillSignerName={block.prefillSignerName}
                     prefillSignerEmail={block.prefillSignerEmail}
                     prefillSignerOrganization={block.prefillSignerOrganization}
+                    customerSignerPrefill={customerSignerPrefill}
                     agreementTitle={agreementTitle}
                     proposalTitle={proposalTitle}
                     ctaColor={ctaColor}

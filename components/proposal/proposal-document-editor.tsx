@@ -1791,74 +1791,44 @@ function AgreementEsignatureSettingsPopover({
                 Prefilled names
               </p>
               <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-                Pre-fill signer fields in the accept flow so clients see fewer empty inputs.
+                When enabled and the proposal is linked to a CRM customer, the buyer&apos;s name, email, and
+                organisation from that customer record are pre-filled in the accept flow.
               </p>
               <div className="mt-3 space-y-3">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-3">
-                    <Label htmlFor={`agreement-prefill-name-${bid}`} className="cursor-pointer text-sm font-medium">
-                      Name
-                    </Label>
-                    <Switch
-                      id={`agreement-prefill-name-${bid}`}
-                      checked={Boolean(block.prefillSignerNameEnabled)}
-                      onCheckedChange={(checked) => onChange({ ...block, prefillSignerNameEnabled: checked })}
-                    />
-                  </div>
-                  {block.prefillSignerNameEnabled ? (
-                    <Input
-                      value={block.prefillSignerName ?? ""}
-                      placeholder="Default name"
-                      maxLength={200}
-                      onChange={(e) => onChange({ ...block, prefillSignerName: e.target.value })}
-                    />
-                  ) : null}
+                <div className="flex items-center justify-between gap-3">
+                  <Label htmlFor={`agreement-prefill-name-${bid}`} className="cursor-pointer text-sm font-medium">
+                    Name
+                  </Label>
+                  <Switch
+                    id={`agreement-prefill-name-${bid}`}
+                    checked={Boolean(block.prefillSignerNameEnabled)}
+                    onCheckedChange={(checked) => onChange({ ...block, prefillSignerNameEnabled: checked })}
+                  />
                 </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-3">
-                    <Label htmlFor={`agreement-prefill-email-${bid}`} className="cursor-pointer text-sm font-medium">
-                      Email
-                    </Label>
-                    <Switch
-                      id={`agreement-prefill-email-${bid}`}
-                      checked={Boolean(block.prefillSignerEmailEnabled)}
-                      onCheckedChange={(checked) => onChange({ ...block, prefillSignerEmailEnabled: checked })}
-                    />
-                  </div>
-                  {block.prefillSignerEmailEnabled ? (
-                    <Input
-                      type="email"
-                      value={block.prefillSignerEmail ?? ""}
-                      placeholder="default@company.com"
-                      maxLength={320}
-                      onChange={(e) => onChange({ ...block, prefillSignerEmail: e.target.value })}
-                    />
-                  ) : null}
+                <div className="flex items-center justify-between gap-3">
+                  <Label htmlFor={`agreement-prefill-email-${bid}`} className="cursor-pointer text-sm font-medium">
+                    Email
+                  </Label>
+                  <Switch
+                    id={`agreement-prefill-email-${bid}`}
+                    checked={Boolean(block.prefillSignerEmailEnabled)}
+                    onCheckedChange={(checked) => onChange({ ...block, prefillSignerEmailEnabled: checked })}
+                  />
                 </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-3">
-                    <Label
-                      htmlFor={`agreement-prefill-org-${bid}`}
-                      className="cursor-pointer text-sm font-medium"
-                    >
-                      Organisation
-                    </Label>
-                    <Switch
-                      id={`agreement-prefill-org-${bid}`}
-                      checked={Boolean(block.prefillSignerOrganizationEnabled)}
-                      onCheckedChange={(checked) =>
-                        onChange({ ...block, prefillSignerOrganizationEnabled: checked })
-                      }
-                    />
-                  </div>
-                  {block.prefillSignerOrganizationEnabled ? (
-                    <Input
-                      value={block.prefillSignerOrganization ?? ""}
-                      placeholder="Default organisation"
-                      maxLength={500}
-                      onChange={(e) => onChange({ ...block, prefillSignerOrganization: e.target.value })}
-                    />
-                  ) : null}
+                <div className="flex items-center justify-between gap-3">
+                  <Label
+                    htmlFor={`agreement-prefill-org-${bid}`}
+                    className="cursor-pointer text-sm font-medium"
+                  >
+                    Organisation
+                  </Label>
+                  <Switch
+                    id={`agreement-prefill-org-${bid}`}
+                    checked={Boolean(block.prefillSignerOrganizationEnabled)}
+                    onCheckedChange={(checked) =>
+                      onChange({ ...block, prefillSignerOrganizationEnabled: checked })
+                    }
+                  />
                 </div>
               </div>
             </div>
