@@ -99,6 +99,10 @@ import {
   PROPOSAL_IMAGE_BLOCK_PLACEHOLDER_URL,
   ProposalImageBlockEditor,
 } from "@/components/proposal/proposal-image-block-editor";
+import {
+  ProposalIconBlockToolbar,
+  type ProposalIconColumnToolbarActions,
+} from "@/components/proposal/proposal-icon-block-toolbar";
 import { ProposalImageBlockToolbar } from "@/components/proposal/proposal-image-block-toolbar";
 import { ProposalSectionBackgroundPicker } from "@/components/proposal/proposal-section-background-picker";
 import { useProposalSectionEditorChrome } from "@/components/proposal/proposal-section-editor-chrome";
@@ -509,7 +513,7 @@ function createBlock(type: ProposalBlock["type"]): ProposalBlock {
     case "columns":
       return createColumnsBlock(2);
     case "icon":
-      return { id, type: "icon", emoji: "✨", label: "" };
+      return { id, type: "icon", iconName: "Sparkles", label: "" };
     case "section":
       return {
         id,
@@ -810,6 +814,7 @@ function NestedColumnBlockFields({
   textPlaceholder,
   cellSelection,
   imageColumnToolbar,
+  iconColumnToolbar,
 }: {
   block: ProposalColumnChildBlock;
   onChange: (next: ProposalColumnChildBlock) => void;
@@ -819,6 +824,8 @@ function NestedColumnBlockFields({
   cellSelection?: { selectedId: string | null; onSelect: (id: string | null) => void };
   /** When this cell is an image: remove action is shown on the image toolbar. */
   imageColumnToolbar?: ProposalImageColumnToolbarActions;
+  /** When this cell is an icon: picker + remove are shown on the floating toolbar. */
+  iconColumnToolbar?: ProposalIconColumnToolbarActions;
 }) {
   const patchNested = (next: ProposalBlock) => onChange(next as ProposalColumnChildBlock);
   switch (block.type) {
@@ -859,6 +866,7 @@ function NestedColumnBlockFields({
           block={block as ProposalBlock}
           onChange={patchNested}
           imageColumnToolbar={block.type === "image" ? imageColumnToolbar : undefined}
+          iconColumnToolbar={block.type === "icon" ? iconColumnToolbar : undefined}
           selection={cellSelection}
         />
       );
@@ -928,6 +936,13 @@ function ColumnPane({
                 cellSelection={cellSelection}
                 imageColumnToolbar={
                   child.type === "image"
+                    ? {
+                        onRemove: () => removeAt(child.id),
+                      }
+                    : undefined
+                }
+                iconColumnToolbar={
+                  child.type === "icon"
                     ? {
                         onRemove: () => removeAt(child.id),
                       }
@@ -1495,6 +1510,12 @@ function SectionBlockFields({
                                   updateChild(child.id, { ...p, background: next } as ProposalContentBlock);
                                 }
                               }}
+                            />
+                          ) : child.type === "icon" ? (
+                            <ProposalIconBlockToolbar
+                              variant="toolbar"
+                              block={child as IconBlock}
+                              onChange={(next) => updateChild(child.id, next as ProposalContentBlock)}
                             />
                           ) : undefined
                         }
@@ -2438,6 +2459,12 @@ function AgreementBlockFields({
                                 }
                               }}
                             />
+                          ) : child.type === "icon" ? (
+                            <ProposalIconBlockToolbar
+                              variant="toolbar"
+                              block={child as IconBlock}
+                              onChange={(next) => updateChild(child.id, next as ProposalAgreementChildBlock)}
+                            />
                           ) : undefined
                         }
                         leadingSlot={dragHandle}
@@ -2501,6 +2528,7 @@ function BlockFields({
   applyBlockStyle,
   columnsLayoutEditing,
   imageColumnToolbar,
+  iconColumnToolbar,
 }: {
   block: ProposalBlock;
   onChange: (next: ProposalBlock) => void;
@@ -2513,6 +2541,8 @@ function BlockFields({
   };
   /** Columns only: image remove is on {@link ProposalImageBlockToolbar}; duplicate/move stay on the column row. */
   imageColumnToolbar?: ProposalImageColumnToolbarActions;
+  /** Columns only: icon picker + remove on the floating toolbar when the cell is selected. */
+  iconColumnToolbar?: ProposalIconColumnToolbarActions;
 }) {
   const patch = (next: ProposalBlock) => onChange(next);
   const sectionChrome = useProposalSectionEditorChrome();
@@ -2800,17 +2830,22 @@ function BlockFields({
       return <AccordionBlockEditor block={block as AccordionBlock} onChange={(next) => patch(next)} />;
     case "icon": {
       const ic = block as IconBlock;
+      const col = iconColumnToolbar;
+      const showEmbeddedColumnToolbar = Boolean(col) && selection?.selectedId === ic.id;
       return (
-        <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label>Emoji or symbol</Label>
-            <Input
-              value={ic.emoji ?? ""}
-              maxLength={8}
-              onChange={(e) => patch({ ...ic, emoji: e.target.value || undefined })}
-              placeholder="e.g. ✨"
-            />
-          </div>
+        <div className="relative space-y-3">
+          {showEmbeddedColumnToolbar ? (
+            <div className="pointer-events-none absolute inset-x-0 top-0 z-30 -translate-y-full pb-1.5 pt-2">
+              <div className="pointer-events-auto flex w-full flex-wrap items-start justify-end gap-1.5">
+                <ProposalIconBlockToolbar
+                  variant="embedded"
+                  block={ic}
+                  onChange={(next) => patch(next)}
+                  onRemove={col?.onRemove}
+                />
+              </div>
+            </div>
+          ) : null}
           <div className="space-y-1.5">
             <Label>Caption</Label>
             <Input value={ic.label ?? ""} onChange={(e) => patch({ ...ic, label: e.target.value })} placeholder="Displayed beside icon" />
@@ -3791,6 +3826,12 @@ export function ProposalDocumentEditor({
                                 ) : block.type === "splash" ? (
                                   <ProposalSplashBackgroundPicker
                                     block={block as SplashBlock}
+                                    onChange={(next) => updateBlock(block.id, next)}
+                                  />
+                                ) : block.type === "icon" ? (
+                                  <ProposalIconBlockToolbar
+                                    variant="toolbar"
+                                    block={block as IconBlock}
                                     onChange={(next) => updateBlock(block.id, next)}
                                   />
                                 ) : undefined

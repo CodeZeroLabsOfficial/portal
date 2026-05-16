@@ -246,6 +246,7 @@ function mapContentBlock(block: ProposalContentBlock, ctx: ProposalTokenContext)
     case "icon":
       return {
         ...block,
+        iconName: block.iconName !== undefined ? replaceProposalTokens(block.iconName, ctx) : block.iconName,
         emoji: block.emoji !== undefined ? replaceProposalTokens(block.emoji, ctx) : block.emoji,
         label: block.label !== undefined ? replaceProposalTokens(block.label, ctx) : block.label,
       };

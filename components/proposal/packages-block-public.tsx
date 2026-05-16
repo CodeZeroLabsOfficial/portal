@@ -492,8 +492,8 @@ export function PackagesBlockPublic({
                   <thead>
                     <tr className="border-b border-dashed border-border/50 bg-card text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                       <th className="px-4 py-2.5 !text-left">Description</th>
-                      <th className="px-4 py-2.5 text-right">Item</th>
-                      {allowAddonEdit ? <th className="px-4 py-2.5 text-right">Quantity</th> : null}
+                      <th className="px-4 py-2.5 text-center">Item</th>
+                      {allowAddonEdit ? <th className="px-4 py-2.5 text-center">Quantity</th> : null}
                       <th className="px-4 py-2.5 text-right">Price</th>
                     </tr>
                   </thead>
@@ -530,12 +530,12 @@ export function PackagesBlockPublic({
                               ) : null}
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-right align-middle tabular-nums text-muted-foreground">
+                          <td className="px-4 py-3 text-center align-middle tabular-nums text-muted-foreground">
                             {formatCurrencyAmount(li.unitAmountMinor, currency)}
                           </td>
                           {allowAddonEdit ? (
-                            <td className="px-4 py-3 text-right align-middle">
-                              <div className="inline-flex min-h-8 items-center justify-end tabular-nums">
+                            <td className="px-4 py-3 text-center align-middle">
+                              <div className="flex min-h-8 w-full items-center justify-center tabular-nums">
                                 {qRaw <= 0 ? (
                                   <Button
                                     key="addon-qty-add"
@@ -557,7 +557,7 @@ export function PackagesBlockPublic({
                                   <span
                                     key="addon-qty-stepper"
                                     className={cn(
-                                      "inline-flex items-center justify-end rounded-md border border-border/60 bg-background p-0.5 shadow-sm",
+                                      "inline-flex items-center rounded-md border border-border/60 bg-background p-0.5 shadow-sm",
                                       "animate-in fade-in-0 zoom-in-95 duration-200",
                                     )}
                                   >

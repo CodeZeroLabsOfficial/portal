@@ -372,6 +372,7 @@ const accordionBlockSchema = z.object({
 const iconBlockSchema = z.object({
   id: idSchema,
   type: z.literal("icon"),
+  iconName: z.string().max(64).optional(),
   emoji: z.string().max(8).optional(),
   label: z.string().optional(),
 });

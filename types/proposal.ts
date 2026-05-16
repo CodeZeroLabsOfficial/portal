@@ -380,7 +380,12 @@ export interface AccordionBlock extends ProposalBlockBase {
 
 export interface IconBlock extends ProposalBlockBase {
   type: "icon";
-  /** Emoji / single-character marker shown in proposals. */
+  /**
+   * Lucide icon name from the proposal picker (e.g. `ArrowRight`).
+   * When set, this is shown instead of {@link emoji}.
+   */
+  iconName?: string;
+  /** @deprecated Legacy emoji-only content; preserved for older documents. */
   emoji?: string;
   label?: string;
 }

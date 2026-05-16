@@ -4,6 +4,7 @@ import * as React from "react";
 import type {
   AccordionBlock,
   AgreementBlock,
+  IconBlock,
   ImageBlock,
   PackagesBlock,
   ProposalBlock,
@@ -47,6 +48,7 @@ import { ProposalSplashBlockCanvas } from "@/components/proposal/proposal-splash
 import { isProposalImagePlaceholderUrl } from "@/components/proposal/proposal-image-block-editor";
 import { isSectionBackgroundActive } from "@/lib/section-background";
 import { proposalEndsInFullBleedBand } from "@/lib/proposal-blocks";
+import { resolveProposalPresetIcon } from "@/lib/proposal-icon-presets";
 import { isPublicProposalPackageSelectionsLocked } from "@/lib/proposal-package-selection";
 
 export interface ProposalDocumentViewProps {
@@ -535,15 +537,20 @@ function BlockView({
       return <AccordionPublicView block={block} />;
     }
     case "icon": {
-      if (!block.emoji && !block.label) return null;
+      const ic = block as IconBlock;
+      const IconGlyph = resolveProposalPresetIcon(ic.iconName);
+      const emoji = ic.emoji?.trim();
+      if (!IconGlyph && !emoji && !(ic.label ?? "").trim()) return null;
       return (
         <div className="flex flex-wrap items-center gap-3 py-2">
-          {block.emoji ? (
+          {IconGlyph ? (
+            <IconGlyph className="h-10 w-10 shrink-0 text-foreground" aria-hidden />
+          ) : emoji ? (
             <span className="text-4xl leading-none" aria-hidden>
-              {block.emoji}
+              {emoji}
             </span>
           ) : null}
-          {block.label ? <span className="text-xl font-semibold tracking-tight text-foreground">{block.label}</span> : null}
+          {ic.label ? <span className="text-xl font-semibold tracking-tight text-foreground">{ic.label}</span> : null}
         </div>
       );
     }
