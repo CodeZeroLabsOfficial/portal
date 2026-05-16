@@ -410,7 +410,7 @@ export function AgreementBlockPublic({
         </div>
         <div
           className={cn(
-            "flex flex-col gap-4 border-t border-border/50 pt-8",
+            "flex flex-col gap-4",
             buttonAlign === "start" ? "items-stretch text-left" : "items-center text-center",
           )}
         >

@@ -1758,7 +1758,7 @@ function AgreementSignButtonPreview({
 
   return (
     <Popover>
-      <div className={cn("mt-3 flex w-full", align === "start" ? "justify-start" : "justify-center")}>
+      <div className={cn("flex w-full", align === "start" ? "justify-start" : "justify-center")}>
         <div className="relative inline-flex max-w-full">
           <div
             className="inline-flex h-10 min-w-0 max-w-full items-center justify-center rounded-lg px-5 text-sm font-semibold shadow-sm"
@@ -1895,7 +1895,7 @@ function AgreementSignButtonPreview({
 }
 
 /**
- * Accept block settings: sign button appearance, contract template, acknowledgement
+ * Accept block settings: CTA preview (pencil popover), contract template, acknowledgement
  * option. Layout above the button is edited as nested blocks in the Accept surface.
  */
 function AgreementBlockEditor({
@@ -1908,23 +1908,7 @@ function AgreementBlockEditor({
   const contractLib = useProposalContractTemplateLibraryOptional();
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl border border-dashed border-border/70 bg-muted/15 px-6 py-6 text-center">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-          Sign button
-        </p>
-        <AgreementSignButtonPreview block={block} onChange={onChange} />
-        <p className="mt-3 text-[11px] text-muted-foreground">
-          {block.contractTemplateLabel?.trim() ? (
-            <>
-              Opens the “{block.agreementTitle?.trim() || "Services Agreement"}” modal for the buyer to review
-              &amp; sign.
-            </>
-          ) : (
-            <>Attach a contract template to set the modal title and agreement copy. Buyers review &amp; sign in the modal.</>
-          )}
-          <span className="block">Use the pencil on the button to change its label, colour, and alignment.</span>
-        </p>
-      </div>
+      <AgreementSignButtonPreview block={block} onChange={onChange} />
 
       {contractLib ? (
         <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border/70 bg-muted/20 px-3 py-2.5">
