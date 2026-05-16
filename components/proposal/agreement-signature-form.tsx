@@ -51,8 +51,8 @@ export interface AgreementSignaturePayload {
   signerName: string;
   signerEmail: string;
   signerOrganization?: string;
-  signatureDataUrl: string;
-  signatureMethod: AgreementSignatureMethod;
+  signatureDataUrl?: string;
+  signatureMethod?: AgreementSignatureMethod;
   clientSignedAt: number;
 }
 
@@ -229,7 +229,20 @@ function AgreementAccordionPanel({
 export interface AgreementSignatureFormProps {
   disabled: boolean;
   busy: boolean;
+  /** When false, acceptance does not require a captured signature. Default true. */
+  eSignaturesEnabled: boolean;
+  /** When true, show and require the electronic-signature binding checkbox (unless disabled). Default true. */
+  electronicSignatureDisclaimerEnabled: boolean;
+  /** When true, show the “I have read and agree…” checkbox. Default true. */
+  termsReadDisclaimerEnabled: boolean;
+  /** When {@link termsReadDisclaimerEnabled}, whether that checkbox must be checked. Default true. */
   requireAcceptTerms: boolean;
+  prefillSignerNameEnabled: boolean;
+  prefillSignerEmailEnabled: boolean;
+  prefillSignerOrganizationEnabled: boolean;
+  prefillSignerName?: string;
+  prefillSignerEmail?: string;
+  prefillSignerOrganization?: string;
   agreementTitle: string;
   proposalTitle?: string;
   ctaColor: string;
@@ -251,7 +264,16 @@ export interface AgreementSignatureFormProps {
 export function AgreementSignatureForm({
   disabled,
   busy,
+  eSignaturesEnabled,
+  electronicSignatureDisclaimerEnabled,
+  termsReadDisclaimerEnabled,
   requireAcceptTerms,
+  prefillSignerNameEnabled,
+  prefillSignerEmailEnabled,
+  prefillSignerOrganizationEnabled,
+  prefillSignerName,
+  prefillSignerEmail,
+  prefillSignerOrganization,
   agreementTitle,
   proposalTitle,
   ctaColor,
@@ -265,9 +287,17 @@ export function AgreementSignatureForm({
   monthlyTotalMinor,
   monthlyCurrency,
 }: AgreementSignatureFormProps) {
-  const [acceptName, setAcceptName] = React.useState("");
-  const [acceptEmail, setAcceptEmail] = React.useState("");
-  const [acceptOrg, setAcceptOrg] = React.useState("");
+  const [acceptName, setAcceptName] = React.useState(() =>
+    prefillSignerNameEnabled && prefillSignerName?.trim() ? prefillSignerName.trim() : "",
+  );
+  const [acceptEmail, setAcceptEmail] = React.useState(() =>
+    prefillSignerEmailEnabled && prefillSignerEmail?.trim() ? prefillSignerEmail.trim() : "",
+  );
+  const [acceptOrg, setAcceptOrg] = React.useState(() =>
+    prefillSignerOrganizationEnabled && prefillSignerOrganization?.trim()
+      ? prefillSignerOrganization.trim()
+      : "",
+  );
 
   const [adoptOpen, setAdoptOpen] = React.useState(false);
   const [adoptTab, setAdoptTab] = React.useState<AgreementSignatureMethod>("type");
@@ -282,7 +312,7 @@ export function AgreementSignatureForm({
   const [capturedMethod, setCapturedMethod] = React.useState<AgreementSignatureMethod | null>(null);
   const [signatureBannerDate, setSignatureBannerDate] = React.useState("");
 
-  const [electronicAgreed, setElectronicAgreed] = React.useState(false);
+  const [electronicAgreed, setElectronicAgreed] = React.useState(!electronicSignatureDisclaimerEnabled);
   const [termsAgreed, setTermsAgreed] = React.useState(false);
   const [localError, setLocalError] = React.useState<string | null>(null);
 
@@ -365,6 +395,7 @@ export function AgreementSignatureForm({
   }
 
   function openAdoptPanel() {
+    if (!eSignaturesEnabled) return;
     setLocalError(null);
     onDismissError?.();
     setSignSectionOpen(true);
@@ -398,6 +429,7 @@ export function AgreementSignatureForm({
   }
 
   function openAdoptPanelForEdit() {
+    if (!eSignaturesEnabled) return;
     setLocalError(null);
     onDismissError?.();
     setSignSectionOpen(true);
@@ -484,14 +516,16 @@ export function AgreementSignatureForm({
       return;
     }
     if (!capturedDataUrl || !capturedMethod) {
-      setLocalError("Please add your signature in the e-signature box below.");
-      return;
+      if (eSignaturesEnabled) {
+        setLocalError("Please add your signature in the e-signature box below.");
+        return;
+      }
     }
-    if (!electronicAgreed) {
+    if (electronicSignatureDisclaimerEnabled && !electronicAgreed) {
       setLocalError("Please confirm that your electronic signature is legally binding.");
       return;
     }
-    if (requireAcceptTerms && !termsAgreed) {
+    if (termsReadDisclaimerEnabled && requireAcceptTerms && !termsAgreed) {
       setLocalError("Please confirm you have read and agree to the terms.");
       return;
     }
@@ -508,9 +542,10 @@ export function AgreementSignatureForm({
       signerName: name,
       signerEmail: email,
       signerOrganization: acceptOrg.trim() || undefined,
-      signatureDataUrl: capturedDataUrl,
-      signatureMethod: capturedMethod,
       clientSignedAt,
+      ...(eSignaturesEnabled && capturedDataUrl && capturedMethod
+        ? { signatureDataUrl: capturedDataUrl, signatureMethod: capturedMethod }
+        : {}),
     };
     setSigningBusy(true);
     try {
@@ -552,18 +587,23 @@ export function AgreementSignatureForm({
   }
 
   const showError = localError || error;
+  const emailOk = acceptEmail.trim().length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(acceptEmail.trim());
+  const signatureOk = !eSignaturesEnabled || Boolean(capturedDataUrl && capturedMethod);
+  const electronicOk = !electronicSignatureDisclaimerEnabled || electronicAgreed;
+  const termsOk =
+    !termsReadDisclaimerEnabled || (!requireAcceptTerms || termsAgreed);
   const canFinalSubmit =
     !disabled &&
     !formLocked &&
     acceptName.trim().length >= 2 &&
-    acceptEmail.trim().length > 0 &&
-    capturedDataUrl &&
-    capturedMethod &&
-    electronicAgreed &&
-    (!requireAcceptTerms || termsAgreed) &&
+    emailOk &&
+    signatureOk &&
+    electronicOk &&
+    termsOk &&
     (!publicSubscriptionUi || Boolean(subscriptionBillingSnapshot?.readyToCreateSubscription));
 
   const canAdopt =
+    eSignaturesEnabled &&
     !disabled &&
     !formLocked &&
     acceptName.trim().length >= 2 &&
@@ -655,6 +695,7 @@ export function AgreementSignatureForm({
               </div>
 
               <div className="space-y-3 pt-1">
+                {eSignaturesEnabled ? (
                 <div>
                   <AgreementFlowAccordionTrigger
                     icon={<PenLine aria-hidden />}
@@ -955,6 +996,12 @@ export function AgreementSignatureForm({
                     </>
                   </AgreementAccordionPanel>
                 </div>
+                ) : (
+                  <div className="rounded-lg border border-zinc-200 bg-zinc-50/80 px-4 py-3 text-sm leading-relaxed text-zinc-700">
+                    Electronic signatures are turned off for this proposal. Confirm your name and email below — no
+                    drawn or typed signature is required.
+                  </div>
+                )}
 
                 {publicSubscriptionUi && shareToken ? (
                   <div>
@@ -1005,6 +1052,7 @@ export function AgreementSignatureForm({
           </div>
 
           <div className="mx-auto mt-8 max-w-md space-y-3 rounded-xl border border-zinc-100 bg-zinc-50/60 p-4">
+            {electronicSignatureDisclaimerEnabled ? (
             <label
               className={cn(
                 "group flex cursor-pointer items-start gap-3 text-sm leading-snug text-[#1a1a5e]",
@@ -1041,8 +1089,9 @@ export function AgreementSignatureForm({
                 I agree that my electronic signature is as valid and legally binding as a handwritten signature.
               </span>
             </label>
-            {requireAcceptTerms ? (
-              <label
+            ) : null}
+            {termsReadDisclaimerEnabled ? (
+            <label
                 className={cn(
                   "group flex cursor-pointer items-start gap-3 text-sm leading-snug text-[#1a1a5e]",
                   disabled && "pointer-events-none cursor-not-allowed opacity-60",

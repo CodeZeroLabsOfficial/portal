@@ -34,6 +34,7 @@ import {
   Coins,
   CreditCard,
   ExternalLink,
+  FileSignature,
   GripVertical,
   Heading,
   Image as ImageIcon,
@@ -142,6 +143,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { escapeHtml } from "@/lib/escape-html";
 import {
@@ -1429,9 +1431,9 @@ function SectionBlockFields({
                         auxiliarySlot={(() => {
                           const agreementMenu =
                             child.type === "agreement" ? (
-                              <AgreementBubbleEditMenu
+                              <AgreementToolbarAgreementAux
                                 block={child as AgreementBlock}
-                                onApplyPick={(next) => updateChild(child.id, next)}
+                                onChange={(next) => updateChild(child.id, next)}
                               />
                             ) : null;
                           const packagesSlot =
@@ -1683,12 +1685,17 @@ function AgreementBubbleEditMenu({
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="inline-flex h-8 items-center gap-1.5 rounded-full border border-border/80 bg-background px-3 text-xs font-medium text-foreground shadow-sm transition-colors hover:bg-muted"
+          className={cn(
+            "inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors",
+            "bg-transparent text-muted-foreground shadow-none",
+            "hover:bg-background hover:text-foreground",
+            "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          )}
           onPointerDown={(e) => e.stopPropagation()}
         >
           <Pencil className="h-3.5 w-3.5 shrink-0" aria-hidden />
           Edit agreement
-          <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-60" aria-hidden />
+          <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
@@ -1712,6 +1719,181 @@ function AgreementBubbleEditMenu({
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+function AgreementEsignatureSettingsPopover({
+  block,
+  onChange,
+}: {
+  block: AgreementBlock;
+  onChange: (next: AgreementBlock) => void;
+}) {
+  const esignOn = block.eSignaturesEnabled !== false;
+  const electronicOn = block.electronicSignatureDisclaimerEnabled !== false;
+  const termsDisclaimerOn = block.termsReadDisclaimerEnabled !== false;
+  const requireTermsAck = block.requireAcceptTerms !== false;
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            "inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors",
+            "bg-transparent text-muted-foreground shadow-none",
+            "hover:bg-background hover:text-foreground",
+            "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          )}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <FileSignature className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          E-sign / acceptance
+          <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-60" aria-hidden />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-[22rem] max-w-[calc(100vw-2rem)] p-0"
+        align="start"
+        side="bottom"
+        sideOffset={8}
+        collisionPadding={16}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
+        <div className="max-h-[min(32rem,80vh)] overflow-y-auto p-3">
+          <p className="px-0.5 pb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            View agreement modal
+          </p>
+          <div className="space-y-1">
+            <div className="flex items-start justify-between gap-3 py-2">
+              <div className="min-w-0 flex-1">
+                <Label htmlFor={`agreement-esign-${block.id}`} className="text-sm font-medium">
+                  E-signatures
+                </Label>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  When off, buyers accept with name and email only (no drawn or typed signature).
+                </p>
+              </div>
+              <input
+                id={`agreement-esign-${block.id}`}
+                type="checkbox"
+                className="mt-1 h-4 w-4 shrink-0 rounded border-input accent-primary"
+                checked={esignOn}
+                onChange={(e) => onChange({ ...block, eSignaturesEnabled: e.target.checked })}
+              />
+            </div>
+            <Separator />
+            <div className="space-y-2 pt-1">
+              <p className="text-xs font-medium text-foreground">Pre-fill signer fields</p>
+              <label className="flex items-center justify-between gap-2 text-sm">
+                <span className="text-muted-foreground">Name</span>
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-input accent-primary"
+                  checked={Boolean(block.prefillSignerNameEnabled)}
+                  onChange={(e) => onChange({ ...block, prefillSignerNameEnabled: e.target.checked })}
+                />
+              </label>
+              {block.prefillSignerNameEnabled ? (
+                <Input
+                  value={block.prefillSignerName ?? ""}
+                  placeholder="Default name"
+                  maxLength={200}
+                  onChange={(e) => onChange({ ...block, prefillSignerName: e.target.value })}
+                />
+              ) : null}
+              <label className="flex items-center justify-between gap-2 text-sm">
+                <span className="text-muted-foreground">Email</span>
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-input accent-primary"
+                  checked={Boolean(block.prefillSignerEmailEnabled)}
+                  onChange={(e) => onChange({ ...block, prefillSignerEmailEnabled: e.target.checked })}
+                />
+              </label>
+              {block.prefillSignerEmailEnabled ? (
+                <Input
+                  type="email"
+                  value={block.prefillSignerEmail ?? ""}
+                  placeholder="default@company.com"
+                  maxLength={320}
+                  onChange={(e) => onChange({ ...block, prefillSignerEmail: e.target.value })}
+                />
+              ) : null}
+              <label className="flex items-center justify-between gap-2 text-sm">
+                <span className="text-muted-foreground">Organisation</span>
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-input accent-primary"
+                  checked={Boolean(block.prefillSignerOrganizationEnabled)}
+                  onChange={(e) => onChange({ ...block, prefillSignerOrganizationEnabled: e.target.checked })}
+                />
+              </label>
+              {block.prefillSignerOrganizationEnabled ? (
+                <Input
+                  value={block.prefillSignerOrganization ?? ""}
+                  placeholder="Default organisation"
+                  maxLength={500}
+                  onChange={(e) => onChange({ ...block, prefillSignerOrganization: e.target.value })}
+                />
+              ) : null}
+            </div>
+            <Separator />
+            <div className="space-y-2 pt-1">
+              <p className="text-xs font-medium text-foreground">Disclaimers</p>
+              <label className="flex items-start justify-between gap-3 py-1">
+                <span className="min-w-0 flex-1 text-xs leading-snug text-muted-foreground">
+                  “I agree that my electronic signature is as valid and legally binding as a handwritten signature.”
+                </span>
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-input accent-primary"
+                  checked={electronicOn}
+                  onChange={(e) => onChange({ ...block, electronicSignatureDisclaimerEnabled: e.target.checked })}
+                />
+              </label>
+              <label className="flex items-start justify-between gap-3 py-1">
+                <span className="min-w-0 flex-1 text-xs leading-snug text-muted-foreground">
+                  “I have read and agree to the terms of this agreement for this proposal.”
+                </span>
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-input accent-primary"
+                  checked={termsDisclaimerOn}
+                  onChange={(e) => onChange({ ...block, termsReadDisclaimerEnabled: e.target.checked })}
+                />
+              </label>
+              {termsDisclaimerOn ? (
+                <label className="flex items-center justify-between gap-2 border-t border-border/60 pt-2 text-sm">
+                  <span className="text-muted-foreground">Require acknowledgement</span>
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-input accent-primary"
+                    checked={requireTermsAck}
+                    onChange={(e) => onChange({ ...block, requireAcceptTerms: e.target.checked })}
+                  />
+                </label>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function AgreementToolbarAgreementAux({
+  block,
+  onChange,
+}: {
+  block: AgreementBlock;
+  onChange: (next: AgreementBlock) => void;
+}) {
+  return (
+    <span className="inline-flex flex-wrap items-center gap-1">
+      <AgreementBubbleEditMenu block={block} onApplyPick={onChange} />
+      <AgreementEsignatureSettingsPopover block={block} onChange={onChange} />
+    </span>
   );
 }
 
@@ -1920,9 +2102,8 @@ function AgreementSignButtonPreview({
 }
 
 /**
- * Accept block settings: CTA preview (pencil popover) and acknowledgement option.
- * Contract template is chosen from the block toolbar (“Edit agreement”). Layout above
- * the button is edited as nested blocks in the Accept surface.
+ * Accept block settings: CTA preview (pencil popover). Contract template is chosen from
+ * “Edit agreement”; e-sign / acceptance from “E-sign / acceptance” on the block toolbar.
  */
 function AgreementBlockEditor({
   block,
@@ -1934,15 +2115,6 @@ function AgreementBlockEditor({
   return (
     <div className="space-y-4">
       <AgreementSignButtonPreview block={block} onChange={onChange} />
-
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={block.requireAcceptTerms !== false}
-          onChange={(e) => onChange({ ...block, requireAcceptTerms: e.target.checked })}
-        />
-        Require &quot;I have read and agree&quot; checkbox before signing
-      </label>
     </div>
   );
 }
@@ -3541,9 +3713,9 @@ export function ProposalDocumentEditor({
                               }
                               auxiliarySlot={
                                 block.type === "agreement" ? (
-                                  <AgreementBubbleEditMenu
+                                  <AgreementToolbarAgreementAux
                                     block={block as AgreementBlock}
-                                    onApplyPick={(next) => updateBlock(block.id, next)}
+                                    onChange={(next) => updateBlock(block.id, next)}
                                   />
                                 ) : undefined
                               }

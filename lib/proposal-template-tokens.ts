@@ -195,6 +195,18 @@ function mapContentBlock(block: ProposalContentBlock, ctx: ProposalTokenContext)
           block.introHtml !== undefined ? replaceProposalTokens(block.introHtml, ctx) : block.introHtml,
         legalHtml:
           block.legalHtml !== undefined ? replaceProposalTokens(block.legalHtml, ctx) : block.legalHtml,
+        prefillSignerName:
+          block.prefillSignerName !== undefined
+            ? replaceProposalTokens(block.prefillSignerName, ctx)
+            : block.prefillSignerName,
+        prefillSignerEmail:
+          block.prefillSignerEmail !== undefined
+            ? replaceProposalTokens(block.prefillSignerEmail, ctx)
+            : block.prefillSignerEmail,
+        prefillSignerOrganization:
+          block.prefillSignerOrganization !== undefined
+            ? replaceProposalTokens(block.prefillSignerOrganization, ctx)
+            : block.prefillSignerOrganization,
       };
     case "embed":
       return {

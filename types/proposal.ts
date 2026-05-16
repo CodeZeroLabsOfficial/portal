@@ -293,7 +293,31 @@ export interface AgreementBlock extends ProposalBlockBase {
    * (Parties, Scope, Pricing, Term, Termination, Confidentiality, Governing Law).
    */
   legalHtml?: string;
-  /** When true, requires a “I have read and agree” checkbox before signing (default true). */
+  /**
+   * When false, the buyer can accept with name and email only (no drawn/typed/uploaded signature).
+   * Default true.
+   */
+  eSignaturesEnabled?: boolean;
+  /** When true, the name field opens pre-filled from {@link prefillSignerName} when set. */
+  prefillSignerNameEnabled?: boolean;
+  prefillSignerEmailEnabled?: boolean;
+  prefillSignerOrganizationEnabled?: boolean;
+  prefillSignerName?: string;
+  prefillSignerEmail?: string;
+  prefillSignerOrganization?: string;
+  /**
+   * When false, hides the “electronic signature is as valid as handwritten” acknowledgement
+   * and does not require it. Default true.
+   */
+  electronicSignatureDisclaimerEnabled?: boolean;
+  /**
+   * When false, hides the “I have read and agree…” acknowledgement. Default true.
+   */
+  termsReadDisclaimerEnabled?: boolean;
+  /**
+   * When {@link termsReadDisclaimerEnabled}, controls whether that checkbox must be checked
+   * before acceptance. Default true.
+   */
   requireAcceptTerms?: boolean;
   /**
    * Visual overrides — only `primaryColor` is honoured today and drives the

@@ -306,6 +306,9 @@ export function AgreementBlockPublic({
   const buttonLabel = block.buttonLabel?.trim() || DEFAULT_BUTTON_LABEL;
   const buttonAlign = block.buttonAlign ?? "center";
   const agreementTitle = block.agreementTitle?.trim() || DEFAULT_AGREEMENT_TITLE;
+  const eSignaturesEnabled = block.eSignaturesEnabled !== false;
+  const electronicSignatureDisclaimerEnabled = block.electronicSignatureDisclaimerEnabled !== false;
+  const termsReadDisclaimerEnabled = block.termsReadDisclaimerEnabled !== false;
   const requireAcceptTerms = block.requireAcceptTerms !== false;
   const ctaColor = resolveAgreementButtonColor(block.style);
   const ctaForeground = readableForeground(ctaColor);
@@ -379,8 +382,8 @@ export function AgreementBlockPublic({
       signerName: string;
       signerEmail: string;
       signerOrganization?: string;
-      signatureDataUrl: string;
-      signatureMethod: "draw" | "type" | "upload";
+      signatureDataUrl?: string;
+      signatureMethod?: "draw" | "type" | "upload";
       clientSignedAt: number;
     },
     meta?: { subscriptionError?: string | null },
@@ -671,7 +674,16 @@ export function AgreementBlockPublic({
                   <AgreementSignatureForm
                     disabled={!interactive || !shareToken}
                     busy={false}
+                    eSignaturesEnabled={eSignaturesEnabled}
+                    electronicSignatureDisclaimerEnabled={electronicSignatureDisclaimerEnabled}
+                    termsReadDisclaimerEnabled={termsReadDisclaimerEnabled}
                     requireAcceptTerms={requireAcceptTerms}
+                    prefillSignerNameEnabled={Boolean(block.prefillSignerNameEnabled)}
+                    prefillSignerEmailEnabled={Boolean(block.prefillSignerEmailEnabled)}
+                    prefillSignerOrganizationEnabled={Boolean(block.prefillSignerOrganizationEnabled)}
+                    prefillSignerName={block.prefillSignerName}
+                    prefillSignerEmail={block.prefillSignerEmail}
+                    prefillSignerOrganization={block.prefillSignerOrganization}
                     agreementTitle={agreementTitle}
                     proposalTitle={proposalTitle}
                     ctaColor={ctaColor}
