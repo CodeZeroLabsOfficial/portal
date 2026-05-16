@@ -1796,9 +1796,8 @@ function AgreementEsignatureSettingsPopover({
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground">Payment</p>
               <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-                When this proposal includes subscription billing, the accept modal can show the Add payment details
-                step before signing. Turn off to hide that step (acceptance is still recorded; the in-modal subscription
-                setup is skipped).
+                Show or hide the Add payment details step before signing. Turn off to hide that step (acceptance is
+                still recorded; the in-modal subscription setup is skipped).
               </p>
               <div className="mt-3 flex items-center justify-between gap-3">
                 <Label

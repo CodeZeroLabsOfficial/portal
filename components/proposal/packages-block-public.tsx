@@ -106,7 +106,6 @@ export function PackagesBlockPublic({
   const totalBarFg = readableForeground(style.primaryColor);
   const addonsTitle = block.addonsTitle ?? "Add-ons";
   const totalSectionLabel = resolvePackagesTotalSectionLabel(block.totalSectionLabel);
-  const qtyUnit = (block.addonQuantityUnitLabel ?? "Unit").trim() || "Unit";
   const allowAddonEdit = block.allowAddonQuantityEdit !== false;
 
   const selectionDraft: PackagesPublicSelection | undefined = selectedTierId
@@ -558,49 +557,42 @@ export function PackagesBlockPublic({
                                   <span
                                     key="addon-qty-stepper"
                                     className={cn(
-                                      "inline-flex items-center justify-end gap-1.5",
+                                      "inline-flex items-center justify-end rounded-md border border-border/60 bg-background p-0.5 shadow-sm",
                                       "animate-in fade-in-0 zoom-in-95 duration-200",
                                     )}
                                   >
-                                    <span className="inline-flex items-center rounded-md border border-border/60 bg-background p-0.5 shadow-sm">
-                                      <button
-                                        type="button"
-                                        disabled={hidden || !interactive || !selectedTierId}
-                                        className={cn(
-                                          "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-sm text-foreground outline-none transition-colors",
-                                          "hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
-                                          "disabled:pointer-events-none disabled:opacity-50",
-                                        )}
-                                        aria-label={`Decrease ${li.label} quantity`}
-                                        onClick={() =>
-                                          patchAddonQty(li, qRaw - 1)
-                                        }
-                                      >
-                                        <Minus className="h-3.5 w-3.5" aria-hidden />
-                                      </button>
-                                      <span
-                                        className="min-w-7 px-1 text-center text-sm font-medium tabular-nums text-foreground"
-                                        aria-live="polite"
-                                      >
-                                        {qRaw}
-                                      </span>
-                                      <button
-                                        type="button"
-                                        disabled={hidden || !interactive || !selectedTierId}
-                                        className={cn(
-                                          "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-sm text-foreground outline-none transition-colors",
-                                          "hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
-                                          "disabled:pointer-events-none disabled:opacity-50",
-                                        )}
-                                        aria-label={`Increase ${li.label} quantity`}
-                                        onClick={() =>
-                                          patchAddonQty(li, qRaw + 1)
-                                        }
-                                      >
-                                        <Plus className="h-3.5 w-3.5" aria-hidden />
-                                      </button>
+                                    <button
+                                      type="button"
+                                      disabled={hidden || !interactive || !selectedTierId}
+                                      className={cn(
+                                        "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-sm text-foreground outline-none transition-colors",
+                                        "hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
+                                        "disabled:pointer-events-none disabled:opacity-50",
+                                      )}
+                                      aria-label={`Decrease ${li.label} quantity`}
+                                      onClick={() => patchAddonQty(li, qRaw - 1)}
+                                    >
+                                      <Minus className="h-3.5 w-3.5" aria-hidden />
+                                    </button>
+                                    <span
+                                      className="min-w-7 px-1 text-center text-sm font-medium tabular-nums text-foreground"
+                                      aria-live="polite"
+                                    >
+                                      {qRaw}
                                     </span>
-                                    <span className="text-xs text-muted-foreground">{qtyUnit}</span>
+                                    <button
+                                      type="button"
+                                      disabled={hidden || !interactive || !selectedTierId}
+                                      className={cn(
+                                        "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-sm text-foreground outline-none transition-colors",
+                                        "hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
+                                        "disabled:pointer-events-none disabled:opacity-50",
+                                      )}
+                                      aria-label={`Increase ${li.label} quantity`}
+                                      onClick={() => patchAddonQty(li, qRaw + 1)}
+                                    >
+                                      <Plus className="h-3.5 w-3.5" aria-hidden />
+                                    </button>
                                   </span>
                                 )}
                               </div>
