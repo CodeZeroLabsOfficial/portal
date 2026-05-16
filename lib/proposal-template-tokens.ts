@@ -229,6 +229,7 @@ function mapContentBlock(block: ProposalContentBlock, ctx: ProposalTokenContext)
         panels: block.panels.map((p) => ({
           ...p,
           title: replaceProposalTokens(p.title, ctx),
+          titleHtml: p.titleHtml !== undefined ? replaceProposalTokens(p.titleHtml, ctx) : p.titleHtml,
           html: p.html !== undefined ? replaceProposalTokens(p.html, ctx) : p.html,
           body: p.body !== undefined ? replaceProposalTokens(p.body, ctx) : p.body,
         })),
@@ -249,6 +250,7 @@ function mapContentBlock(block: ProposalContentBlock, ctx: ProposalTokenContext)
         iconName: block.iconName !== undefined ? replaceProposalTokens(block.iconName, ctx) : block.iconName,
         emoji: block.emoji !== undefined ? replaceProposalTokens(block.emoji, ctx) : block.emoji,
         label: block.label !== undefined ? replaceProposalTokens(block.label, ctx) : block.label,
+        labelHtml: block.labelHtml !== undefined ? replaceProposalTokens(block.labelHtml, ctx) : block.labelHtml,
       };
     default:
       return block;

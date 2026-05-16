@@ -369,6 +369,8 @@ export interface SpacerBlock extends ProposalBlockBase {
 export interface AccordionPanel {
   id: string;
   title: string;
+  /** Rich panel title (TipTap); public prefers this over {@link title} when set. */
+  titleHtml?: string;
   html?: string;
   body?: string;
 }
@@ -388,6 +390,8 @@ export interface IconBlock extends ProposalBlockBase {
   /** @deprecated Legacy emoji-only content; preserved for older documents. */
   emoji?: string;
   label?: string;
+  /** Rich caption (TipTap); public prefers this over {@link label} when set. */
+  labelHtml?: string;
 }
 
 /** Column cells: same as nested section content excluding nested columns and accordion. */

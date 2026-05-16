@@ -6,6 +6,7 @@ import type { AccordionBlock, AccordionPanel } from "@/types/proposal";
 import { ProposalRichText } from "@/components/proposal/proposal-rich-text";
 import { ProposalSectionEditorChromeContext } from "@/components/proposal/proposal-section-editor-chrome";
 import { escapeHtml } from "@/lib/escape-html";
+import { proposalRichHtmlToPlainText } from "@/lib/proposal-rich-plain-text";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ProposalAccordionExpandSurface } from "@/components/proposal/proposal-accordion-expand-surface";
@@ -18,6 +19,12 @@ function panelEditorHtml(p: AccordionPanel): string {
   if (p.html?.trim()) return p.html;
   if (p.body?.trim()) return `<p>${escapeHtml(p.body)}</p>`;
   return "<p></p>";
+}
+
+function accordionPanelTitleEditorHtml(p: AccordionPanel): string {
+  if (p.titleHtml?.trim()) return p.titleHtml;
+  const t = (p.title ?? "").trim() || "Untitled panel";
+  return `<h2>${escapeHtml(t)}</h2>`;
 }
 
 const LIGHT_SECTION_CHROME = { seamless: false, prefersLight: false } as const;
@@ -75,19 +82,22 @@ export function AccordionBlockEditor({
           return (
             <div key={p.id} className="group/panel border-b border-border/60 last:border-b-0">
               <div className="flex items-center gap-2 px-4 py-4 sm:px-5">
-                <input
-                  value={p.title}
-                  onChange={(e) => updatePanel(idx, { title: e.target.value })}
-                  placeholder="Untitled panel"
-                  aria-label="Panel heading"
-                  className={cn(
-                    "min-w-0 flex-1 border-0 bg-transparent py-1 text-lg font-semibold tracking-tight text-foreground",
-                    "placeholder:text-muted-foreground/80",
-                    "shadow-none outline-none ring-0 focus-visible:ring-0 focus-visible:ring-offset-0",
-                  )}
-                  onPointerDown={(e) => e.stopPropagation()}
-                />
-                <div className="flex shrink-0 items-center gap-0.5">
+                <div className="min-w-0 flex-1" onPointerDown={(e) => e.stopPropagation()}>
+                  <ProposalRichText
+                    key={p.id}
+                    variant="header"
+                    html={accordionPanelTitleEditorHtml(p)}
+                    placeholder="Untitled panel"
+                    className="!border-0 !bg-transparent !px-0 !py-0 !shadow-none"
+                    onChange={(html) =>
+                      updatePanel(idx, {
+                        titleHtml: html,
+                        title: proposalRichHtmlToPlainText(html) || p.title,
+                      })
+                    }
+                  />
+                </div>
+                <div className="flex shrink-0 items-center gap-0.5 self-center">
                   <Button
                     type="button"
                     variant="ghost"

@@ -41,9 +41,9 @@ export default async function ProposalTemplatePublicPreviewPage({ params }: Page
       <header className="fixed inset-x-0 top-0 z-50 border-b border-border/80 bg-background/85 px-4 py-3 shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-background/70">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-muted-foreground">
-            <span className="font-medium text-foreground">Public-style preview</span>
+            <span className="font-medium text-foreground">Public preview</span>
             {" — "}
-            Recipients see this layout on a sent proposal; package actions stay in preview mode until a real link
+            Recipients see this layout on a published proposal; package actions stay in preview mode until a real link
             exists.
           </p>
           <Button variant="outline" size="sm" className="gap-1.5 shrink-0" asChild>

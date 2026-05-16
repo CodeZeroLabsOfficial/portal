@@ -103,7 +103,7 @@ import {
   ProposalIconBlockToolbar,
   type ProposalIconColumnToolbarActions,
 } from "@/components/proposal/proposal-icon-block-toolbar";
-import { ProposalIconBlockDisplay } from "@/components/proposal/proposal-icon-block-display";
+import { ProposalIconBlockEditorRow } from "@/components/proposal/proposal-icon-block-editor";
 import { ProposalImageBlockToolbar } from "@/components/proposal/proposal-image-block-toolbar";
 import { ProposalSectionBackgroundPicker } from "@/components/proposal/proposal-section-background-picker";
 import { useProposalSectionEditorChrome } from "@/components/proposal/proposal-section-editor-chrome";
@@ -173,19 +173,10 @@ import {
 } from "@/components/proposal/proposal-splash-editor";
 import { AccordionBlockEditor } from "@/components/proposal/accordion-block-editor";
 import { EditorStripeCatalogContext } from "@/components/proposal/editor-stripe-catalog-context";
+import { proposalRichHtmlToPlainText } from "@/lib/proposal-rich-plain-text";
 
 function newId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `b-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
-function headerRichHtmlToPlainText(html: string): string {
-  return html
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ")
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 500);
 }
 
 function headerBlockEditorHtml(block: HeaderBlock): string {
@@ -842,7 +833,7 @@ function NestedColumnBlockFields({
             patchNested({
               ...hb,
               html,
-              text: headerRichHtmlToPlainText(html) || hb.text,
+                text: proposalRichHtmlToPlainText(html) || hb.text,
             })
           }
         />
@@ -2580,7 +2571,7 @@ function BlockFields({
               patch({
                 ...b,
                 html,
-                text: headerRichHtmlToPlainText(html) || b.text,
+                text: proposalRichHtmlToPlainText(html) || b.text,
               })
             }
           />
@@ -2848,27 +2839,12 @@ function BlockFields({
               </div>
             </div>
           ) : null}
-          <div
-            className={cn(
-              "-mx-1 cursor-pointer rounded-md px-1 py-0.5 transition-shadow",
-              isSelected
-                ? "ring-1 ring-primary/45 ring-offset-2 ring-offset-background"
-                : "hover:ring-1 hover:ring-border/60",
-            )}
-            onPointerDown={() => selection?.onSelect(ic.id)}
-          >
-            <ProposalIconBlockDisplay block={ic} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor={`proposal-icon-caption-${ic.id}`}>Caption</Label>
-            <Input
-              id={`proposal-icon-caption-${ic.id}`}
-              value={ic.label ?? ""}
-              onChange={(e) => patch({ ...ic, label: e.target.value })}
-              placeholder="Displayed beside icon"
-              onFocus={() => selection?.onSelect(ic.id)}
-            />
-          </div>
+          <ProposalIconBlockEditorRow
+            block={ic}
+            onChange={(next) => patch(next)}
+            isSelected={isSelected}
+            onSelect={() => selection?.onSelect(ic.id)}
+          />
         </div>
       );
     }

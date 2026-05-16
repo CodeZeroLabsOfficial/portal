@@ -1,20 +1,47 @@
+import type { ReactNode } from "react";
 import type { IconBlock } from "@/types/proposal";
 import { cn } from "@/lib/utils";
 import { resolveProposalPresetIcon } from "@/lib/proposal-icon-presets";
+import { PROPOSAL_INLINE_HEADING_RICH_DISPLAY_CLASS } from "@/lib/proposal-inline-heading-rich-display";
+import { sanitizeProposalHtml } from "@/lib/sanitize-proposal-html";
+import { WORKSPACE_DETAIL_PAGE_TITLE_CLASS } from "@/lib/workspace-page-typography";
 
 export type ProposalIconBlockDisplayProps = {
   block: IconBlock;
   className?: string;
+  /**
+   * When set, replaces the read-only caption (e.g. rich editor in the builder).
+   * The slot is laid out in the same flex column as the public caption with `min-w-0 flex-1`.
+   */
+  labelSlot?: ReactNode;
 };
 
 /** Public + builder: icon/emoji and caption with hanging-indent multi-line caption layout. */
-export function ProposalIconBlockDisplay({ block, className }: ProposalIconBlockDisplayProps) {
+export function ProposalIconBlockDisplay({ block, className, labelSlot }: ProposalIconBlockDisplayProps) {
   const IconGlyph = resolveProposalPresetIcon(block.iconName);
   const emoji = block.emoji?.trim();
   const hasGlyph = Boolean(IconGlyph || emoji);
-  const label = block.label?.trim();
+  const label = (block.label ?? "").trim();
+  const rich = (block.labelHtml ?? "").trim();
 
-  if (!hasGlyph && !label) return null;
+  if (!labelSlot) {
+    if (!hasGlyph && !label && !rich) return null;
+  }
+
+  const captionEl = labelSlot ? (
+    <div className="min-w-0 flex-1">{labelSlot}</div>
+  ) : rich ? (
+    <div
+      className={cn(PROPOSAL_INLINE_HEADING_RICH_DISPLAY_CLASS, hasGlyph && "flex-1")}
+      dangerouslySetInnerHTML={{ __html: sanitizeProposalHtml(block.labelHtml!) }}
+    />
+  ) : label ? (
+    <span className={cn(WORKSPACE_DETAIL_PAGE_TITLE_CLASS, "min-w-0 leading-snug", hasGlyph && "flex-1")}>
+      {label}
+    </span>
+  ) : null;
+
+  if (!captionEl && !hasGlyph) return null;
 
   return (
     <div className={cn("flex items-start gap-3 py-2", className)}>
@@ -27,16 +54,7 @@ export function ProposalIconBlockDisplay({ block, className }: ProposalIconBlock
           )}
         </div>
       ) : null}
-      {label ? (
-        <span
-          className={cn(
-            "min-w-0 text-xl font-semibold leading-snug tracking-tight text-foreground",
-            hasGlyph && "flex-1",
-          )}
-        >
-          {label}
-        </span>
-      ) : null}
+      {captionEl}
     </div>
   );
 }

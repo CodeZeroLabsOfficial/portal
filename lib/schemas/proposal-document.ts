@@ -359,6 +359,7 @@ const spacerBlockSchema = z.object({
 const accordionPanelSchema = z.object({
   id: idSchema,
   title: z.string().default(""),
+  titleHtml: z.string().optional(),
   html: z.string().optional(),
   body: z.string().optional(),
 });
@@ -375,6 +376,7 @@ const iconBlockSchema = z.object({
   iconName: z.string().max(64).optional(),
   emoji: z.string().max(8).optional(),
   label: z.string().optional(),
+  labelHtml: z.string().optional(),
 });
 
 function newAgreementMigrationChildId(): string {

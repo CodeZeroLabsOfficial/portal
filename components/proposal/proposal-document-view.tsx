@@ -48,8 +48,9 @@ import { ProposalSplashBlockCanvas } from "@/components/proposal/proposal-splash
 import { isProposalImagePlaceholderUrl } from "@/components/proposal/proposal-image-block-editor";
 import { isSectionBackgroundActive } from "@/lib/section-background";
 import { proposalEndsInFullBleedBand } from "@/lib/proposal-blocks";
-import { isPublicProposalPackageSelectionsLocked } from "@/lib/proposal-package-selection";
+import { PROPOSAL_INLINE_HEADING_RICH_DISPLAY_CLASS } from "@/lib/proposal-inline-heading-rich-display";
 import { ProposalIconBlockDisplay } from "@/components/proposal/proposal-icon-block-display";
+import { isPublicProposalPackageSelectionsLocked } from "@/lib/proposal-package-selection";
 
 export interface ProposalDocumentViewProps {
   document: ProposalDocument;
@@ -85,12 +86,21 @@ function AccordionPublicView({ block }: { block: AccordionBlock }) {
           <div key={p.id} className="border-b border-border/60 last:border-b-0">
             <button
               type="button"
-              className="flex w-full cursor-pointer list-none select-none items-center justify-between gap-4 px-4 py-4 text-left text-lg font-semibold tracking-tight text-foreground sm:px-5"
+              className="flex w-full cursor-pointer list-none select-none items-center justify-between gap-4 px-4 py-4 text-left text-foreground sm:px-5"
               aria-expanded={open}
               aria-controls={contentId}
               onClick={() => setOpenById((prev) => ({ ...prev, [p.id]: !prev[p.id] }))}
             >
-              <span>{p.title.trim() ? p.title : "Untitled panel"}</span>
+              {(p.titleHtml ?? "").trim() ? (
+                <div
+                  className={cn(PROPOSAL_INLINE_HEADING_RICH_DISPLAY_CLASS, "min-w-0 flex-1 text-left")}
+                  dangerouslySetInnerHTML={{ __html: sanitizeProposalHtml(p.titleHtml!) }}
+                />
+              ) : (
+                <span className={cn("min-w-0 flex-1 text-left", WORKSPACE_DETAIL_PAGE_TITLE_CLASS)}>
+                  {p.title.trim() ? p.title : "Untitled panel"}
+                </span>
+              )}
               <ChevronRight
                 className={cn(
                   "h-5 w-5 shrink-0 text-[#673AB7] transition-transform duration-200 ease-out",
@@ -202,16 +212,7 @@ function BlockView({
       if (block.html?.trim()) {
         return (
           <div
-            className={cn(
-              "proposal-rich-text max-w-none scroll-mt-20 text-foreground",
-              WORKSPACE_DETAIL_PAGE_TITLE_CLASS,
-              "[&_a]:text-primary [&_a]:underline",
-              "[&_blockquote]:my-4 [&_blockquote]:border-l-4 [&_blockquote]:border-border [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-muted-foreground",
-              "[&_h1]:m-0 [&_h2]:m-0 [&_h3]:m-0 [&_h4]:m-0 [&_p]:m-0",
-              "[&_h1]:text-[1em] [&_h2]:text-[1em] [&_h3]:text-[1em] [&_h4]:text-[1em] [&_p]:text-[1em]",
-              "[&_h1]:font-semibold [&_h2]:font-semibold [&_h3]:font-semibold [&_h4]:font-semibold",
-              "[&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5",
-            )}
+            className={PROPOSAL_INLINE_HEADING_RICH_DISPLAY_CLASS}
             dangerouslySetInnerHTML={{ __html: sanitizeProposalHtml(block.html) }}
           />
         );
