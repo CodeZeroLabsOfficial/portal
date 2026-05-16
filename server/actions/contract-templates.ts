@@ -6,8 +6,10 @@ import { z } from "zod";
 import { requireStaffSession } from "@/lib/auth/server-session";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import { runAdminWrite } from "@/lib/firebase/admin-write";
+import { parseProposalDocument } from "@/lib/schemas/proposal-document";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { getContractTemplateForStaff } from "@/server/firestore/contract-templates";
+import type { ProposalDocument } from "@/types/proposal";
 
 const NAME_MAX = 200;
 const DESC_MAX = 2000;
@@ -19,6 +21,7 @@ const saveContractSchema = z.object({
   name: z.string().trim().min(1).max(NAME_MAX),
   description: z.string().max(DESC_MAX).optional(),
   agreementTitle: z.string().trim().min(1).max(TITLE_MAX),
+  document: z.unknown().optional(),
   introHtml: z.string().max(20_000).optional(),
   legalHtml: z.string().max(HTML_MAX),
 });
@@ -44,6 +47,7 @@ export async function createContractTemplateAction(): Promise<
         name: "New contract template",
         description: "",
         agreementTitle: "Services Agreement",
+        document: { title: "Services Agreement", blocks: [] },
         introHtml: "",
         legalHtml: "",
         createdAt: FieldValue.serverTimestamp(),
@@ -91,6 +95,7 @@ export async function cloneContractTemplateAction(
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   };
+  if (source.document) payload.document = source.document;
 
   const write = await runAdminWrite(
     "contract_template_clone_failed",
@@ -121,6 +126,15 @@ export async function saveContractTemplateAction(
   if (!db) return { ok: false, message: "Database unavailable." };
 
   const descTrim = parsed.data.description?.trim();
+  let document: ProposalDocument | undefined;
+  if (parsed.data.document !== undefined) {
+    try {
+      document = parseProposalDocument(parsed.data.document);
+    } catch {
+      return { ok: false, message: "Invalid contract template document." };
+    }
+  }
+
   const patch: Record<string, unknown> = {
     name: parsed.data.name,
     agreementTitle: parsed.data.agreementTitle,
@@ -128,6 +142,7 @@ export async function saveContractTemplateAction(
     legalHtml: parsed.data.legalHtml,
     updatedAt: FieldValue.serverTimestamp(),
   };
+  if (document) patch.document = document;
   if (descTrim) patch.description = descTrim;
   else patch.description = FieldValue.delete();
 

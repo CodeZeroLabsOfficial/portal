@@ -1,12 +1,22 @@
 import { isStaff } from "@/lib/auth/server-session";
 import { asString } from "@/lib/firestore/coerce";
 import { millisFromFirestore } from "@/lib/firestore/timestamp";
+import { parseProposalDocument } from "@/lib/schemas/proposal-document";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import type { ContractTemplateRecord } from "@/types/contract-template";
 import type { PortalUser } from "@/types/user";
 
 export function parseContractTemplateRecord(id: string, data: Record<string, unknown>): ContractTemplateRecord {
+  let document: ContractTemplateRecord["document"];
+  if (data.document && typeof data.document === "object") {
+    try {
+      document = parseProposalDocument(data.document);
+    } catch {
+      document = undefined;
+    }
+  }
+
   return {
     id,
     organizationId: asString(data.organizationId) ?? "",
@@ -14,6 +24,7 @@ export function parseContractTemplateRecord(id: string, data: Record<string, unk
     name: asString(data.name) ?? "Untitled contract",
     description: asString(data.description),
     agreementTitle: asString(data.agreementTitle)?.trim() || "Services Agreement",
+    document,
     introHtml: asString(data.introHtml),
     legalHtml: asString(data.legalHtml) ?? "",
     createdAt: millisFromFirestore(data, "createdAt"),

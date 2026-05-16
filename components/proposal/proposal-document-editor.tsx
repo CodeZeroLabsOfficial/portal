@@ -129,8 +129,12 @@ import {
   PROPOSAL_EDITOR_BLOCK_CANVAS_INNER_CLASSES,
   PROPOSAL_PUBLIC_DOCUMENT_OUTER_CLASSES,
 } from "@/lib/proposal-public-layout";
+import { contractTemplateDocumentToHtml } from "@/lib/contract-template-document";
 import { saveProposalDocumentAction, sendProposalAction } from "@/server/actions/proposal-builder";
 import { saveProposalTemplateAction } from "@/server/actions/proposal-templates";
+import { saveContractTemplateAction } from "@/server/actions/contract-templates";
+import { DeleteContractTemplateButton } from "@/components/portal/delete-contract-template-button";
+import { ContractTemplateAgreementPreview } from "@/components/portal/contract-template-agreement-preview";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -360,6 +364,71 @@ const LIBRARY_BLOCK_OPTIONS: BlockOption[] = [
   { id: "divider", type: "divider", label: "Divider", icon: SeparatorHorizontal, accent: "text-slate-400", accentBg: "bg-slate-500/10" },
   { id: "spacer", type: "spacer", label: "Spacer", icon: MoveVertical, accent: "text-zinc-400", accentBg: "bg-zinc-500/10" },
 ];
+
+type BlockMenuProfile = "proposal" | "contract-template";
+
+const CONTRACT_DOCUMENT_PRIMARY_BLOCK_OPTIONS: BlockOption[] = [
+  SECTION_PRIMARY_OPTION,
+  { id: "text", type: "text", label: "Text", icon: ScrollText, accent: "text-violet-500", accentBg: "bg-violet-500/10" },
+  { id: "header", type: "header", label: "Heading", icon: Heading, accent: "text-sky-500", accentBg: "bg-sky-500/10" },
+];
+
+const CONTRACT_LIBRARY_BLOCK_OPTIONS: BlockOption[] = [
+  { id: "image", type: "image", label: "Image", icon: ImageIcon, accent: "text-fuchsia-500", accentBg: "bg-fuchsia-500/10" },
+  {
+    id: "columns",
+    type: "columns",
+    label: "Columns",
+    icon: LayoutGrid,
+    accent: "text-cyan-500",
+    accentBg: "bg-cyan-500/10",
+    factory: () => createColumnsBlock(2),
+  },
+  {
+    id: "accordion",
+    type: "accordion",
+    label: "Accordion",
+    icon: ListTree,
+    accent: "text-amber-600",
+    accentBg: "bg-amber-500/10",
+  },
+  { id: "divider", type: "divider", label: "Divider", icon: SeparatorHorizontal, accent: "text-slate-400", accentBg: "bg-slate-500/10" },
+  { id: "spacer", type: "spacer", label: "Spacer", icon: MoveVertical, accent: "text-zinc-400", accentBg: "bg-zinc-500/10" },
+];
+
+const CONTRACT_SECTION_INSERT_OPTIONS: BlockOption[] = SECTION_INSERT_OPTIONS.filter(
+  (o) => o.type !== "splash" && o.type !== "video" && o.type !== "icon",
+);
+
+const CONTRACT_COLUMN_MENU_CONTENT: BlockOption[] = COLUMN_MENU_CONTENT.filter(
+  (o) => o.type !== "pricing" && o.type !== "packages",
+);
+
+function documentPrimaryOptions(profile: BlockMenuProfile): BlockOption[] {
+  return profile === "contract-template" ? CONTRACT_DOCUMENT_PRIMARY_BLOCK_OPTIONS : DOCUMENT_PRIMARY_BLOCK_OPTIONS;
+}
+
+function libraryBlockOptions(profile: BlockMenuProfile): BlockOption[] {
+  return profile === "contract-template" ? CONTRACT_LIBRARY_BLOCK_OPTIONS : LIBRARY_BLOCK_OPTIONS;
+}
+
+function sectionInsertOptions(profile: BlockMenuProfile): BlockOption[] {
+  return profile === "contract-template" ? CONTRACT_SECTION_INSERT_OPTIONS : SECTION_INSERT_OPTIONS;
+}
+
+function columnMenuContent(profile: BlockMenuProfile): BlockOption[] {
+  return profile === "contract-template" ? CONTRACT_COLUMN_MENU_CONTENT : COLUMN_MENU_CONTENT;
+}
+
+function columnMenuInteractive(profile: BlockMenuProfile): BlockOption[] {
+  return profile === "contract-template" ? [] : COLUMN_MENU_INTERACTIVE;
+}
+
+const BlockMenuProfileContext = React.createContext<BlockMenuProfile>("proposal");
+
+function useBlockMenuProfile(): BlockMenuProfile {
+  return React.useContext(BlockMenuProfileContext);
+}
 
 function createColumnsBlock(count: ColumnLayoutCount): ColumnsBlock {
   return {
@@ -639,6 +708,7 @@ function SectionInsertMenu({
   trigger: React.ReactNode;
   align?: "start" | "center" | "end";
 }) {
+  const blockMenuProfile = useBlockMenuProfile();
   const [open, setOpen] = React.useState(false);
 
   function pick(option: BlockOption) {
@@ -661,7 +731,7 @@ function SectionInsertMenu({
           Content
         </p>
         <div className="pb-1">
-          {SECTION_INSERT_OPTIONS.map((opt) => (
+          {sectionInsertOptions(blockMenuProfile).map((opt) => (
             <DarkInsertRow key={opt.id} icon={opt.icon} label={opt.label} onPick={() => pick(opt)} />
           ))}
         </div>
@@ -679,6 +749,7 @@ function ColumnInsertMenu({
   trigger: React.ReactNode;
   align?: "start" | "center" | "end";
 }) {
+  const blockMenuProfile = useBlockMenuProfile();
   const [open, setOpen] = React.useState(false);
 
   function pick(option: BlockOption) {
@@ -699,16 +770,22 @@ function ColumnInsertMenu({
       >
         <p className="px-2.5 pb-1 pt-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-zinc-500">Content</p>
         <div className="pb-1">
-          {COLUMN_MENU_CONTENT.map((opt) => (
+          {columnMenuContent(blockMenuProfile).map((opt) => (
             <DarkInsertRow key={opt.id} icon={opt.icon} label={opt.label} onPick={() => pick(opt)} />
           ))}
         </div>
-        <p className="px-2.5 pb-1 pt-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-zinc-500">Interactive</p>
-        <div className="pb-1">
-          {COLUMN_MENU_INTERACTIVE.map((opt) => (
-            <DarkInsertRow key={opt.id} icon={opt.icon} label={opt.label} onPick={() => pick(opt)} />
-          ))}
-        </div>
+        {columnMenuInteractive(blockMenuProfile).length > 0 ? (
+          <>
+            <p className="px-2.5 pb-1 pt-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+              Interactive
+            </p>
+            <div className="pb-1">
+              {columnMenuInteractive(blockMenuProfile).map((opt) => (
+                <DarkInsertRow key={opt.id} icon={opt.icon} label={opt.label} onPick={() => pick(opt)} />
+              ))}
+            </div>
+          </>
+        ) : null}
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -2873,6 +2950,7 @@ function AddBlockMenu({
   trigger: React.ReactNode;
   align?: "start" | "center" | "end";
 }) {
+  const blockMenuProfile = useBlockMenuProfile();
   const [open, setOpen] = React.useState(false);
   const [view, setView] = React.useState<"main" | "library">("main");
 
@@ -2903,18 +2981,20 @@ function AddBlockMenu({
               Add a block
             </p>
             <div className="grid grid-cols-3 gap-2">
-              {DOCUMENT_PRIMARY_BLOCK_OPTIONS.map((opt) => (
+              {documentPrimaryOptions(blockMenuProfile).map((opt) => (
                 <BlockTile key={opt.id} option={opt} onSelect={() => handlePick(opt)} />
               ))}
             </div>
-            <button
-              type="button"
-              onClick={() => setView("library")}
-              className="mt-2 flex w-full items-center justify-center gap-1 rounded-md border-t border-border/60 px-2 py-2 pt-3 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
-            >
-              Add block from library
-              <ChevronRight className="h-3.5 w-3.5" />
-            </button>
+            {libraryBlockOptions(blockMenuProfile).length > 0 ? (
+              <button
+                type="button"
+                onClick={() => setView("library")}
+                className="mt-2 flex w-full items-center justify-center gap-1 rounded-md border-t border-border/60 px-2 py-2 pt-3 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Add block from library
+                <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+            ) : null}
           </div>
         ) : (
           <div className="p-2">
@@ -2929,7 +3009,7 @@ function AddBlockMenu({
               Content
             </p>
             <div className="space-y-0.5">
-              {LIBRARY_BLOCK_OPTIONS.map((opt) => (
+              {libraryBlockOptions(blockMenuProfile).map((opt) => (
                 <LibraryRow key={opt.id} option={opt} onSelect={() => handlePick(opt)} />
               ))}
             </div>
@@ -2992,13 +3072,17 @@ function InsertBlockSlot({
   /** `section` swaps the picker to the condensed gallery optimised for grouped layouts. */
   context?: "document" | "section";
 }) {
+  const blockMenuProfile = useBlockMenuProfile();
   if (variant === "empty") {
     return (
       <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border/70 bg-muted/15 px-4 py-12 text-center">
-        <p className="text-sm font-medium text-foreground">Start building your proposal</p>
+        <p className="text-sm font-medium text-foreground">
+          {blockMenuProfile === "contract-template" ? "Start building your contract" : "Start building your proposal"}
+        </p>
         <p className="max-w-xs text-xs text-muted-foreground">
-          Add a grouped layout, text blocks, headings, visuals, quoting tables, accepting signatures, plus everything in your
-          block library — then refine with the contextual toolbar.
+          {blockMenuProfile === "contract-template"
+            ? "Add sections, headings, and rich text for the buyer agreement modal — content before the first section becomes the intro."
+            : "Add a grouped layout, text blocks, headings, visuals, quoting tables, accepting signatures, plus everything in your block library — then refine with the contextual toolbar."}
         </p>
         <AddBlockMenu
           onAdd={onAdd}
@@ -3087,11 +3171,14 @@ export type ProposalEditShellToolbarProps = {
 };
 
 export interface ProposalDocumentEditorProps {
-  variant?: "proposal" | "template";
+  variant?: "proposal" | "template" | "contract-template";
   proposalId?: string;
   templateId?: string;
+  contractTemplateId?: string;
   initialTemplateName?: string;
   initialTemplateDescription?: string;
+  /** Contract templates only — default buyer modal title. */
+  initialAgreementTitle?: string;
   initialDocument: ProposalDocument;
   initialStatus?: string;
   proposalEditShellToolbar?: ProposalEditShellToolbarProps;
@@ -3107,8 +3194,10 @@ export function ProposalDocumentEditor({
   variant = "proposal",
   proposalId,
   templateId,
+  contractTemplateId,
   initialTemplateName = "",
   initialTemplateDescription = "",
+  initialAgreementTitle = "",
   initialDocument,
   initialStatus = "draft",
   proposalEditShellToolbar,
@@ -3117,7 +3206,11 @@ export function ProposalDocumentEditor({
   subscriptionProductOptions = [],
 }: ProposalDocumentEditorProps) {
   const isTemplate = variant === "template";
+  const isContractTemplate = variant === "contract-template";
+  const isNamedTemplateShell = isTemplate || isContractTemplate;
+  const blockMenuProfile: BlockMenuProfile = isContractTemplate ? "contract-template" : "proposal";
   const [templateName, setTemplateName] = React.useState(initialTemplateName);
+  const [agreementTitle, setAgreementTitle] = React.useState(initialAgreementTitle);
   const [templateNameEditing, setTemplateNameEditing] = React.useState(false);
   const skipNextTemplateNameBlurSaveRef = React.useRef(false);
   const [blocks, setBlocks] = React.useState<ProposalBlock[]>(initialDocument.blocks);
@@ -3159,15 +3252,15 @@ export function ProposalDocumentEditor({
 
   const proposalTitleFrozenRef = React.useRef<string | null>(null);
   const documentTitle = React.useMemo(() => {
-    if (isTemplate) {
-      return templateName.trim() || "Untitled template";
+    if (isNamedTemplateShell) {
+      return templateName.trim() || (isContractTemplate ? "Untitled contract" : "Untitled template");
     }
     if (proposalTitleFrozenRef.current === null) {
       proposalTitleFrozenRef.current =
         (initialDocument.title ?? "").trim() || "Untitled proposal";
     }
     return proposalTitleFrozenRef.current;
-  }, [isTemplate, templateName, initialDocument.title]);
+  }, [isNamedTemplateShell, isContractTemplate, templateName, initialDocument.title]);
   const doc: ProposalDocument = React.useMemo(
     () => ({ title: documentTitle, blocks }),
     [documentTitle, blocks],
@@ -3187,6 +3280,26 @@ export function ProposalDocumentEditor({
   async function save() {
     setSaving(true);
     setMessage(null);
+    if (isContractTemplate) {
+      if (!contractTemplateId) {
+        setSaving(false);
+        setMessage("Missing contract template id.");
+        return;
+      }
+      const { introHtml, legalHtml } = contractTemplateDocumentToHtml(doc);
+      const res = await saveContractTemplateAction({
+        contractTemplateId,
+        name: templateName.trim() || "Untitled contract",
+        description: initialTemplateDescription?.trim() || undefined,
+        agreementTitle: agreementTitle.trim() || "Services Agreement",
+        document: doc,
+        introHtml,
+        legalHtml,
+      });
+      setSaving(false);
+      setMessage(res.ok ? "Contract template saved." : res.message);
+      return;
+    }
     if (isTemplate) {
       if (!templateId) {
         setSaving(false);
@@ -3231,13 +3344,13 @@ export function ProposalDocumentEditor({
   }
 
   async function saveAndExitTemplateNameEdit() {
-    if (!isTemplate || !templateId) return;
+    if (!isNamedTemplateShell || (!templateId && !contractTemplateId)) return;
     setTemplateNameEditing(false);
     await save();
   }
 
   async function send() {
-    if (isTemplate || !proposalId) return;
+    if (isNamedTemplateShell || !proposalId) return;
     if (publishSuccessResetRef.current) {
       clearTimeout(publishSuccessResetRef.current);
       publishSuccessResetRef.current = null;
@@ -3432,8 +3545,9 @@ export function ProposalDocumentEditor({
     <EditorStripeCatalogContext.Provider value={subscriptionProductOptions}>
     <ProposalMediaLibraryProvider>
     <ProposalContractTemplateLibraryProvider>
+    <BlockMenuProfileContext.Provider value={blockMenuProfile}>
     <div className="space-y-6">
-      {isTemplate && templateId ? (
+      {isNamedTemplateShell && (templateId || contractTemplateId) ? (
         <>
           <div className="flex flex-wrap items-center gap-3">
             <Button
@@ -3442,7 +3556,7 @@ export function ProposalDocumentEditor({
               className="-ml-2 gap-1.5 text-muted-foreground hover:text-foreground"
               asChild
             >
-              <Link href="/admin/templates">
+              <Link href={isContractTemplate ? "/admin/templates#contract-templates" : "/admin/templates"}>
                 <ArrowLeft className="h-4 w-4" aria-hidden />
                 All templates
               </Link>
@@ -3480,17 +3594,24 @@ export function ProposalDocumentEditor({
                   className="flex h-8 w-full min-w-0 items-center gap-2 rounded-sm text-left text-xs font-medium outline-none ring-offset-background transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
                 >
                   <span className="min-w-0 flex-1 truncate text-foreground">
-                    {templateName.trim() || "Untitled template"}
+                    {templateName.trim() || (isContractTemplate ? "Untitled contract" : "Untitled template")}
                   </span>
                   <Pencil className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
                 </button>
               )}
             </div>
             <div className="ml-auto flex flex-wrap items-center gap-2">
-              <DeleteProposalTemplateButton
-                templateId={templateId}
-                templateName={templateName.trim() || initialTemplateName || "Untitled template"}
-              />
+              {isContractTemplate ? (
+                <DeleteContractTemplateButton
+                  contractTemplateId={contractTemplateId!}
+                  templateName={templateName.trim() || initialTemplateName || "Untitled contract"}
+                />
+              ) : (
+                <DeleteProposalTemplateButton
+                  templateId={templateId!}
+                  templateName={templateName.trim() || initialTemplateName || "Untitled template"}
+                />
+              )}
               <Button
                 variant="ghost"
                 size="sm"
@@ -3498,7 +3619,11 @@ export function ProposalDocumentEditor({
                 asChild
               >
                 <Link
-                  href={`/admin/templates/${templateId}/preview`}
+                  href={
+                    isContractTemplate
+                      ? `/admin/templates/contracts/${contractTemplateId}/preview`
+                      : `/admin/templates/${templateId}/preview`
+                  }
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -3512,6 +3637,19 @@ export function ProposalDocumentEditor({
               </Button>
             </div>
           </div>
+          {isContractTemplate ? (
+            <div className="flex h-8 max-w-xl items-center gap-2 border-b border-border/60">
+              <span className="shrink-0 text-[11px] font-medium text-muted-foreground">Agreement title</span>
+              <Input
+                aria-label="Default agreement modal title"
+                value={agreementTitle}
+                disabled={saving}
+                onChange={(e) => setAgreementTitle(e.target.value)}
+                placeholder="Services Agreement"
+                className="h-8 flex-1 border-0 bg-transparent px-0 text-xs text-foreground shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+              />
+            </div>
+          ) : null}
           {message ? <span className="block text-sm text-muted-foreground">{message}</span> : null}
         </>
       ) : proposalEditShellToolbar ? (
@@ -3866,12 +4004,17 @@ export function ProposalDocumentEditor({
           value="preview"
           className="mt-4 overflow-x-visible rounded-2xl border border-border/70 bg-muted/15 py-6 md:py-10"
         >
-          <div className={PROPOSAL_PUBLIC_DOCUMENT_OUTER_CLASSES}>
-            <ProposalDocumentView document={doc} localityTimeZone={localityTimeZone} />
-          </div>
+          {isContractTemplate ? (
+            <ContractTemplateAgreementPreview agreementTitle={agreementTitle} document={doc} />
+          ) : (
+            <div className={PROPOSAL_PUBLIC_DOCUMENT_OUTER_CLASSES}>
+              <ProposalDocumentView document={doc} localityTimeZone={localityTimeZone} />
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
+    </BlockMenuProfileContext.Provider>
     </ProposalContractTemplateLibraryProvider>
     </ProposalMediaLibraryProvider>
     </EditorStripeCatalogContext.Provider>

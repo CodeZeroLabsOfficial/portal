@@ -1,13 +1,14 @@
-import { connection } from "next/server";
 import { notFound, redirect } from "next/navigation";
+import { connection } from "next/server";
 import { getCurrentSessionUser, isStaff } from "@/lib/auth/server-session";
+import { contractTemplateRecordToDocument } from "@/lib/contract-template-document";
 import { getContractTemplateForStaff } from "@/server/firestore/contract-templates";
+import { ProposalDocumentEditorLazy } from "@/components/proposal/proposal-document-editor-lazy";
 import { WorkspaceShell } from "@/components/portal/workspace-shell";
-import { ContractTemplateEditorClient } from "@/components/portal/contract-template-editor-client";
 
-export const dynamic = "force-dynamic";
-
-type PageProps = { params: Promise<{ contractTemplateId: string }> };
+interface PageProps {
+  params: Promise<{ contractTemplateId: string }>;
+}
 
 export default async function EditContractTemplatePage({ params }: PageProps) {
   await connection();
@@ -25,6 +26,8 @@ export default async function EditContractTemplatePage({ params }: PageProps) {
     notFound();
   }
 
+  const document = contractTemplateRecordToDocument(row);
+
   return (
     <WorkspaceShell
       title={row.name}
@@ -35,7 +38,17 @@ export default async function EditContractTemplatePage({ params }: PageProps) {
       showMainHeader={false}
       showRightAside={false}
     >
-      <ContractTemplateEditorClient initial={row} />
+      <div className="space-y-6">
+        <ProposalDocumentEditorLazy
+          variant="contract-template"
+          contractTemplateId={row.id}
+          initialTemplateName={row.name}
+          initialTemplateDescription={row.description ?? ""}
+          initialAgreementTitle={row.agreementTitle}
+          initialDocument={document}
+          localityTimeZone={user.timeZone?.trim() || undefined}
+        />
+      </div>
     </WorkspaceShell>
   );
 }
