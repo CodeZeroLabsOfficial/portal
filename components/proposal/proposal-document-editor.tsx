@@ -1738,22 +1738,28 @@ function AgreementEsignatureSettingsPopover({
 
   return (
     <Popover>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          className={cn(
-            "inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors",
-            "bg-transparent text-muted-foreground shadow-none",
-            "hover:bg-background hover:text-foreground",
-            "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-          )}
-          onPointerDown={(e) => e.stopPropagation()}
-        >
-          <FileSignature className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          E-sign / acceptance
-          <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-60" aria-hidden />
-        </button>
-      </PopoverTrigger>
+      <Tooltip delayDuration={320}>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className={cn(
+                "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors",
+                "bg-transparent text-muted-foreground shadow-none",
+                "ring-1 ring-border/70 hover:bg-background hover:text-foreground",
+                "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+              )}
+              aria-label="E-signature and acceptance settings"
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <FileSignature className="h-4 w-4 shrink-0" aria-hidden />
+            </button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" className="max-w-[14rem] text-xs">
+          E-signature & acceptance
+        </TooltipContent>
+      </Tooltip>
       <PopoverContent
         className="w-[22rem] max-w-[calc(100vw-2rem)] overflow-hidden p-0"
         align="start"
