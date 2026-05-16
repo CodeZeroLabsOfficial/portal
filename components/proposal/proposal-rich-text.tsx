@@ -30,6 +30,7 @@ import {
   Underline as UnderlineIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PROPOSAL_RICH_HEADING_LEVEL_CLASSES } from "@/lib/proposal-rich-heading-typography";
 import { PROPOSAL_MERGE_TOKEN_CHOICES } from "@/lib/proposal-template-tokens";
 import { useProposalSectionEditorChrome } from "@/components/proposal/proposal-section-editor-chrome";
 
@@ -715,8 +716,10 @@ export interface ProposalRichTextProps {
 const TEXT_EDITOR_RESIZE_MIN_PX = 52;
 const TEXT_EDITOR_RESIZE_MAX_PX = 1600;
 
-const TIPTAP_PROSE_TYPOGRAPHY =
-  "outline-none [&_p]:mb-1.5 [&_p:last-child]:mb-0 [&_h1]:mt-2 [&_h1]:mb-2 [&_h1]:text-3xl [&_h1]:font-semibold [&_h2]:mt-1.5 [&_h2]:mb-1.5 [&_h2]:text-2xl [&_h2]:font-semibold [&_h3]:mt-1.5 [&_h3]:mb-1.5 [&_h3]:text-xl [&_h3]:font-semibold [&_h4]:mt-1 [&_h4]:mb-1 [&_h4]:text-base [&_h4]:font-semibold [&_ul]:my-1.5 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-1.5 [&_ol]:list-decimal [&_ol]:pl-5";
+const TIPTAP_PROSE_TYPOGRAPHY = cn(
+  "outline-none [&_p]:mb-1.5 [&_p:last-child]:mb-0 [&_ul]:my-1.5 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-1.5 [&_ol]:list-decimal [&_ol]:pl-5",
+  PROPOSAL_RICH_HEADING_LEVEL_CLASSES,
+);
 
 function TextEditorResizeHandle({
   shellRef,
