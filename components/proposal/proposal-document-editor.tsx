@@ -34,7 +34,6 @@ import {
   Coins,
   CreditCard,
   ExternalLink,
-  FileText,
   GripVertical,
   Heading,
   Image as ImageIcon,
@@ -51,6 +50,7 @@ import {
   Pencil,
   PenLine,
   Plus,
+  RefreshCw,
   Save,
   ScrollText,
   Send,
@@ -1225,7 +1225,6 @@ function SectionBlockFields({
   const children = block.children;
   const sortableChildIds = React.useMemo(() => children.map((c) => c.id), [children]);
   const [columnsLayoutEditingId, setColumnsLayoutEditingId] = React.useState<string | null>(null);
-  const contractTemplateLibrary = useProposalContractTemplateLibraryOptional();
 
   React.useEffect(() => {
     if (columnsLayoutEditingId && !children.some((c) => c.id === columnsLayoutEditingId)) {
@@ -1428,33 +1427,12 @@ function SectionBlockFields({
                         // via `auxiliarySlot` when applicable.
                         showOverflowMenu={false}
                         auxiliarySlot={(() => {
-                          const agreementSlot =
-                            child.type === "agreement" && contractTemplateLibrary ? (
-                              <Tooltip delayDuration={320}>
-                                <TooltipTrigger asChild>
-                                  <button
-                                    type="button"
-                                    className="inline-flex h-8 items-center gap-1 rounded-full px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
-                                    onClick={() => {
-                                      const ab = child as AgreementBlock;
-                                      contractTemplateLibrary.openSelection({
-                                        onSelect: (pick) =>
-                                          updateChild(
-                                            child.id,
-                                            applyContractTemplatePickToAgreementBlock(ab, pick),
-                                          ),
-                                      });
-                                    }}
-                                    aria-label="Open contract template library"
-                                  >
-                                    <FileText className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                                    Contract
-                                  </button>
-                                </TooltipTrigger>
-                                <TooltipContent side="bottom" className="text-xs">
-                                  Choose a contract from your library (snapshots legal text onto this block)
-                                </TooltipContent>
-                              </Tooltip>
+                          const agreementMenu =
+                            child.type === "agreement" ? (
+                              <AgreementBubbleEditMenu
+                                block={child as AgreementBlock}
+                                onApplyPick={(next) => updateChild(child.id, next)}
+                              />
                             ) : null;
                           const packagesSlot =
                             child.type === "packages" &&
@@ -1481,10 +1459,10 @@ function SectionBlockFields({
                                 </TooltipContent>
                               </Tooltip>
                             ) : null;
-                          if (!agreementSlot && !packagesSlot) return undefined;
+                          if (!agreementMenu && !packagesSlot) return undefined;
                           return (
                             <span className="inline-flex flex-wrap items-center gap-1">
-                              {agreementSlot}
+                              {agreementMenu}
                               {packagesSlot}
                             </span>
                           );
@@ -1688,6 +1666,53 @@ function applyContractTemplatePickToAgreementBlock(block: AgreementBlock, pick: 
     introHtml: pick.introHtml.trim() ? pick.introHtml.trim() : undefined,
     legalHtml: pick.legalHtml,
   };
+}
+
+/** Accept block toolbar: Qwilr-style “Edit agreement” control opening the contract template library. */
+function AgreementBubbleEditMenu({
+  block,
+  onApplyPick,
+}: {
+  block: AgreementBlock;
+  onApplyPick: (next: AgreementBlock) => void;
+}) {
+  const contractTemplateLibrary = useProposalContractTemplateLibraryOptional();
+  if (!contractTemplateLibrary) return null;
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="inline-flex h-8 items-center gap-1.5 rounded-full border border-border/80 bg-background px-3 text-xs font-medium text-foreground shadow-sm transition-colors hover:bg-muted"
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <Pencil className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          Edit agreement
+          <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-60" aria-hidden />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="start"
+        side="bottom"
+        sideOffset={6}
+        className="min-w-[11rem]"
+        onCloseAutoFocus={(e) => e.preventDefault()}
+      >
+        <DropdownMenuItem
+          className="cursor-pointer gap-2"
+          onClick={(e) => {
+            e.stopPropagation();
+            contractTemplateLibrary.openSelection({
+              onSelect: (pick) => onApplyPick(applyContractTemplatePickToAgreementBlock(block, pick)),
+            });
+          }}
+        >
+          <RefreshCw className="h-4 w-4 shrink-0" aria-hidden />
+          Change agreement
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 }
 
 function agreementNormalizeColorInput(input: string): string | null {
@@ -1895,8 +1920,9 @@ function AgreementSignButtonPreview({
 }
 
 /**
- * Accept block settings: CTA preview (pencil popover), contract template, acknowledgement
- * option. Layout above the button is edited as nested blocks in the Accept surface.
+ * Accept block settings: CTA preview (pencil popover) and acknowledgement option.
+ * Contract template is chosen from the block toolbar (“Edit agreement”). Layout above
+ * the button is edited as nested blocks in the Accept surface.
  */
 function AgreementBlockEditor({
   block,
@@ -1905,39 +1931,9 @@ function AgreementBlockEditor({
   block: AgreementBlock;
   onChange: (next: AgreementBlock) => void;
 }) {
-  const contractLib = useProposalContractTemplateLibraryOptional();
   return (
     <div className="space-y-4">
       <AgreementSignButtonPreview block={block} onChange={onChange} />
-
-      {contractLib ? (
-        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border/70 bg-muted/20 px-3 py-2.5">
-          <p className="min-w-0 flex-1 text-xs text-muted-foreground">
-            {block.contractTemplateLabel?.trim() ? (
-              <>
-                Library template:{" "}
-                <span className="font-medium text-foreground">{block.contractTemplateLabel.trim()}</span>
-              </>
-            ) : (
-              <>Attach a template from your org&apos;s contract library — title, intro, and legal text are copied onto this block.</>
-            )}
-          </p>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="shrink-0 gap-1.5"
-            onClick={() =>
-              contractLib.openSelection({
-                onSelect: (pick) => onChange(applyContractTemplatePickToAgreementBlock(block, pick)),
-              })
-            }
-          >
-            <FileText className="h-3.5 w-3.5" aria-hidden />
-            Contract library…
-          </Button>
-        </div>
-      ) : null}
 
       <label className="flex items-center gap-2 text-sm">
         <input
@@ -2897,8 +2893,6 @@ export function ProposalDocumentEditor({
     }),
   );
 
-  const contractTemplateLibrary = useProposalContractTemplateLibraryOptional();
-
   React.useEffect(() => {
     if (rootColumnsLayoutEditingId && !blocks.some((b) => b.id === rootColumnsLayoutEditingId)) {
       setRootColumnsLayoutEditingId(null);
@@ -3461,14 +3455,14 @@ export function ProposalDocumentEditor({
                             if (block.type === "image") {
                               const ib = block as ImageBlock;
                               return (
-                                <div className="flex w-full items-start justify-end gap-1.5">
+                                <div className="flex w-full items-start justify-between gap-1.5">
+                                  {dragHandle}
                                   <ProposalImageBlockToolbar
                                     variant="shell"
                                     block={ib}
                                     onChange={(next) => updateBlock(block.id, next)}
                                     onDelete={() => removeBlock(block.id)}
                                   />
-                                  {dragHandle}
                                 </div>
                               );
                             }
@@ -3545,24 +3539,13 @@ export function ProposalDocumentEditor({
                                     }
                                   : undefined
                               }
-                              overflowExtraItems={
-                                block.type === "agreement" && contractTemplateLibrary
-                                  ? [
-                                      {
-                                        label: "Change contract…",
-                                        onClick: () => {
-                                          const ab = block as AgreementBlock;
-                                          contractTemplateLibrary.openSelection({
-                                            onSelect: (pick) =>
-                                              updateBlock(
-                                                block.id,
-                                                applyContractTemplatePickToAgreementBlock(ab, pick),
-                                              ),
-                                          });
-                                        },
-                                      },
-                                    ]
-                                  : undefined
+                              auxiliarySlot={
+                                block.type === "agreement" ? (
+                                  <AgreementBubbleEditMenu
+                                    block={block as AgreementBlock}
+                                    onApplyPick={(next) => updateBlock(block.id, next)}
+                                  />
+                                ) : undefined
                               }
                               showOverflowMenu={!isSection && block.type !== "splash"}
                               style={supportsStyle ? getBlockStyle(block) : undefined}
@@ -3592,8 +3575,8 @@ export function ProposalDocumentEditor({
                                   />
                                 ) : undefined
                               }
-                              leadingSlot={isSection ? dragHandle : undefined}
-                              trailingSlot={isSection ? undefined : dragHandle}
+                              leadingSlot={dragHandle}
+                              trailingSlot={undefined}
                             />
                             );
                           }}

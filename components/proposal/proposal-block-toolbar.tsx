@@ -40,7 +40,7 @@ export interface BlockToolbarProps {
   onDelete: () => void;
   /** Optional control rendered at the start of the pill (e.g. drag handle on the left). */
   leadingSlot?: React.ReactNode;
-  /** More menu (ellipsis) — hides when false. Duplicate/delete stay on the pill for speed. */
+  /** More menu (ellipsis) — only rendered when {@link overflowLeadingAction} or {@link overflowExtraItems} are set. Duplicate/delete are always inline. */
   showOverflowMenu?: boolean;
   /** Optional trailing control inside the pill (e.g. drag handle with sortable listeners). */
   trailingSlot?: React.ReactNode;
@@ -102,6 +102,10 @@ export function BlockToolbar({
     ? "text-zinc-300 hover:bg-white/10 hover:text-white focus-visible:ring-white/40"
     : "text-muted-foreground hover:bg-background hover:text-foreground focus-visible:ring-ring";
 
+  const hasOverflowMenuItems =
+    Boolean(overflowLeadingAction) || (overflowExtraItems?.length ?? 0) > 0;
+  const showOverflowDropdown = Boolean(showOverflowMenu && hasOverflowMenuItems);
+
   return (
     <div
       className={cn("pointer-events-auto inline-flex items-center gap-0.5 rounded-full p-1", shell)}
@@ -125,77 +129,6 @@ export function BlockToolbar({
         </>
       ) : (
         <>
-          {showOverflowMenu ? (
-            <>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    title="More"
-                    aria-label="More actions"
-                    className={cn(
-                      "inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2",
-                      iconBtnBase,
-                    )}
-                  >
-                    <EllipsisVertical className="h-4 w-4" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" sideOffset={6} className="min-w-[10rem]" onCloseAutoFocus={(e) => e.preventDefault()}>
-                  {overflowLeadingAction ? (
-                    <>
-                      <DropdownMenuItem
-                        className="cursor-pointer"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          overflowLeadingAction.onClick();
-                        }}
-                      >
-                        {overflowLeadingAction.label}
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                    </>
-                  ) : null}
-                  {overflowExtraItems?.map((item, itemIdx) => (
-                    <DropdownMenuItem
-                      key={`${item.label}-${itemIdx}`}
-                      className={cn(
-                        "cursor-pointer",
-                        item.destructive && "text-destructive focus:text-destructive",
-                      )}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        item.onClick();
-                      }}
-                    >
-                      {item.label}
-                    </DropdownMenuItem>
-                  ))}
-                  {overflowExtraItems && overflowExtraItems.length > 0 ? <DropdownMenuSeparator /> : null}
-                  <DropdownMenuItem
-                    className="cursor-pointer"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDuplicate();
-                    }}
-                  >
-                    Duplicate
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="cursor-pointer text-destructive focus:text-destructive"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDelete();
-                    }}
-                  >
-                    {deleteLabel}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <ToolbarDivider elevated={elevated} />
-            </>
-          ) : null}
           {backdropPickerSlot ? (
             <>
               <span className="inline-flex items-center">{backdropPickerSlot}</span>
@@ -260,6 +193,57 @@ export function BlockToolbar({
             >
               <Settings2 className="h-4 w-4" />
             </ToolbarIconButton>
+          ) : null}
+          {showOverflowDropdown ? (
+            <>
+              <ToolbarDivider elevated={elevated} />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    title="More"
+                    aria-label="More actions"
+                    className={cn(
+                      "inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:ring-2",
+                      iconBtnBase,
+                    )}
+                  >
+                    <EllipsisVertical className="h-4 w-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" sideOffset={6} className="min-w-[10rem]" onCloseAutoFocus={(e) => e.preventDefault()}>
+                  {overflowLeadingAction ? (
+                    <>
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          overflowLeadingAction.onClick();
+                        }}
+                      >
+                        {overflowLeadingAction.label}
+                      </DropdownMenuItem>
+                      {overflowExtraItems && overflowExtraItems.length > 0 ? <DropdownMenuSeparator /> : null}
+                    </>
+                  ) : null}
+                  {overflowExtraItems?.map((item, itemIdx) => (
+                    <DropdownMenuItem
+                      key={`${item.label}-${itemIdx}`}
+                      className={cn(
+                        "cursor-pointer",
+                        item.destructive && "text-destructive focus:text-destructive",
+                      )}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        item.onClick();
+                      }}
+                    >
+                      {item.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
           ) : null}
           <ToolbarDivider elevated={elevated} />
         </>
