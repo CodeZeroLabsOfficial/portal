@@ -103,6 +103,7 @@ import {
   ProposalIconBlockToolbar,
   type ProposalIconColumnToolbarActions,
 } from "@/components/proposal/proposal-icon-block-toolbar";
+import { ProposalIconBlockDisplay } from "@/components/proposal/proposal-icon-block-display";
 import { ProposalImageBlockToolbar } from "@/components/proposal/proposal-image-block-toolbar";
 import { ProposalSectionBackgroundPicker } from "@/components/proposal/proposal-section-background-picker";
 import { useProposalSectionEditorChrome } from "@/components/proposal/proposal-section-editor-chrome";
@@ -1339,7 +1340,7 @@ function SectionBlockFields({
                 <SortableShell
                   id={child.id}
                   selected={isSelected}
-                  toolbarShowOnHover={child.type !== "image"}
+                  toolbarShowOnHover={child.type !== "image" && child.type !== "icon"}
                   onSelect={() => {
                     setColumnsLayoutEditingId((prev) =>
                       prev !== null && prev !== child.id ? null : prev,
@@ -2307,7 +2308,7 @@ function AgreementBlockFields({
                 <SortableShell
                   id={child.id}
                   selected={isSelected}
-                  toolbarShowOnHover={child.type !== "image"}
+                  toolbarShowOnHover={child.type !== "image" && child.type !== "icon"}
                   onSelect={() => {
                     setColumnsLayoutEditingId((prev) =>
                       prev !== null && prev !== child.id ? null : prev,
@@ -2832,6 +2833,7 @@ function BlockFields({
       const ic = block as IconBlock;
       const col = iconColumnToolbar;
       const showEmbeddedColumnToolbar = Boolean(col) && selection?.selectedId === ic.id;
+      const isSelected = selection?.selectedId === ic.id;
       return (
         <div className="relative space-y-3">
           {showEmbeddedColumnToolbar ? (
@@ -2846,9 +2848,26 @@ function BlockFields({
               </div>
             </div>
           ) : null}
+          <div
+            className={cn(
+              "-mx-1 cursor-pointer rounded-md px-1 py-0.5 transition-shadow",
+              isSelected
+                ? "ring-1 ring-primary/45 ring-offset-2 ring-offset-background"
+                : "hover:ring-1 hover:ring-border/60",
+            )}
+            onPointerDown={() => selection?.onSelect(ic.id)}
+          >
+            <ProposalIconBlockDisplay block={ic} />
+          </div>
           <div className="space-y-1.5">
-            <Label>Caption</Label>
-            <Input value={ic.label ?? ""} onChange={(e) => patch({ ...ic, label: e.target.value })} placeholder="Displayed beside icon" />
+            <Label htmlFor={`proposal-icon-caption-${ic.id}`}>Caption</Label>
+            <Input
+              id={`proposal-icon-caption-${ic.id}`}
+              value={ic.label ?? ""}
+              onChange={(e) => patch({ ...ic, label: e.target.value })}
+              placeholder="Displayed beside icon"
+              onFocus={() => selection?.onSelect(ic.id)}
+            />
           </div>
         </div>
       );
@@ -3679,7 +3698,7 @@ export function ProposalDocumentEditor({
                         <SortableShell
                           id={block.id}
                           selected={isSelected}
-                          toolbarShowOnHover={block.type !== "image"}
+                          toolbarShowOnHover={block.type !== "image" && block.type !== "icon"}
                           onSelect={() => {
                             setRootColumnsLayoutEditingId((prev) =>
                               prev !== null && prev !== block.id ? null : prev,
