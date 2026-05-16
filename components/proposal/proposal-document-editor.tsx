@@ -129,6 +129,7 @@ import { saveProposalTemplateAction } from "@/server/actions/proposal-templates"
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Tooltip,
@@ -1733,6 +1734,7 @@ function AgreementEsignatureSettingsPopover({
   const electronicOn = block.electronicSignatureDisclaimerEnabled !== false;
   const termsDisclaimerOn = block.termsReadDisclaimerEnabled !== false;
   const requireTermsAck = block.requireAcceptTerms !== false;
+  const bid = block.id;
 
   return (
     <Popover>
@@ -1753,127 +1755,170 @@ function AgreementEsignatureSettingsPopover({
         </button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-[22rem] max-w-[calc(100vw-2rem)] p-0"
+        className="w-[22rem] max-w-[calc(100vw-2rem)] overflow-hidden p-0"
         align="start"
         side="bottom"
         sideOffset={8}
         collisionPadding={16}
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        <div className="max-h-[min(32rem,80vh)] overflow-y-auto p-3">
-          <p className="px-0.5 pb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-            View agreement modal
-          </p>
-          <div className="space-y-1">
-            <div className="flex items-start justify-between gap-3 py-2">
-              <div className="min-w-0 flex-1">
-                <Label htmlFor={`agreement-esign-${block.id}`} className="text-sm font-medium">
-                  E-signatures
+        <div className="max-h-[min(32rem,80vh)] overflow-y-auto px-4 py-4">
+          <div className="space-y-4">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground">
+                E-signatures
+              </p>
+              <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+                When enabled, signers can add a drawn or typed signature. When off, they accept with name and email
+                only.
+              </p>
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <Label htmlFor={`agreement-esign-${bid}`} className="cursor-pointer text-sm font-medium">
+                  Enable e-sign
                 </Label>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  When off, buyers accept with name and email only (no drawn or typed signature).
-                </p>
+                <Switch
+                  id={`agreement-esign-${bid}`}
+                  checked={esignOn}
+                  onCheckedChange={(checked) => onChange({ ...block, eSignaturesEnabled: checked })}
+                />
               </div>
-              <input
-                id={`agreement-esign-${block.id}`}
-                type="checkbox"
-                className="mt-1 h-4 w-4 shrink-0 rounded border-input accent-primary"
-                checked={esignOn}
-                onChange={(e) => onChange({ ...block, eSignaturesEnabled: e.target.checked })}
-              />
             </div>
+
             <Separator />
-            <div className="space-y-2 pt-1">
-              <p className="text-xs font-medium text-foreground">Pre-fill signer fields</p>
-              <label className="flex items-center justify-between gap-2 text-sm">
-                <span className="text-muted-foreground">Name</span>
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-input accent-primary"
-                  checked={Boolean(block.prefillSignerNameEnabled)}
-                  onChange={(e) => onChange({ ...block, prefillSignerNameEnabled: e.target.checked })}
-                />
-              </label>
-              {block.prefillSignerNameEnabled ? (
-                <Input
-                  value={block.prefillSignerName ?? ""}
-                  placeholder="Default name"
-                  maxLength={200}
-                  onChange={(e) => onChange({ ...block, prefillSignerName: e.target.value })}
-                />
-              ) : null}
-              <label className="flex items-center justify-between gap-2 text-sm">
-                <span className="text-muted-foreground">Email</span>
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-input accent-primary"
-                  checked={Boolean(block.prefillSignerEmailEnabled)}
-                  onChange={(e) => onChange({ ...block, prefillSignerEmailEnabled: e.target.checked })}
-                />
-              </label>
-              {block.prefillSignerEmailEnabled ? (
-                <Input
-                  type="email"
-                  value={block.prefillSignerEmail ?? ""}
-                  placeholder="default@company.com"
-                  maxLength={320}
-                  onChange={(e) => onChange({ ...block, prefillSignerEmail: e.target.value })}
-                />
-              ) : null}
-              <label className="flex items-center justify-between gap-2 text-sm">
-                <span className="text-muted-foreground">Organisation</span>
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-input accent-primary"
-                  checked={Boolean(block.prefillSignerOrganizationEnabled)}
-                  onChange={(e) => onChange({ ...block, prefillSignerOrganizationEnabled: e.target.checked })}
-                />
-              </label>
-              {block.prefillSignerOrganizationEnabled ? (
-                <Input
-                  value={block.prefillSignerOrganization ?? ""}
-                  placeholder="Default organisation"
-                  maxLength={500}
-                  onChange={(e) => onChange({ ...block, prefillSignerOrganization: e.target.value })}
-                />
-              ) : null}
+
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground">
+                Prefilled names
+              </p>
+              <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+                Pre-fill signer fields in the accept flow so clients see fewer empty inputs.
+              </p>
+              <div className="mt-3 space-y-3">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <Label htmlFor={`agreement-prefill-name-${bid}`} className="cursor-pointer text-sm font-medium">
+                      Name
+                    </Label>
+                    <Switch
+                      id={`agreement-prefill-name-${bid}`}
+                      checked={Boolean(block.prefillSignerNameEnabled)}
+                      onCheckedChange={(checked) => onChange({ ...block, prefillSignerNameEnabled: checked })}
+                    />
+                  </div>
+                  {block.prefillSignerNameEnabled ? (
+                    <Input
+                      value={block.prefillSignerName ?? ""}
+                      placeholder="Default name"
+                      maxLength={200}
+                      onChange={(e) => onChange({ ...block, prefillSignerName: e.target.value })}
+                    />
+                  ) : null}
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <Label htmlFor={`agreement-prefill-email-${bid}`} className="cursor-pointer text-sm font-medium">
+                      Email
+                    </Label>
+                    <Switch
+                      id={`agreement-prefill-email-${bid}`}
+                      checked={Boolean(block.prefillSignerEmailEnabled)}
+                      onCheckedChange={(checked) => onChange({ ...block, prefillSignerEmailEnabled: checked })}
+                    />
+                  </div>
+                  {block.prefillSignerEmailEnabled ? (
+                    <Input
+                      type="email"
+                      value={block.prefillSignerEmail ?? ""}
+                      placeholder="default@company.com"
+                      maxLength={320}
+                      onChange={(e) => onChange({ ...block, prefillSignerEmail: e.target.value })}
+                    />
+                  ) : null}
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <Label
+                      htmlFor={`agreement-prefill-org-${bid}`}
+                      className="cursor-pointer text-sm font-medium"
+                    >
+                      Organisation
+                    </Label>
+                    <Switch
+                      id={`agreement-prefill-org-${bid}`}
+                      checked={Boolean(block.prefillSignerOrganizationEnabled)}
+                      onCheckedChange={(checked) =>
+                        onChange({ ...block, prefillSignerOrganizationEnabled: checked })
+                      }
+                    />
+                  </div>
+                  {block.prefillSignerOrganizationEnabled ? (
+                    <Input
+                      value={block.prefillSignerOrganization ?? ""}
+                      placeholder="Default organisation"
+                      maxLength={500}
+                      onChange={(e) => onChange({ ...block, prefillSignerOrganization: e.target.value })}
+                    />
+                  ) : null}
+                </div>
+              </div>
             </div>
+
             <Separator />
-            <div className="space-y-2 pt-1">
-              <p className="text-xs font-medium text-foreground">Disclaimers</p>
-              <label className="flex items-start justify-between gap-3 py-1">
-                <span className="min-w-0 flex-1 text-xs leading-snug text-muted-foreground">
-                  “I agree that my electronic signature is as valid and legally binding as a handwritten signature.”
-                </span>
-                <input
-                  type="checkbox"
-                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-input accent-primary"
-                  checked={electronicOn}
-                  onChange={(e) => onChange({ ...block, electronicSignatureDisclaimerEnabled: e.target.checked })}
-                />
-              </label>
-              <label className="flex items-start justify-between gap-3 py-1">
-                <span className="min-w-0 flex-1 text-xs leading-snug text-muted-foreground">
-                  “I have read and agree to the terms of this agreement for this proposal.”
-                </span>
-                <input
-                  type="checkbox"
-                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-input accent-primary"
-                  checked={termsDisclaimerOn}
-                  onChange={(e) => onChange({ ...block, termsReadDisclaimerEnabled: e.target.checked })}
-                />
-              </label>
-              {termsDisclaimerOn ? (
-                <label className="flex items-center justify-between gap-2 border-t border-border/60 pt-2 text-sm">
-                  <span className="text-muted-foreground">Require acknowledgement</span>
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 rounded border-input accent-primary"
-                    checked={requireTermsAck}
-                    onChange={(e) => onChange({ ...block, requireAcceptTerms: e.target.checked })}
+
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground">Disclaimer</p>
+              <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+                Optional acknowledgements shown in the accept flow before signing.
+              </p>
+              <div className="mt-3 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <Label
+                    htmlFor={`agreement-disclaimer-esign-${bid}`}
+                    className="cursor-pointer text-sm font-medium leading-snug"
+                  >
+                    E-Signature legal acknowledgment
+                  </Label>
+                  <Switch
+                    id={`agreement-disclaimer-esign-${bid}`}
+                    checked={electronicOn}
+                    onCheckedChange={(checked) =>
+                      onChange({ ...block, electronicSignatureDisclaimerEnabled: checked })
+                    }
                   />
-                </label>
-              ) : null}
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <Label
+                      htmlFor={`agreement-disclaimer-terms-${bid}`}
+                      className="cursor-pointer text-sm font-medium leading-snug"
+                    >
+                      Agreement to terms acknowledgement
+                    </Label>
+                    <Switch
+                      id={`agreement-disclaimer-terms-${bid}`}
+                      checked={termsDisclaimerOn}
+                      onCheckedChange={(checked) =>
+                        onChange({ ...block, termsReadDisclaimerEnabled: checked })
+                      }
+                    />
+                  </div>
+                  {termsDisclaimerOn ? (
+                    <div className="flex items-center justify-between gap-3 border-t border-border/60 pt-3">
+                      <Label
+                        htmlFor={`agreement-require-terms-${bid}`}
+                        className="cursor-pointer text-sm font-medium text-muted-foreground"
+                      >
+                        Require acknowledgement
+                      </Label>
+                      <Switch
+                        id={`agreement-require-terms-${bid}`}
+                        checked={requireTermsAck}
+                        onCheckedChange={(checked) => onChange({ ...block, requireAcceptTerms: checked })}
+                      />
+                    </div>
+                  ) : null}
+                </div>
+              </div>
             </div>
           </div>
         </div>
