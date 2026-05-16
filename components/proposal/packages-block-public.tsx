@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Check, ChevronDown, Loader2 } from "lucide-react";
+import { Check, ChevronDown, Loader2, Minus, Plus } from "lucide-react";
 import type { PackagesBlock, PackagesPublicSelection } from "@/types/proposal";
 import { formatCurrencyAmount } from "@/lib/format";
 import { formatPackageTierIncluded } from "@/lib/package-tier-limits";
@@ -145,6 +145,13 @@ export function PackagesBlockPublic({
       addonOptionalOff: o,
     });
     if (res.ok) router.refresh();
+  }
+
+  function patchAddonQty(lineItem: (typeof addonLines)[number], nextValue: number) {
+    const clamped = Math.max(0, Math.floor(nextValue));
+    const nextMap = { ...addonQty, [lineItem.id]: clamped };
+    setAddonQty(nextMap);
+    void flushAddonsToServer(nextMap);
   }
 
   function monthlyMinor(tier: (typeof tiers)[number]): number {
@@ -529,25 +536,74 @@ export function PackagesBlockPublic({
                           </td>
                           {allowAddonEdit ? (
                             <td className="px-4 py-3 text-right align-middle">
-                              <span className="inline-flex items-center justify-end gap-1.5 tabular-nums">
-                                <input
-                                  type="number"
-                                  min={0}
-                                  step={1}
-                                  disabled={hidden || !interactive || !selectedTierId}
-                                  className="w-14 rounded-md border border-border/60 bg-background px-2 py-1 text-right text-foreground outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/25"
-                                  value={qRaw}
-                                  onChange={(e) => {
-                                    const n = Number(e.target.value);
-                                    if (!Number.isFinite(n) || n < 0) return;
-                                    setAddonQty((prev) => ({ ...prev, [li.id]: Math.floor(n) }));
-                                  }}
-                                  onBlur={() => {
-                                    void flushAddonsToServer();
-                                  }}
-                                />
-                                <span className="text-xs text-muted-foreground">{qtyUnit}</span>
-                              </span>
+                              <div className="inline-flex min-h-8 items-center justify-end tabular-nums">
+                                {qRaw <= 0 ? (
+                                  <Button
+                                    key="addon-qty-add"
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={hidden || !interactive || !selectedTierId}
+                                    className={cn(
+                                      "h-8 gap-1 rounded-md border-border/60 px-2.5 text-xs font-medium",
+                                      "animate-in fade-in-0 zoom-in-95 duration-200",
+                                    )}
+                                    aria-label={`Add ${li.label}`}
+                                    onClick={() => patchAddonQty(li, 1)}
+                                  >
+                                    <Plus className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                                    Add
+                                  </Button>
+                                ) : (
+                                  <span
+                                    key="addon-qty-stepper"
+                                    className={cn(
+                                      "inline-flex items-center justify-end gap-1.5",
+                                      "animate-in fade-in-0 zoom-in-95 duration-200",
+                                    )}
+                                  >
+                                    <span className="inline-flex items-center rounded-md border border-border/60 bg-background p-0.5 shadow-sm">
+                                      <button
+                                        type="button"
+                                        disabled={hidden || !interactive || !selectedTierId}
+                                        className={cn(
+                                          "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-sm text-foreground outline-none transition-colors",
+                                          "hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
+                                          "disabled:pointer-events-none disabled:opacity-50",
+                                        )}
+                                        aria-label={`Decrease ${li.label} quantity`}
+                                        onClick={() =>
+                                          patchAddonQty(li, qRaw - 1)
+                                        }
+                                      >
+                                        <Minus className="h-3.5 w-3.5" aria-hidden />
+                                      </button>
+                                      <span
+                                        className="min-w-7 px-1 text-center text-sm font-medium tabular-nums text-foreground"
+                                        aria-live="polite"
+                                      >
+                                        {qRaw}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        disabled={hidden || !interactive || !selectedTierId}
+                                        className={cn(
+                                          "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-sm text-foreground outline-none transition-colors",
+                                          "hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
+                                          "disabled:pointer-events-none disabled:opacity-50",
+                                        )}
+                                        aria-label={`Increase ${li.label} quantity`}
+                                        onClick={() =>
+                                          patchAddonQty(li, qRaw + 1)
+                                        }
+                                      >
+                                        <Plus className="h-3.5 w-3.5" aria-hidden />
+                                      </button>
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">{qtyUnit}</span>
+                                  </span>
+                                )}
+                              </div>
                             </td>
                           ) : null}
                           <td className="px-4 py-3 text-right align-middle tabular-nums font-medium text-foreground">
