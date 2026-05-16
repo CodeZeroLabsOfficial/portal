@@ -2,8 +2,8 @@ import { cn } from "@/lib/utils";
 import { WORKSPACE_DETAIL_PAGE_TITLE_CLASS } from "@/lib/workspace-page-typography";
 
 /**
- * Sanitized rich HTML for short inline headings (icon captions, accordion panel titles, etc.)
- * — matches public {@link ProposalDocumentView} `header` block styling.
+ * Sanitized rich HTML for **section header** blocks on the public page — workspace-scale title
+ * typography. For icon captions and accordion panel titles use {@link PROPOSAL_CAPTION_RICH_DISPLAY_CLASS}.
  */
 export const PROPOSAL_INLINE_HEADING_RICH_DISPLAY_CLASS = cn(
   "proposal-rich-text max-w-none min-w-0 scroll-mt-20 text-foreground",

@@ -48,6 +48,7 @@ import { ProposalSplashBlockCanvas } from "@/components/proposal/proposal-splash
 import { isProposalImagePlaceholderUrl } from "@/components/proposal/proposal-image-block-editor";
 import { isSectionBackgroundActive } from "@/lib/section-background";
 import { proposalEndsInFullBleedBand } from "@/lib/proposal-blocks";
+import { PROPOSAL_CAPTION_PLAIN_CLASS, PROPOSAL_CAPTION_RICH_DISPLAY_CLASS } from "@/lib/proposal-inline-caption-rich-display";
 import { PROPOSAL_INLINE_HEADING_RICH_DISPLAY_CLASS } from "@/lib/proposal-inline-heading-rich-display";
 import { ProposalIconBlockDisplay } from "@/components/proposal/proposal-icon-block-display";
 import { isPublicProposalPackageSelectionsLocked } from "@/lib/proposal-package-selection";
@@ -93,11 +94,11 @@ function AccordionPublicView({ block }: { block: AccordionBlock }) {
             >
               {(p.titleHtml ?? "").trim() ? (
                 <div
-                  className={cn(PROPOSAL_INLINE_HEADING_RICH_DISPLAY_CLASS, "min-w-0 flex-1 text-left")}
+                  className={cn(PROPOSAL_CAPTION_RICH_DISPLAY_CLASS, "min-w-0 flex-1 text-left")}
                   dangerouslySetInnerHTML={{ __html: sanitizeProposalHtml(p.titleHtml!) }}
                 />
               ) : (
-                <span className={cn("min-w-0 flex-1 text-left", WORKSPACE_DETAIL_PAGE_TITLE_CLASS)}>
+                <span className={cn("min-w-0 flex-1 text-left", PROPOSAL_CAPTION_PLAIN_CLASS)}>
                   {p.title.trim() ? p.title : "Untitled panel"}
                 </span>
               )}
