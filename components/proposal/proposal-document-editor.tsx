@@ -1759,7 +1759,7 @@ function AgreementEsignatureSettingsPopover({
         align="start"
         side="bottom"
         sideOffset={8}
-        collisionPadding={16}
+        collisionPadding={32}
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <div className="max-h-[min(32rem,80vh)] overflow-y-auto px-4 py-4">
@@ -3589,7 +3589,10 @@ export function ProposalDocumentEditor({
           <TabsTrigger value="edit">Edit blocks</TabsTrigger>
           <TabsTrigger value="preview">Live preview</TabsTrigger>
         </TabsList>
-        <TabsContent value="edit" className="mt-4">
+        <TabsContent
+          value="edit"
+          className="mt-4 pb-[min(45vh,26rem)] sm:pb-40 md:pb-48"
+        >
           <TooltipProvider delayDuration={280}>
           {blocks.length === 0 ? (
             <InsertBlockSlot variant="empty" onAdd={(b) => addBlockAt(b, 0)} />

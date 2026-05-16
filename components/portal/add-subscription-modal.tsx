@@ -250,6 +250,7 @@ export function AddSubscriptionModal({
       stripeRef.current = window.Stripe(key);
       const elements = stripeRef.current.elements();
       const card = elements.create("card", {
+        hidePostalCode: true,
         style: {
           base: {
             color: "#ffffff",
