@@ -696,6 +696,7 @@ export function AgreementBlockPublic({
                     localityTimeZone={localityTimeZone}
                     shareToken={shareToken}
                     publicSubscriptionUi={publicSubscriptionUi}
+                    paymentDetailsSectionEnabled={block.paymentDetailsSectionEnabled !== false}
                     monthlyTotalMinor={subscriptionMonthly?.total}
                     monthlyCurrency={subscriptionMonthly?.currency}
                     error={error}

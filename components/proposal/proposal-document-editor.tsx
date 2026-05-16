@@ -1731,6 +1731,7 @@ function AgreementEsignatureSettingsPopover({
   onChange: (next: AgreementBlock) => void;
 }) {
   const esignOn = block.eSignaturesEnabled !== false;
+  const paymentDetailsOn = block.paymentDetailsSectionEnabled !== false;
   const electronicOn = block.electronicSignatureDisclaimerEnabled !== false;
   const termsDisclaimerOn = block.termsReadDisclaimerEnabled !== false;
   const requireTermsAck = block.requireAcceptTerms !== false;
@@ -1786,6 +1787,30 @@ function AgreementEsignatureSettingsPopover({
                   id={`agreement-esign-${bid}`}
                   checked={esignOn}
                   onCheckedChange={(checked) => onChange({ ...block, eSignaturesEnabled: checked })}
+                />
+              </div>
+            </div>
+
+            <Separator />
+
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground">Payment</p>
+              <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+                When this proposal includes subscription billing, the accept modal can show the Add payment details
+                step before signing. Turn off to hide that step (acceptance is still recorded; the in-modal subscription
+                setup is skipped).
+              </p>
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <Label
+                  htmlFor={`agreement-payment-details-${bid}`}
+                  className="cursor-pointer text-sm font-medium"
+                >
+                  Add payment details in modal
+                </Label>
+                <Switch
+                  id={`agreement-payment-details-${bid}`}
+                  checked={paymentDetailsOn}
+                  onCheckedChange={(checked) => onChange({ ...block, paymentDetailsSectionEnabled: checked })}
                 />
               </div>
             </div>
@@ -2124,7 +2149,7 @@ function AgreementSignButtonPreview({
 
 /**
  * Accept block settings: CTA preview (pencil popover). Contract template is chosen from
- * “Edit agreement”; e-sign / acceptance from “E-sign / acceptance” on the block toolbar.
+ * “Edit agreement”; e-sign, payment-in-modal, and acceptance options from the circular e-sign control on the toolbar.
  */
 function AgreementBlockEditor({
   block,

@@ -425,6 +425,7 @@ const agreementBlockSchema: z.ZodTypeAny = z.object({
   electronicSignatureDisclaimerEnabled: z.boolean().optional(),
   termsReadDisclaimerEnabled: z.boolean().optional(),
   requireAcceptTerms: z.boolean().optional(),
+  paymentDetailsSectionEnabled: z.boolean().optional(),
   style: blockStyleSchema.optional(),
   background: sectionBackgroundSchema.optional(),
   /** Lazy so this object exists in unions before `agreementNestedBlockSchema` is defined. */

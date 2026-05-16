@@ -326,6 +326,12 @@ export interface AgreementBlock extends ProposalBlockBase {
    */
   requireAcceptTerms?: boolean;
   /**
+   * When false, the View Agreement modal does not show “Add payment details” or require a saved card,
+   * even when the proposal has subscription billing. Acceptance is still recorded; subscription creation
+   * from this flow is skipped. Default true.
+   */
+  paymentDetailsSectionEnabled?: boolean;
+  /**
    * Visual overrides — only `primaryColor` is honoured today and drives the
    * CTA button background (and matching modal sign button). Defaults to the
    * brand primary when unset.

@@ -270,6 +270,11 @@ export interface AgreementSignatureFormProps {
   localityTimeZone?: string;
   shareToken?: string;
   publicSubscriptionUi?: ProposalPublicSubscriptionUi | null;
+  /**
+   * When false, hide subscription card capture in the modal and do not require billing before accept.
+   * Default true.
+   */
+  paymentDetailsSectionEnabled?: boolean;
   /** First packages block monthly total (minor units) for payment header. */
   monthlyTotalMinor?: number;
   monthlyCurrency?: string;
@@ -299,9 +304,14 @@ export function AgreementSignatureForm({
   localityTimeZone,
   shareToken,
   publicSubscriptionUi,
+  paymentDetailsSectionEnabled = true,
   monthlyTotalMinor,
   monthlyCurrency,
 }: AgreementSignatureFormProps) {
+  const subscriptionBillingInModal = Boolean(
+    publicSubscriptionUi && shareToken && paymentDetailsSectionEnabled !== false,
+  );
+
   const [acceptName, setAcceptName] = React.useState(() =>
     agreementPrefillField(
       prefillSignerNameEnabled,
@@ -368,11 +378,19 @@ export function AgreementSignatureForm({
   const [localError, setLocalError] = React.useState<string | null>(null);
 
   const [signSectionOpen, setSignSectionOpen] = React.useState(true);
-  const [paymentSectionOpen, setPaymentSectionOpen] = React.useState(() => Boolean(publicSubscriptionUi && shareToken));
+  const [paymentSectionOpen, setPaymentSectionOpen] = React.useState(() => subscriptionBillingInModal);
   const [paymentMethodSummary, setPaymentMethodSummary] = React.useState<string | null>(null);
   const [subscriptionBillingSnapshot, setSubscriptionBillingSnapshot] =
     React.useState<ProposalPublicSubscriptionBillingSnapshot | null>(null);
   const [signingBusy, setSigningBusy] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!subscriptionBillingInModal) {
+      setPaymentSectionOpen(false);
+      setPaymentMethodSummary(null);
+      setSubscriptionBillingSnapshot(null);
+    }
+  }, [subscriptionBillingInModal]);
 
   const formLocked = busy || signingBusy;
   const canvasRef = React.useRef<HTMLCanvasElement | null>(null);
@@ -529,7 +547,7 @@ export function AgreementSignatureForm({
     setSignatureBannerDate(signatureBannerDateLabel(adoptTab, localityTimeZone));
     setAdoptOpen(false);
     setSignSectionOpen(false);
-    if (publicSubscriptionUi && shareToken) {
+    if (subscriptionBillingInModal) {
       setPaymentSectionOpen(true);
     }
   }
@@ -584,7 +602,7 @@ export function AgreementSignatureForm({
       setLocalError("Signing is not available.");
       return;
     }
-    if (publicSubscriptionUi && !subscriptionBillingSnapshot?.readyToCreateSubscription) {
+    if (subscriptionBillingInModal && !subscriptionBillingSnapshot?.readyToCreateSubscription) {
       setLocalError("Add payment details and save your card before signing the agreement.");
       return;
     }
@@ -614,7 +632,7 @@ export function AgreementSignatureForm({
         return;
       }
       let subscriptionError: string | null = null;
-      if (publicSubscriptionUi && subscriptionBillingSnapshot?.readyToCreateSubscription) {
+      if (subscriptionBillingInModal && subscriptionBillingSnapshot?.readyToCreateSubscription) {
         const subRes = await createProposalPublicSubscriptionAction({
           shareToken,
           collectionMethod: subscriptionBillingSnapshot.collectionMethod,
@@ -651,7 +669,7 @@ export function AgreementSignatureForm({
     signatureOk &&
     electronicOk &&
     termsOk &&
-    (!publicSubscriptionUi || Boolean(subscriptionBillingSnapshot?.readyToCreateSubscription));
+    (!subscriptionBillingInModal || Boolean(subscriptionBillingSnapshot?.readyToCreateSubscription));
 
   const canAdopt =
     eSignaturesEnabled &&
@@ -676,7 +694,7 @@ export function AgreementSignatureForm({
             <p className="mt-3 text-sm font-semibold text-zinc-800">Signing agreement…</p>
             <p className="mt-1 max-w-[14rem] text-center text-xs text-zinc-500">
               Please wait while we record your acceptance
-              {publicSubscriptionUi ? " and start your subscription." : "."}
+              {subscriptionBillingInModal ? " and start your subscription." : "."}
             </p>
           </div>
         ) : null}
@@ -1054,7 +1072,7 @@ export function AgreementSignatureForm({
                   </div>
                 )}
 
-                {publicSubscriptionUi && shareToken ? (
+                {subscriptionBillingInModal && publicSubscriptionUi && shareToken ? (
                   <div>
                     <AgreementFlowAccordionTrigger
                       icon={<CreditCard aria-hidden />}
