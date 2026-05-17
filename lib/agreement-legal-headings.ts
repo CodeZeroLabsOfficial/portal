@@ -28,14 +28,6 @@ function slugifyHeading(label: string): string {
     .slice(0, 48);
 }
 
-function ensureScrollMarginClass(attrsStr: string): string {
-  if (!/\bclass\s*=/.test(attrsStr)) {
-    return `${attrsStr} class="scroll-mt-24"`.trim();
-  }
-  if (/scroll-mt-24/.test(attrsStr)) return attrsStr;
-  return attrsStr.replace(/\bclass\s*=\s*["']([^"']*)["']/i, (_, cls) => `class="${cls} scroll-mt-24"`);
-}
-
 /**
  * Assigns stable `id`s to h1–h6 in agreement HTML so the modal Jump to nav can scroll to each heading.
  */
@@ -69,11 +61,10 @@ export function injectAgreementLegalHeadingIds(
     headings.push({ id, label, level });
 
     if (existingIdMatch) {
-      const nextAttrs = ensureScrollMarginClass(attrsStr);
-      return `<h${level}${nextAttrs ? ` ${nextAttrs.trim()}` : ""}>${inner}</h${level}>`;
+      return `<h${level}${attrsStr}>${inner}</h${level}>`;
     }
 
-    return `<h${level} id="${id}" class="scroll-mt-24">${inner}</h${level}>`;
+    return `<h${level} id="${id}">${inner}</h${level}>`;
   });
 
   return { html: processed, headings };

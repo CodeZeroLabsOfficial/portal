@@ -63,6 +63,19 @@ export interface AgreementBlockPublicProps {
 
 const DEFAULT_BUTTON_LABEL = "View Agreement";
 const DEFAULT_AGREEMENT_TITLE = "Services Agreement";
+/** Small inset from the top of the modal scroll pane (header is outside this pane). */
+const AGREEMENT_SCROLL_PADDING_PX = 12;
+
+function scrollAgreementContainerToElement(
+  container: HTMLElement,
+  target: HTMLElement,
+  behavior: ScrollBehavior = "smooth",
+) {
+  const containerRect = container.getBoundingClientRect();
+  const targetRect = target.getBoundingClientRect();
+  const nextTop = targetRect.top - containerRect.top + container.scrollTop - AGREEMENT_SCROLL_PADDING_PX;
+  container.scrollTo({ top: Math.max(0, nextTop), behavior });
+}
 
 type AgreementJumpLink = { kind: "link"; id: string; label: string };
 type AgreementJumpGroup = {
@@ -266,7 +279,6 @@ function LegalSections({ legalHtmlWithIds }: { legalHtmlWithIds?: string }) {
           "[&_h1]:mt-10 [&_h1]:text-2xl [&_h1]:font-semibold [&_h1]:text-zinc-900",
           "[&_h2]:mt-8 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:text-zinc-900",
           "[&_h3]:mt-6 [&_h3]:text-base [&_h3]:font-semibold [&_h3]:text-zinc-900",
-          "[&_h1]:scroll-mt-24 [&_h2]:scroll-mt-24 [&_h3]:scroll-mt-24 [&_h4]:scroll-mt-24 [&_h5]:scroll-mt-24 [&_h6]:scroll-mt-24",
           "[&_p]:mb-4 [&_p:last-child]:mb-0",
           "[&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5",
           "[&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5",
@@ -282,7 +294,7 @@ function LegalSections({ legalHtmlWithIds }: { legalHtmlWithIds?: string }) {
         <section
           key={s.heading}
           id={`agreement-section-${i}`}
-          className="scroll-mt-24 space-y-2"
+          className="space-y-2"
         >
           <h3 className="text-base font-semibold tracking-tight text-zinc-900">
             {s.heading}
@@ -407,14 +419,20 @@ export function AgreementBlockPublic({
   }, [open]);
 
   function jumpToSection(id: string) {
-    const el = scrollRef.current?.querySelector(`#${CSS.escape(id)}`);
+    const container = scrollRef.current;
+    if (!container) return;
+    const el = container.querySelector(`#${CSS.escape(id)}`);
     if (el instanceof HTMLElement) {
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      scrollAgreementContainerToElement(container, el);
     }
   }
 
   function scrollToRef(ref: React.RefObject<HTMLDivElement | null>) {
-    ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    const container = scrollRef.current;
+    const el = ref.current;
+    if (container && el) {
+      scrollAgreementContainerToElement(container, el);
+    }
   }
 
   function onDownload() {
@@ -664,7 +682,6 @@ export function AgreementBlockPublic({
                       "[&_a]:text-zinc-900 [&_a]:underline",
                       "[&_p]:mb-4 [&_p:last-child]:mb-0",
                       "[&_em]:italic",
-                      "[&_h1]:scroll-mt-24 [&_h2]:scroll-mt-24 [&_h3]:scroll-mt-24",
                     )}
                     dangerouslySetInnerHTML={{ __html: sanitizeProposalHtml(introWithHeadingIds.html) }}
                   />
@@ -672,7 +689,7 @@ export function AgreementBlockPublic({
               ) : null}
 
               {packageSummaries.length > 0 ? (
-                <section id="agreement-plan" className="mt-12 scroll-mt-24 space-y-4">
+                <section id="agreement-plan" className="mt-12 space-y-4">
                   <SectionLabel>Your selection</SectionLabel>
                   <div className="space-y-4">
                     {packageSummaries.map((summary) => (
@@ -688,7 +705,7 @@ export function AgreementBlockPublic({
                 ) : null}
               </section>
 
-              <section id="agreement-legal" className="mt-12 scroll-mt-24">
+              <section id="agreement-legal" className="mt-12">
                 <SectionLabel>The agreement</SectionLabel>
                 <div className="mt-6">
                   <LegalSections legalHtmlWithIds={legalWithHeadingIds.html} />
@@ -698,7 +715,7 @@ export function AgreementBlockPublic({
               <section
                 ref={signRef}
                 id="agreement-sign"
-                className="mt-16 scroll-mt-24"
+                className="mt-16"
               >
                 {accepted ? (
                   <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-6 py-8 text-center sm:px-8">
