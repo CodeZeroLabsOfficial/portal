@@ -64,6 +64,15 @@ export interface AgreementBlockPublicProps {
 const DEFAULT_BUTTON_LABEL = "View Agreement";
 const DEFAULT_AGREEMENT_TITLE = "Services Agreement";
 
+type AgreementJumpLink = { kind: "link"; id: string; label: string };
+type AgreementJumpGroup = {
+  kind: "group";
+  id: string;
+  label: string;
+  children: Array<{ id: string; label: string }>;
+};
+type AgreementJumpItem = AgreementJumpLink | AgreementJumpGroup;
+
 /** Sensible placeholder body used when the editor hasn't supplied custom legal text. */
 const DEFAULT_LEGAL_SECTIONS: Array<{ heading: string; body: string }> = [
   {
@@ -356,24 +365,37 @@ export function AgreementBlockPublic({
     return injectAgreementLegalHeadingIds(block.legalHtml.trim());
   }, [block.legalHtml]);
 
-  const sectionAnchors = React.useMemo(
-    () => [
-      { id: "agreement-top", label: "Top of agreement", level: 1 },
-      ...(packageSummaries.length > 0
-        ? [{ id: "agreement-plan", label: "Selected plan & add-ons", level: 1 }]
-        : []),
-      ...introWithHeadingIds.headings.map((h) => ({ id: h.id, label: h.label, level: h.level })),
-      ...(hasCustomLegal
-        ? legalWithHeadingIds.headings.map((h) => ({ id: h.id, label: h.label, level: h.level }))
-        : DEFAULT_LEGAL_SECTIONS.map((s, i) => ({
-            id: `agreement-section-${i}`,
-            label: s.heading,
-            level: 3,
-          }))),
-      { id: "agreement-sign", label: accepted ? "Signature" : "Sign agreement", level: 1 },
-    ],
-    [packageSummaries.length, hasCustomLegal, accepted, introWithHeadingIds.headings, legalWithHeadingIds.headings],
-  );
+  const agreementLegalChildren = React.useMemo(() => {
+    const intro = introWithHeadingIds.headings.map((h) => ({ id: h.id, label: h.label }));
+    const legal = hasCustomLegal
+      ? legalWithHeadingIds.headings.map((h) => ({ id: h.id, label: h.label }))
+      : DEFAULT_LEGAL_SECTIONS.map((s, i) => ({
+          id: `agreement-section-${i}`,
+          label: s.heading,
+        }));
+    return [...intro, ...legal];
+  }, [hasCustomLegal, introWithHeadingIds.headings, legalWithHeadingIds.headings]);
+
+  const jumpNavItems = React.useMemo((): AgreementJumpItem[] => {
+    const items: AgreementJumpItem[] = [
+      { kind: "link", id: "agreement-top", label: "Top of agreement" },
+    ];
+    if (packageSummaries.length > 0) {
+      items.push({ kind: "link", id: "agreement-plan", label: "Selected plan & add-ons" });
+    }
+    items.push({
+      kind: "group",
+      id: "agreement-legal",
+      label: agreementTitle,
+      children: agreementLegalChildren,
+    });
+    items.push({
+      kind: "link",
+      id: "agreement-sign",
+      label: accepted ? "Signature" : "Sign agreement",
+    });
+    return items;
+  }, [packageSummaries.length, agreementTitle, agreementLegalChildren, accepted]);
   const displayName = localAcceptedName ?? acceptedByName;
   const blockAgreementUntilPlanPicked = interactive && !accepted && !planSelectionComplete;
   const scrollRef = React.useRef<HTMLDivElement | null>(null);
@@ -573,20 +595,44 @@ export function AgreementBlockPublic({
                 </div>
                 <nav className="min-h-0 flex-1 overflow-y-auto p-2" aria-label="Agreement sections">
                   <ul className="space-y-0.5">
-                    {sectionAnchors.map((s) => (
-                      <li key={s.id}>
-                        <button
-                          type="button"
-                          className={cn(
-                            "w-full rounded-lg py-2.5 text-left text-sm font-medium text-zinc-800 transition-colors hover:bg-zinc-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400",
-                            s.level === 3 ? "pl-8 pr-3" : s.level === 2 ? "pl-5 pr-3" : "px-3",
-                          )}
-                          onClick={() => jumpToSection(s.id)}
-                        >
-                          {s.label}
-                        </button>
-                      </li>
-                    ))}
+                    {jumpNavItems.map((item) =>
+                      item.kind === "link" ? (
+                        <li key={item.id}>
+                          <button
+                            type="button"
+                            className="w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium text-zinc-800 transition-colors hover:bg-zinc-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
+                            onClick={() => jumpToSection(item.id)}
+                          >
+                            {item.label}
+                          </button>
+                        </li>
+                      ) : (
+                        <li key={item.id}>
+                          <button
+                            type="button"
+                            className="w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium text-zinc-800 transition-colors hover:bg-zinc-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
+                            onClick={() => jumpToSection(item.id)}
+                          >
+                            {item.label}
+                          </button>
+                          {item.children.length > 0 ? (
+                            <ul className="mt-0.5 space-y-0.5 border-l border-zinc-200 ml-3 pl-1">
+                              {item.children.map((child) => (
+                                <li key={child.id}>
+                                  <button
+                                    type="button"
+                                    className="w-full rounded-lg py-2 pl-4 pr-3 text-left text-sm font-medium text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
+                                    onClick={() => jumpToSection(child.id)}
+                                  >
+                                    {child.label}
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : null}
+                        </li>
+                      ),
+                    )}
                   </ul>
                 </nav>
               </div>
@@ -642,7 +688,7 @@ export function AgreementBlockPublic({
                 ) : null}
               </section>
 
-              <section className="mt-12">
+              <section id="agreement-legal" className="mt-12 scroll-mt-24">
                 <SectionLabel>The agreement</SectionLabel>
                 <div className="mt-6">
                   <LegalSections legalHtmlWithIds={legalWithHeadingIds.html} />
