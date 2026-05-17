@@ -25,6 +25,12 @@ const ALLOWED_TAGS = [
   "h2",
   "h3",
   "h4",
+  "h5",
+  "h6",
+  "section",
+  "hr",
+  "figure",
+  "figcaption",
   "code",
   "pre",
   "img",
@@ -54,7 +60,7 @@ const allowedStyles: Record<string, Record<string, RegExp[]>> = {
   "*": Object.fromEntries([...ALLOWED_CSS_PROPERTIES].map((k) => [k, [SAFE_STYLE_VALUE]])),
 };
 
-const baseAttrs = ["class", "style"] as const;
+const baseAttrs = ["id", "class", "style"] as const;
 
 const allowedAttributes: Record<string, string[]> = {
   a: [...baseAttrs, "href", "title", "target", "rel"],
@@ -73,6 +79,12 @@ const allowedAttributes: Record<string, string[]> = {
   h2: [...baseAttrs],
   h3: [...baseAttrs],
   h4: [...baseAttrs],
+  h5: [...baseAttrs],
+  h6: [...baseAttrs],
+  section: [...baseAttrs],
+  hr: ["class"],
+  figure: [...baseAttrs],
+  figcaption: [...baseAttrs],
   code: [...baseAttrs],
   pre: [...baseAttrs],
   br: ["class"],

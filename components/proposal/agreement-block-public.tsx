@@ -30,6 +30,7 @@ import {
   packagesAddonsSectionActive,
   packagesSelectionTermLabel,
 } from "@/lib/proposal-packages-totals";
+import { injectAgreementLegalHeadingIds } from "@/lib/agreement-legal-headings";
 import { sanitizeProposalHtml } from "@/lib/sanitize-proposal-html";
 import { isDocumentPackageSelectionComplete } from "@/lib/proposal-package-selection";
 import type { ProposalPublicSubscriptionUi } from "@/server/proposal/public-proposal-subscription-ui";
@@ -242,11 +243,11 @@ function NoPackageSelectionCard() {
   );
 }
 
-function LegalSections({ legalHtml }: { legalHtml?: string }) {
+function LegalSections({ legalHtmlWithIds }: { legalHtmlWithIds?: string }) {
   const sanitizedHtml = React.useMemo(() => {
-    if (!legalHtml?.trim()) return null;
-    return sanitizeProposalHtml(legalHtml);
-  }, [legalHtml]);
+    if (!legalHtmlWithIds?.trim()) return null;
+    return sanitizeProposalHtml(legalHtmlWithIds);
+  }, [legalHtmlWithIds]);
 
   if (sanitizedHtml) {
     return (
@@ -256,6 +257,7 @@ function LegalSections({ legalHtml }: { legalHtml?: string }) {
           "[&_h1]:mt-10 [&_h1]:text-2xl [&_h1]:font-semibold [&_h1]:text-zinc-900",
           "[&_h2]:mt-8 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:text-zinc-900",
           "[&_h3]:mt-6 [&_h3]:text-base [&_h3]:font-semibold [&_h3]:text-zinc-900",
+          "[&_h1]:scroll-mt-24 [&_h2]:scroll-mt-24 [&_h3]:scroll-mt-24 [&_h4]:scroll-mt-24 [&_h5]:scroll-mt-24 [&_h6]:scroll-mt-24",
           "[&_p]:mb-4 [&_p:last-child]:mb-0",
           "[&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5",
           "[&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5",
@@ -343,16 +345,34 @@ export function AgreementBlockPublic({
 
   const accepted = localDone || proposalStatus === "accepted";
   const hasCustomLegal = Boolean(block.legalHtml?.trim());
+
+  const introWithHeadingIds = React.useMemo(() => {
+    if (!block.introHtml?.trim()) return { html: "", headings: [] };
+    return injectAgreementLegalHeadingIds(block.introHtml.trim(), { idPrefix: "agreement-intro" });
+  }, [block.introHtml]);
+
+  const legalWithHeadingIds = React.useMemo(() => {
+    if (!block.legalHtml?.trim()) return { html: "", headings: [] };
+    return injectAgreementLegalHeadingIds(block.legalHtml.trim());
+  }, [block.legalHtml]);
+
   const sectionAnchors = React.useMemo(
     () => [
-      { id: "agreement-top", label: "Top of agreement" },
-      ...(packageSummaries.length > 0 ? [{ id: "agreement-plan", label: "Selected plan & add-ons" }] : []),
-      ...(!hasCustomLegal
-        ? DEFAULT_LEGAL_SECTIONS.map((s, i) => ({ id: `agreement-section-${i}`, label: s.heading }))
+      { id: "agreement-top", label: "Top of agreement", level: 1 },
+      ...(packageSummaries.length > 0
+        ? [{ id: "agreement-plan", label: "Selected plan & add-ons", level: 1 }]
         : []),
-      { id: "agreement-sign", label: accepted ? "Signature" : "Sign agreement" },
+      ...introWithHeadingIds.headings.map((h) => ({ id: h.id, label: h.label, level: h.level })),
+      ...(hasCustomLegal
+        ? legalWithHeadingIds.headings.map((h) => ({ id: h.id, label: h.label, level: h.level }))
+        : DEFAULT_LEGAL_SECTIONS.map((s, i) => ({
+            id: `agreement-section-${i}`,
+            label: s.heading,
+            level: 3,
+          }))),
+      { id: "agreement-sign", label: accepted ? "Signature" : "Sign agreement", level: 1 },
     ],
-    [packageSummaries.length, hasCustomLegal, accepted],
+    [packageSummaries.length, hasCustomLegal, accepted, introWithHeadingIds.headings, legalWithHeadingIds.headings],
   );
   const displayName = localAcceptedName ?? acceptedByName;
   const blockAgreementUntilPlanPicked = interactive && !accepted && !planSelectionComplete;
@@ -557,7 +577,10 @@ export function AgreementBlockPublic({
                       <li key={s.id}>
                         <button
                           type="button"
-                          className="w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium text-zinc-800 transition-colors hover:bg-zinc-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
+                          className={cn(
+                            "w-full rounded-lg py-2.5 text-left text-sm font-medium text-zinc-800 transition-colors hover:bg-zinc-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400",
+                            s.level === 3 ? "pl-8 pr-3" : s.level === 2 ? "pl-5 pr-3" : "px-3",
+                          )}
                           onClick={() => jumpToSection(s.id)}
                         >
                           {s.label}
@@ -587,7 +610,7 @@ export function AgreementBlockPublic({
                 ) : null}
               </header>
 
-              {block.introHtml && block.introHtml.trim() ? (
+              {introWithHeadingIds.html ? (
                 <section className="mx-auto mt-10 max-w-2xl">
                   <div
                     className={cn(
@@ -595,8 +618,9 @@ export function AgreementBlockPublic({
                       "[&_a]:text-zinc-900 [&_a]:underline",
                       "[&_p]:mb-4 [&_p:last-child]:mb-0",
                       "[&_em]:italic",
+                      "[&_h1]:scroll-mt-24 [&_h2]:scroll-mt-24 [&_h3]:scroll-mt-24",
                     )}
-                    dangerouslySetInnerHTML={{ __html: sanitizeProposalHtml(block.introHtml) }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeProposalHtml(introWithHeadingIds.html) }}
                   />
                 </section>
               ) : null}
@@ -621,7 +645,7 @@ export function AgreementBlockPublic({
               <section className="mt-12">
                 <SectionLabel>The agreement</SectionLabel>
                 <div className="mt-6">
-                  <LegalSections legalHtml={block.legalHtml} />
+                  <LegalSections legalHtmlWithIds={legalWithHeadingIds.html} />
                 </div>
               </section>
 
