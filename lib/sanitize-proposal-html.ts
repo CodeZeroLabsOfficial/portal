@@ -24,6 +24,7 @@ function ensureImgSrcHttpsHook() {
 
 const ALLOWED_CSS_PROPERTIES = new Set([
   "color",
+  "font-family",
   "font-size",
   "font-weight",
   "font-style",
