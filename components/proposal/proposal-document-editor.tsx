@@ -1751,13 +1751,18 @@ function SpacerBlockHeightEditor({
 }
 
 function applyContractTemplatePickToAgreementBlock(block: AgreementBlock, pick: ContractTemplatePick): AgreementBlock {
+  const snapshot = {
+    agreementTitle: pick.agreementTitle.trim() || "Services Agreement",
+    introHtml: pick.introHtml.trim() || undefined,
+    legalHtml: pick.legalHtml ?? "",
+  };
   return {
     ...block,
     contractTemplateId: pick.id,
     contractTemplateLabel: pick.name.trim() || undefined,
-    agreementTitle: pick.agreementTitle.trim() || block.agreementTitle?.trim() || undefined,
-    introHtml: pick.introHtml.trim() ? pick.introHtml.trim() : undefined,
-    legalHtml: pick.legalHtml,
+    agreementTitle: snapshot.agreementTitle,
+    introHtml: snapshot.introHtml,
+    legalHtml: snapshot.legalHtml.trim() ? snapshot.legalHtml : undefined,
   };
 }
 

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireStaffSession } from "@/lib/auth/server-session";
+import { contractTemplateToAgreementSnapshot } from "@/lib/contract-template-agreement-snapshot";
 import { listContractTemplatesForOrg } from "@/server/firestore/contract-templates";
 
 function previewSnippet(legalHtml: string, maxLen = 140): string {
@@ -18,14 +19,17 @@ export async function GET() {
   }
 
   const rows = await listContractTemplatesForOrg(user);
-  const templates = rows.map((t) => ({
-    id: t.id,
-    name: t.name,
-    agreementTitle: t.agreementTitle,
-    introHtml: t.introHtml ?? "",
-    legalHtml: t.legalHtml ?? "",
-    previewSnippet: previewSnippet(t.legalHtml ?? ""),
-  }));
+  const templates = rows.map((t) => {
+    const snapshot = contractTemplateToAgreementSnapshot(t);
+    return {
+      id: t.id,
+      name: t.name,
+      agreementTitle: snapshot.agreementTitle,
+      introHtml: snapshot.introHtml ?? "",
+      legalHtml: snapshot.legalHtml ?? "",
+      previewSnippet: previewSnippet(snapshot.legalHtml ?? ""),
+    };
+  });
 
   return NextResponse.json({ templates });
 }

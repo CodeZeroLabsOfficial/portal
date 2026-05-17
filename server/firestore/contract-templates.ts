@@ -48,6 +48,34 @@ export async function listContractTemplatesForOrg(user: PortalUser): Promise<Con
   }
 }
 
+/** Batch load contract templates for agreement hydration (public proposals, template save). */
+export async function getContractTemplatesForOrgByIds(
+  organizationId: string,
+  templateIds: string[],
+): Promise<ContractTemplateRecord[]> {
+  const db = getFirebaseAdminFirestore();
+  if (!db || templateIds.length === 0) return [];
+
+  const orgId = organizationId?.trim() || "default";
+  const unique = [...new Set(templateIds.map((id) => id.trim()).filter(Boolean))];
+  if (unique.length === 0) return [];
+
+  try {
+    const refs = unique.map((id) => db.collection(COLLECTIONS.contractTemplates).doc(id));
+    const snaps = await db.getAll(...refs);
+    const out: ContractTemplateRecord[] = [];
+    for (const snap of snaps) {
+      if (!snap.exists) continue;
+      const data = snap.data() as Record<string, unknown>;
+      if (asString(data.organizationId) !== orgId) continue;
+      out.push(parseContractTemplateRecord(snap.id, data));
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
 export async function getContractTemplateForStaff(
   user: PortalUser,
   templateId: string,

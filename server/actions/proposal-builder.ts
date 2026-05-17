@@ -12,6 +12,7 @@ import { omitUndefinedDeep } from "@/lib/omit-undefined-deep";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { encodeProposalDocumentForFirestore } from "@/lib/proposal-firestore-document";
 import { parseProposalDocument } from "@/lib/schemas/proposal-document";
+import { hydrateAgreementBlocksInDocument } from "@/server/proposal/hydrate-agreement-contract-templates";
 import { effectivePricingLineQuantity } from "@/lib/pricing-line-quantity";
 import { findProposalBlockById } from "@/lib/proposal-blocks";
 import { hashSharePassword, sealProposalAccess, verifySharePassword } from "@/lib/proposal-share-crypto";
@@ -105,6 +106,10 @@ export async function saveProposalDocumentAction(
     ...docInput,
     title: parsed.data.title,
   });
+  const hydrated = await hydrateAgreementBlocksInDocument(
+    normalized,
+    user.organizationId ?? "default",
+  );
 
   const db = getFirebaseAdminFirestore();
   if (!db) return { ok: false, message: "Database unavailable." };
@@ -119,7 +124,7 @@ export async function saveProposalDocumentAction(
         .doc(parsed.data.proposalId)
         .update({
           title: parsed.data.title,
-          document: omitUndefinedDeep(encodeProposalDocumentForFirestore(normalized)) as Record<string, unknown>,
+          document: omitUndefinedDeep(encodeProposalDocumentForFirestore(hydrated)) as Record<string, unknown>,
           documentVersion: FieldValue.increment(1),
           updatedAt: FieldValue.serverTimestamp(),
         }),
@@ -280,6 +285,13 @@ export async function acceptProposalPublicAction(
   if (proposal.status === "draft") return { ok: false, message: "This proposal is not available yet." };
   if (proposal.status === "accepted") return { ok: false, message: "Already accepted." };
 
+  const hydratedDocument = await hydrateAgreementBlocksInDocument(
+    proposal.document,
+    proposal.organizationId,
+  );
+  const proposalForAgreement =
+    hydratedDocument === proposal.document ? proposal : { ...proposal, document: hydratedDocument };
+
   if (!isProposalPackageSelectionComplete(proposal)) {
     return {
       ok: false,
@@ -333,7 +345,7 @@ export async function acceptProposalPublicAction(
   await applyProposalAcceptCrmSideEffects(db, proposal, parsed.data.signerName);
 
   const stripeSubscriptionPriceId = await resolveSubscriptionStripePriceIdForProposalWithStripe(proposal);
-  const commerceSnapshot = buildSignedAgreementCommerceSnapshot(proposal);
+  const commerceSnapshot = buildSignedAgreementCommerceSnapshot(proposalForAgreement);
   if (proposal.customerId && stripeSubscriptionPriceId) {
     await persistCustomerSubscriptionIntentAfterAccept(
       db,
@@ -346,7 +358,7 @@ export async function acceptProposalPublicAction(
 
   if (hasSignaturePayload && sigUrl) {
     const commerce = commerceSnapshot;
-    const fullAgreementText = buildFullAgreementTextSnapshot(proposal);
+    const fullAgreementText = buildFullAgreementTextSnapshot(proposalForAgreement);
 
     let customerName: string | undefined;
     if (proposal.customerId) {

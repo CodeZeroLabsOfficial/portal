@@ -11,6 +11,7 @@ import { encodeProposalDocumentForFirestore } from "@/lib/proposal-firestore-doc
 import { parseProposalDocument } from "@/lib/schemas/proposal-document";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { getProposalTemplateForStaff } from "@/server/firestore/proposal-templates";
+import { hydrateAgreementBlocksInDocument } from "@/server/proposal/hydrate-agreement-contract-templates";
 
 const saveTemplateSchema = z.object({
   templateId: z.string().min(1),
@@ -126,6 +127,10 @@ export async function saveProposalTemplateAction(
     ...docInput,
     title: parsed.data.title,
   });
+  const hydrated = await hydrateAgreementBlocksInDocument(
+    normalized,
+    user.organizationId ?? "default",
+  );
 
   const db = getFirebaseAdminFirestore();
   if (!db) return { ok: false, message: "Database unavailable." };
@@ -143,7 +148,7 @@ export async function saveProposalTemplateAction(
           description: parsed.data.description?.trim()
             ? parsed.data.description.trim()
             : FieldValue.delete(),
-          document: omitUndefinedDeep(encodeProposalDocumentForFirestore(normalized)) as Record<string, unknown>,          updatedAt: FieldValue.serverTimestamp(),
+          document: omitUndefinedDeep(encodeProposalDocumentForFirestore(hydrated)) as Record<string, unknown>,          updatedAt: FieldValue.serverTimestamp(),
         }),
   );
   if (!write.ok) return write;

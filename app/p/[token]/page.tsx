@@ -13,6 +13,7 @@ import {
 } from "@/lib/proposal-public-layout";
 import { getProposalRecordByShareToken } from "@/server/firestore/parse-proposal";
 import { getUserStoredTimeZone } from "@/server/firestore/user-locality";
+import { hydrateAgreementBlocksInDocument } from "@/server/proposal/hydrate-agreement-contract-templates";
 import { loadProposalCustomerSignerPrefill } from "@/server/proposal/public-proposal-customer-signer-prefill";
 import { loadProposalPublicSubscriptionUi } from "@/server/proposal/public-proposal-subscription-ui";
 
@@ -58,7 +59,11 @@ export default async function PublicProposalPage(props: PublicProposalPageProps)
   const requiresPassword = Boolean(proposal.sharePasswordHash);
   const unlocked = !requiresPassword || (await isProposalUnlockedForRequest(proposal.id));
 
-  const agreementPresent = hasAgreementBlock(proposal.document.blocks);
+  const publicDocument = unlocked
+    ? await hydrateAgreementBlocksInDocument(proposal.document, proposal.organizationId)
+    : proposal.document;
+
+  const agreementPresent = hasAgreementBlock(publicDocument.blocks);
   const [publicSubscriptionUi, customerSignerPrefill] = unlocked
     ? await Promise.all([
         agreementPresent ? loadProposalPublicSubscriptionUi(proposal) : Promise.resolve(null),
@@ -75,7 +80,7 @@ export default async function PublicProposalPage(props: PublicProposalPageProps)
    */
   const showFooter = !agreementPresent || proposal.status === "accepted";
   /** When the document already ends with a viewport-bleed band, `<main>`'s default bottom padding leaves a stripe of page background below it. */
-  const flushBottom = !showFooter && proposalEndsInFullBleedBand(proposal.document.blocks);
+  const flushBottom = !showFooter && proposalEndsInFullBleedBand(publicDocument.blocks);
 
   const mainUnlockedClasses = flushBottom
     ? "proposal-print-root w-full pb-0 pt-0 print:pb-0 min-h-dvh"
@@ -94,7 +99,7 @@ export default async function PublicProposalPage(props: PublicProposalPageProps)
           <ProposalAnalyticsTracker shareToken={proposal.shareToken} />
           <div className={PROPOSAL_PUBLIC_DOCUMENT_OUTER_CLASSES}>
             <ProposalDocumentView
-              document={proposal.document}
+              document={publicDocument}
               branding={proposal.branding}
               shareToken={proposal.shareToken}
               publicSelections={proposal.publicSelections}

@@ -13,6 +13,7 @@ import { getProposalTemplateForStaff } from "@/server/firestore/proposal-templat
 import { cloneBrandingFromTemplate, cloneProposalDocument } from "@/lib/proposal-clone-document";
 import { encodeProposalDocumentForFirestore } from "@/lib/proposal-firestore-document";
 import { applyProposalTokensToDocument } from "@/lib/proposal-template-tokens";
+import { hydrateAgreementBlocksInDocument } from "@/server/proposal/hydrate-agreement-contract-templates";
 import { escapeHtml } from "@/lib/escape-html";
 import { logError } from "@/lib/logging";
 import type { CustomerRecord } from "@/types/customer";
@@ -255,8 +256,10 @@ export async function createDraftProposalFromOpportunityAction(
     document = buildPrefilledProposalDocument(customer, opportunity);
   }
 
+  const organizationId = user.organizationId ?? "default";
+  document = await hydrateAgreementBlocksInDocument(document, organizationId);
+
   try {
-    const organizationId = user.organizationId ?? "default";
     const shareToken = randomUUID().replace(/-/g, "");
 
     const ref = db.collection(COLLECTIONS.proposals).doc();
