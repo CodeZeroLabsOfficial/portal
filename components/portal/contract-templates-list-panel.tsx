@@ -200,7 +200,7 @@ export function ContractTemplatesListPanel({ templates, localityTimeZone }: Cont
                               <ExternalLink className="h-4 w-4" aria-hidden />
                             </Link>
                           </Button>
-                        </motion.tr>
+                        </div>
                       </td>
                     </motion.tr>
                   );
