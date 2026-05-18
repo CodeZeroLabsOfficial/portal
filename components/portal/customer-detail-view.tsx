@@ -496,6 +496,24 @@ export function CustomerDetailView({
                 </dt>
                 <dd className="text-sm text-foreground">{customer.company || "—"}</dd>
               </div>
+              <div className="space-y-1">
+                <dt className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  <FileText className="h-3.5 w-3.5" aria-hidden />
+                  ABN
+                </dt>
+                <dd className="text-sm text-foreground">
+                  {customer.companyAbn?.trim() ? customer.companyAbn.trim() : <span className="text-muted-foreground">—</span>}
+                </dd>
+              </div>
+              <div className="space-y-1">
+                <dt className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  <FileText className="h-3.5 w-3.5" aria-hidden />
+                  ACN
+                </dt>
+                <dd className="text-sm text-foreground">
+                  {customer.companyAcn?.trim() ? customer.companyAcn.trim() : <span className="text-muted-foreground">—</span>}
+                </dd>
+              </div>
               <div className="space-y-1 sm:col-span-2">
                 <dt className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   <MapPin className="h-3.5 w-3.5" aria-hidden />

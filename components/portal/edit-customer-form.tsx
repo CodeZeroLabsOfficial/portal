@@ -32,6 +32,8 @@ function customerToFormDefaults(customer: CustomerRecord): UpdateCustomerFormInp
     companyPhone: customer.companyPhone ?? "",
     companyEmail: customer.companyEmail ?? "",
     companyWebsite: customer.companyWebsite ?? "",
+    companyAbn: customer.companyAbn ?? "",
+    companyAcn: customer.companyAcn ?? "",
     companyAddressLine1: customer.companyAddressLine1 ?? "",
     companyAddressLine2: customer.companyAddressLine2 ?? "",
     companyCity: customer.companyCity ?? "",
@@ -191,12 +193,20 @@ export function EditCustomerForm({ customer }: EditCustomerFormProps) {
                     <p className="text-xs text-destructive">{form.formState.errors.companyEmail.message}</p>
                   ) : null}
                 </div>
-                <div className="space-y-2 sm:col-span-2">
+                <div className="space-y-2">
                   <Label htmlFor="edit-crm-company-website">Company website</Label>
                   <Input id="edit-crm-company-website" placeholder="https://www.company.com" {...form.register("companyWebsite")} />
                   {form.formState.errors.companyWebsite ? (
                     <p className="text-xs text-destructive">{form.formState.errors.companyWebsite.message}</p>
                   ) : null}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-crm-company-abn">ABN</Label>
+                  <Input id="edit-crm-company-abn" autoComplete="off" placeholder="12 345 678 901" {...form.register("companyAbn")} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-crm-company-acn">ACN</Label>
+                  <Input id="edit-crm-company-acn" autoComplete="off" placeholder="123 456 789" {...form.register("companyAcn")} />
                 </div>
               </div>
 
