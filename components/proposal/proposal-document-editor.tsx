@@ -89,6 +89,7 @@ import type { SubscriptionProductOption } from "@/types/subscription-product";
 import { ProposalRichText } from "@/components/proposal/proposal-rich-text";
 import { ProposalDocumentView } from "@/components/proposal/proposal-document-view";
 import { ProposalSectionShell } from "@/components/proposal/proposal-section-shell";
+import { ProposalEditorLibraryScope } from "@/components/proposal/proposal-editor-library-scope";
 import { ProposalMediaLibraryProvider } from "@/components/proposal/proposal-media-library";
 import {
   ProposalContractTemplateLibraryProvider,
@@ -3548,6 +3549,7 @@ export function ProposalDocumentEditor({
 
   return (
     <EditorStripeCatalogContext.Provider value={subscriptionProductOptions}>
+    <ProposalEditorLibraryScope>
     <ProposalMediaLibraryProvider>
     <ProposalContractTemplateLibraryProvider>
     <BlockMenuProfileContext.Provider value={blockMenuProfile}>
@@ -4022,6 +4024,7 @@ export function ProposalDocumentEditor({
     </BlockMenuProfileContext.Provider>
     </ProposalContractTemplateLibraryProvider>
     </ProposalMediaLibraryProvider>
+    </ProposalEditorLibraryScope>
     </EditorStripeCatalogContext.Provider>
   );
 }

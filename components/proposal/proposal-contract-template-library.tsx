@@ -8,10 +8,6 @@ import { Input } from "@/components/ui/input";
 import {
   PROPOSAL_EDITOR_LIBRARY_ASIDE_CLASS,
   PROPOSAL_EDITOR_LIBRARY_BACKDROP_CLASS,
-  ProposalEditorLibraryScope,
-  proposalEditorLibraryAsideStyle,
-  proposalEditorLibraryPanelStyle,
-  useProposalEditorLibraryBounds,
 } from "@/components/proposal/proposal-editor-library-scope";
 
 const noop = () => {};
@@ -56,9 +52,6 @@ function ContractTemplateLibrarySidebar() {
   const isOpen = Boolean(ctx?.isOpen && ctx.activeParams);
   const activeParams = ctx?.activeParams ?? null;
   const close = ctx?.close ?? noop;
-  const panelBounds = useProposalEditorLibraryBounds(isOpen);
-  const panelStyle = proposalEditorLibraryPanelStyle(panelBounds);
-  const asideStyle = proposalEditorLibraryAsideStyle(panelBounds);
 
   const [query, setQuery] = React.useState("");
   const [rows, setRows] = React.useState<ApiRow[]>([]);
@@ -115,7 +108,6 @@ function ContractTemplateLibrarySidebar() {
             type="button"
             aria-label="Close contract library"
             className={PROPOSAL_EDITOR_LIBRARY_BACKDROP_CLASS}
-            style={panelStyle}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -127,10 +119,9 @@ function ContractTemplateLibrarySidebar() {
             aria-modal="true"
             aria-labelledby="proposal-contract-template-library-title"
             className={PROPOSAL_EDITOR_LIBRARY_ASIDE_CLASS}
-            style={asideStyle}
-            initial={{ x: "-105%" }}
+            initial={{ x: "-100%" }}
             animate={{ x: 0 }}
-            exit={{ x: "-105%" }}
+            exit={{ x: "-100%" }}
             transition={{ type: "spring", stiffness: 420, damping: 38 }}
           >
             <button
@@ -290,10 +281,8 @@ export function ProposalContractTemplateLibraryProvider({ children }: { children
 
   return (
     <ProposalContractTemplateLibraryContext.Provider value={value}>
-      <ProposalEditorLibraryScope>
-        {children}
-        <ContractTemplateLibrarySidebar />
-      </ProposalEditorLibraryScope>
+      {children}
+      <ContractTemplateLibrarySidebar />
     </ProposalContractTemplateLibraryContext.Provider>
   );
 }
