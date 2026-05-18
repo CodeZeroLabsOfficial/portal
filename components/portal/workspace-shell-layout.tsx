@@ -42,7 +42,7 @@ import { cn } from "@/lib/utils";
 
 const SIDEBAR_COLLAPSED_KEY = "portal-sidebar-collapsed";
 
-/** Height for search / Create — matches the natural account menu trigger (h-8 avatar + label stack). */
+/** Shared height for search, Create, and account menu in the top bar. */
 const TOPBAR_COMPACT_CONTROL_HEIGHT_CLASS = "h-9";
 
 /** Shared horizontal inset for top bar, main column, and optional right panel. */
@@ -408,10 +408,13 @@ export function WorkspaceShellLayout({
                         type="button"
                         title={avatarTitle}
                         aria-label={`Account menu for ${nameHeadline}`}
-                        className="flex max-w-full items-center gap-2 rounded-lg border border-transparent px-1.5 py-0.5 text-left transition-colors hover:border-white/[0.08] hover:bg-white/[0.06] sm:gap-2.5 sm:px-2"
+                        className={cn(
+                          TOPBAR_COMPACT_CONTROL_HEIGHT_CLASS,
+                          "flex max-w-full items-center gap-2 rounded-lg border border-transparent px-1.5 py-0 text-left transition-colors hover:border-white/[0.08] hover:bg-white/[0.06] sm:gap-2.5 sm:px-2",
+                        )}
                       >
                         <div
-                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary text-[13px] font-semibold text-primary-foreground"
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary text-[14px] font-semibold text-primary-foreground"
                           aria-hidden
                         >
                           {initial}
@@ -420,7 +423,7 @@ export function WorkspaceShellLayout({
                           <p className="max-w-[140px] truncate text-[14px] font-medium leading-none text-white md:max-w-[220px]">
                             {nameHeadline}
                           </p>
-                          <p className="max-w-[140px] truncate text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500 md:max-w-[220px]">
+                          <p className="max-w-[140px] truncate text-[11px] font-medium uppercase leading-none tracking-[0.12em] text-zinc-500 md:max-w-[220px]">
                             {roleLabel.toUpperCase()}
                           </p>
                         </div>
