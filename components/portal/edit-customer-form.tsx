@@ -194,19 +194,19 @@ export function EditCustomerForm({ customer }: EditCustomerFormProps) {
                   ) : null}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-crm-company-website">Company website</Label>
-                  <Input id="edit-crm-company-website" placeholder="https://www.company.com" {...form.register("companyWebsite")} />
-                  {form.formState.errors.companyWebsite ? (
-                    <p className="text-xs text-destructive">{form.formState.errors.companyWebsite.message}</p>
-                  ) : null}
-                </div>
-                <div className="space-y-2">
                   <Label htmlFor="edit-crm-company-abn">ABN</Label>
                   <Input id="edit-crm-company-abn" autoComplete="off" placeholder="12 345 678 901" {...form.register("companyAbn")} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-crm-company-acn">ACN</Label>
                   <Input id="edit-crm-company-acn" autoComplete="off" placeholder="123 456 789" {...form.register("companyAcn")} />
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="edit-crm-company-website">Company website</Label>
+                  <Input id="edit-crm-company-website" placeholder="https://www.company.com" {...form.register("companyWebsite")} />
+                  {form.formState.errors.companyWebsite ? (
+                    <p className="text-xs text-destructive">{form.formState.errors.companyWebsite.message}</p>
+                  ) : null}
                 </div>
               </div>
 
