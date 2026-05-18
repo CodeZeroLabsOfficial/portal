@@ -24,6 +24,7 @@ import {
   sumActiveSubscriptionMrrMinor,
 } from "@/lib/admin-dashboard-metrics";
 import { buildAdminDashboardChartTabs } from "@/lib/admin-dashboard-chart-payload";
+import type { PaymentRecord } from "@/types/payment";
 import type { ProposalBlock, ProposalRecord } from "@/types/proposal";
 import { iterateProposalContentBlocks } from "@/lib/proposal-blocks";
 import type { SupportTicketRecord } from "@/types/support-ticket";
@@ -67,33 +68,42 @@ function shortRef(id: string): string {
   return `#${clean.slice(0, 3)}-${clean.slice(3, 6)}`;
 }
 
-/** Stable display amount for demo-style rows when Stripe totals are not on the row. */
-function pseudoAmountMinorFromId(id: string): number {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) {
-    h = (h * 31 + id.charCodeAt(i)) | 0;
-  }
-  return (Math.abs(h) % 48_000) + 2_400;
-}
-
-function proposalStatusLabel(status: string): { label: string; className: string } {
-  if (status === "accepted") {
+function paymentStatusLabel(status: string): { label: string; className: string } {
+  const s = status.toLowerCase();
+  if (s === "succeeded") {
     return {
       label: "Succeeded",
-      className:
-        "border-emerald-500/35 bg-emerald-500/15 text-emerald-200",
+      className: "border-emerald-500/35 bg-emerald-500/15 text-emerald-200",
     };
   }
-  if (status === "published" || status === "viewed") {
+  if (
+    s === "processing" ||
+    s === "requires_capture" ||
+    s === "requires_action" ||
+    s === "requires_confirmation" ||
+    s === "requires_payment_method"
+  ) {
     return {
       label: "Pending",
       className: "border-amber-500/35 bg-amber-500/10 text-amber-100",
     };
   }
+  if (s === "canceled" || s === "payment_failed") {
+    return {
+      label: s === "canceled" ? "Canceled" : "Failed",
+      className: "border-destructive/35 bg-destructive/15 text-destructive",
+    };
+  }
+  const label = s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   return {
-    label: status.charAt(0).toUpperCase() + status.slice(1),
+    label,
     className: "border-border bg-muted/40 text-muted-foreground",
   };
+}
+
+function stripePaymentDashboardUrl(payment: PaymentRecord): string {
+  const id = payment.stripePaymentIntentId?.trim() || payment.id.trim();
+  return `https://dashboard.stripe.com/payments/${encodeURIComponent(id)}`;
 }
 
 const PRICING_MINOR_KEYS = [
@@ -225,8 +235,8 @@ function countOpenTicketsByUrgency(tickets: SupportTicketRecord[]): {
 }
 
 export function AdminHomeRightAside({ data }: { data: AdminPortalData }) {
-  const proposals = [...data.proposals]
-    .sort((a, b) => b.updatedAt - a.updatedAt)
+  const recentPayments = [...data.payments]
+    .sort((a, b) => (b.createdAt || b.updatedAt) - (a.createdAt || a.updatedAt))
     .slice(0, 5);
 
   const activities = [...data.proposals]
@@ -238,13 +248,15 @@ export function AdminHomeRightAside({ data }: { data: AdminPortalData }) {
       <section className="rounded-xl border border-border/80 bg-card/95 shadow-sm">
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <h2 className="text-sm font-semibold text-foreground">Recent transactions</h2>
-          <Link
-            href="/admin/customers"
+          <a
+            href="https://dashboard.stripe.com/payments"
+            target="_blank"
+            rel="noopener noreferrer"
             className="inline-flex items-center gap-0.5 text-xs font-medium text-primary hover:underline"
           >
             See all
             <ChevronRight className="h-3.5 w-3.5" aria-hidden />
-          </Link>
+          </a>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full table-fixed text-left text-[13px]">
@@ -257,22 +269,23 @@ export function AdminHomeRightAside({ data }: { data: AdminPortalData }) {
               </tr>
             </thead>
             <tbody className="text-foreground">
-              {proposals.length === 0 ? (
+              {recentPayments.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="px-4 py-6 text-center text-muted-foreground">
-                    No proposals yet
+                    No payments recorded yet
                   </td>
                 </tr>
               ) : (
-                proposals.map((p) => {
-                  const st = proposalStatusLabel(p.status);
+                recentPayments.map((payment) => {
+                  const st = paymentStatusLabel(payment.status);
+                  const refId = payment.stripePaymentIntentId?.trim() || payment.id;
                   return (
-                    <tr key={p.id} className="border-b border-border/60 last:border-0">
+                    <tr key={payment.id} className="border-b border-border/60 last:border-0">
                       <td className="truncate px-3 py-3 font-mono text-[12px] text-muted-foreground">
-                        {shortRef(p.id)}
+                        {shortRef(refId)}
                       </td>
                       <td className="truncate px-2 py-3 tabular-nums text-foreground">
-                        {formatCurrencyAmount(pseudoAmountMinorFromId(p.id), DEFAULT_CURRENCY)}
+                        {formatCurrencyAmount(payment.amount, payment.currency || DEFAULT_CURRENCY)}
                       </td>
                       <td className="px-2 py-3">
                         <span
@@ -281,20 +294,22 @@ export function AdminHomeRightAside({ data }: { data: AdminPortalData }) {
                             st.className,
                           )}
                         >
-                          {p.status === "accepted" ? (
+                          {payment.status === "succeeded" ? (
                             <Check className="h-3 w-3 shrink-0" aria-hidden />
                           ) : null}
                           {st.label}
                         </span>
                       </td>
                       <td className="px-2 py-3 text-muted-foreground">
-                        <button
-                          type="button"
+                        <a
+                          href={stripePaymentDashboardUrl(payment)}
+                          target="_blank"
+                          rel="noopener noreferrer"
                           className="inline-flex rounded-md p-1 hover:bg-muted"
-                          aria-label="Row actions"
+                          aria-label={`Open ${refId} in Stripe`}
                         >
                           <MoreHorizontal className="h-4 w-4" aria-hidden />
-                        </button>
+                        </a>
                       </td>
                     </tr>
                   );
