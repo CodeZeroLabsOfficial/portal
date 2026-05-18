@@ -155,6 +155,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
+import { PROPOSAL_EDITOR_BUBBLE_TOOLBAR_PANEL_CLASSES } from "@/lib/proposal-editor-glass";
 import { cn } from "@/lib/utils";
 import { escapeHtml } from "@/lib/escape-html";
 import {
@@ -1221,7 +1222,10 @@ function ColumnsBlockFields({
                         ) : null}
                         {showPlansHere ? (
                           <div
-                            className="w-[min(14rem,calc(100vw-3rem))] space-y-1.5 rounded-xl border border-border/70 bg-muted/95 p-2.5 shadow-sm ring-1 ring-black/[0.04] backdrop-blur-sm dark:bg-zinc-800/95 dark:ring-white/10"
+                            className={cn(
+                              "w-[min(14rem,calc(100vw-3rem))] space-y-1.5 rounded-xl p-2.5",
+                              PROPOSAL_EDITOR_BUBBLE_TOOLBAR_PANEL_CLASSES,
+                            )}
                             onPointerDown={(e) => e.stopPropagation()}
                             onClick={(e) => e.stopPropagation()}
                           >

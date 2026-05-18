@@ -6,6 +6,7 @@ import type { IconBlock } from "@/types/proposal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { PROPOSAL_EDITOR_BUBBLE_TOOLBAR_SHELL_CLASSES } from "@/lib/proposal-editor-glass";
 import { cn } from "@/lib/utils";
 import {
   PROPOSAL_ICON_DEFAULT_NAME,
@@ -18,8 +19,8 @@ import {
 
 /** Matches {@link BlockToolbar} `appearance="surface"` and {@link ProposalImageBlockToolbar} pill chrome. */
 const barShell = cn(
-  "inline-flex max-w-[calc(100vw-3rem)] shrink-0 flex-nowrap items-center gap-0.5 overflow-x-auto rounded-full border border-border/70 bg-muted/95 p-1 text-foreground shadow-sm ring-1 ring-black/[0.04] backdrop-blur-sm",
-  "dark:bg-zinc-800/95 dark:ring-white/10",
+  "inline-flex max-w-[calc(100vw-3rem)] shrink-0 flex-nowrap items-center gap-0.5 overflow-x-auto rounded-full border p-1",
+  PROPOSAL_EDITOR_BUBBLE_TOOLBAR_SHELL_CLASSES,
   "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
 );
 

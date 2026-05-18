@@ -24,6 +24,11 @@ import {
   STYLE_PRESET_COLORS,
   resolveBlockStyle,
 } from "@/lib/block-style";
+import {
+  PROPOSAL_EDITOR_BUBBLE_TOOLBAR_DARK_SHELL_CLASSES,
+  PROPOSAL_EDITOR_BUBBLE_TOOLBAR_PANEL_CLASSES,
+  PROPOSAL_EDITOR_BUBBLE_TOOLBAR_SHELL_CLASSES,
+} from "@/lib/proposal-editor-glass";
 import { cn } from "@/lib/utils";
 import type { BlockStyle } from "@/types/proposal";
 
@@ -95,9 +100,7 @@ export function BlockToolbar({
   const stylePickerMode: StylePickerMode = blockType === "agreement" ? "agreement" : "packages";
 
   const elevated = appearance === "elevated";
-  const shell = elevated
-    ? "border-zinc-700/40 bg-zinc-900/95 text-zinc-100 shadow-xl"
-    : "border-border/70 bg-muted/95 text-foreground shadow-sm ring-1 ring-black/[0.04] backdrop-blur-sm dark:bg-zinc-800/95 dark:ring-white/10";
+  const shell = elevated ? PROPOSAL_EDITOR_BUBBLE_TOOLBAR_DARK_SHELL_CLASSES : PROPOSAL_EDITOR_BUBBLE_TOOLBAR_SHELL_CLASSES;
   const iconBtnBase = elevated
     ? "text-zinc-300 hover:bg-white/10 hover:text-white focus-visible:ring-white/40"
     : "text-muted-foreground hover:bg-background hover:text-foreground focus-visible:ring-ring";
@@ -376,8 +379,8 @@ function StylePickerTrigger({
         align="center"
         sideOffset={8}
         className={cn(
-          "w-72 p-0",
-          elevated ? "border-zinc-700/60 bg-zinc-900/95 text-zinc-100" : "border border-border bg-popover text-popover-foreground shadow-md",
+          "w-72 border p-0",
+          elevated ? PROPOSAL_EDITOR_BUBBLE_TOOLBAR_DARK_SHELL_CLASSES : PROPOSAL_EDITOR_BUBBLE_TOOLBAR_PANEL_CLASSES,
         )}
         onCloseAutoFocus={(e) => e.preventDefault()}
       >

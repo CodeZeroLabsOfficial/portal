@@ -30,6 +30,7 @@ import {
   Strikethrough,
   Underline as UnderlineIcon,
 } from "lucide-react";
+import { PROPOSAL_EDITOR_BUBBLE_TOOLBAR_DARK_SHELL_CLASSES } from "@/lib/proposal-editor-glass";
 import { cn } from "@/lib/utils";
 import { PROPOSAL_RICH_HEADING_LEVEL_CLASSES } from "@/lib/proposal-rich-heading-typography";
 import { PROPOSAL_MERGE_TOKEN_CHOICES } from "@/lib/proposal-merge-token-choices";
@@ -97,8 +98,10 @@ const ALIGN_OPTIONS: { value: "left" | "center" | "right"; icon: typeof AlignLef
   { value: "right", icon: AlignRight, label: "Right" },
 ];
 
-const BUBBLE_MENU_PANEL_SURFACE_CLASS =
-  "rounded-md border border-zinc-700 bg-zinc-900 p-1 text-zinc-100 shadow-lg";
+const BUBBLE_MENU_PANEL_SURFACE_CLASS = cn(
+  "rounded-md border p-1",
+  PROPOSAL_EDITOR_BUBBLE_TOOLBAR_DARK_SHELL_CLASSES,
+);
 
 const BUBBLE_MENU_PANEL_CLASS = cn(
   BUBBLE_MENU_PANEL_SURFACE_CLASS,
@@ -1139,7 +1142,12 @@ export function ProposalRichText({
           return ed.isFocused;
         }}
       >
-        <div className="flex items-center gap-0.5 rounded-lg border border-zinc-800 bg-zinc-950/95 p-1 text-zinc-100 shadow-2xl backdrop-blur">
+        <div
+          className={cn(
+            "flex items-center gap-0.5 rounded-lg border p-1",
+            PROPOSAL_EDITOR_BUBBLE_TOOLBAR_DARK_SHELL_CLASSES,
+          )}
+        >
           <HeadingPicker editor={editor} />
           <ToolbarDivider />
           <FontSizeControl editor={editor} />

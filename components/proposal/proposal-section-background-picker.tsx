@@ -10,6 +10,10 @@ import {
   resolveSectionBackground,
   type ResolvedSectionBackground,
 } from "@/lib/section-background";
+import {
+  PROPOSAL_EDITOR_BUBBLE_TOOLBAR_DARK_SHELL_CLASSES,
+  PROPOSAL_EDITOR_BUBBLE_TOOLBAR_PANEL_CLASSES,
+} from "@/lib/proposal-editor-glass";
 import { cn } from "@/lib/utils";
 import type { SectionBackground, SectionBackdropKind } from "@/types/proposal";
 import { Button } from "@/components/ui/button";
@@ -98,10 +102,10 @@ export function ProposalSectionBackgroundPicker({
         align="center"
         sideOffset={8}
         className={cn(
-          "w-[min(272px,calc(100vw-2rem))] overflow-hidden rounded-lg border-0 p-0 shadow-xl",
+          "w-[min(272px,calc(100vw-2rem))] overflow-hidden rounded-lg border p-0",
           elevated
-            ? "bg-zinc-900/95 text-zinc-100 ring-1 ring-white/15"
-            : "bg-popover text-popover-foreground ring-1 ring-black/[0.06] dark:ring-white/10",
+            ? PROPOSAL_EDITOR_BUBBLE_TOOLBAR_DARK_SHELL_CLASSES
+            : PROPOSAL_EDITOR_BUBBLE_TOOLBAR_PANEL_CLASSES,
         )}
         onCloseAutoFocus={(e) => e.preventDefault()}
         onPointerDownOutside={(e) => {
