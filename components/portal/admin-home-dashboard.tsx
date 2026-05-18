@@ -420,17 +420,13 @@ export function AdminHomeDashboard({
   chartRangeStart.setDate(chartRangeStart.getDate() - 13);
   const chartRangeLabel = `${formatShortChartDate(chartRangeStart)} - ${formatShortChartDate(chartRangeEnd)}`;
 
-  const paymentsValueDetail = paymentsSummary.useYtd
-    ? `${paymentsSummary.count} payments · ${paymentsSummary.year} YTD`
-    : `${paymentsSummary.count} payments received`;
-
   const clientsFooter = `Last month: ${clientsMom.lastMonthNew} new sign-up${clientsMom.lastMonthNew === 1 ? "" : "s"}`;
 
   const mrrFooter = `Last month: ${formatCurrencyAmount(paidMom.lastMinor, DEFAULT_CURRENCY)}`;
 
   const paymentsFooter = paymentsSummary.useYtd
-    ? paymentsValueDetail
-    : `${paymentsValueDetail} · Last month ${formatCurrencyAmount(paymentsLastMonthMinor, DEFAULT_CURRENCY)}`;
+    ? `${paymentsSummary.count} payments · ${paymentsSummary.year} YTD`
+    : `Last month ${formatCurrencyAmount(paymentsLastMonthMinor, DEFAULT_CURRENCY)}`;
 
   return (
     <div className="space-y-8">
