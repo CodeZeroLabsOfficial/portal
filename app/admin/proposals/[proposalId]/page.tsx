@@ -11,6 +11,10 @@ import { ProposalDocumentEditorLazy } from "@/components/proposal/proposal-docum
 import { ProposalShareSettings } from "@/components/proposal/proposal-share-settings";
 import { formatCurrencyAmount } from "@/lib/format";
 import { computeProposalDealValue } from "@/lib/proposal-packages-totals";
+import {
+  isDocumentPackageSelectionComplete,
+  listPackagesBlocksInDocument,
+} from "@/lib/proposal-package-selection";
 import { cn } from "@/lib/utils";
 import type { ProposalStatus } from "@/types/proposal";
 
@@ -73,7 +77,16 @@ export default async function AdminProposalDetailPage({ params, searchParams }: 
   const customerBackId = proposal.customerId?.trim() || firstQueryString(sp.customer);
 
   const recipient = proposal.recipientEmail?.trim() || null;
-  const dealValue = computeProposalDealValue(proposal.document.blocks, proposal.publicSelections);
+  const hasPackagesBlocks =
+    listPackagesBlocksInDocument(proposal.document.blocks).length > 0;
+  const packageSelectionComplete = isDocumentPackageSelectionComplete(
+    proposal.document.blocks,
+    proposal.publicSelections,
+  );
+  const dealValue =
+    !hasPackagesBlocks || packageSelectionComplete
+      ? computeProposalDealValue(proposal.document.blocks, proposal.publicSelections)
+      : null;
 
   const proposalDetailsSlot = (
     <div className="grid gap-6 lg:grid-cols-3">
@@ -119,6 +132,8 @@ export default async function AdminProposalDetailPage({ params, searchParams }: 
                   <span className="font-medium tabular-nums">
                     {formatCurrencyAmount(dealValue.totalMinor, dealValue.currency)}
                   </span>
+                ) : hasPackagesBlocks ? (
+                  <span className="text-muted-foreground">No selection</span>
                 ) : (
                   "—"
                 )}

@@ -73,9 +73,8 @@ export interface ProposalDealValueSummary {
 
 /**
  * Summarise the headline deal value for a proposal: the first packages block's
- * commitment total (tier × term + monthly add-ons × term), using the buyer's
- * public selection when available, else falling back to the recommended (or
- * first) tier at 12 months.
+ * commitment total (tier × term + monthly add-ons × term) from the buyer's
+ * persisted public selection only (no tier fallback).
  */
 export function computeProposalDealValue(
   blocks: ProposalBlock[],
@@ -86,18 +85,12 @@ export function computeProposalDealValue(
     if (!block.tiers || block.tiers.length === 0) continue;
 
     const persisted = selections?.[block.id];
-    const fallbackTier = block.tiers.find((t) => t.recommended) ?? block.tiers[0];
-    const sel: PackagesPublicSelection = persisted ?? {
-      kind: "packages",
-      tierId: fallbackTier.id,
-      term: "12_months",
-      updatedAt: 0,
-    };
-    const tier = block.tiers.find((t) => t.id === sel.tierId) ?? fallbackTier;
-    const effective: PackagesPublicSelection = { ...sel, tierId: tier.id };
+    if (!persisted || persisted.kind !== "packages" || !persisted.tierId) continue;
+    const tier = block.tiers.find((t) => t.id === persisted.tierId);
+    if (!tier) continue;
 
     return {
-      totalMinor: packageCommitmentTotalMinor(block, effective),
+      totalMinor: packageCommitmentTotalMinor(block, persisted),
       currency: block.currency || "aud",
     };
   }

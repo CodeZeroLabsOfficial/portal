@@ -97,14 +97,22 @@ const ALIGN_OPTIONS: { value: "left" | "center" | "right"; icon: typeof AlignLef
   { value: "right", icon: AlignRight, label: "Right" },
 ];
 
-const BUBBLE_MENU_PANEL_CLASS =
-  "absolute left-0 top-full z-[100] mt-1 rounded-md border border-zinc-700 bg-zinc-900 p-1 text-zinc-100 shadow-lg";
+const BUBBLE_MENU_PANEL_SURFACE_CLASS =
+  "rounded-md border border-zinc-700 bg-zinc-900 p-1 text-zinc-100 shadow-lg";
+
+const BUBBLE_MENU_PANEL_CLASS = cn(
+  BUBBLE_MENU_PANEL_SURFACE_CLASS,
+  "absolute left-0 top-full z-[100] mt-1",
+);
+
+const VIEWPORT_EDGE_PAD_PX = 8;
 
 /** Radix dropdowns portal to `document.body`; inside TipTap's Tippy bubble that breaks anchor geometry. Inline panels stay under the trigger. */
 function useCloseBubbleToolbarMenu(
   open: boolean,
   setOpen: React.Dispatch<React.SetStateAction<boolean>>,
   containerRef: React.RefObject<HTMLElement | null>,
+  extraContainRefs?: React.RefObject<HTMLElement | null>[],
 ) {
   React.useEffect(() => {
     if (!open) return;
@@ -112,7 +120,12 @@ function useCloseBubbleToolbarMenu(
       const el = containerRef.current;
       if (!el) return;
       const t = e.target;
-      if (t instanceof Node && !el.contains(t)) setOpen(false);
+      if (!(t instanceof Node)) return;
+      if (el.contains(t)) return;
+      for (const extra of extraContainRefs ?? []) {
+        if (extra.current?.contains(t)) return;
+      }
+      setOpen(false);
     };
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
@@ -123,7 +136,76 @@ function useCloseBubbleToolbarMenu(
       document.removeEventListener("pointerdown", onPointerDown, true);
       document.removeEventListener("keydown", onKeyDown, true);
     };
-  }, [open, setOpen, containerRef]);
+  }, [open, setOpen, containerRef, extraContainRefs]);
+}
+
+function useFixedToolbarMenuPosition(
+  open: boolean,
+  triggerRef: React.RefObject<HTMLElement | null>,
+  panelRef: React.RefObject<HTMLElement | null>,
+  {
+    estimatedWidthPx,
+    align = "start",
+    placement = "below",
+  }: {
+    estimatedWidthPx?: number;
+    align?: "start" | "end";
+    placement?: "below" | "above";
+  } = {},
+) {
+  const [panelStyle, setPanelStyle] = React.useState<React.CSSProperties | null>(null);
+
+  React.useLayoutEffect(() => {
+    if (!open) {
+      setPanelStyle(null);
+      return;
+    }
+    const trigger = triggerRef.current;
+    if (!trigger) return;
+
+    const updatePosition = () => {
+      const tr = trigger.getBoundingClientRect();
+      const pr = panelRef.current?.getBoundingClientRect();
+      const width = Math.ceil(pr?.width ?? estimatedWidthPx ?? 216);
+      const height = Math.ceil(pr?.height ?? 0);
+
+      let left = align === "end" ? tr.right - width : tr.left;
+      left = Math.min(
+        Math.max(VIEWPORT_EDGE_PAD_PX, left),
+        window.innerWidth - width - VIEWPORT_EDGE_PAD_PX,
+      );
+
+      const gapPx = 4;
+      const spaceBelow = window.innerHeight - VIEWPORT_EDGE_PAD_PX - (tr.bottom + gapPx);
+      const spaceAbove = tr.top - gapPx - VIEWPORT_EDGE_PAD_PX;
+      const openAbove =
+        placement === "above" ||
+        (placement === "below" && height > 0 && height > spaceBelow && height <= spaceAbove);
+
+      const style: React.CSSProperties = {
+        position: "fixed",
+        left,
+        top: openAbove ? tr.top - gapPx : tr.bottom + gapPx,
+        zIndex: 10000,
+      };
+      if (estimatedWidthPx != null) style.width = estimatedWidthPx;
+      if (openAbove) style.transform = "translateY(-100%)";
+
+      setPanelStyle(style);
+    };
+
+    updatePosition();
+    const raf = requestAnimationFrame(updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    window.addEventListener("resize", updatePosition);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("scroll", updatePosition, true);
+      window.removeEventListener("resize", updatePosition);
+    };
+  }, [open, align, estimatedWidthPx, placement, triggerRef, panelRef]);
+
+  return panelStyle;
 }
 
 function ToolbarButton({
@@ -491,58 +573,12 @@ function MergeFieldMenu({ editor }: { editor: Editor }) {
   const [open, setOpen] = React.useState(false);
   const triggerRef = React.useRef<HTMLDivElement>(null);
   const panelRef = React.useRef<HTMLDivElement>(null);
-  const [panelStyle, setPanelStyle] = React.useState<React.CSSProperties | null>(null);
-
-  React.useLayoutEffect(() => {
-    if (!open) {
-      setPanelStyle(null);
-      return;
-    }
-    const el = triggerRef.current;
-    if (!el) return;
-
-    const updatePosition = () => {
-      const r = el.getBoundingClientRect();
-      const width = MERGE_FIELD_PANEL_WIDTH_PX;
-      const left = Math.min(Math.max(8, r.right - width), window.innerWidth - width - 8);
-      setPanelStyle({
-        position: "fixed",
-        left,
-        top: r.top - 8,
-        width,
-        transform: "translateY(-100%)",
-        zIndex: 10000,
-      });
-    };
-
-    updatePosition();
-    window.addEventListener("scroll", updatePosition, true);
-    window.addEventListener("resize", updatePosition);
-    return () => {
-      window.removeEventListener("scroll", updatePosition, true);
-      window.removeEventListener("resize", updatePosition);
-    };
-  }, [open]);
-
-  React.useEffect(() => {
-    if (!open) return;
-    const onPointerDown = (e: PointerEvent) => {
-      const t = e.target;
-      if (!(t instanceof Node)) return;
-      if (triggerRef.current?.contains(t)) return;
-      if (panelRef.current?.contains(t)) return;
-      setOpen(false);
-    };
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("pointerdown", onPointerDown, true);
-    document.addEventListener("keydown", onKeyDown, true);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown, true);
-      document.removeEventListener("keydown", onKeyDown, true);
-    };
-  }, [open]);
+  const panelStyle = useFixedToolbarMenuPosition(open, triggerRef, panelRef, {
+    estimatedWidthPx: MERGE_FIELD_PANEL_WIDTH_PX,
+    align: "end",
+    placement: "above",
+  });
+  useCloseBubbleToolbarMenu(open, setOpen, triggerRef, [panelRef]);
 
   function insert(snippet: string) {
     editor.chain().focus().insertContent(snippet).run();
@@ -703,10 +739,18 @@ function TypographyNumericField({
   );
 }
 
+const TYPOGRAPHY_MORE_MENU_WIDTH_PX = 216;
+
 function TypographyMoreMenu({ editor }: { editor: Editor }) {
   const [open, setOpen] = React.useState(false);
-  const rootRef = React.useRef<HTMLDivElement>(null);
-  useCloseBubbleToolbarMenu(open, setOpen, rootRef);
+  const triggerRef = React.useRef<HTMLDivElement>(null);
+  const panelRef = React.useRef<HTMLDivElement>(null);
+  const panelStyle = useFixedToolbarMenuPosition(open, triggerRef, panelRef, {
+    estimatedWidthPx: TYPOGRAPHY_MORE_MENU_WIDTH_PX,
+    align: "end",
+    placement: "below",
+  });
+  useCloseBubbleToolbarMenu(open, setOpen, triggerRef, [panelRef]);
 
   const state = useEditorState({
     editor,
@@ -733,33 +777,15 @@ function TypographyMoreMenu({ editor }: { editor: Editor }) {
   const letterCase = state.letterCase ?? "none";
   const fontWeight = state.fontWeightRaw ?? "";
 
-  return (
-    <div className="relative" ref={rootRef}>
-      <button
-        type="button"
-        onPointerDown={(e) => {
-          e.preventDefault();
-          setOpen((v) => !v);
-        }}
-        aria-label="More typography options"
-        aria-expanded={open}
-        aria-haspopup="menu"
-        className={cn(
-          "inline-flex h-7 w-7 items-center justify-center rounded text-zinc-300 transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:bg-white/10",
-          open && "bg-white/15 text-white",
-        )}
+  const panel =
+    open && panelStyle ? (
+      <div
+        ref={panelRef}
+        role="menu"
+        style={panelStyle}
+        className={cn(BUBBLE_MENU_PANEL_SURFACE_CLASS, "min-w-[13.5rem] space-y-2.5 p-2")}
+        onPointerDown={(e) => e.stopPropagation()}
       >
-        <MoreHorizontal className="h-4 w-4" />
-      </button>
-      {open ? (
-        <div
-          role="menu"
-          className={cn(
-            BUBBLE_MENU_PANEL_CLASS,
-            "absolute right-0 top-full z-[110] mt-1 min-w-[13.5rem] space-y-2.5 p-2",
-          )}
-          onPointerDown={(e) => e.stopPropagation()}
-        >
           <div className="space-y-1">
             <span className="block text-xs text-zinc-400">Font</span>
             <FontFamilyPicker editor={editor} layout="menu" />
@@ -858,8 +884,28 @@ function TypographyMoreMenu({ editor }: { editor: Editor }) {
               Place the cursor in a paragraph or heading to adjust spacing.
             </p>
           )}
-        </div>
-      ) : null}
+      </div>
+    ) : null;
+
+  return (
+    <div className="relative" ref={triggerRef}>
+      <button
+        type="button"
+        onPointerDown={(e) => {
+          e.preventDefault();
+          setOpen((v) => !v);
+        }}
+        aria-label="More typography options"
+        aria-expanded={open}
+        aria-haspopup="menu"
+        className={cn(
+          "inline-flex h-7 w-7 items-center justify-center rounded text-zinc-300 transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:bg-white/10",
+          open && "bg-white/15 text-white",
+        )}
+      >
+        <MoreHorizontal className="h-4 w-4" />
+      </button>
+      {typeof document !== "undefined" && panel ? createPortal(panel, document.body) : null}
     </div>
   );
 }
@@ -1075,7 +1121,17 @@ export function ProposalRichText({
     <div className="relative" ref={shellRef}>
       <BubbleMenu
         editor={editor}
-        tippyOptions={{ duration: 80, placement: "top", maxWidth: 720 }}
+        tippyOptions={{
+          duration: 80,
+          placement: "top",
+          maxWidth: 720,
+          popperOptions: {
+            modifiers: [
+              { name: "preventOverflow", options: { padding: VIEWPORT_EDGE_PAD_PX, altAxis: true } },
+              { name: "flip", options: { fallbackPlacements: ["bottom", "top"] } },
+            ],
+          },
+        }}
         shouldShow={({ editor: ed, from, to }) => {
           if (!ed.isEditable) return false;
           if (from !== to) return true;
