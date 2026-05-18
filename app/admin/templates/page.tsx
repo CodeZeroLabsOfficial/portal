@@ -5,7 +5,6 @@ import { listProposalTemplatesForOrg } from "@/server/firestore/proposal-templat
 import { listContractTemplatesForOrg } from "@/server/firestore/contract-templates";
 import { WorkspaceShell } from "@/components/portal/workspace-shell";
 import { ProposalTemplatesListPanel } from "@/components/portal/proposal-templates-list-panel";
-import { ContractTemplatesListPanel } from "@/components/portal/contract-templates-list-panel";
 import { TemplatesHubPageIntro } from "@/components/portal/templates-hub-page-intro";
 import { NewProposalTemplateButton } from "@/components/proposal/new-proposal-template-button";
 import { NewContractTemplateButton } from "@/components/portal/new-contract-template-button";
@@ -45,10 +44,9 @@ export default async function AdminTemplatesHubPage() {
           }
         />
 
-        <ProposalTemplatesListPanel templates={templates} localityTimeZone={user.timeZone?.trim() || undefined} />
-
-        <ContractTemplatesListPanel
-          templates={contractTemplates}
+        <ProposalTemplatesListPanel
+          proposalTemplates={templates}
+          contractTemplates={contractTemplates}
           localityTimeZone={user.timeZone?.trim() || undefined}
         />
       </div>

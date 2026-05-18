@@ -195,8 +195,8 @@ function ContractTemplateLibrarySidebar() {
                     <p>No contract templates yet.</p>
                     <p className="text-xs leading-relaxed">
                       Add reusable agreements under{" "}
-                      <Link href="/admin/templates#contract-templates" className="font-medium text-primary underline-offset-2 hover:underline">
-                        Templates → Contract templates
+                      <Link href="/admin/templates" className="font-medium text-primary underline-offset-2 hover:underline">
+                        Templates
                       </Link>
                       .
                     </p>
@@ -244,7 +244,7 @@ function ContractTemplateLibrarySidebar() {
 
               <div className="shrink-0 border-t border-border pt-3">
                 <Link
-                  href="/admin/templates#contract-templates"
+                  href="/admin/templates"
                   className="flex w-full items-center justify-center rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
                   onClick={() => close()}
                 >

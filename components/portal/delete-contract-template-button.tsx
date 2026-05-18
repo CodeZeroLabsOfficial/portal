@@ -25,7 +25,7 @@ export function DeleteContractTemplateButton({
       window.alert(res.message);
       return;
     }
-    router.push("/admin/templates#contract-templates");
+    router.push("/admin/templates");
     router.refresh();
   }
 

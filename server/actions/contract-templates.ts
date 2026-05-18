@@ -47,6 +47,7 @@ export async function createContractTemplateAction(): Promise<
         name: "New contract template",
         description: "",
         agreementTitle: "Services Agreement",
+        stage: "draft",
         document: { title: "Services Agreement", blocks: [] },
         introHtml: "",
         legalHtml: "",
@@ -90,6 +91,7 @@ export async function cloneContractTemplateAction(
     name,
     description: source.description?.trim() ? source.description.trim() : "",
     agreementTitle: source.agreementTitle,
+    stage: "draft",
     introHtml: source.introHtml?.trim() ? source.introHtml.trim() : "",
     legalHtml: source.legalHtml ?? "",
     createdAt: FieldValue.serverTimestamp(),
@@ -182,5 +184,42 @@ export async function deleteContractTemplateAction(
 
   revalidatePath("/admin/templates");
   revalidatePath("/admin/templates/contracts");
+  return { ok: true };
+}
+
+const contractTemplateStageSchema = z.enum(["draft", "published"]);
+
+export async function setContractTemplateStageAction(
+  contractTemplateId: string,
+  stage: z.infer<typeof contractTemplateStageSchema>,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const user = await requireStaffSession();
+  if (!user) return { ok: false, message: "Unauthorized." };
+
+  const parsedStage = contractTemplateStageSchema.safeParse(stage);
+  if (!parsedStage.success) return { ok: false, message: "Invalid stage." };
+
+  if (!(await getContractTemplateForStaff(user, contractTemplateId))) {
+    return { ok: false, message: "Contract template not found." };
+  }
+
+  const db = getFirebaseAdminFirestore();
+  if (!db) return { ok: false, message: "Database unavailable." };
+
+  const write = await runAdminWrite(
+    "contract_template_stage_failed",
+    { contractTemplateId, stage: parsedStage.data },
+    "Could not update template stage.",
+    () =>
+      db.collection(COLLECTIONS.contractTemplates).doc(contractTemplateId).update({
+        stage: parsedStage.data,
+        updatedAt: FieldValue.serverTimestamp(),
+      }),
+  );
+  if (!write.ok) return write;
+
+  revalidatePath("/admin/templates");
+  revalidatePath("/admin/templates/contracts");
+  revalidatePath(`/admin/templates/contracts/${contractTemplateId}`);
   return { ok: true };
 }

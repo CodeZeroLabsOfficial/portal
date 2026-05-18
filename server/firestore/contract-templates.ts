@@ -5,6 +5,7 @@ import { parseProposalDocument } from "@/lib/schemas/proposal-document";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import type { ContractTemplateRecord } from "@/types/contract-template";
+import type { ProposalTemplateStage } from "@/types/proposal-template";
 import type { PortalUser } from "@/types/user";
 
 export function parseContractTemplateRecord(id: string, data: Record<string, unknown>): ContractTemplateRecord {
@@ -17,6 +18,10 @@ export function parseContractTemplateRecord(id: string, data: Record<string, unk
     }
   }
 
+  const stageRaw = asString(data.stage);
+  const stage: ProposalTemplateStage =
+    stageRaw === "draft" || stageRaw === "published" ? stageRaw : "published";
+
   return {
     id,
     organizationId: asString(data.organizationId) ?? "",
@@ -24,6 +29,7 @@ export function parseContractTemplateRecord(id: string, data: Record<string, unk
     name: asString(data.name) ?? "Untitled contract",
     description: asString(data.description),
     agreementTitle: asString(data.agreementTitle)?.trim() || "Services Agreement",
+    stage,
     document,
     introHtml: asString(data.introHtml),
     legalHtml: asString(data.legalHtml) ?? "",
