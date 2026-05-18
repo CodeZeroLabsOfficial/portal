@@ -18,6 +18,7 @@ import {
   countActiveSubscriptions,
   countCrmContacts,
   crmContactsMomStats,
+  paidInvoiceRevenueMomStats,
   succeededPaymentsMomStats,
   summarizeSucceededPayments,
   sumActiveSubscriptionMrrMinor,
@@ -356,6 +357,8 @@ export function AdminHomeDashboard({
 
   const mrrMinor = sumActiveSubscriptionMrrMinor(data.subscriptions);
   const activeSubCount = countActiveSubscriptions(data.subscriptions);
+  const paidMom = paidInvoiceRevenueMomStats(data.invoices, now);
+  const mrrGrowthStr = `${paidMom.pct >= 0 ? "+" : ""}${paidMom.pct.toFixed(1)}%`;
 
   const paymentsSummary = summarizeSucceededPayments(data.payments, now);
   const paymentsMom = succeededPaymentsMomStats(data.payments, now);
@@ -419,11 +422,11 @@ export function AdminHomeDashboard({
 
   const paymentsValueDetail = paymentsSummary.useYtd
     ? `${paymentsSummary.count} payments · ${paymentsSummary.year} YTD`
-    : `${paymentsSummary.count} successful payment${paymentsSummary.count === 1 ? "" : "s"}`;
+    : `${paymentsSummary.count} payments received`;
 
-  const clientsFooter = `Last month: ${clientsMom.lastMonthNew} new contact${clientsMom.lastMonthNew === 1 ? "" : "s"}`;
+  const clientsFooter = `Last month: ${clientsMom.lastMonthNew} new sign-up${clientsMom.lastMonthNew === 1 ? "" : "s"}`;
 
-  const mrrFooter = `${activeSubCount} active subscription${activeSubCount === 1 ? "" : "s"}`;
+  const mrrFooter = `Last month: ${formatCurrencyAmount(paidMom.lastMinor, DEFAULT_CURRENCY)}`;
 
   const paymentsFooter = paymentsSummary.useYtd
     ? paymentsValueDetail
@@ -452,7 +455,7 @@ export function AdminHomeDashboard({
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <MetricCard
           heading="Customers"
-          metricLabel="CRM contacts"
+          metricLabel="With active subscriptions"
           value={String(contactCount)}
           footer={clientsFooter}
           delta={clientsDeltaStr}
@@ -462,16 +465,17 @@ export function AdminHomeDashboard({
         />
         <MetricCard
           heading="Revenue"
-          metricLabel="MRR from active subscriptions"
+          metricLabel="MRR"
           value={formatCurrencyAmount(mrrMinor, DEFAULT_CURRENCY)}
           footer={mrrFooter}
-          positive={false}
-          neutralDelta
+          delta={mrrGrowthStr}
+          positive={paidMom.pct > 0}
+          neutralDelta={paidMom.neutral}
           icon={LineChart}
         />
         <MetricCard
           heading="Payments"
-          metricLabel={paymentsSummary.useYtd ? "YTD collected (Stripe)" : "Collected this month (Stripe)"}
+          metricLabel="Total revenue"
           value={formatCurrencyAmount(paymentsSummary.amountMinor, DEFAULT_CURRENCY)}
           footer={paymentsFooter}
           delta={paymentsDeltaStr}

@@ -231,8 +231,9 @@ function parseSubscriptionFirestore(id: string, data: Record<string, unknown>): 
   };
 }
 
-async function listAllSubscriptionsForStaff(db: AdminDb): Promise<SubscriptionRecord[]> {
-  const snap = await db.collection(COLLECTIONS.subscriptions).limit(200).get();
+/** Top-level Stripe subscription mirrors — same source as the admin subscriptions directory. */
+export async function listAllSubscriptionsForStaff(db: AdminDb): Promise<SubscriptionRecord[]> {
+  const snap = await db.collection(COLLECTIONS.subscriptions).limit(500).get();
   return snap.docs.map((doc) => parseSubscriptionFirestore(doc.id, doc.data() as Record<string, unknown>));
 }
 

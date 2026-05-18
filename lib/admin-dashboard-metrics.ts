@@ -1,4 +1,5 @@
 import type { CustomerRecord } from "@/types/customer";
+import type { InvoiceRecord } from "@/types/invoice";
 import type { PaymentRecord } from "@/types/payment";
 import type { SubscriptionRecord } from "@/types/subscription";
 
@@ -57,25 +58,33 @@ export function crmContactsMomStats(
   return { pct, neutral: Math.abs(pct) < 0.05, lastMonthNew: newLastMonth };
 }
 
+/** Same recurring statuses as the admin subscriptions table (Active / Trialing badges). */
+export function isBillableSubscriptionStatus(status: SubscriptionRecord["status"]): boolean {
+  return status === "active" || status === "trialing";
+}
+
+/** Aligns with `resolvedMonthlyMinor` on the subscriptions directory. */
 function subscriptionMrrMinor(s: SubscriptionRecord): number {
   if (typeof s.monthlyAmountMinor === "number" && s.monthlyAmountMinor > 0) {
     return s.monthlyAmountMinor;
   }
-  const legacy = s.mrrAmount ?? 0;
-  if (legacy <= 0) {
-    return 0;
+  if (s.interval === "month" && typeof s.mrrAmount === "number" && s.mrrAmount > 0) {
+    return s.mrrAmount;
   }
-  if (s.interval === "year") {
-    return Math.round(legacy / 12);
+  if (s.interval === "year" && typeof s.mrrAmount === "number" && s.mrrAmount > 0) {
+    return Math.round(s.mrrAmount / 12);
   }
-  return legacy;
+  if (typeof s.mrrAmount === "number" && s.mrrAmount > 0) {
+    return s.mrrAmount;
+  }
+  return 0;
 }
 
-/** Sum of normalized monthly recurring revenue for `active` subscriptions only. */
+/** Sum of normalized monthly recurring revenue for active / trialing subscriptions. */
 export function sumActiveSubscriptionMrrMinor(subscriptions: SubscriptionRecord[]): number {
   let total = 0;
   for (const s of subscriptions) {
-    if (s.status !== "active") {
+    if (!isBillableSubscriptionStatus(s.status)) {
       continue;
     }
     total += subscriptionMrrMinor(s);
@@ -84,7 +93,7 @@ export function sumActiveSubscriptionMrrMinor(subscriptions: SubscriptionRecord[
 }
 
 export function countActiveSubscriptions(subscriptions: SubscriptionRecord[]): number {
-  return subscriptions.filter((s) => s.status === "active").length;
+  return subscriptions.filter((s) => isBillableSubscriptionStatus(s.status)).length;
 }
 
 export function succeededPaymentsInRange(
@@ -166,6 +175,58 @@ export function summarizeSucceededPayments(
     useYtd: true,
     year: now.getFullYear(),
   };
+}
+
+export function paidInvoicesInRange(
+  invoices: InvoiceRecord[],
+  startMs: number,
+  endMs: number,
+): InvoiceRecord[] {
+  return invoices.filter(
+    (inv) =>
+      inv.status === "paid" &&
+      typeof inv.paidAt === "number" &&
+      inv.paidAt >= startMs &&
+      inv.paidAt <= endMs,
+  );
+}
+
+export function sumInvoiceAmountDueMinor(invoices: InvoiceRecord[]): number {
+  return invoices.reduce((sum, inv) => sum + inv.amountDue, 0);
+}
+
+/** Paid invoice revenue: this month-to-date vs same day range last month (Revenue card footer / delta). */
+export function paidInvoiceRevenueMomStats(
+  invoices: InvoiceRecord[],
+  now: Date,
+): { pct: number; neutral: boolean; lastMinor: number } {
+  const thisMonthStart = startOfMonthMs(now);
+  const nowMs = now.getTime();
+  const lastMonthStart = startOfPreviousMonthMs(now);
+  const dom = now.getDate();
+  const daysInPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0).getDate();
+  const cmpDom = Math.min(dom, daysInPrevMonth);
+  const lastWindowEnd = new Date(
+    now.getFullYear(),
+    now.getMonth() - 1,
+    cmpDom,
+    23,
+    59,
+    59,
+    999,
+  ).getTime();
+  const thisSlice = paidInvoicesInRange(invoices, thisMonthStart, nowMs);
+  const lastSlice = paidInvoicesInRange(invoices, lastMonthStart, lastWindowEnd);
+  const a = sumInvoiceAmountDueMinor(thisSlice);
+  const b = sumInvoiceAmountDueMinor(lastSlice);
+  if (a === 0 && b === 0) {
+    return { pct: 0, neutral: true, lastMinor: 0 };
+  }
+  if (b === 0) {
+    return { pct: a > 0 ? 100 : 0, neutral: a === 0, lastMinor: 0 };
+  }
+  const pct = ((a - b) / b) * 100;
+  return { pct, neutral: Math.abs(pct) < 0.05, lastMinor: b };
 }
 
 export function comparableLastMonthPaymentMinor(payments: PaymentRecord[], now: Date): number {

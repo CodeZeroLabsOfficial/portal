@@ -20,6 +20,7 @@ import {
   getAdminAccountListRows as loadCrmAccountListRows,
   getAdminCustomerListRows as loadCrmCustomerListRows,
   batchGetCustomerRecordsForStaff,
+  listAllSubscriptionsForStaff,
   listCrmCustomerRecordsForStaff,
 } from "@/server/firestore/crm-customers";
 
@@ -166,11 +167,8 @@ async function listSubscriptionsForStaffAdmin(user: PortalUser): Promise<Subscri
   if (!db || !isStaff(user)) {
     return [];
   }
-  const col = db.collection(COLLECTIONS.subscriptions);
-  const snap = user.organizationId
-    ? await col.where("organizationId", "==", user.organizationId).limit(500).get()
-    : await col.limit(500).get();
-  return snap.docs.map((doc) => parseSubscription(doc.id, doc.data() as Record<string, unknown>));
+  /** Match `/admin/subscriptions` — org metadata on Stripe objects is optional in single-tenant CRM. */
+  return listAllSubscriptionsForStaff(db);
 }
 
 async function listSubscriptionsForUser(user: PortalUser): Promise<SubscriptionRecord[]> {
@@ -207,10 +205,7 @@ async function listInvoicesForStaffAdmin(user: PortalUser): Promise<InvoiceRecor
   if (!db || !isStaff(user)) {
     return [];
   }
-  const col = db.collection(COLLECTIONS.invoices);
-  const snap = user.organizationId
-    ? await col.where("organizationId", "==", user.organizationId).limit(500).get()
-    : await col.limit(500).get();
+  const snap = await db.collection(COLLECTIONS.invoices).limit(500).get();
   return snap.docs.map((doc) => parseInvoice(doc.id, doc.data() as Record<string, unknown>));
 }
 
@@ -243,10 +238,7 @@ async function listPaymentsForStaffAdmin(user: PortalUser): Promise<PaymentRecor
   if (!db || !isStaff(user)) {
     return [];
   }
-  const col = db.collection(COLLECTIONS.payments);
-  const snap = user.organizationId
-    ? await col.where("organizationId", "==", user.organizationId).limit(500).get()
-    : await col.limit(500).get();
+  const snap = await db.collection(COLLECTIONS.payments).limit(500).get();
   return snap.docs.map((doc) => parsePayment(doc.id, doc.data() as Record<string, unknown>));
 }
 
