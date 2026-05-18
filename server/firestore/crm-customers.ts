@@ -286,6 +286,12 @@ export async function getAdminSubscriptionsSnapshot(
   }
 }
 
+/** All CRM customer documents for staff dashboards and directory rollups. */
+export async function listCrmCustomerRecordsForStaff(user: PortalUser): Promise<CustomerRecord[]> {
+  const rows = await listCustomerRecordsForStaffSorted(user);
+  return rows ?? [];
+}
+
 async function listCustomerRecordsForStaffSorted(
   user: PortalUser,
 ): Promise<CustomerRecord[] | null> {

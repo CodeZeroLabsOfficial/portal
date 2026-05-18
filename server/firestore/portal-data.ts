@@ -1,7 +1,6 @@
 import { unstable_noStore as noStore } from "next/cache";
 import { isStaff } from "@/lib/auth/server-session";
 import { asBoolean, asNumber, asString } from "@/lib/firestore/coerce";
-import { profileJoinedAtMillisFromRawUser } from "@/lib/firestore/profile-joined-at";
 import { millisFromFirestore } from "@/lib/firestore/timestamp";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
@@ -21,6 +20,7 @@ import {
   getAdminAccountListRows as loadCrmAccountListRows,
   getAdminCustomerListRows as loadCrmCustomerListRows,
   batchGetCustomerRecordsForStaff,
+  listCrmCustomerRecordsForStaff,
 } from "@/server/firestore/crm-customers";
 
 export interface ActivityItem {
@@ -47,10 +47,11 @@ export interface CustomerPortalData {
 }
 
 export interface AdminPortalData {
-  customers: PortalUser[];
+  crmCustomers: CustomerRecord[];
   subscriptions: SubscriptionRecord[];
   proposals: ProposalRecord[];
   invoices: InvoiceRecord[];
+  payments: PaymentRecord[];
   tasks: TaskRecord[];
   supportTickets: SupportTicketRecord[];
 }
@@ -142,33 +143,6 @@ function parseInvoice(id: string, data: Record<string, unknown>): InvoiceRecord 
   };
 }
 
-function parsePortalUser(id: string, data: Record<string, unknown>): PortalUser {
-  const role = data.role === "admin" || data.role === "team" || data.role === "customer" ? data.role : "customer";
-  const nowMs = Date.now();
-  return {
-    uid: id,
-    email: asString(data.email) ?? "",
-    name: asString(data.name),
-    displayName: asString(data.displayName),
-    photoURL: asString(data.photoURL),
-    role,
-    organizationId: asString(data.organizationId),
-    stripeCustomerId: asString(data.stripeCustomerId),
-    joinedAt: profileJoinedAtMillisFromRawUser(data, nowMs),
-  };
-}
-
-type AdminFirestore = NonNullable<ReturnType<typeof getFirebaseAdminFirestore>>;
-
-/** `users/{uid}` with `role: "customer"` — same documents used for customer portal login. */
-async function queryUsersInCustomerRole(user: PortalUser, db: AdminFirestore, limit: number) {
-  let q = db.collection(COLLECTIONS.users).where("role", "==", "customer").limit(limit);
-  if (user.organizationId) {
-    q = q.where("organizationId", "==", user.organizationId);
-  }
-  return q.get();
-}
-
 /** CRM table rows from `customers` (single-tenant; all admin/team can list). */
 export async function getAdminCustomerListRows(user: PortalUser): Promise<CustomerListRow[]> {
   /** Always read fresh Firestore data — avoids stale RSC / router cache after create or edits. */
@@ -187,16 +161,26 @@ export async function getAdminAccountDetail(user: PortalUser, accountKey: string
   return getAccountDetailForKey(user, accountKey);
 }
 
+async function listSubscriptionsForStaffAdmin(user: PortalUser): Promise<SubscriptionRecord[]> {
+  const db = getFirebaseAdminFirestore();
+  if (!db || !isStaff(user)) {
+    return [];
+  }
+  const col = db.collection(COLLECTIONS.subscriptions);
+  const snap = user.organizationId
+    ? await col.where("organizationId", "==", user.organizationId).limit(500).get()
+    : await col.limit(500).get();
+  return snap.docs.map((doc) => parseSubscription(doc.id, doc.data() as Record<string, unknown>));
+}
+
 async function listSubscriptionsForUser(user: PortalUser): Promise<SubscriptionRecord[]> {
   const db = getFirebaseAdminFirestore();
   if (!db) {
     return [];
   }
 
-  if (isStaff(user) && user.organizationId) {
-    const col = db.collection(COLLECTIONS.subscriptions);
-    const snap = await col.where("organizationId", "==", user.organizationId).limit(100).get();
-    return snap.docs.map((doc) => parseSubscription(doc.id, doc.data() as Record<string, unknown>));
+  if (isStaff(user)) {
+    return listSubscriptionsForStaffAdmin(user);
   }
 
   const uidScoped = await db
@@ -218,16 +202,26 @@ async function listSubscriptionsForUser(user: PortalUser): Promise<SubscriptionR
   return [];
 }
 
+async function listInvoicesForStaffAdmin(user: PortalUser): Promise<InvoiceRecord[]> {
+  const db = getFirebaseAdminFirestore();
+  if (!db || !isStaff(user)) {
+    return [];
+  }
+  const col = db.collection(COLLECTIONS.invoices);
+  const snap = user.organizationId
+    ? await col.where("organizationId", "==", user.organizationId).limit(500).get()
+    : await col.limit(500).get();
+  return snap.docs.map((doc) => parseInvoice(doc.id, doc.data() as Record<string, unknown>));
+}
+
 async function listInvoicesForUser(user: PortalUser): Promise<InvoiceRecord[]> {
   const db = getFirebaseAdminFirestore();
   if (!db) {
     return [];
   }
 
-  if (isStaff(user) && user.organizationId) {
-    const col = db.collection(COLLECTIONS.invoices);
-    const snap = await col.where("organizationId", "==", user.organizationId).limit(100).get();
-    return snap.docs.map((doc) => parseInvoice(doc.id, doc.data() as Record<string, unknown>));
+  if (isStaff(user)) {
+    return listInvoicesForStaffAdmin(user);
   }
 
   const uidScoped = await db.collection(COLLECTIONS.users).doc(user.uid).collection("invoices").limit(100).get();
@@ -244,16 +238,26 @@ async function listInvoicesForUser(user: PortalUser): Promise<InvoiceRecord[]> {
   return [];
 }
 
+async function listPaymentsForStaffAdmin(user: PortalUser): Promise<PaymentRecord[]> {
+  const db = getFirebaseAdminFirestore();
+  if (!db || !isStaff(user)) {
+    return [];
+  }
+  const col = db.collection(COLLECTIONS.payments);
+  const snap = user.organizationId
+    ? await col.where("organizationId", "==", user.organizationId).limit(500).get()
+    : await col.limit(500).get();
+  return snap.docs.map((doc) => parsePayment(doc.id, doc.data() as Record<string, unknown>));
+}
+
 async function listPaymentsForUser(user: PortalUser): Promise<PaymentRecord[]> {
   const db = getFirebaseAdminFirestore();
   if (!db) {
     return [];
   }
 
-  if (isStaff(user) && user.organizationId) {
-    const col = db.collection(COLLECTIONS.payments);
-    const snap = await col.where("organizationId", "==", user.organizationId).limit(100).get();
-    return snap.docs.map((doc) => parsePayment(doc.id, doc.data() as Record<string, unknown>));
+  if (isStaff(user)) {
+    return listPaymentsForStaffAdmin(user);
   }
 
   const uidScoped = await db.collection(COLLECTIONS.users).doc(user.uid).collection("payments").limit(100).get();
@@ -442,31 +446,33 @@ export async function getAdminPortalData(user: PortalUser): Promise<AdminPortalD
   const db = getFirebaseAdminFirestore();
   if (!db || !isStaff(user)) {
     return {
-      customers: [],
+      crmCustomers: [],
       subscriptions: [],
       proposals: [],
       invoices: [],
+      payments: [],
       tasks: [],
       supportTickets: [],
     };
   }
 
-  const usersSnap = await queryUsersInCustomerRole(user, db, 200);
-  const customers = usersSnap.docs.map((doc) => parsePortalUser(doc.id, doc.data() as Record<string, unknown>));
-
-  const [subscriptions, proposals, invoices, tasks, supportTickets] = await Promise.all([
-    listSubscriptionsForUser(user),
-    listProposalsForUser(user),
-    listInvoicesForUser(user),
-    listTasksForUser(user),
-    listSupportTicketsForUser(user),
-  ]);
+  const [crmCustomers, subscriptions, proposals, invoices, payments, tasks, supportTickets] =
+    await Promise.all([
+      listCrmCustomerRecordsForStaff(user),
+      listSubscriptionsForStaffAdmin(user),
+      listProposalsForUser(user),
+      listInvoicesForStaffAdmin(user),
+      listPaymentsForStaffAdmin(user),
+      listTasksForUser(user),
+      listSupportTicketsForUser(user),
+    ]);
 
   return {
-    customers,
+    crmCustomers,
     subscriptions,
     proposals,
     invoices,
+    payments,
     tasks,
     supportTickets,
   };

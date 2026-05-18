@@ -13,14 +13,20 @@ import {
 } from "lucide-react";
 import { DEFAULT_CURRENCY } from "@/lib/constants";
 import { formatCurrencyAmount } from "@/lib/format";
+import {
+  comparableLastMonthPaymentMinor,
+  countActiveSubscriptions,
+  countCrmContacts,
+  crmContactsMomStats,
+  succeededPaymentsMomStats,
+  summarizeSucceededPayments,
+  sumActiveSubscriptionMrrMinor,
+} from "@/lib/admin-dashboard-metrics";
 import { buildAdminDashboardChartTabs } from "@/lib/admin-dashboard-chart-payload";
-import type { InvoiceRecord } from "@/types/invoice";
 import type { ProposalBlock, ProposalRecord } from "@/types/proposal";
 import { iterateProposalContentBlocks } from "@/lib/proposal-blocks";
 import type { SupportTicketRecord } from "@/types/support-ticket";
 import type { TaskRecord } from "@/types/task";
-import type { PortalUser } from "@/types/user";
-import type { SubscriptionRecord } from "@/types/subscription";
 import type { AdminPortalData } from "@/server/firestore/portal-data";
 import { AdminDashboardSecondaryChart } from "@/components/portal/admin-dashboard-secondary-chart";
 import { Badge } from "@/components/ui/badge";
@@ -89,104 +95,6 @@ function proposalStatusLabel(status: string): { label: string; className: string
   };
 }
 
-function startOfMonthMs(d: Date): number {
-  return new Date(d.getFullYear(), d.getMonth(), 1).getTime();
-}
-
-function startOfYearMs(d: Date): number {
-  return new Date(d.getFullYear(), 0, 1).getTime();
-}
-
-function startOfPreviousMonthMs(d: Date): number {
-  return new Date(d.getFullYear(), d.getMonth() - 1, 1).getTime();
-}
-
-function countActiveClients(customers: PortalUser[], subscriptions: SubscriptionRecord[]): number {
-  const activeCustomerIds = new Set(
-    subscriptions
-      .filter((s) => s.status === "active")
-      .map((s) => s.customerId)
-      .filter(Boolean),
-  );
-  if (activeCustomerIds.size === 0) {
-    return 0;
-  }
-  const matched = customers.filter(
-    (c) =>
-      (c.stripeCustomerId && activeCustomerIds.has(c.stripeCustomerId)) || activeCustomerIds.has(c.uid),
-  ).length;
-  return matched;
-}
-
-/** Month-over-month % change in new customer sign-ups (calendar months). */
-function newCustomersMomStats(customers: PortalUser[], now: Date): {
-  pct: number;
-  neutral: boolean;
-  lastMonthNew: number;
-} {
-  const thisMonthStart = startOfMonthMs(now);
-  const lastMonthStart = startOfPreviousMonthMs(now);
-  const nowMs = now.getTime();
-  const newThisMonth = customers.filter(
-    (c) => c.joinedAt >= thisMonthStart && c.joinedAt <= nowMs,
-  ).length;
-  const newLastMonth = customers.filter(
-    (c) => c.joinedAt >= lastMonthStart && c.joinedAt < thisMonthStart,
-  ).length;
-  if (newLastMonth === 0 && newThisMonth === 0) {
-    return { pct: 0, neutral: true, lastMonthNew: 0 };
-  }
-  if (newLastMonth === 0) {
-    return {
-      pct: newThisMonth > 0 ? 100 : 0,
-      neutral: newThisMonth === 0,
-      lastMonthNew: 0,
-    };
-  }
-  const pct = ((newThisMonth - newLastMonth) / newLastMonth) * 100;
-  return { pct, neutral: Math.abs(pct) < 0.05, lastMonthNew: newLastMonth };
-}
-
-type SubWithAmount = SubscriptionRecord & { mrrAmount?: number; amount?: number };
-
-function sumMrrAndArr(subscriptions: SubscriptionRecord[]): { mrrMinor: number; arrMinor: number } {
-  let mrrMinor = 0;
-  let arrMinor = 0;
-  for (const s of subscriptions) {
-    if (s.status !== "active" && s.status !== "trialing") {
-      continue;
-    }
-    const r = s as SubWithAmount;
-    const minor = r.mrrAmount ?? r.amount ?? 0;
-    if (minor <= 0) {
-      continue;
-    }
-    if (s.interval === "year") {
-      arrMinor += minor;
-      mrrMinor += Math.round(minor / 12);
-    } else {
-      mrrMinor += minor;
-      arrMinor += minor * 12;
-    }
-  }
-  return { mrrMinor, arrMinor };
-}
-
-function paidInvoicesInRange(invoices: InvoiceRecord[], startMs: number, endMs: number): InvoiceRecord[] {
-  return invoices.filter(
-    (inv) =>
-      inv.status === "paid" &&
-      typeof inv.paidAt === "number" &&
-      inv.paidAt >= startMs &&
-      inv.paidAt <= endMs,
-  );
-}
-
-function sumAmountDueMinor(invoices: InvoiceRecord[]): number {
-  return invoices.reduce((sum, inv) => sum + inv.amountDue, 0);
-}
-
-/** Paid invoice revenue: this month-to-date vs same number of days last month. */
 const PRICING_MINOR_KEYS = [
   "totalMinorUnits",
   "amountMinorUnits",
@@ -315,32 +223,6 @@ function countOpenTicketsByUrgency(tickets: SupportTicketRecord[]): {
   return { critical, high, medium };
 }
 
-function paidRevenueMomStats(invoices: InvoiceRecord[], now: Date): {
-  pct: number;
-  neutral: boolean;
-  lastMinor: number;
-} {
-  const thisMonthStart = startOfMonthMs(now);
-  const nowMs = now.getTime();
-  const lastMonthStart = startOfPreviousMonthMs(now);
-  const dom = now.getDate();
-  const daysInPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0).getDate();
-  const cmpDom = Math.min(dom, daysInPrevMonth);
-  const lastWindowEnd = new Date(now.getFullYear(), now.getMonth() - 1, cmpDom, 23, 59, 59, 999).getTime();
-  const thisSlice = paidInvoicesInRange(invoices, thisMonthStart, nowMs);
-  const lastSlice = paidInvoicesInRange(invoices, lastMonthStart, lastWindowEnd);
-  const a = sumAmountDueMinor(thisSlice);
-  const b = sumAmountDueMinor(lastSlice);
-  if (a === 0 && b === 0) {
-    return { pct: 0, neutral: true, lastMinor: 0 };
-  }
-  if (b === 0) {
-    return { pct: a > 0 ? 100 : 0, neutral: a === 0, lastMinor: 0 };
-  }
-  const pct = ((a - b) / b) * 100;
-  return { pct, neutral: Math.abs(pct) < 0.05, lastMinor: b };
-}
-
 export function AdminHomeRightAside({ data }: { data: AdminPortalData }) {
   const proposals = [...data.proposals]
     .sort((a, b) => b.updatedAt - a.updatedAt)
@@ -467,57 +349,31 @@ export function AdminHomeDashboard({
   const today = formatWelcomeDate(new Date());
   const now = new Date();
 
-  const activeClients = countActiveClients(data.customers, data.subscriptions);
-  const clientsMom = newCustomersMomStats(data.customers, now);
+  const nowMs = now.getTime();
+  const contactCount = countCrmContacts(data.crmCustomers);
+  const clientsMom = crmContactsMomStats(data.crmCustomers, now);
   const clientsDeltaStr = `${clientsMom.pct >= 0 ? "+" : ""}${clientsMom.pct.toFixed(1)}%`;
 
-  const { mrrMinor } = sumMrrAndArr(data.subscriptions);
-  const paidMom = paidRevenueMomStats(data.invoices, now);
-  const mrrGrowthStr = `${paidMom.pct >= 0 ? "+" : ""}${paidMom.pct.toFixed(1)}%`;
+  const mrrMinor = sumActiveSubscriptionMrrMinor(data.subscriptions);
+  const activeSubCount = countActiveSubscriptions(data.subscriptions);
 
-  const monthStart = startOfMonthMs(now);
-  const nowMs = now.getTime();
-  const yearStart = startOfYearMs(now);
-  const paidThisMonth = paidInvoicesInRange(data.invoices, monthStart, nowMs);
-  const revenueThisMonthMinor = sumAmountDueMinor(paidThisMonth);
-  const paymentsThisMonth = paidThisMonth.length;
-
-  const useYtdRevenue = revenueThisMonthMinor === 0 && paymentsThisMonth === 0;
-  const paidYtd = paidInvoicesInRange(data.invoices, yearStart, nowMs);
-  const revenueMinor = useYtdRevenue ? sumAmountDueMinor(paidYtd) : revenueThisMonthMinor;
-  const paymentCount = useYtdRevenue ? paidYtd.length : paymentsThisMonth;
-  const dom = now.getDate();
-  const daysInPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0).getDate();
-  const cmpDom = Math.min(dom, daysInPrevMonth);
-  const lastMonthComparableEnd = new Date(now.getFullYear(), now.getMonth() - 1, cmpDom, 23, 59, 59, 999).getTime();
-  const revenueLastMonthComparableMinor = sumAmountDueMinor(
-    paidInvoicesInRange(data.invoices, startOfPreviousMonthMs(now), lastMonthComparableEnd),
-  );
-
-  let revenueDeltaStr: string | undefined;
-  let revenueMomPct = 0;
-  let revenueMomNeutral = true;
-  if (!useYtdRevenue) {
-    if (revenueLastMonthComparableMinor === 0) {
-      revenueMomPct = revenueMinor > 0 ? 100 : 0;
-      revenueMomNeutral = revenueMinor === 0;
-    } else {
-      revenueMomPct = ((revenueMinor - revenueLastMonthComparableMinor) / revenueLastMonthComparableMinor) * 100;
-      revenueMomNeutral = Math.abs(revenueMomPct) < 0.05;
-    }
-    revenueDeltaStr = `${revenueMomPct >= 0 ? "+" : ""}${revenueMomPct.toFixed(1)}% vs last month`;
-  }
+  const paymentsSummary = summarizeSucceededPayments(data.payments, now);
+  const paymentsMom = succeededPaymentsMomStats(data.payments, now);
+  const paymentsLastMonthMinor = comparableLastMonthPaymentMinor(data.payments, now);
+  const paymentsDeltaStr = paymentsSummary.useYtd
+    ? undefined
+    : `${paymentsMom.pct >= 0 ? "+" : ""}${paymentsMom.pct.toFixed(1)}%`;
 
   const totalSubs = data.subscriptions.length;
-  const activeSubCount = data.subscriptions.filter(
+  const activeOrTrialCount = data.subscriptions.filter(
     (s) => s.status === "active" || s.status === "trialing",
   ).length;
   const utilPct =
-    data.customers.length === 0
+    contactCount === 0
       ? null
-      : Math.min(100, Math.round((activeSubCount / data.customers.length) * 1000) / 10);
+      : Math.min(100, Math.round((activeSubCount / contactCount) * 1000) / 10);
   const churnPct =
-    totalSubs === 0 ? 0 : Math.round(((totalSubs - activeSubCount) / totalSubs) * 1000) / 10;
+    totalSubs === 0 ? 0 : Math.round(((totalSubs - activeOrTrialCount) / totalSubs) * 1000) / 10;
 
   const pendingProposals = data.proposals.filter(
     (p) => p.status === "draft" || p.status === "published" || p.status === "viewed",
@@ -561,15 +417,17 @@ export function AdminHomeDashboard({
   chartRangeStart.setDate(chartRangeStart.getDate() - 13);
   const chartRangeLabel = `${formatShortChartDate(chartRangeStart)} - ${formatShortChartDate(chartRangeEnd)}`;
 
-  const revenueValueDetail = useYtdRevenue
-    ? `${paymentCount} payments · ${now.getFullYear()} YTD`
-    : `${paymentCount} payments received`;
+  const paymentsValueDetail = paymentsSummary.useYtd
+    ? `${paymentsSummary.count} payments · ${paymentsSummary.year} YTD`
+    : `${paymentsSummary.count} successful payment${paymentsSummary.count === 1 ? "" : "s"}`;
 
-  const clientsFooter = `Last month: ${clientsMom.lastMonthNew} new sign-up${clientsMom.lastMonthNew === 1 ? "" : "s"}`;
+  const clientsFooter = `Last month: ${clientsMom.lastMonthNew} new contact${clientsMom.lastMonthNew === 1 ? "" : "s"}`;
 
-  const mrrFooter = `Last month: ${formatCurrencyAmount(paidMom.lastMinor, DEFAULT_CURRENCY)}`;
+  const mrrFooter = `${activeSubCount} active subscription${activeSubCount === 1 ? "" : "s"}`;
 
-  const revenueFooter = `${revenueValueDetail} · Last month ${formatCurrencyAmount(revenueLastMonthComparableMinor, DEFAULT_CURRENCY)}`;
+  const paymentsFooter = paymentsSummary.useYtd
+    ? paymentsValueDetail
+    : `${paymentsValueDetail} · Last month ${formatCurrencyAmount(paymentsLastMonthMinor, DEFAULT_CURRENCY)}`;
 
   return (
     <div className="space-y-8">
@@ -594,8 +452,8 @@ export function AdminHomeDashboard({
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <MetricCard
           heading="Customers"
-          metricLabel="With active subscriptions"
-          value={String(activeClients)}
+          metricLabel="CRM contacts"
+          value={String(contactCount)}
           footer={clientsFooter}
           delta={clientsDeltaStr}
           positive={clientsMom.pct > 0}
@@ -604,22 +462,23 @@ export function AdminHomeDashboard({
         />
         <MetricCard
           heading="Revenue"
-          metricLabel="MRR"
+          metricLabel="MRR from active subscriptions"
           value={formatCurrencyAmount(mrrMinor, DEFAULT_CURRENCY)}
           footer={mrrFooter}
-          delta={mrrGrowthStr}
-          positive={paidMom.pct > 0}
-          neutralDelta={paidMom.neutral}
+          positive={false}
+          neutralDelta
           icon={LineChart}
         />
         <MetricCard
           heading="Payments"
-          metricLabel="Total revenue"
-          value={formatCurrencyAmount(revenueMinor, DEFAULT_CURRENCY)}
-          footer={revenueFooter}
-          delta={revenueDeltaStr?.replace(/\s+vs last month$/i, "")}
-          positive={revenueDeltaStr !== undefined && revenueMomPct > 0}
-          neutralDelta={revenueDeltaStr !== undefined ? revenueMomNeutral : revenueMinor === 0}
+          metricLabel={paymentsSummary.useYtd ? "YTD collected (Stripe)" : "Collected this month (Stripe)"}
+          value={formatCurrencyAmount(paymentsSummary.amountMinor, DEFAULT_CURRENCY)}
+          footer={paymentsFooter}
+          delta={paymentsDeltaStr}
+          positive={paymentsDeltaStr !== undefined && paymentsMom.pct > 0}
+          neutralDelta={
+            paymentsDeltaStr !== undefined ? paymentsMom.neutral : paymentsSummary.amountMinor === 0
+          }
           icon={Wallet}
         />
       </div>
