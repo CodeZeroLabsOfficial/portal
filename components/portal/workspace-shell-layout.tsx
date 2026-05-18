@@ -41,6 +41,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const SIDEBAR_COLLAPSED_KEY = "portal-sidebar-collapsed";
+const RIGHT_ASIDE_COLLAPSED_KEY = "portal-right-aside-collapsed";
 
 /** Matches `<main>` horizontal padding; negative margin lets content span the full main column. */
 const WORKSPACE_MAIN_CONTENT_CLASS =
@@ -143,6 +144,7 @@ export function WorkspaceShellLayout({
   const isAdminRoute = pathname.startsWith("/admin");
   const { organizationId: adminOrganizationId } = useAdminWorkspace();
   const [collapsed, setCollapsed] = React.useState(false);
+  const [rightAsideCollapsed, setRightAsideCollapsed] = React.useState(false);
   const [addCustomerOpen, setAddCustomerOpen] = React.useState(false);
   const [addTaskOpen, setAddTaskOpen] = React.useState(false);
   const [creatingTemplate, setCreatingTemplate] = React.useState(false);
@@ -173,6 +175,8 @@ export function WorkspaceShellLayout({
     try {
       const stored = localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
       if (stored === "1") setCollapsed(true);
+      const rightStored = localStorage.getItem(RIGHT_ASIDE_COLLAPSED_KEY);
+      if (rightStored === "1") setRightAsideCollapsed(true);
     } catch {
       /* ignore */
     }
@@ -183,6 +187,18 @@ export function WorkspaceShellLayout({
       const next = !prev;
       try {
         localStorage.setItem(SIDEBAR_COLLAPSED_KEY, next ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }
+
+  function toggleRightAsideCollapsed() {
+    setRightAsideCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(RIGHT_ASIDE_COLLAPSED_KEY, next ? "1" : "0");
       } catch {
         /* ignore */
       }
@@ -460,8 +476,57 @@ export function WorkspaceShellLayout({
             </main>
 
             {showRightAside ? (
-              <aside className="hidden w-[260px] shrink-0 border-l border-white/[0.06] bg-[#0D0D16] px-3 py-8 sm:px-4 lg:px-5 xl:block">
-                <div className="space-y-6">{rightAside ?? <DefaultWorkspaceRightAside />}</div>
+              <aside
+                aria-label="Dashboard panel"
+                className={cn(
+                  "sticky top-0 hidden h-dvh shrink-0 flex-col border-l border-white/[0.06] bg-[#0D0D16] transition-[width] duration-200 ease-out xl:flex",
+                  rightAsideCollapsed ? "w-[52px]" : "w-[340px]",
+                )}
+              >
+                <div
+                  className={cn(
+                    "flex h-14 shrink-0 items-center border-b border-white/[0.06]",
+                    rightAsideCollapsed ? "justify-center px-2" : "justify-end px-3",
+                  )}
+                >
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={toggleRightAsideCollapsed}
+                        className="shrink-0 text-zinc-400 hover:bg-white/[0.06] hover:text-white"
+                        aria-expanded={!rightAsideCollapsed}
+                        aria-label={
+                          rightAsideCollapsed ? "Expand dashboard panel" : "Collapse dashboard panel"
+                        }
+                      >
+                        {rightAsideCollapsed ? (
+                          <ChevronsLeft className="h-4 w-4" aria-hidden />
+                        ) : (
+                          <ChevronsRight className="h-4 w-4" aria-hidden />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent
+                      side="left"
+                      className="border-white/[0.08] bg-[#1e1e1e] text-white"
+                    >
+                      {rightAsideCollapsed ? "Show panel" : "Hide panel"}
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                <div
+                  className={cn(
+                    "min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3 py-6 sm:px-4",
+                    rightAsideCollapsed && "hidden",
+                  )}
+                >
+                  <div className="min-w-0 space-y-6">
+                    {rightAside ?? <DefaultWorkspaceRightAside />}
+                  </div>
+                </div>
               </aside>
             ) : null}
           </div>

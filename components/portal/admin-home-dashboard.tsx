@@ -235,7 +235,7 @@ export function AdminHomeRightAside({ data }: { data: AdminPortalData }) {
 
   return (
     <div className="space-y-5">
-      <section className="overflow-hidden rounded-xl border border-border/80 bg-card/95 shadow-sm">
+      <section className="rounded-xl border border-border/80 bg-card/95 shadow-sm">
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <h2 className="text-sm font-semibold text-foreground">Recent transactions</h2>
           <Link
@@ -247,13 +247,13 @@ export function AdminHomeRightAside({ data }: { data: AdminPortalData }) {
           </Link>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[240px] text-left text-[13px]">
+          <table className="w-full table-fixed text-left text-[13px]">
             <thead>
               <tr className="border-b border-border text-muted-foreground">
-                <th className="px-4 py-2.5 font-medium">Transaction ID</th>
-                <th className="px-2 py-2.5 font-medium">Amount</th>
-                <th className="px-2 py-2.5 font-medium">Status</th>
-                <th className="w-10 px-2 py-2.5" aria-hidden />
+                <th className="w-[34%] px-3 py-2.5 font-medium">Transaction ID</th>
+                <th className="w-[26%] px-2 py-2.5 font-medium">Amount</th>
+                <th className="w-[28%] px-2 py-2.5 font-medium">Status</th>
+                <th className="w-9 px-1 py-2.5" aria-hidden />
               </tr>
             </thead>
             <tbody className="text-foreground">
@@ -268,10 +268,10 @@ export function AdminHomeRightAside({ data }: { data: AdminPortalData }) {
                   const st = proposalStatusLabel(p.status);
                   return (
                     <tr key={p.id} className="border-b border-border/60 last:border-0">
-                      <td className="px-4 py-3 font-mono text-[12px] text-muted-foreground">
+                      <td className="truncate px-3 py-3 font-mono text-[12px] text-muted-foreground">
                         {shortRef(p.id)}
                       </td>
-                      <td className="px-2 py-3 tabular-nums text-foreground">
+                      <td className="truncate px-2 py-3 tabular-nums text-foreground">
                         {formatCurrencyAmount(pseudoAmountMinorFromId(p.id), DEFAULT_CURRENCY)}
                       </td>
                       <td className="px-2 py-3">
@@ -305,7 +305,7 @@ export function AdminHomeRightAside({ data }: { data: AdminPortalData }) {
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-xl border border-border/80 bg-card/95 shadow-sm">
+      <section className="rounded-xl border border-border/80 bg-card/95 shadow-sm">
         <div className="flex items-center gap-2 border-b border-border px-4 py-3">
           <h2 className="text-sm font-semibold text-foreground">Recent activities</h2>
           <Badge
