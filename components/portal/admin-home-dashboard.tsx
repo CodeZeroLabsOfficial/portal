@@ -533,7 +533,7 @@ function MetricCard({
 }: MetricCardProps) {
   const showDelta = typeof delta === "string" && delta.length > 0;
   return (
-    <div className="relative overflow-hidden rounded-[14px] border border-border/80 bg-card pb-5 pl-3 pr-5 pt-3 shadow-sm">
+    <div className="relative overflow-hidden rounded-[14px] border border-border/80 bg-card p-4 pb-5 shadow-sm">
       <div
         className="pointer-events-none absolute -bottom-10 -right-8 h-36 w-36 rounded-full bg-primary/[0.07]"
         aria-hidden

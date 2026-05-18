@@ -42,9 +42,13 @@ import { cn } from "@/lib/utils";
 
 const SIDEBAR_COLLAPSED_KEY = "portal-sidebar-collapsed";
 
-/** Matches `<main>` horizontal padding; negative margin lets content span the full main column. */
-const WORKSPACE_MAIN_CONTENT_CLASS =
-  "w-full min-w-0 max-w-none space-y-6 -mx-3 px-3 sm:-mx-4 sm:px-4";
+/** Shared height for search, Create, and account controls in the top bar. */
+const TOPBAR_CONTROL_HEIGHT_CLASS = "h-10";
+
+/** Shared horizontal inset for top bar, main column, and optional right panel. */
+const WORKSPACE_INSET_X_CLASS = "px-4";
+
+const WORKSPACE_MAIN_CONTENT_CLASS = "w-full min-w-0 max-w-none space-y-6";
 
 interface WorkspaceShellLayoutProps {
   title: string;
@@ -234,7 +238,7 @@ export function WorkspaceShellLayout({
               "flex shrink-0 items-center",
               collapsed
                 ? "flex-col gap-2 px-3 pb-3 pt-3"
-                : "h-14 justify-between px-4",
+                : "h-12 justify-between px-4",
             )}
           >
             {!collapsed ? (
@@ -302,7 +306,7 @@ export function WorkspaceShellLayout({
 
         <div className="flex min-w-0 flex-1 flex-col bg-[#0D0D16]">
           <header className="sticky top-0 z-20 border-b border-white/[0.06] bg-[#0D0D16]/95 backdrop-blur-md">
-            <div className="flex h-14 w-full items-center gap-3 px-3 sm:px-4">
+            <div className={cn("flex h-12 w-full items-center gap-3", WORKSPACE_INSET_X_CLASS)}>
               <div className="relative hidden min-w-0 flex-1 lg:block">
                 <Search
                   className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 stroke-[1.5] text-zinc-400"
@@ -311,12 +315,20 @@ export function WorkspaceShellLayout({
                 <Input
                   type="search"
                   placeholder={isAdminRoute ? "Search..." : "Search for list, template, etc."}
-                  className="h-9 max-w-xl rounded-full border-white/[0.08] bg-[#1e1e1e] pl-10 pr-4 text-[14px] font-medium leading-none text-white shadow-none placeholder:text-zinc-400 focus-visible:ring-2 focus-visible:ring-primary"
+                  className={cn(
+                    TOPBAR_CONTROL_HEIGHT_CLASS,
+                    "max-w-xl rounded-full border-white/[0.08] bg-[#1e1e1e] pl-10 pr-4 text-[14px] font-medium leading-none text-white shadow-none placeholder:text-zinc-400 focus-visible:ring-2 focus-visible:ring-primary",
+                  )}
                   aria-label="Search"
                 />
               </div>
               <div className="flex min-w-0 flex-1 items-center gap-3 lg:hidden">
-                <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/[0.08] bg-[#1e1e1e]">
+                <span
+                  className={cn(
+                    TOPBAR_CONTROL_HEIGHT_CLASS,
+                    "inline-flex w-10 shrink-0 items-center justify-center rounded-lg border border-white/[0.08] bg-[#1e1e1e]",
+                  )}
+                >
                   <Building2 className="h-[18px] w-[18px] stroke-[1.5] text-zinc-400" aria-hidden />
                 </span>
                 <div className="min-w-0">
@@ -332,7 +344,10 @@ export function WorkspaceShellLayout({
                     <DropdownMenuTrigger asChild>
                       <Button
                         type="button"
-                        className="h-9 gap-1.5 rounded-lg bg-primary px-4 text-[14px] font-medium text-primary-foreground shadow-none hover:bg-primary/90"
+                        className={cn(
+                          TOPBAR_CONTROL_HEIGHT_CLASS,
+                          "gap-1.5 rounded-lg bg-primary px-4 text-[14px] font-medium text-primary-foreground shadow-none hover:bg-primary/90",
+                        )}
                       >
                         Create
                         <ChevronDown className="h-[18px] w-[18px] shrink-0 stroke-[1.5] opacity-90" aria-hidden />
@@ -374,7 +389,10 @@ export function WorkspaceShellLayout({
                 ) : (
                   <Button
                     variant="ghost"
-                    className="inline-flex h-9 gap-2 rounded-lg px-3 text-[14px] font-medium text-zinc-400 hover:bg-white/[0.06] hover:text-white"
+                    className={cn(
+                      TOPBAR_CONTROL_HEIGHT_CLASS,
+                      "inline-flex gap-2 rounded-lg px-3 text-[14px] font-medium text-zinc-400 hover:bg-white/[0.06] hover:text-white",
+                    )}
                     asChild
                   >
                     <Link href="#">
@@ -390,19 +408,22 @@ export function WorkspaceShellLayout({
                         type="button"
                         title={avatarTitle}
                         aria-label={`Account menu for ${nameHeadline}`}
-                        className="flex max-w-full items-center gap-2 rounded-lg border border-transparent px-1.5 py-0.5 text-left transition-colors hover:border-white/[0.08] hover:bg-white/[0.06] sm:gap-2.5 sm:px-2"
+                        className={cn(
+                          TOPBAR_CONTROL_HEIGHT_CLASS,
+                          "flex max-w-full items-center gap-2 rounded-lg border border-transparent px-1.5 py-0 text-left transition-colors hover:border-white/[0.08] hover:bg-white/[0.06] sm:gap-2.5 sm:px-2",
+                        )}
                       >
                         <div
-                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary text-[13px] font-semibold text-primary-foreground"
+                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary text-[12px] font-semibold text-primary-foreground"
                           aria-hidden
                         >
                           {initial}
                         </div>
                         <div className="hidden min-w-0 flex-1 sm:block">
-                          <p className="max-w-[140px] truncate text-[14px] font-medium leading-none text-white md:max-w-[220px]">
+                          <p className="max-w-[140px] truncate text-[13px] font-medium leading-none text-white md:max-w-[220px]">
                             {nameHeadline}
                           </p>
-                          <p className="max-w-[140px] truncate text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500 md:max-w-[220px]">
+                          <p className="max-w-[140px] truncate text-[10px] font-medium uppercase leading-none tracking-[0.12em] text-zinc-500 md:max-w-[220px]">
                             {roleLabel.toUpperCase()}
                           </p>
                         </div>
@@ -447,7 +468,12 @@ export function WorkspaceShellLayout({
                 {secondaryNav}
               </div>
             ) : null}
-            <main className="min-w-0 flex-1 overflow-auto px-3 py-8 sm:px-4">
+            <main
+              className={cn(
+                "min-w-0 flex-1 overflow-y-auto py-8 scrollbar-gutter-stable",
+                WORKSPACE_INSET_X_CLASS,
+              )}
+            >
               <div className={cn(WORKSPACE_MAIN_CONTENT_CLASS, contentClassName)}>
                 {showMainHeader ? (
                   <div className="mb-2 hidden lg:block">
@@ -462,7 +488,10 @@ export function WorkspaceShellLayout({
             {showRightAside ? (
               <aside
                 aria-label="Dashboard panel"
-                className="hidden w-[450px] shrink-0 border-l border-white/[0.06] bg-[#0D0D16] px-3 py-8 sm:px-4 lg:px-5 xl:block"
+                className={cn(
+                  "hidden w-[450px] shrink-0 border-l border-white/[0.06] bg-[#0D0D16] py-8 xl:block",
+                  WORKSPACE_INSET_X_CLASS,
+                )}
               >
                 <div className="min-w-0 space-y-6">
                   {rightAside ?? <DefaultWorkspaceRightAside />}
