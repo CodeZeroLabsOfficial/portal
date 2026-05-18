@@ -21,6 +21,8 @@ import { Label } from "@/components/ui/label";
 import { formatCurrencyAmount } from "@/lib/format";
 import type { SubscriptionProductOption } from "@/types/subscription-product";
 import { getFirebasePublicConfig } from "@/lib/env/client-public";
+import { cn } from "@/lib/utils";
+import { WORKSPACE_GLASS_DIALOG_SURFACE_CLASSES } from "@/lib/workspace-glass";
 
 interface StripeCardElement {
   mount: (selector: string | Element) => void;
@@ -367,7 +369,12 @@ export function AddSubscriptionModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[min(90vh,760px)] w-[min(100vw-2rem,720px)] max-w-[720px] overflow-y-auto border-white/[0.08] bg-[#141414] p-0 sm:max-w-[720px]">
+      <DialogContent
+        className={cn(
+          "max-h-[min(90vh,760px)] w-[min(100vw-2rem,720px)] max-w-[720px] overflow-y-auto p-0 sm:max-w-[720px]",
+          WORKSPACE_GLASS_DIALOG_SURFACE_CLASSES,
+        )}
+      >
         <div className="border-b border-white/[0.06] bg-gradient-to-br from-primary/15 via-transparent to-transparent px-6 pb-5 pt-6">
           <DialogHeader className="text-left">
             <DialogTitle className="text-xl font-semibold tracking-tight text-white">New subscription</DialogTitle>

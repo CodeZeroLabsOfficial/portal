@@ -28,6 +28,8 @@ import { FormServerError } from "@/components/ui/form-server-error";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
+import { WORKSPACE_GLASS_DIALOG_SURFACE_CLASSES } from "@/lib/workspace-glass";
 
 export interface AddTaskDialogProps {
   open: boolean;
@@ -125,7 +127,12 @@ export function AddTaskDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[min(90vh,800px)] w-[min(100vw-2rem,520px)] max-w-[520px] overflow-y-auto border-white/[0.08] bg-[#141414] p-0 sm:max-w-[520px]">
+      <DialogContent
+        className={cn(
+          "max-h-[min(90vh,800px)] w-[min(100vw-2rem,520px)] max-w-[520px] overflow-y-auto p-0 sm:max-w-[520px]",
+          WORKSPACE_GLASS_DIALOG_SURFACE_CLASSES,
+        )}
+      >
         <div className="border-b border-white/[0.06] bg-gradient-to-br from-primary/15 via-transparent to-transparent px-6 pb-5 pt-6">
           <DialogHeader className="text-left">
             <DialogTitle className="text-xl font-semibold tracking-tight text-white">New task</DialogTitle>

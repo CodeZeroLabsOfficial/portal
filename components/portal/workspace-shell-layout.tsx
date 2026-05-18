@@ -39,6 +39,7 @@ import {
   WORKSPACE_MAIN_COLUMN_TITLE_CLASS,
 } from "@/lib/workspace-page-typography";
 import { cn } from "@/lib/utils";
+import { WORKSPACE_GLASS_DROPDOWN_CLASSES } from "@/lib/workspace-glass";
 
 const SIDEBAR_COLLAPSED_KEY = "portal-sidebar-collapsed";
 
@@ -355,7 +356,7 @@ export function WorkspaceShellLayout({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
                       align="end"
-                      className="min-w-[12rem] border-white/[0.08] bg-[#1e1e1e] text-zinc-100 shadow-lg"
+                      className={cn("min-w-[12rem]", WORKSPACE_GLASS_DROPDOWN_CLASSES)}
                     >
                       <DropdownMenuItem
                         className="cursor-pointer text-zinc-200 focus:bg-white/[0.08] focus:text-white"
@@ -410,11 +411,11 @@ export function WorkspaceShellLayout({
                         aria-label={`Account menu for ${nameHeadline}`}
                         className={cn(
                           TOPBAR_COMPACT_CONTROL_HEIGHT_CLASS,
-                          "flex max-w-full items-center gap-2 rounded-lg border border-transparent px-1.5 py-0 text-left transition-colors hover:border-white/[0.08] hover:bg-white/[0.06] sm:gap-2.5 sm:px-2",
+                          "flex max-w-full items-center gap-2 rounded-lg border border-transparent py-0 pl-0 pr-1.5 text-left transition-colors hover:border-white/[0.08] hover:bg-white/[0.06] sm:gap-2.5 sm:pr-2",
                         )}
                       >
                         <div
-                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary text-[14px] font-semibold text-primary-foreground"
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-l-lg rounded-r-md bg-primary text-[14px] font-semibold text-primary-foreground"
                           aria-hidden
                         >
                           {initial}
@@ -432,7 +433,7 @@ export function WorkspaceShellLayout({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
                       align="end"
-                      className="min-w-[14rem] border-white/[0.08] bg-[#1e1e1e] text-zinc-100 shadow-lg"
+                      className={cn("min-w-[14rem]", WORKSPACE_GLASS_DROPDOWN_CLASSES)}
                     >
                       <DropdownMenuLabel className="font-semibold text-white">{nameHeadline}</DropdownMenuLabel>
                       {userLabel.trim() && userLabel.trim() !== nameHeadline ? (
