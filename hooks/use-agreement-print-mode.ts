@@ -5,8 +5,11 @@ import * as React from "react";
 /** Applied to `document.body` while printing an agreement modal (see `app/globals.css`). */
 export const AGREEMENT_PRINT_BODY_CLASS = "agreement-print-mode";
 
-/** Marks the scrollable agreement document inside the modal — only this region is printed. */
+/** Marks the Services Agreement body printed from the modal (title, intro, legal — not proposal UI). */
 export const AGREEMENT_PRINT_TARGET_ATTR = "data-agreement-print-target";
+
+/** Descendants excluded from agreement PDF/print even when inside the print target. */
+export const AGREEMENT_PRINT_EXCLUDE_ATTR = "data-agreement-print-exclude";
 
 /**
  * Isolates the agreement document for `window.print()`:

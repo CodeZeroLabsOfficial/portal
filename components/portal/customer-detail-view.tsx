@@ -64,6 +64,7 @@ import { formatAddressLines, initialsFromName } from "@/lib/format";
 import { sanitizeProposalHtml } from "@/lib/sanitize-proposal-html";
 import { WORKSPACE_DETAIL_PAGE_TITLE_CLASS } from "@/lib/workspace-page-typography";
 import { cn } from "@/lib/utils";
+import { AgreementPrintSignatureBlock } from "@/components/proposal/agreement-block-public";
 import { printAgreementDocument, useAgreementPrintMode } from "@/hooks/use-agreement-print-mode";
 import { useProposalTemplatePickerState } from "@/hooks/use-proposal-template-picker-state";
 
@@ -1175,12 +1176,12 @@ export function CustomerDetailView({
                   </DialogClose>
                 </div>
               </div>
-              <div
-                data-agreement-print-target=""
-                className="min-h-0 overflow-y-auto bg-white print:overflow-visible"
-              >
-                <div className="mx-auto w-full max-w-3xl px-5 py-10 sm:px-10 sm:py-14">
-                  <header className="text-center">
+              <div className="min-h-0 overflow-y-auto bg-white print:overflow-visible">
+                <div
+                  data-agreement-print-target=""
+                  className="mx-auto w-full max-w-3xl px-5 py-10 sm:px-10 sm:py-14"
+                >
+                  <header data-agreement-print-exclude="" className="text-center print:hidden">
                     <h2 className="font-serif text-3xl font-semibold leading-tight tracking-tight text-zinc-900 sm:text-4xl">
                       Signed agreement
                     </h2>
@@ -1240,10 +1241,16 @@ export function CustomerDetailView({
                     })()}
                   </section>
 
+                  <AgreementPrintSignatureBlock
+                    signatureSrc={signedAgreementModalData.signatureSrc}
+                    signerName={signedAgreementModalData.record.signerName}
+                    signedAt={signedAgreementModalData.record.signedAt}
+                  />
+
                   <section
                     ref={signedAgreementSignRef}
                     id="customer-signed-agreement-signature"
-                    className="mt-12 scroll-mt-24"
+                    className="mt-12 scroll-mt-24 print:hidden"
                   >
                     <h3 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Signature</h3>
                     {signedAgreementModalData.signatureSrc ? (

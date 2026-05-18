@@ -50,6 +50,10 @@ export interface AgreementBlockPublicProps {
   /** Current proposal status — drives the “accepted” state in the modal footer. */
   proposalStatus?: ProposalStatus;
   acceptedByName?: string;
+  /** Captured e-signature image (data URL) after acceptance — used for print/PDF. */
+  acceptedSignatureDataUrl?: string;
+  /** Server acceptance timestamp (ms). */
+  acceptedAt?: number;
   /** Staff locality IANA zone — signing UI default date and typed-signature label use this. */
   localityTimeZone?: string;
   /** When set after acceptance, buyer can complete the same subscription flow as admin (prefilled). */
@@ -316,6 +320,8 @@ export function AgreementBlockPublic({
   proposalTitle,
   proposalStatus,
   acceptedByName,
+  acceptedSignatureDataUrl,
+  acceptedAt,
   localityTimeZone,
   interactive = true,
   publicSubscriptionUi = null,
@@ -326,6 +332,7 @@ export function AgreementBlockPublic({
   const [open, setOpen] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [localAcceptedName, setLocalAcceptedName] = React.useState<string | null>(null);
+  const [localSignatureDataUrl, setLocalSignatureDataUrl] = React.useState<string | null>(null);
   const [localDone, setLocalDone] = React.useState(proposalStatus === "accepted");
 
   React.useEffect(() => {
@@ -411,6 +418,8 @@ export function AgreementBlockPublic({
     return items;
   }, [packageSummaries.length, agreementTitle, agreementLegalChildren, accepted]);
   const displayName = localAcceptedName ?? acceptedByName;
+  const signatureDataUrl = localSignatureDataUrl ?? acceptedSignatureDataUrl ?? null;
+  const signedAtMs = accepted ? (acceptedAt ?? null) : null;
   const blockAgreementUntilPlanPicked = interactive && !accepted && !planSelectionComplete;
   const scrollRef = React.useRef<HTMLDivElement | null>(null);
   const signRef = React.useRef<HTMLDivElement | null>(null);
@@ -457,6 +466,9 @@ export function AgreementBlockPublic({
     if (!shareToken || !interactive) return;
     setError(null);
     setLocalAcceptedName(payload.signerName);
+    if (payload.signatureDataUrl) {
+      setLocalSignatureDataUrl(payload.signatureDataUrl);
+    }
     setLocalDone(true);
     if (meta?.subscriptionError) {
       toast.error(meta.subscriptionError);
@@ -662,10 +674,12 @@ export function AgreementBlockPublic({
 
             <div
               ref={scrollRef}
-              data-agreement-print-target=""
               className="min-h-0 min-w-0 flex-1 overflow-y-auto bg-white pb-[max(1rem,env(safe-area-inset-bottom))] print:overflow-visible print:pb-0"
             >
-            <div className="mx-auto w-full max-w-3xl px-5 py-12 sm:px-10 sm:py-16">
+            <div
+              data-agreement-print-target=""
+              className="mx-auto w-full max-w-3xl px-5 py-12 sm:px-10 sm:py-16"
+            >
               <div id="agreement-top" aria-hidden />
 
               <header className="text-center">
@@ -673,7 +687,10 @@ export function AgreementBlockPublic({
                   {agreementTitle}
                 </h1>
                 {proposalTitle ? (
-                  <p className="mt-3 text-sm font-medium text-zinc-500">
+                  <p
+                    data-agreement-print-exclude=""
+                    className="mt-3 text-sm font-medium text-zinc-500 print:hidden"
+                  >
                     Re: <span className="text-zinc-900">{proposalTitle}</span>
                   </p>
                 ) : null}
@@ -695,7 +712,11 @@ export function AgreementBlockPublic({
               ) : null}
 
               {packageSummaries.length > 0 ? (
-                <section id="agreement-plan" className="mt-12 space-y-4">
+                <section
+                  id="agreement-plan"
+                  data-agreement-print-exclude=""
+                  className="mt-12 space-y-4 print:hidden"
+                >
                   <SectionLabel>Your selection</SectionLabel>
                   <div className="space-y-4">
                     {packageSummaries.map((summary) => (
@@ -705,23 +726,36 @@ export function AgreementBlockPublic({
                 </section>
               ) : null}
 
-              <section className="mt-12 space-y-2">
+              <section data-agreement-print-exclude="" className="mt-12 space-y-2 print:hidden">
                 {!packageSummaries.length && !block.legalHtml?.trim() ? (
                   <NoPackageSelectionCard />
                 ) : null}
               </section>
 
-              <section id="agreement-legal" className="mt-12">
+              <section
+                id="agreement-legal"
+                {...(!accepted ? { "data-agreement-print-exclude": "" } : {})}
+                className="mt-12"
+              >
                 <SectionLabel>The agreement</SectionLabel>
                 <div className="mt-6">
                   <LegalSections legalHtmlWithIds={legalWithHeadingIds.html} />
                 </div>
               </section>
 
+              {accepted ? (
+                <AgreementPrintSignatureBlock
+                  signatureSrc={signatureDataUrl}
+                  signerName={displayName}
+                  signedAt={signedAtMs}
+                />
+              ) : null}
+
               <section
                 ref={signRef}
                 id="agreement-sign"
-                className="mt-16"
+                data-agreement-print-exclude=""
+                className="mt-16 print:hidden"
               >
                 {accepted ? (
                   <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-6 py-8 text-center sm:px-8">
@@ -749,9 +783,7 @@ export function AgreementBlockPublic({
                         type="button"
                         variant="outline"
                         className="gap-2 border-emerald-300/80 bg-white text-emerald-950 hover:bg-emerald-100/50"
-                        onClick={() => {
-                          window.alert("PDF download is not available yet. This button will export your signed agreement soon.");
-                        }}
+                        onClick={onDownload}
                       >
                         <Download className="h-4 w-4" aria-hidden />
                         Download PDF
@@ -812,6 +844,47 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
       {children}
     </p>
+  );
+}
+
+/** Shown only in print/PDF after the agreement is signed — mirrors the e-signature capture. */
+export function AgreementPrintSignatureBlock({
+  signatureSrc,
+  signerName,
+  signedAt,
+}: {
+  signatureSrc: string | null | undefined;
+  signerName?: string | null;
+  signedAt?: number | null;
+}) {
+  if (!signatureSrc?.trim()) return null;
+
+  const signedLabel =
+    signedAt && signedAt > 0
+      ? new Date(signedAt).toLocaleString(undefined, {
+          dateStyle: "medium",
+          timeStyle: "short",
+        })
+      : null;
+
+  return (
+    <section className="mt-12 hidden print:block">
+      <SectionLabel>Signature</SectionLabel>
+      <div className="mt-6 border-t border-zinc-200 pt-8">
+        {signerName?.trim() ? (
+          <p className="text-sm font-semibold text-zinc-900">{signerName.trim()}</p>
+        ) : null}
+        {signedLabel ? <p className="mt-1 text-xs text-zinc-500">Signed {signedLabel}</p> : null}
+        <div className="mt-4">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={signatureSrc}
+            alt={signerName?.trim() ? `Signature of ${signerName.trim()}` : "Signature"}
+            className="max-h-36 max-w-full object-contain object-left"
+          />
+        </div>
+      </div>
+    </section>
   );
 }
 

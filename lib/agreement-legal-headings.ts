@@ -28,6 +28,26 @@ function slugifyHeading(label: string): string {
     .slice(0, 48);
 }
 
+function escapeHtmlAttribute(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+}
+
+/** Rebuild `<hN>` open tag, preserving `style` / `class` etc. when injecting `id`. */
+function buildHeadingOpenTag(
+  level: number,
+  attrsStr: string,
+  id: string,
+  hasExistingId: boolean,
+): string {
+  const attrs = attrsStr.trim();
+  if (hasExistingId) {
+    return attrs ? `<h${level} ${attrs}>` : `<h${level}>`;
+  }
+  const idAttr = `id="${escapeHtmlAttribute(id)}"`;
+  if (!attrs) return `<h${level} ${idAttr}>`;
+  return `<h${level} ${idAttr} ${attrs}>`;
+}
+
 /**
  * Assigns stable `id`s to h1–h6 in agreement HTML so the modal Jump to nav can scroll to each heading.
  */
@@ -60,11 +80,8 @@ export function injectAgreementLegalHeadingIds(
     usedIds.add(id);
     headings.push({ id, label, level });
 
-    if (existingIdMatch) {
-      return `<h${level}${attrsStr}>${inner}</h${level}>`;
-    }
-
-    return `<h${level} id="${id}">${inner}</h${level}>`;
+    const openTag = buildHeadingOpenTag(level, attrsStr, id, Boolean(existingIdMatch));
+    return `${openTag}${inner}</h${level}>`;
   });
 
   return { html: processed, headings };

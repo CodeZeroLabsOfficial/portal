@@ -105,6 +105,8 @@ export default async function PublicProposalPage(props: PublicProposalPageProps)
               publicSelections={proposal.publicSelections}
               proposalStatus={proposal.status}
               acceptedByName={proposal.acceptedByName}
+              acceptedSignatureDataUrl={proposal.acceptedSignatureDataUrl}
+              acceptedAt={proposal.acceptedAt}
               localityTimeZone={localityTimeZone}
               publicSubscriptionUi={publicSubscriptionUi}
               customerSignerPrefill={customerSignerPrefill}

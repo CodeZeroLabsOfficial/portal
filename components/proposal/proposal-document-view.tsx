@@ -66,6 +66,9 @@ export interface ProposalDocumentViewProps {
   proposalStatus?: ProposalStatus;
   /** Name of the buyer that already signed the agreement (when status is `accepted`). */
   acceptedByName?: string;
+  /** E-signature image (data URL) stored on the proposal when accepted. */
+  acceptedSignatureDataUrl?: string;
+  acceptedAt?: number;
   /** IANA zone from Settings → Locality — agreement dates and previews use this when set. */
   localityTimeZone?: string;
   /** Prefilled subscription summary for the agreement success flow (public page only). */
@@ -146,6 +149,8 @@ interface ProposalRenderContext {
   proposalTitle?: string;
   proposalStatus?: ProposalStatus;
   acceptedByName?: string;
+  acceptedSignatureDataUrl?: string;
+  acceptedAt?: number;
   localityTimeZone?: string;
   publicSubscriptionUi?: ProposalPublicSubscriptionUi | null;
   customerSignerPrefill?: ProposalCustomerSignerPrefill | null;
@@ -448,6 +453,8 @@ function BlockView({
           proposalTitle={proposalContext?.proposalTitle}
           proposalStatus={proposalContext?.proposalStatus}
           acceptedByName={proposalContext?.acceptedByName}
+          acceptedSignatureDataUrl={proposalContext?.acceptedSignatureDataUrl}
+          acceptedAt={proposalContext?.acceptedAt}
           localityTimeZone={proposalContext?.localityTimeZone}
           interactive={Boolean(shareToken)}
           publicSubscriptionUi={proposalContext?.publicSubscriptionUi}
@@ -564,6 +571,8 @@ export function ProposalDocumentView({
   viewportSectionBleed = true,
   proposalStatus,
   acceptedByName,
+  acceptedSignatureDataUrl,
+  acceptedAt,
   localityTimeZone,
   publicSubscriptionUi = null,
   customerSignerPrefill = null,
@@ -584,6 +593,8 @@ export function ProposalDocumentView({
       proposalTitle: document.title,
       proposalStatus,
       acceptedByName,
+      acceptedSignatureDataUrl,
+      acceptedAt,
       localityTimeZone,
       publicSubscriptionUi,
       customerSignerPrefill,
@@ -593,6 +604,8 @@ export function ProposalDocumentView({
       document.title,
       proposalStatus,
       acceptedByName,
+      acceptedSignatureDataUrl,
+      acceptedAt,
       localityTimeZone,
       publicSubscriptionUi,
       customerSignerPrefill,

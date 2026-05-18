@@ -138,6 +138,10 @@
    * Only [data-agreement-print-target] (the scrollable document pane) is visible.
    */
   @media print {
+    body.agreement-print-mode .proposal-print-root {
+      display: none !important;
+    }
+
     body.agreement-print-mode * {
       visibility: hidden;
     }
@@ -145,6 +149,12 @@
     body.agreement-print-mode [data-agreement-print-target],
     body.agreement-print-mode [data-agreement-print-target] * {
       visibility: visible;
+    }
+
+    body.agreement-print-mode [data-agreement-print-exclude],
+    body.agreement-print-mode [data-agreement-print-exclude] * {
+      visibility: hidden !important;
+      display: none !important;
     }
 
     body.agreement-print-mode [data-agreement-print-target] {
