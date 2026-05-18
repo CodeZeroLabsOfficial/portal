@@ -283,6 +283,7 @@ function LegalSections({ legalHtmlWithIds }: { legalHtmlWithIds?: string }) {
           "[&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5",
           "[&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5",
           "[&_a]:text-zinc-900 [&_a]:underline",
+          "[&_.proposal-agreement-spacer]:m-0 [&_.proposal-agreement-spacer]:block [&_.proposal-agreement-spacer]:shrink-0 [&_.proposal-agreement-spacer]:overflow-hidden [&_.proposal-agreement-spacer]:p-0",
         )}
         dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
       />
@@ -682,6 +683,7 @@ export function AgreementBlockPublic({
                       "[&_a]:text-zinc-900 [&_a]:underline",
                       "[&_p]:mb-4 [&_p:last-child]:mb-0",
                       "[&_em]:italic",
+                      "[&_.proposal-agreement-spacer]:m-0 [&_.proposal-agreement-spacer]:block [&_.proposal-agreement-spacer]:shrink-0 [&_.proposal-agreement-spacer]:overflow-hidden [&_.proposal-agreement-spacer]:p-0",
                     )}
                     dangerouslySetInnerHTML={{ __html: sanitizeProposalHtml(introWithHeadingIds.html) }}
                   />

@@ -28,6 +28,7 @@ const ALLOWED_TAGS = [
   "h5",
   "h6",
   "section",
+  "div",
   "hr",
   "figure",
   "figcaption",
@@ -69,6 +70,8 @@ function isAllowedCssValue(prop: string, val: string): boolean {
       return /^-?(\d+(?:\.\d+)?)em$/i.test(val) || val === "0";
     case "text-transform":
       return /^(none|capitalize|uppercase|lowercase)$/i.test(val);
+    case "height":
+      return /^(\d+(?:\.\d+)?)px$/i.test(val);
     default:
       return true;
   }
@@ -103,6 +106,7 @@ const allowedAttributes: Record<string, string[]> = {
   h5: [...baseAttrs],
   h6: [...baseAttrs],
   section: [...baseAttrs],
+  div: [...baseAttrs, "aria-hidden"],
   hr: ["class"],
   figure: [...baseAttrs],
   figcaption: [...baseAttrs],
@@ -130,7 +134,11 @@ function filterStyleAttribute(value: string): string {
 }
 
 export function sanitizeProposalHtmlServer(html: string): string {
-  const cleaned = sanitizeHtml(html, {
+  const normalized = html.replace(
+    /<motion-spacer\s+style="display:block;height:(\d+)px"[^>]*>\s*<\/motion-spacer>/gi,
+    '<div class="proposal-agreement-spacer" style="height:$1px" aria-hidden="true"></div>',
+  );
+  const cleaned = sanitizeHtml(normalized, {
     allowedTags: [...ALLOWED_TAGS],
     allowedAttributes,
     allowedStyles,

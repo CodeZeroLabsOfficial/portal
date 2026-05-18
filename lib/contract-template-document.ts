@@ -16,6 +16,17 @@ function newId(): string {
   return `ct-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
+/** Matches {@link components/proposal/proposal-document-view} spacer clamp (1–2400px). */
+export function clampProposalSpacerHeightPx(heightPx: number | undefined): number {
+  return Math.min(2400, Math.max(1, Math.round(heightPx ?? 40)));
+}
+
+/** Serialized into agreement intro/legal HTML; must survive {@link ./sanitize-proposal-html}. */
+export function proposalSpacerBlockToHtml(heightPx: number | undefined): string {
+  const px = clampProposalSpacerHeightPx(heightPx);
+  return `<div class="proposal-agreement-spacer" style="height:${px}px" aria-hidden="true"></div>`;
+}
+
 function contentBlockToHtml(block: ProposalContentBlock): string {
   switch (block.type) {
     case "header": {
@@ -40,10 +51,8 @@ function contentBlockToHtml(block: ProposalContentBlock): string {
     }
     case "divider":
       return "<hr />";
-    case "spacer": {
-      const px = Math.min(400, Math.max(8, Math.round(block.heightPx ?? 24)));
-      return `<motion-spacer style="display:block;height:${px}px" aria-hidden="true"></motion-spacer>`;
-    }
+    case "spacer":
+      return proposalSpacerBlockToHtml(block.heightPx);
     case "accordion": {
       const ab = block as AccordionBlock;
       const panels = (ab.panels ?? [])

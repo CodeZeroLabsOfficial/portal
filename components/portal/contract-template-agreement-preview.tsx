@@ -15,6 +15,7 @@ const richClass = cn(
   "[&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5",
   "[&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5",
   "[&_a]:text-zinc-900 [&_a]:underline",
+  "[&_.proposal-agreement-spacer]:m-0 [&_.proposal-agreement-spacer]:block [&_.proposal-agreement-spacer]:shrink-0 [&_.proposal-agreement-spacer]:overflow-hidden [&_.proposal-agreement-spacer]:p-0",
 );
 
 export function ContractTemplateAgreementPreview({

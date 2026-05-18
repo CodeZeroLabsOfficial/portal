@@ -55,6 +55,8 @@ function isAllowedCssValue(prop: string, val: string): boolean {
       return /^-?(\d+(?:\.\d+)?)em$/i.test(val) || val === "0";
     case "text-transform":
       return /^(none|capitalize|uppercase|lowercase)$/i.test(val);
+    case "height":
+      return /^(\d+(?:\.\d+)?)px$/i.test(val);
     default:
       return true;
   }
@@ -80,7 +82,11 @@ function filterStyleAttribute(value: string): string {
 
 export function sanitizeProposalHtml(html: string): string {
   ensureImgSrcHttpsHook();
-  const cleaned = DOMPurify.sanitize(html, {
+  const normalized = html.replace(
+    /<motion-spacer\s+style="display:block;height:(\d+)px"[^>]*>\s*<\/motion-spacer>/gi,
+    '<div class="proposal-agreement-spacer" style="height:$1px" aria-hidden="true"></div>',
+  );
+  const cleaned = DOMPurify.sanitize(normalized, {
     ALLOWED_TAGS: [
       "p",
       "br",
@@ -101,6 +107,7 @@ export function sanitizeProposalHtml(html: string): string {
       "h5",
       "h6",
       "section",
+      "div",
       "hr",
       "figure",
       "figcaption",
@@ -122,6 +129,7 @@ export function sanitizeProposalHtml(html: string): string {
       "height",
       "loading",
       "decoding",
+      "aria-hidden",
     ],
     ALLOW_DATA_ATTR: false,
     RETURN_DOM_FRAGMENT: false,
