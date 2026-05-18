@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { type Editor, EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react";
 import { Extension } from "@tiptap/core";
@@ -31,7 +32,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PROPOSAL_RICH_HEADING_LEVEL_CLASSES } from "@/lib/proposal-rich-heading-typography";
-import { PROPOSAL_MERGE_TOKEN_CHOICES } from "@/lib/proposal-template-tokens";
+import { PROPOSAL_MERGE_TOKEN_CHOICES } from "@/lib/proposal-merge-token-choices";
 import { useProposalSectionEditorChrome } from "@/components/proposal/proposal-section-editor-chrome";
 
 declare module "@tiptap/core" {
@@ -613,18 +614,109 @@ function AlignmentPicker({ editor }: { editor: Editor }) {
   );
 }
 
+const MERGE_FIELD_PANEL_WIDTH_PX = 260;
+
 function MergeFieldMenu({ editor }: { editor: Editor }) {
   const [open, setOpen] = React.useState(false);
-  const rootRef = React.useRef<HTMLDivElement>(null);
-  useCloseBubbleToolbarMenu(open, setOpen, rootRef);
+  const triggerRef = React.useRef<HTMLDivElement>(null);
+  const panelRef = React.useRef<HTMLDivElement>(null);
+  const [panelStyle, setPanelStyle] = React.useState<React.CSSProperties | null>(null);
+
+  React.useLayoutEffect(() => {
+    if (!open) {
+      setPanelStyle(null);
+      return;
+    }
+    const el = triggerRef.current;
+    if (!el) return;
+
+    const updatePosition = () => {
+      const r = el.getBoundingClientRect();
+      const width = MERGE_FIELD_PANEL_WIDTH_PX;
+      const left = Math.min(Math.max(8, r.right - width), window.innerWidth - width - 8);
+      setPanelStyle({
+        position: "fixed",
+        left,
+        top: r.top - 8,
+        width,
+        transform: "translateY(-100%)",
+        zIndex: 10000,
+      });
+    };
+
+    updatePosition();
+    window.addEventListener("scroll", updatePosition, true);
+    window.addEventListener("resize", updatePosition);
+    return () => {
+      window.removeEventListener("scroll", updatePosition, true);
+      window.removeEventListener("resize", updatePosition);
+    };
+  }, [open]);
+
+  React.useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (e: PointerEvent) => {
+      const t = e.target;
+      if (!(t instanceof Node)) return;
+      if (triggerRef.current?.contains(t)) return;
+      if (panelRef.current?.contains(t)) return;
+      setOpen(false);
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown, true);
+    document.addEventListener("keydown", onKeyDown, true);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown, true);
+      document.removeEventListener("keydown", onKeyDown, true);
+    };
+  }, [open]);
 
   function insert(snippet: string) {
     editor.chain().focus().insertContent(snippet).run();
     setOpen(false);
   }
 
+  const tokenCount = PROPOSAL_MERGE_TOKEN_CHOICES.length;
+
+  const panel =
+    open && panelStyle ? (
+      <div
+        ref={panelRef}
+        role="menu"
+        style={panelStyle}
+        className="rounded-md border border-zinc-700 bg-zinc-900 text-zinc-100 shadow-lg"
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        <div className="border-b border-white/10 px-2 pb-2 pt-1">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">CRM merge tokens</p>
+          <p className="mt-1 text-[11px] leading-snug text-zinc-400">
+            Insert placeholders — replaced when generating a proposal from a customer or opportunity.
+          </p>
+          <p className="mt-1 text-[10px] text-zinc-500">{tokenCount} fields — scroll if needed</p>
+        </div>
+        <div className="max-h-[min(70vh,24rem)] overflow-y-auto overscroll-y-contain p-1">
+          {PROPOSAL_MERGE_TOKEN_CHOICES.map((opt) => (
+            <button
+              key={opt.insert}
+              type="button"
+              role="menuitem"
+              title={opt.hint}
+              className="flex w-full flex-col items-start rounded px-2 py-1.5 text-left outline-none hover:bg-white/10 focus-visible:bg-white/10"
+              onPointerDown={(e) => e.preventDefault()}
+              onClick={() => insert(opt.insert)}
+            >
+              <span className="text-[13px] font-medium leading-tight text-zinc-100">{opt.label}</span>
+              <code className="mt-0.5 text-[11px] text-sky-300/90">{opt.insert}</code>
+            </button>
+          ))}
+        </div>
+      </div>
+    ) : null;
+
   return (
-    <div className="relative" ref={rootRef}>
+    <div className="relative" ref={triggerRef}>
       <button
         type="button"
         onPointerDown={(e) => {
@@ -638,36 +730,7 @@ function MergeFieldMenu({ editor }: { editor: Editor }) {
       >
         <Braces className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
       </button>
-      {open ? (
-        <div
-          role="menu"
-          className={cn(BUBBLE_MENU_PANEL_CLASS, "left-auto right-0 min-w-[260px]")}
-          onPointerDown={(e) => e.stopPropagation()}
-        >
-          <div className="border-b border-white/10 px-2 pb-2 pt-1">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">CRM merge tokens</p>
-            <p className="mt-1 text-[11px] leading-snug text-zinc-400">
-              Insert placeholders — replaced when generating a proposal from a customer or opportunity.
-            </p>
-          </div>
-          <div className="max-h-[min(50vh,20rem)] overflow-y-auto p-1">
-            {PROPOSAL_MERGE_TOKEN_CHOICES.map((opt) => (
-              <button
-                key={opt.insert}
-                type="button"
-                role="menuitem"
-                className="flex w-full flex-col items-start rounded px-2 py-1.5 text-left outline-none hover:bg-white/10 focus-visible:bg-white/10"
-                onPointerDown={(e) => e.preventDefault()}
-                onClick={() => insert(opt.insert)}
-              >
-                <span className="text-[13px] font-medium leading-tight text-zinc-100">{opt.label}</span>
-                <code className="mt-0.5 text-[11px] text-sky-300/90">{opt.insert}</code>
-                {opt.hint ? <span className="mt-1 text-[10px] leading-snug text-zinc-500">{opt.hint}</span> : null}
-              </button>
-            ))}
-          </div>
-        </div>
-      ) : null}
+      {typeof document !== "undefined" && panel ? createPortal(panel, document.body) : null}
     </div>
   );
 }
