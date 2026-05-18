@@ -5,7 +5,6 @@ import {
   Check,
   ChevronRight,
   LineChart,
-  MoreHorizontal,
   Settings2,
   Users,
   Wallet,
@@ -262,16 +261,15 @@ export function AdminHomeRightAside({ data }: { data: AdminPortalData }) {
           <table className="w-full table-fixed text-left text-[13px]">
             <thead>
               <tr className="border-b border-border text-muted-foreground">
-                <th className="w-[34%] px-3 py-2.5 font-medium">Transaction ID</th>
-                <th className="w-[26%] px-2 py-2.5 font-medium">Amount</th>
-                <th className="w-[28%] px-2 py-2.5 font-medium">Status</th>
-                <th className="w-9 px-1 py-2.5" aria-hidden />
+                <th className="w-[40%] px-3 py-2.5 font-medium">Transaction ID</th>
+                <th className="w-[30%] px-2 py-2.5 font-medium">Amount</th>
+                <th className="w-[30%] px-2 py-2.5 font-medium">Status</th>
               </tr>
             </thead>
             <tbody className="text-foreground">
               {recentPayments.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-6 text-center text-muted-foreground">
+                  <td colSpan={3} className="px-4 py-6 text-center text-muted-foreground">
                     No payments recorded yet
                   </td>
                 </tr>
@@ -281,8 +279,16 @@ export function AdminHomeRightAside({ data }: { data: AdminPortalData }) {
                   const refId = payment.stripePaymentIntentId?.trim() || payment.id;
                   return (
                     <tr key={payment.id} className="border-b border-border/60 last:border-0">
-                      <td className="truncate px-3 py-3 font-mono text-[12px] text-muted-foreground">
-                        {shortRef(refId)}
+                      <td className="truncate px-3 py-3 font-mono text-[12px]">
+                        <a
+                          href={stripePaymentDashboardUrl(payment)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline"
+                          title={refId}
+                        >
+                          {shortRef(refId)}
+                        </a>
                       </td>
                       <td className="truncate px-2 py-3 tabular-nums text-foreground">
                         {formatCurrencyAmount(payment.amount, payment.currency || DEFAULT_CURRENCY)}
@@ -299,17 +305,6 @@ export function AdminHomeRightAside({ data }: { data: AdminPortalData }) {
                           ) : null}
                           {st.label}
                         </span>
-                      </td>
-                      <td className="px-2 py-3 text-muted-foreground">
-                        <a
-                          href={stripePaymentDashboardUrl(payment)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex rounded-md p-1 hover:bg-muted"
-                          aria-label={`Open ${refId} in Stripe`}
-                        >
-                          <MoreHorizontal className="h-4 w-4" aria-hidden />
-                        </a>
                       </td>
                     </tr>
                   );
