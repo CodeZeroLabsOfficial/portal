@@ -45,7 +45,7 @@ function customerAddress(customer: CustomerRecord): string {
   }).join(", ");
 }
 
-/** Replace merge tokens in strings (case-insensitive): `{{name}}`, `{{first_name}}`, `{{client}}` (same as name), `{{email}}`, `{{company}}`, `{{address}}`, `{{opportunity}}`, `{{deal_amount}}`, `{{date}}`. */
+/** Replace merge tokens in strings (case-insensitive): `{{client}}`, `{{first_name}}`, `{{email}}`, `{{company}}`, `{{address}}`, `{{opportunity}}`, `{{deal_amount}}`, `{{date}}`. */
 export function replaceProposalTokens(text: string, ctx: ProposalTokenContext): string {
   const { customer, opportunity } = ctx;
   const at = ctx.mergedAt ?? new Date();
@@ -64,10 +64,8 @@ export function replaceProposalTokens(text: string, ctx: ProposalTokenContext): 
   const name = customer.name?.trim() ?? "";
   const firstName = firstNameFromFullName(name);
   const vars: Record<string, string> = {
-    name,
-    first_name: firstName,
-    /** Common synonym in templates (e.g. “For {{client}}”). */
     client: name,
+    first_name: firstName,
     email: customer.email?.trim() ?? "",
     company,
     address: customerAddress(customer),

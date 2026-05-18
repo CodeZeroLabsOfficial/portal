@@ -133,7 +133,7 @@ function proposalSaveErrorMessage(err: unknown): string {
 }
 
 /**
- * Creates a draft proposal row from CRM customer + optional template (`{{name}}`, `{{email}}`, `{{company}}`, `{{date}}`, …).
+ * Creates a draft proposal row from CRM customer + optional template (`{{client}}`, `{{email}}`, `{{company}}`, `{{date}}`, …).
  */
 export async function createDraftProposalFromCustomerAction(
   customerId: string,

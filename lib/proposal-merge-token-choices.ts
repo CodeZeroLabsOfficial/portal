@@ -2,25 +2,17 @@
 export type ProposalMergeTokenChoice = {
   readonly insert: string;
   readonly label: string;
-  readonly hint?: string;
+  /** Shown after the token, e.g. “For Address”. */
+  readonly description?: string;
 };
 
 export const PROPOSAL_MERGE_TOKEN_CHOICES: readonly ProposalMergeTokenChoice[] = [
-  { insert: "{{name}}", label: "Contact name", hint: "Customer name from CRM" },
-  {
-    insert: "{{first_name}}",
-    label: "First name",
-    hint: "First word of the contact name — e.g. “Hi {{first_name}}”",
-  },
-  { insert: "{{client}}", label: "Client", hint: "Synonym for contact name — e.g. “For {{client}}”" },
-  { insert: "{{email}}", label: "Email" },
-  { insert: "{{company}}", label: "Company" },
-  {
-    insert: "{{address}}",
-    label: "Address",
-    hint: "Contact mailing address from CRM (comma-separated lines)",
-  },
-  { insert: "{{opportunity}}", label: "Opportunity title" },
-  { insert: "{{deal_amount}}", label: "Deal amount", hint: "Formatted when merging from an opportunity" },
-  { insert: "{{date}}", label: "Date", hint: "Long date when the proposal is merged" },
+  { insert: "{{address}}", label: "Contact Address", description: "For Address" },
+  { insert: "{{client}}", label: "Contact Name", description: "For Customer" },
+  { insert: "{{first_name}}", label: "First Name" },
+  { insert: "{{company}}", label: "Company", description: "For Company Name" },
+  { insert: "{{date}}", label: "Date", description: "For Date" },
+  { insert: "{{deal_amount}}", label: "Deal amount", description: "Deal amount" },
+  { insert: "{{email}}", label: "Email", description: "For Contact Email" },
+  { insert: "{{opportunity}}", label: "Opportunity title", description: "For Opportunity name" },
 ];

@@ -614,7 +614,7 @@ function AlignmentPicker({ editor }: { editor: Editor }) {
   );
 }
 
-const MERGE_FIELD_PANEL_WIDTH_PX = 260;
+const MERGE_FIELD_PANEL_WIDTH_PX = 340;
 
 function MergeFieldMenu({ editor }: { editor: Editor }) {
   const [open, setOpen] = React.useState(false);
@@ -678,37 +678,34 @@ function MergeFieldMenu({ editor }: { editor: Editor }) {
     setOpen(false);
   }
 
-  const tokenCount = PROPOSAL_MERGE_TOKEN_CHOICES.length;
-
   const panel =
     open && panelStyle ? (
       <div
         ref={panelRef}
         role="menu"
         style={panelStyle}
-        className="rounded-md border border-zinc-700 bg-zinc-900 text-zinc-100 shadow-lg"
+        className="rounded-md border border-zinc-700 bg-zinc-900 p-1 text-zinc-100 shadow-lg"
         onPointerDown={(e) => e.stopPropagation()}
       >
-        <div className="border-b border-white/10 px-2 pb-2 pt-1">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">CRM merge tokens</p>
-          <p className="mt-1 text-[11px] leading-snug text-zinc-400">
-            Insert placeholders — replaced when generating a proposal from a customer or opportunity.
-          </p>
-          <p className="mt-1 text-[10px] text-zinc-500">{tokenCount} fields — scroll if needed</p>
-        </div>
-        <div className="max-h-[min(70vh,24rem)] overflow-y-auto overscroll-y-contain p-1">
+        <p className="px-2 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
+          CRM merge tokens
+        </p>
+        <div className="max-h-[min(70vh,24rem)] overflow-y-auto overscroll-y-contain">
           {PROPOSAL_MERGE_TOKEN_CHOICES.map((opt) => (
             <button
               key={opt.insert}
               type="button"
               role="menuitem"
-              title={opt.hint}
-              className="flex w-full flex-col items-start rounded px-2 py-1.5 text-left outline-none hover:bg-white/10 focus-visible:bg-white/10"
+              className="flex w-full rounded px-2 py-1.5 text-left text-[13px] leading-snug outline-none hover:bg-white/10 focus-visible:bg-white/10"
               onPointerDown={(e) => e.preventDefault()}
               onClick={() => insert(opt.insert)}
             >
-              <span className="text-[13px] font-medium leading-tight text-zinc-100">{opt.label}</span>
-              <code className="mt-0.5 text-[11px] text-sky-300/90">{opt.insert}</code>
+              <span className="text-zinc-100">
+                {opt.label}: <span className="text-sky-300/90">{opt.insert}</span>
+                {opt.description ? (
+                  <span className="text-zinc-500"> — {opt.description}</span>
+                ) : null}
+              </span>
             </button>
           ))}
         </div>
