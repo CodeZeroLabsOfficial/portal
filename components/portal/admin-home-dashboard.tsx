@@ -325,14 +325,18 @@ export function AdminHomeRightAside({ data }: { data: AdminPortalData }) {
         </div>
         <ul className="divide-y divide-border px-2 py-1">
           {activities.length === 0 ? (
-            <li className="px-2 py-5 text-center text-sm text-muted-foreground">No recent activity</li>
+            <li className="px-2 py-5 text-center text-[12px] font-normal leading-snug text-muted-foreground">
+              No recent activity
+            </li>
           ) : (
             activities.map((p) => (
               <li key={p.id} className="flex gap-3 px-2 py-3">
                 <span className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-primary/80" aria-hidden />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-foreground">{p.title}</p>
-                  <p className="mt-0.5 text-xs capitalize text-muted-foreground">
+                  <p className="truncate text-[12px] font-normal leading-snug text-foreground">
+                    {p.title}
+                  </p>
+                  <p className="mt-0.5 text-[10px] font-normal leading-snug capitalize text-muted-foreground">
                     Proposal · {p.status}
                   </p>
                 </div>
