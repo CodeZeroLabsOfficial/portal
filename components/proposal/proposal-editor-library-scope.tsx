@@ -40,6 +40,11 @@ function readBounds(el: HTMLElement): LibraryBounds {
   };
 }
 
+function boundsEqual(a: LibraryBounds | null, b: LibraryBounds): boolean {
+  if (!a) return false;
+  return a.left === b.left && a.top === b.top && a.width === b.width && a.height === b.height;
+}
+
 export function ProposalEditorLibraryScope({ children, className }: { children: ReactNode; className?: string }) {
   const scopeRef = React.useRef<HTMLDivElement>(null);
   const [bounds, setBounds] = React.useState<LibraryBounds | null>(null);
@@ -47,7 +52,8 @@ export function ProposalEditorLibraryScope({ children, className }: { children: 
   const remeasure = React.useCallback(() => {
     const el = scopeRef.current;
     if (!el) return;
-    setBounds(readBounds(el));
+    const next = readBounds(el);
+    setBounds((prev) => (boundsEqual(prev, next) ? prev : next));
   }, []);
 
   React.useLayoutEffect(() => {
@@ -73,11 +79,12 @@ export function ProposalEditorLibraryScope({ children, className }: { children: 
 
 export function useProposalEditorLibraryBounds(isOpen: boolean) {
   const ctx = React.useContext(ProposalEditorLibraryBoundsContext);
+  const remeasure = ctx?.remeasure;
 
   React.useLayoutEffect(() => {
     if (!isOpen) return;
-    ctx?.remeasure();
-  }, [isOpen, ctx]);
+    remeasure?.();
+  }, [isOpen, remeasure]);
 
   return ctx?.bounds ?? null;
 }
