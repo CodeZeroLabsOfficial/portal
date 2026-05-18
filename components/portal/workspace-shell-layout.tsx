@@ -42,8 +42,8 @@ import { cn } from "@/lib/utils";
 
 const SIDEBAR_COLLAPSED_KEY = "portal-sidebar-collapsed";
 
-/** Shared height for search, Create, and account controls in the top bar. */
-const TOPBAR_CONTROL_HEIGHT_CLASS = "h-10";
+/** Height for search / Create — matches the natural account menu trigger (h-8 avatar + label stack). */
+const TOPBAR_COMPACT_CONTROL_HEIGHT_CLASS = "h-9";
 
 /** Shared horizontal inset for top bar, main column, and optional right panel. */
 const WORKSPACE_INSET_X_CLASS = "px-4";
@@ -309,15 +309,15 @@ export function WorkspaceShellLayout({
             <div className={cn("flex h-12 w-full items-center gap-3", WORKSPACE_INSET_X_CLASS)}>
               <div className="relative hidden min-w-0 flex-1 lg:block">
                 <Search
-                  className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 stroke-[1.5] text-zinc-400"
+                  className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 stroke-[1.5] text-zinc-400"
                   aria-hidden
                 />
                 <Input
                   type="search"
                   placeholder={isAdminRoute ? "Search..." : "Search for list, template, etc."}
                   className={cn(
-                    TOPBAR_CONTROL_HEIGHT_CLASS,
-                    "max-w-xl rounded-full border-white/[0.08] bg-[#1e1e1e] pl-10 pr-4 text-[14px] font-medium leading-none text-white shadow-none placeholder:text-zinc-400 focus-visible:ring-2 focus-visible:ring-primary",
+                    TOPBAR_COMPACT_CONTROL_HEIGHT_CLASS,
+                    "max-w-xl rounded-full border-white/[0.08] bg-[#1e1e1e] pl-9 pr-4 text-[14px] font-medium leading-none text-white shadow-none placeholder:text-zinc-400 focus-visible:ring-2 focus-visible:ring-primary",
                   )}
                   aria-label="Search"
                 />
@@ -325,8 +325,8 @@ export function WorkspaceShellLayout({
               <div className="flex min-w-0 flex-1 items-center gap-3 lg:hidden">
                 <span
                   className={cn(
-                    TOPBAR_CONTROL_HEIGHT_CLASS,
-                    "inline-flex w-10 shrink-0 items-center justify-center rounded-lg border border-white/[0.08] bg-[#1e1e1e]",
+                    TOPBAR_COMPACT_CONTROL_HEIGHT_CLASS,
+                    "inline-flex w-9 shrink-0 items-center justify-center rounded-lg border border-white/[0.08] bg-[#1e1e1e]",
                   )}
                 >
                   <Building2 className="h-[18px] w-[18px] stroke-[1.5] text-zinc-400" aria-hidden />
@@ -345,12 +345,12 @@ export function WorkspaceShellLayout({
                       <Button
                         type="button"
                         className={cn(
-                          TOPBAR_CONTROL_HEIGHT_CLASS,
+                          TOPBAR_COMPACT_CONTROL_HEIGHT_CLASS,
                           "gap-1.5 rounded-lg bg-primary px-4 text-[14px] font-medium text-primary-foreground shadow-none hover:bg-primary/90",
                         )}
                       >
                         Create
-                        <ChevronDown className="h-[18px] w-[18px] shrink-0 stroke-[1.5] opacity-90" aria-hidden />
+                        <ChevronDown className="h-4 w-4 shrink-0 stroke-[1.5] opacity-90" aria-hidden />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
@@ -390,7 +390,7 @@ export function WorkspaceShellLayout({
                   <Button
                     variant="ghost"
                     className={cn(
-                      TOPBAR_CONTROL_HEIGHT_CLASS,
+                      TOPBAR_COMPACT_CONTROL_HEIGHT_CLASS,
                       "inline-flex gap-2 rounded-lg px-3 text-[14px] font-medium text-zinc-400 hover:bg-white/[0.06] hover:text-white",
                     )}
                     asChild
@@ -408,22 +408,19 @@ export function WorkspaceShellLayout({
                         type="button"
                         title={avatarTitle}
                         aria-label={`Account menu for ${nameHeadline}`}
-                        className={cn(
-                          TOPBAR_CONTROL_HEIGHT_CLASS,
-                          "flex max-w-full items-center gap-2 rounded-lg border border-transparent px-1.5 py-0 text-left transition-colors hover:border-white/[0.08] hover:bg-white/[0.06] sm:gap-2.5 sm:px-2",
-                        )}
+                        className="flex max-w-full items-center gap-2 rounded-lg border border-transparent px-1.5 py-0.5 text-left transition-colors hover:border-white/[0.08] hover:bg-white/[0.06] sm:gap-2.5 sm:px-2"
                       >
                         <div
-                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary text-[12px] font-semibold text-primary-foreground"
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary text-[13px] font-semibold text-primary-foreground"
                           aria-hidden
                         >
                           {initial}
                         </div>
                         <div className="hidden min-w-0 flex-1 sm:block">
-                          <p className="max-w-[140px] truncate text-[13px] font-medium leading-none text-white md:max-w-[220px]">
+                          <p className="max-w-[140px] truncate text-[14px] font-medium leading-none text-white md:max-w-[220px]">
                             {nameHeadline}
                           </p>
-                          <p className="max-w-[140px] truncate text-[10px] font-medium uppercase leading-none tracking-[0.12em] text-zinc-500 md:max-w-[220px]">
+                          <p className="max-w-[140px] truncate text-[11px] font-medium uppercase tracking-[0.12em] text-zinc-500 md:max-w-[220px]">
                             {roleLabel.toUpperCase()}
                           </p>
                         </div>
