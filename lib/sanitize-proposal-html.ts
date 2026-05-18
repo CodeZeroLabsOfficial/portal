@@ -30,8 +30,11 @@ const ALLOWED_CSS_PROPERTIES = new Set([
   "font-style",
   "text-align",
   "text-decoration",
+  "text-transform",
   "line-height",
   "letter-spacing",
+  "margin-top",
+  "margin-bottom",
   "object-fit",
   "max-width",
   "max-height",
@@ -39,6 +42,23 @@ const ALLOWED_CSS_PROPERTIES = new Set([
   "width",
   "height",
 ]);
+
+function isAllowedCssValue(prop: string, val: string): boolean {
+  if (/url\s*\(|expression\s*\(|javascript:/i.test(val)) return false;
+  switch (prop) {
+    case "line-height":
+      return /^(\d+(?:\.\d+)?)(em|%)?$/i.test(val) || /^normal$/i.test(val);
+    case "margin-top":
+    case "margin-bottom":
+      return /^(\d+(?:\.\d+)?)em$/i.test(val);
+    case "letter-spacing":
+      return /^-?(\d+(?:\.\d+)?)em$/i.test(val) || val === "0";
+    case "text-transform":
+      return /^(none|capitalize|uppercase|lowercase)$/i.test(val);
+    default:
+      return true;
+  }
+}
 
 function filterStyleAttribute(value: string): string {
   return value
@@ -51,7 +71,7 @@ function filterStyleAttribute(value: string): string {
       const prop = decl.slice(0, idx).trim().toLowerCase();
       const val = decl.slice(idx + 1).trim();
       if (!ALLOWED_CSS_PROPERTIES.has(prop)) return null;
-      if (/url\s*\(|expression\s*\(|javascript:/i.test(val)) return null;
+      if (!isAllowedCssValue(prop, val)) return null;
       return `${prop}: ${val}`;
     })
     .filter((decl): decl is string => decl !== null)

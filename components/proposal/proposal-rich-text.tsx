@@ -4,7 +4,6 @@ import * as React from "react";
 import { createPortal } from "react-dom";
 import { type Editor, EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react";
-import { Extension } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
@@ -26,6 +25,7 @@ import {
   List,
   ImageIcon,
   ListOrdered,
+  MoreHorizontal,
   Quote,
   Strikethrough,
   Underline as UnderlineIcon,
@@ -33,103 +33,21 @@ import {
 import { cn } from "@/lib/utils";
 import { PROPOSAL_RICH_HEADING_LEVEL_CLASSES } from "@/lib/proposal-rich-heading-typography";
 import { PROPOSAL_MERGE_TOKEN_CHOICES } from "@/lib/proposal-merge-token-choices";
+import {
+  PROPOSAL_FONT_MENU_SECTIONS,
+  PROPOSAL_FONT_WEIGHT_OPTIONS,
+  normalizeProposalFontFamily,
+  proposalFontPreviewFamily,
+  resolveProposalFontOption,
+} from "@/lib/fonts";
+import {
+  FontFamily,
+  FontSize,
+  FontWeight,
+  ProposalBlockTypography,
+  type ProposalLetterCase,
+} from "@/lib/proposal-tiptap-typography";
 import { useProposalSectionEditorChrome } from "@/components/proposal/proposal-section-editor-chrome";
-
-declare module "@tiptap/core" {
-  interface Commands<ReturnType> {
-    fontSize: {
-      setFontSize: (size: string | null) => ReturnType;
-    };
-    fontFamily: {
-      setFontFamily: (family: string | null) => ReturnType;
-    };
-  }
-}
-
-/**
- * Custom mark extension that adds a `fontSize` attribute to TipTap's TextStyle mark
- * so we can store inline font-size styling alongside color etc. — TipTap v2 doesn't
- * ship an official font-size extension, so we attach the attribute here.
- */
-const FontSize = Extension.create({
-  name: "fontSize",
-  addOptions() {
-    return { types: ["textStyle"] };
-  },
-  addGlobalAttributes() {
-    return [
-      {
-        types: this.options.types,
-        attributes: {
-          fontSize: {
-            default: null,
-            parseHTML: (el) => {
-              const m = (el as HTMLElement).style.fontSize?.match(/^(\d+(?:\.\d+)?)px$/);
-              return m ? m[1] : null;
-            },
-            renderHTML: (attrs) =>
-              attrs.fontSize ? { style: `font-size: ${attrs.fontSize}px` } : {},
-          },
-        },
-      },
-    ];
-  },
-  addCommands() {
-    return {
-      setFontSize:
-        (size) =>
-        ({ chain }) => {
-          if (size === null) {
-            return chain()
-              .setMark("textStyle", { fontSize: null })
-              .removeEmptyTextStyle()
-              .run();
-          }
-          return chain().setMark("textStyle", { fontSize: size }).run();
-        },
-    };
-  },
-});
-
-const FontFamily = Extension.create({
-  name: "fontFamily",
-  addOptions() {
-    return { types: ["textStyle"] };
-  },
-  addGlobalAttributes() {
-    return [
-      {
-        types: this.options.types,
-        attributes: {
-          fontFamily: {
-            default: null,
-            parseHTML: (el) => {
-              const raw = (el as HTMLElement).style.fontFamily?.trim();
-              return raw || null;
-            },
-            renderHTML: (attrs) =>
-              attrs.fontFamily ? { style: `font-family: ${attrs.fontFamily as string}` } : {},
-          },
-        },
-      },
-    ];
-  },
-  addCommands() {
-    return {
-      setFontFamily:
-        (family) =>
-        ({ chain }) => {
-          if (family === null || family === "") {
-            return chain()
-              .setMark("textStyle", { fontFamily: null })
-              .removeEmptyTextStyle()
-              .run();
-          }
-          return chain().setMark("textStyle", { fontFamily: family }).run();
-        },
-    };
-  },
-});
 
 interface HeadingOption {
   value: "p" | "h1" | "h2" | "h3" | "h4" | "blockquote";
@@ -310,95 +228,13 @@ function HeadingPicker({ editor }: { editor: Editor }) {
   );
 }
 
-interface FontOption {
-  label: string;
-  /** Empty = clear custom font (inherit). */
-  value: string;
-}
-
-/**
- * Font dropdown entries: `label` is UI copy; `value` is a full CSS `font-family` stack
- * stored on the TipTap `textStyle` mark. Keep `Default` first (`value: ""` clears the mark).
- * For web fonts (Inter, etc.), load them app-wide first, then use their family name here.
- */
-const FONT_OPTIONS: FontOption[] = [
-  { label: "Default", value: "" },
-  {
-    label: "System UI",
-    value:
-      "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-  },
-  { label: "Serif (UI)", value: "ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif" },
-  {
-    label: "Monospace (UI)",
-    value: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-  },
-  { label: "Arial", value: "Arial, Helvetica, sans-serif" },
-  { label: "Helvetica Neue", value: "'Helvetica Neue', Helvetica, Arial, sans-serif" },
-  { label: "Verdana", value: "Verdana, Geneva, sans-serif" },
-  { label: "Tahoma", value: "Tahoma, Verdana, Geneva, sans-serif" },
-  {
-    label: "Trebuchet MS",
-    value: "'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', sans-serif",
-  },
-  { label: "Segoe UI", value: "'Segoe UI', system-ui, -apple-system, Roboto, sans-serif" },
-  { label: "Calibri", value: "Calibri, 'Segoe UI', Candara, sans-serif" },
-  { label: "Cambria", value: "Cambria, Georgia, 'Times New Roman', serif" },
-  { label: "Georgia", value: "Georgia, 'Times New Roman', Times, serif" },
-  { label: "Times New Roman", value: "'Times New Roman', Times, serif" },
-  {
-    label: "Palatino",
-    value: "Palatino, 'Palatino Linotype', 'Book Antiqua', 'URW Palladio L', serif",
-  },
-  { label: "Garamond", value: "Garamond, 'Palatino Linotype', 'Times New Roman', serif" },
-  { label: "Book Antiqua", value: "'Book Antiqua', Palatino, 'Palatino Linotype', serif" },
-  {
-    label: "Lucida Sans",
-    value: "'Lucida Sans', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, sans-serif",
-  },
-  {
-    label: "Century Gothic",
-    value: "'Century Gothic', CenturyGothic, AppleGothic, sans-serif",
-  },
-  {
-    label: "Franklin Gothic",
-    value: "'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif",
-  },
-  { label: "Rockwell", value: "Rockwell, 'Rockwell Nova', 'Courier New', serif" },
-  { label: "Courier New", value: "'Courier New', Courier, monospace" },
-  { label: "Consolas", value: "Consolas, 'Lucida Console', Monaco, monospace" },
-  { label: "Optima", value: "Optima, 'Segoe UI', Candara, Calibri, sans-serif" },
-  {
-    label: "Futura",
-    value: "Futura, 'Trebuchet MS', 'Century Gothic', CenturyGothic, sans-serif",
-  },
-  { label: "Impact", value: "Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif" },
-  { label: "Brush Script MT", value: "'Brush Script MT', 'Segoe Script', cursive" },
-  { label: "Copperplate", value: "Copperplate, 'Copperplate Gothic Light', fantasy" },
-];
-
-function normalizeFontFamily(s: string | null | undefined): string {
-  if (!s || typeof s !== "string") return "";
-  return s
-    .toLowerCase()
-    .replace(/['"]/g, "")
-    .replace(/\s*,\s*/g, ",")
-    .trim();
-}
-
-const FONT_OPTIONS_BY_NORMALIZED: Map<string, FontOption> = new Map(
-  FONT_OPTIONS.filter((o) => o.value).map((o) => [normalizeFontFamily(o.value), o] as const),
-);
-
-function resolveActiveFontOption(raw: string | undefined): FontOption {
-  const n = normalizeFontFamily(raw);
-  if (!n) return FONT_OPTIONS[0];
-  const hit = FONT_OPTIONS_BY_NORMALIZED.get(n);
-  if (hit) return hit;
-  return { label: "Custom", value: (raw ?? "").trim() };
-}
-
-function FontFamilyPicker({ editor }: { editor: Editor }) {
+function FontFamilyPicker({
+  editor,
+  layout = "toolbar",
+}: {
+  editor: Editor;
+  layout?: "toolbar" | "menu";
+}) {
   const [open, setOpen] = React.useState(false);
   const rootRef = React.useRef<HTMLDivElement>(null);
   useCloseBubbleToolbarMenu(open, setOpen, rootRef);
@@ -410,10 +246,11 @@ function FontFamilyPicker({ editor }: { editor: Editor }) {
     }),
   });
 
-  const active = resolveActiveFontOption(fontFamilyRaw);
+  const active = resolveProposalFontOption(fontFamilyRaw);
+  const menuLayout = layout === "menu";
 
   return (
-    <div className="relative" ref={rootRef}>
+    <div className={cn("relative", menuLayout && "w-full")} ref={rootRef}>
       <button
         type="button"
         onPointerDown={(e) => {
@@ -423,11 +260,20 @@ function FontFamilyPicker({ editor }: { editor: Editor }) {
         aria-label="Font"
         aria-expanded={open}
         aria-haspopup="menu"
-        className="inline-flex max-w-[9.5rem] items-center gap-1 rounded px-2 py-1 text-sm text-zinc-100 transition-colors hover:bg-white/10"
+        className={cn(
+          "inline-flex items-center gap-1 rounded text-sm text-zinc-100 transition-colors hover:bg-white/10",
+          menuLayout
+            ? "h-8 w-full justify-between border border-white/10 bg-white/5 px-2"
+            : "max-w-[9.5rem] px-2 py-1",
+        )}
       >
         <span
           className="min-w-0 truncate whitespace-nowrap"
-          style={active.value ? { fontFamily: active.value } : undefined}
+          style={
+            active.value
+              ? { fontFamily: proposalFontPreviewFamily(active.value) ?? active.value }
+              : undefined
+          }
         >
           {active.label}
         </span>
@@ -442,31 +288,47 @@ function FontFamilyPicker({ editor }: { editor: Editor }) {
           )}
           onPointerDown={(e) => e.stopPropagation()}
         >
-          {FONT_OPTIONS.map((opt) => {
-            const isActive =
-              opt.value === ""
-                ? !fontFamilyRaw || normalizeFontFamily(fontFamilyRaw) === ""
-                : normalizeFontFamily(opt.value) === normalizeFontFamily(fontFamilyRaw);
-            return (
-              <button
-                key={opt.label + opt.value}
-                type="button"
-                role="menuitem"
-                className={cn(
-                  "flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm text-zinc-200 outline-none hover:bg-white/10 hover:text-white focus-visible:bg-white/10 focus-visible:text-white",
-                  isActive && "bg-white/10 text-white",
-                )}
-                style={opt.value ? { fontFamily: opt.value } : undefined}
-                onPointerDown={(e) => e.preventDefault()}
-                onClick={() => {
-                  editor.chain().focus().setFontFamily(opt.value || null).run();
-                  setOpen(false);
-                }}
-              >
-                <span className="whitespace-nowrap">{opt.label}</span>
-              </button>
-            );
-          })}
+          {PROPOSAL_FONT_MENU_SECTIONS.map((section) => (
+            <div key={section.id} role="group" aria-label={section.label}>
+              {section.label ? (
+                <p className="px-2 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 first:pt-1">
+                  {section.label}
+                </p>
+              ) : null}
+              {section.items.map((opt) => {
+                const isActive =
+                  opt.value === ""
+                    ? !fontFamilyRaw || normalizeProposalFontFamily(fontFamilyRaw) === ""
+                    : normalizeProposalFontFamily(opt.value) ===
+                      normalizeProposalFontFamily(fontFamilyRaw);
+                const preview = proposalFontPreviewFamily(opt.value);
+                return (
+                  <button
+                    key={`${section.id}-${opt.label}-${opt.value}`}
+                    type="button"
+                    role="menuitem"
+                    className={cn(
+                      "flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-sm text-zinc-200 outline-none hover:bg-white/10 hover:text-white focus-visible:bg-white/10 focus-visible:text-white",
+                      isActive && "bg-white/10 text-white",
+                    )}
+                    style={preview ? { fontFamily: preview } : undefined}
+                    onPointerDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      editor.chain().focus().setFontFamily(opt.value || null).run();
+                      setOpen(false);
+                    }}
+                  >
+                    <span className="whitespace-nowrap">{opt.label}</span>
+                    {isActive ? (
+                      <span className="text-sky-400" aria-hidden>
+                        ✓
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
         </div>
       ) : null}
     </div>
@@ -755,6 +617,233 @@ function LinkButton({ editor }: { editor: Editor }) {
   );
 }
 
+function roundTypography(n: number, decimals = 2) {
+  const p = 10 ** decimals;
+  return Math.round(n * p) / p;
+}
+
+function TypographyNumericField({
+  label,
+  value,
+  min,
+  max,
+  step,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  onChange: (next: number) => void;
+}) {
+  function clamp(n: number) {
+    return Math.min(max, Math.max(min, roundTypography(n)));
+  }
+  return (
+    <div className="space-y-1">
+      <span className="block text-xs text-zinc-400">{label}</span>
+      <div
+        className="flex h-8 items-center rounded border border-white/10 bg-white/5 pr-0.5"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <input
+          type="number"
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          onChange={(e) => {
+            const n = Number(e.target.value);
+            if (Number.isFinite(n)) onChange(clamp(n));
+          }}
+          className="min-w-0 flex-1 bg-transparent px-2 text-sm tabular-nums text-zinc-100 outline-none"
+          aria-label={label}
+        />
+        <span className="flex flex-col">
+          <button
+            type="button"
+            onClick={() => onChange(clamp(value + step))}
+            aria-label={`Increase ${label}`}
+            className="rounded p-0.5 text-zinc-400 hover:bg-white/10 hover:text-white"
+          >
+            <ChevronUp className="h-3 w-3" />
+          </button>
+          <button
+            type="button"
+            onClick={() => onChange(clamp(value - step))}
+            aria-label={`Decrease ${label}`}
+            className="rounded p-0.5 text-zinc-400 hover:bg-white/10 hover:text-white"
+          >
+            <ChevronDown className="h-3 w-3" />
+          </button>
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function TypographyMoreMenu({ editor }: { editor: Editor }) {
+  const [open, setOpen] = React.useState(false);
+  const rootRef = React.useRef<HTMLDivElement>(null);
+  useCloseBubbleToolbarMenu(open, setOpen, rootRef);
+
+  const state = useEditorState({
+    editor,
+    selector: (snap) => {
+      const parent = snap.editor.state.selection.$from.parent;
+      const blockType = parent.type.name;
+      const canEditBlock = blockType === "paragraph" || blockType === "heading" || blockType === "blockquote";
+      return {
+        canEditBlock,
+        lineHeight: parent.attrs.lineHeight as string | null | undefined,
+        marginTop: parent.attrs.marginTop as string | null | undefined,
+        marginBottom: parent.attrs.marginBottom as string | null | undefined,
+        letterSpacing: parent.attrs.letterSpacing as string | null | undefined,
+        letterCase: (parent.attrs.letterCase as ProposalLetterCase | null | undefined) ?? null,
+        fontWeightRaw: snap.editor.getAttributes("textStyle").fontWeight as string | undefined,
+      };
+    },
+  });
+
+  const lineHeight = Number(state.lineHeight ?? 1.3);
+  const marginTop = Number(state.marginTop ?? 0);
+  const marginBottom = Number(state.marginBottom ?? 0);
+  const letterSpacing = Number(state.letterSpacing ?? 0);
+  const letterCase = state.letterCase ?? "none";
+  const fontWeight = state.fontWeightRaw ?? "";
+
+  return (
+    <div className="relative" ref={rootRef}>
+      <button
+        type="button"
+        onPointerDown={(e) => {
+          e.preventDefault();
+          setOpen((v) => !v);
+        }}
+        aria-label="More typography options"
+        aria-expanded={open}
+        aria-haspopup="menu"
+        className={cn(
+          "inline-flex h-7 w-7 items-center justify-center rounded text-zinc-300 transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:bg-white/10",
+          open && "bg-white/15 text-white",
+        )}
+      >
+        <MoreHorizontal className="h-4 w-4" />
+      </button>
+      {open ? (
+        <div
+          role="menu"
+          className={cn(
+            BUBBLE_MENU_PANEL_CLASS,
+            "absolute right-0 top-full z-[110] mt-1 min-w-[13.5rem] space-y-2.5 p-2",
+          )}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <div className="space-y-1">
+            <span className="block text-xs text-zinc-400">Font</span>
+            <FontFamilyPicker editor={editor} layout="menu" />
+          </div>
+
+          <div className="space-y-1">
+            <label htmlFor="proposal-rich-font-weight" className="block text-xs text-zinc-400">
+              Font weight
+            </label>
+            <select
+              id="proposal-rich-font-weight"
+              value={fontWeight}
+              onChange={(e) => {
+                const v = e.target.value;
+                editor.chain().focus().setFontWeight(v || null).run();
+              }}
+              className="h-8 w-full rounded border border-white/10 bg-white/5 px-2 text-sm text-zinc-100 outline-none focus:bg-white/10"
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              {PROPOSAL_FONT_WEIGHT_OPTIONS.map((opt) => (
+                <option key={opt.label} value={opt.value} className="bg-zinc-900 text-zinc-100">
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {state.canEditBlock ? (
+            <>
+              <TypographyNumericField
+                label="Line height"
+                value={lineHeight}
+                min={0.8}
+                max={3}
+                step={0.05}
+                onChange={(n) => editor.chain().focus().setBlockLineHeight(String(n)).run()}
+              />
+              <TypographyNumericField
+                label="Letter spacing"
+                value={letterSpacing}
+                min={-0.2}
+                max={0.5}
+                step={0.01}
+                onChange={(n) =>
+                  editor.chain().focus().setBlockLetterSpacing(n === 0 ? "0" : String(n)).run()
+                }
+              />
+              <div className="space-y-1">
+                <span className="block text-xs text-zinc-400">Letter case</span>
+                <div className="flex h-8 overflow-hidden rounded border border-white/10">
+                  <button
+                    type="button"
+                    aria-pressed={letterCase !== "uppercase"}
+                    className={cn(
+                      "flex-1 text-sm font-medium text-zinc-200 transition-colors hover:bg-white/10",
+                      letterCase !== "uppercase" && "bg-white/15 text-white",
+                    )}
+                    onPointerDown={(e) => e.preventDefault()}
+                    onClick={() => editor.chain().focus().setBlockLetterCase("none").run()}
+                  >
+                    Ag
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={letterCase === "uppercase"}
+                    className={cn(
+                      "flex-1 border-l border-white/10 text-sm font-medium text-zinc-200 transition-colors hover:bg-white/10",
+                      letterCase === "uppercase" && "bg-white/15 text-white",
+                    )}
+                    onPointerDown={(e) => e.preventDefault()}
+                    onClick={() => editor.chain().focus().setBlockLetterCase("uppercase").run()}
+                  >
+                    AG
+                  </button>
+                </div>
+              </div>
+              <TypographyNumericField
+                label="Top spacing"
+                value={marginTop}
+                min={0}
+                max={5}
+                step={0.05}
+                onChange={(n) => editor.chain().focus().setBlockMarginTop(String(n)).run()}
+              />
+              <TypographyNumericField
+                label="Bottom spacing"
+                value={marginBottom}
+                min={0}
+                max={5}
+                step={0.05}
+                onChange={(n) => editor.chain().focus().setBlockMarginBottom(String(n)).run()}
+              />
+            </>
+          ) : (
+            <p className="px-1 text-xs leading-snug text-zinc-500">
+              Place the cursor in a paragraph or heading to adjust spacing.
+            </p>
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export interface ProposalRichTextProps {
   /** Initial HTML; remount the component (key) when switching blocks. */
   html: string;
@@ -903,6 +992,8 @@ export function ProposalRichText({
       Color.configure({ types: ["textStyle"] }),
       FontSize,
       FontFamily,
+      FontWeight,
+      ProposalBlockTypography,
       TextAlign.configure({ types: ["heading", "paragraph"], alignments: ["left", "center", "right"] }),
       Link.configure({ openOnClick: false, autolink: true, linkOnPaste: true }),
       Image.configure({
@@ -974,7 +1065,6 @@ export function ProposalRichText({
       >
         <div className="flex items-center gap-0.5 rounded-lg border border-zinc-800 bg-zinc-950/95 p-1 text-zinc-100 shadow-2xl backdrop-blur">
           <HeadingPicker editor={editor} />
-          <FontFamilyPicker editor={editor} />
           <ToolbarDivider />
           <FontSizeControl editor={editor} />
           <ToolbarDivider />
@@ -1046,6 +1136,8 @@ export function ProposalRichText({
           >
             <Quote className="h-4 w-4" />
           </ToolbarButton>
+          <ToolbarDivider />
+          <TypographyMoreMenu editor={editor} />
         </div>
       </BubbleMenu>
       <EditorContent editor={editor} />

@@ -1,14 +1,8 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import { AppProviders } from "@/components/providers/app-providers";
 import { APP_NAME } from "@/lib/constants";
+import { APP_SHELL_FONT_CLASS, PROPOSAL_GOOGLE_FONTS_STYLESHEET_HREF } from "@/lib/fonts";
 import "./globals.css";
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-geist-sans",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"),
@@ -27,7 +21,12 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en-AU" suppressHydrationWarning>
-      <body className={`${inter.variable} min-h-dvh font-sans`}>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href={PROPOSAL_GOOGLE_FONTS_STYLESHEET_HREF} rel="stylesheet" />
+      </head>
+      <body className={`${APP_SHELL_FONT_CLASS} min-h-dvh font-sans`}>
         <AppProviders>{children}</AppProviders>
       </body>
     </html>
