@@ -354,7 +354,7 @@ function ProposalMediaLibrarySidebar() {
               <ChevronLeft className="h-4 w-4" aria-hidden />
             </button>
 
-            <div className="flex min-h-0 flex-1 flex-col px-4 pb-4 pt-5">
+            <div className="flex min-h-0 flex-1 flex-col px-4 pb-4 pt-0">
               <h2 id="proposal-media-library-title" className="sr-only">
                 Media library
               </h2>

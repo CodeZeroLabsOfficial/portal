@@ -62,6 +62,8 @@ interface WorkspaceShellLayoutProps {
   showRightAside?: boolean;
   showMainHeader?: boolean;
   contentClassName?: string;
+  /** Extra classes on `<main>` (e.g. `WORKSPACE_MAIN_FLUSH_TOP_CLASS` for proposal builder). */
+  mainClassName?: string;
   secondaryNav?: ReactNode;
   children: ReactNode;
 }
@@ -140,6 +142,7 @@ export function WorkspaceShellLayout({
   showRightAside = false,
   showMainHeader = true,
   contentClassName,
+  mainClassName,
   secondaryNav,
   children,
 }: WorkspaceShellLayoutProps) {
@@ -473,6 +476,7 @@ export function WorkspaceShellLayout({
               className={cn(
                 "min-w-0 flex-1 overflow-y-auto py-8 scrollbar-gutter-stable",
                 WORKSPACE_INSET_X_CLASS,
+                mainClassName,
               )}
             >
               <div className={cn(WORKSPACE_MAIN_CONTENT_CLASS, contentClassName)}>

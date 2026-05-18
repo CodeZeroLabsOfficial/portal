@@ -5,6 +5,7 @@ import { contractTemplateRecordToDocument } from "@/lib/contract-template-docume
 import { getContractTemplateForStaff } from "@/server/firestore/contract-templates";
 import { ProposalDocumentEditorLazy } from "@/components/proposal/proposal-document-editor-lazy";
 import { WorkspaceShell } from "@/components/portal/workspace-shell";
+import { WORKSPACE_MAIN_FLUSH_TOP_CLASS } from "@/lib/workspace-layout";
 
 interface PageProps {
   params: Promise<{ contractTemplateId: string }>;
@@ -37,18 +38,17 @@ export default async function EditContractTemplatePage({ params }: PageProps) {
       userLabel={user.email || user.uid}
       showMainHeader={false}
       showRightAside={false}
+      mainClassName={WORKSPACE_MAIN_FLUSH_TOP_CLASS}
     >
-      <div className="space-y-6">
-        <ProposalDocumentEditorLazy
-          variant="contract-template"
-          contractTemplateId={row.id}
-          initialTemplateName={row.name}
-          initialTemplateDescription={row.description ?? ""}
-          initialAgreementTitle={row.agreementTitle}
-          initialDocument={document}
-          localityTimeZone={user.timeZone?.trim() || undefined}
-        />
-      </div>
+      <ProposalDocumentEditorLazy
+        variant="contract-template"
+        contractTemplateId={row.id}
+        initialTemplateName={row.name}
+        initialTemplateDescription={row.description ?? ""}
+        initialAgreementTitle={row.agreementTitle}
+        initialDocument={document}
+        localityTimeZone={user.timeZone?.trim() || undefined}
+      />
     </WorkspaceShell>
   );
 }

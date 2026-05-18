@@ -134,7 +134,7 @@ function ContractTemplateLibrarySidebar() {
               <ChevronLeft className="h-4 w-4" aria-hidden />
             </button>
 
-            <div className="flex min-h-0 flex-1 flex-col px-4 pb-4 pt-5">
+            <div className="flex min-h-0 flex-1 flex-col px-4 pb-4 pt-0">
               <div className="mb-1 flex items-start justify-between gap-2">
                 <h2 id="proposal-contract-template-library-title" className="text-sm font-semibold leading-tight text-foreground">
                   Contract templates

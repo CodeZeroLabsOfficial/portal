@@ -7,8 +7,9 @@ import { cn } from "@/lib/utils";
  * Positioning root for proposal/contract library panels. Panels use `absolute` (not
  * viewport `fixed`) so slide animations stay clipped to the proposal builder column.
  */
+/** `3rem` matches workspace top bar `h-12` (see `WORKSPACE_TOPBAR_HEIGHT_REM` in workspace-layout). */
 export const PROPOSAL_EDITOR_LIBRARY_SCOPE_CLASS =
-  "proposal-editor-library-scope relative isolate w-full min-h-[calc(100dvh-3.5rem)] overflow-x-clip";
+  "proposal-editor-library-scope relative isolate w-full min-h-[calc(100dvh-3rem)] overflow-x-clip";
 
 /** Dimmed editor canvas behind library panels (frosted scrim). */
 export const PROPOSAL_EDITOR_LIBRARY_BACKDROP_CLASS =
