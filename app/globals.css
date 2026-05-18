@@ -131,4 +131,50 @@
       );
     }
   }
+
+  /*
+   * View Agreement modal → Download uses window.print().
+   * `body.agreement-print-mode` is toggled in useAgreementPrintMode / printAgreementDocument.
+   * Only [data-agreement-print-target] (the scrollable document pane) is visible.
+   */
+  @media print {
+    body.agreement-print-mode * {
+      visibility: hidden;
+    }
+
+    body.agreement-print-mode [data-agreement-print-target],
+    body.agreement-print-mode [data-agreement-print-target] * {
+      visibility: visible;
+    }
+
+    body.agreement-print-mode [data-agreement-print-target] {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      max-width: none;
+      height: auto !important;
+      max-height: none !important;
+      min-height: 0 !important;
+      overflow: visible !important;
+      padding-bottom: 0 !important;
+    }
+
+    body.agreement-print-mode [role="dialog"] {
+      position: static !important;
+      inset: auto !important;
+      transform: none !important;
+      width: 100% !important;
+      max-width: none !important;
+      height: auto !important;
+      max-height: none !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      border: none !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      overflow: visible !important;
+    }
+
+  }
 }

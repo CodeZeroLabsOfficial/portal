@@ -36,6 +36,7 @@ import { isDocumentPackageSelectionComplete } from "@/lib/proposal-package-selec
 import type { ProposalPublicSubscriptionUi } from "@/server/proposal/public-proposal-subscription-ui";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { printAgreementDocument, useAgreementPrintMode } from "@/hooks/use-agreement-print-mode";
 import { toast } from "sonner";
 
 export interface AgreementBlockPublicProps {
@@ -415,6 +416,8 @@ export function AgreementBlockPublic({
   const signRef = React.useRef<HTMLDivElement | null>(null);
   const [sectionsSidebarOpen, setSectionsSidebarOpen] = React.useState(false);
 
+  useAgreementPrintMode();
+
   React.useEffect(() => {
     if (!open) setSectionsSidebarOpen(false);
   }, [open]);
@@ -437,9 +440,7 @@ export function AgreementBlockPublic({
   }
 
   function onDownload() {
-    if (typeof window !== "undefined") {
-      window.print();
-    }
+    printAgreementDocument();
   }
 
   async function onSign(
@@ -540,13 +541,15 @@ export function AgreementBlockPublic({
             "sm:left-1/2 sm:top-1/2 sm:h-[min(96dvh,960px)] sm:max-h-[96dvh]",
             "sm:w-[min(1280px,calc(100vw-2rem))] sm:max-w-[min(1280px,calc(100vw-2rem))]",
             "sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl",
-            "grid-rows-[auto,1fr]",
+            "print:static print:inset-auto print:h-auto print:max-h-none print:w-full print:max-w-none",
+            "print:translate-x-0 print:translate-y-0 print:rounded-none print:shadow-none print:overflow-visible",
+            "grid-rows-[auto,1fr] print:grid-rows-1",
             // Hide the shadcn auto-render close X — our top bar renders its own.
             "[&>button[aria-label='Close']]:hidden",
             "pt-[max(0px,env(safe-area-inset-top))] sm:pt-0",
           )}
         >
-          <div className="flex items-center justify-between gap-3 border-b border-zinc-200 bg-white px-4 py-3 sm:px-6">
+          <div className="flex items-center justify-between gap-3 border-b border-zinc-200 bg-white px-4 py-3 sm:px-6 print:hidden">
             <div className="flex min-w-0 items-center gap-2 sm:gap-3">
               <button
                 type="button"
@@ -593,13 +596,13 @@ export function AgreementBlockPublic({
             </div>
           </div>
 
-          <div className="flex h-full min-h-0 flex-1 overflow-hidden">
+          <div className="flex h-full min-h-0 flex-1 overflow-hidden print:block print:h-auto print:min-h-0 print:overflow-visible">
             <aside
               id="agreement-sections-sidebar"
               aria-hidden={!sectionsSidebarOpen}
               inert={!sectionsSidebarOpen ? true : undefined}
               className={cn(
-                "flex h-full min-h-0 shrink-0 flex-col overflow-hidden border-r bg-white motion-reduce:transition-none",
+                "flex h-full min-h-0 shrink-0 flex-col overflow-hidden border-r bg-white motion-reduce:transition-none print:hidden",
                 "transition-[width] duration-300 ease-out",
                 sectionsSidebarOpen
                   ? "w-[min(18rem,88vw)] border-zinc-200 shadow-[4px_0_16px_-8px_rgba(0,0,0,0.08)]"
@@ -659,7 +662,8 @@ export function AgreementBlockPublic({
 
             <div
               ref={scrollRef}
-              className="min-h-0 min-w-0 flex-1 overflow-y-auto bg-white pb-[max(1rem,env(safe-area-inset-bottom))]"
+              data-agreement-print-target=""
+              className="min-h-0 min-w-0 flex-1 overflow-y-auto bg-white pb-[max(1rem,env(safe-area-inset-bottom))] print:overflow-visible print:pb-0"
             >
             <div className="mx-auto w-full max-w-3xl px-5 py-12 sm:px-10 sm:py-16">
               <div id="agreement-top" aria-hidden />

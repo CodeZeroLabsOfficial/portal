@@ -64,6 +64,7 @@ import { formatAddressLines, initialsFromName } from "@/lib/format";
 import { sanitizeProposalHtml } from "@/lib/sanitize-proposal-html";
 import { WORKSPACE_DETAIL_PAGE_TITLE_CLASS } from "@/lib/workspace-page-typography";
 import { cn } from "@/lib/utils";
+import { printAgreementDocument, useAgreementPrintMode } from "@/hooks/use-agreement-print-mode";
 import { useProposalTemplatePickerState } from "@/hooks/use-proposal-template-picker-state";
 
 function formatMinor(amount: number, currency: string): string {
@@ -340,6 +341,8 @@ export function CustomerDetailView({
   } | null>(null);
   const signedAgreementSignRef = React.useRef<HTMLDivElement | null>(null);
 
+  useAgreementPrintMode();
+
   async function openSignedAgreementModal(doc: SignedAgreementRecord) {
     setSignedAgreementLoadingId(doc.id);
     setSignedAgreementModalData(null);
@@ -364,9 +367,7 @@ export function CustomerDetailView({
   }
 
   function printSignedAgreementModal() {
-    if (typeof window !== "undefined") {
-      window.print();
-    }
+    printAgreementDocument();
   }
 
   function scrollSignedAgreementModalToSignature() {
@@ -1133,13 +1134,15 @@ export function CustomerDetailView({
             "sm:left-1/2 sm:top-1/2 sm:h-[min(96dvh,960px)] sm:max-h-[96dvh]",
             "sm:w-[min(1280px,calc(100vw-2rem))] sm:max-w-[min(1280px,calc(100vw-2rem))]",
             "sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl",
-            "grid-rows-[auto,1fr]",
+            "print:static print:inset-auto print:h-auto print:max-h-none print:w-full print:max-w-none",
+            "print:translate-x-0 print:translate-y-0 print:rounded-none print:shadow-none print:overflow-visible",
+            "grid-rows-[auto,1fr] print:grid-rows-1",
             "[&>button[aria-label='Close']]:hidden",
           )}
         >
           {signedAgreementModalData ? (
             <>
-              <div className="flex items-center justify-between gap-3 border-b border-zinc-200 bg-white px-4 py-3 sm:px-6">
+              <div className="flex items-center justify-between gap-3 border-b border-zinc-200 bg-white px-4 py-3 sm:px-6 print:hidden">
                 <DialogTitle className="truncate text-sm font-semibold tracking-tight text-zinc-900 sm:text-base">
                   {signedAgreementModalData.record.proposalTitle}
                 </DialogTitle>
@@ -1172,7 +1175,10 @@ export function CustomerDetailView({
                   </DialogClose>
                 </div>
               </div>
-              <div className="min-h-0 overflow-y-auto bg-white">
+              <div
+                data-agreement-print-target=""
+                className="min-h-0 overflow-y-auto bg-white print:overflow-visible"
+              >
                 <div className="mx-auto w-full max-w-3xl px-5 py-10 sm:px-10 sm:py-14">
                   <header className="text-center">
                     <h2 className="font-serif text-3xl font-semibold leading-tight tracking-tight text-zinc-900 sm:text-4xl">
