@@ -23,6 +23,14 @@ import {
   proposalLibraryAssetFromBlobListItem,
 } from "@/lib/proposal-media-library-blob";
 import type { ProposalLibraryAsset, ProposalLibraryAssetKind } from "@/lib/proposal-media-library-types";
+import {
+  PROPOSAL_EDITOR_LIBRARY_ASIDE_CLASS,
+  PROPOSAL_EDITOR_LIBRARY_BACKDROP_CLASS,
+  ProposalEditorLibraryScope,
+  proposalEditorLibraryAsideStyle,
+  proposalEditorLibraryPanelStyle,
+  useProposalEditorLibraryBounds,
+} from "@/components/proposal/proposal-editor-library-scope";
 import { cn } from "@/lib/utils";
 
 const noop = () => {};
@@ -168,6 +176,9 @@ function ProposalMediaLibrarySidebar() {
   const isOpen = Boolean(ctx?.isOpen && ctx.activeParams);
   const activeParams = ctx?.activeParams ?? null;
   const close = ctx?.close ?? noop;
+  const panelBounds = useProposalEditorLibraryBounds(isOpen);
+  const panelStyle = proposalEditorLibraryPanelStyle(panelBounds);
+  const asideStyle = proposalEditorLibraryAsideStyle(panelBounds);
 
   const [mainTab, setMainTab] = React.useState<"library" | "explore">("library");
   const [category, setCategory] = React.useState<LibraryCategory>("all");
@@ -323,7 +334,8 @@ function ProposalMediaLibrarySidebar() {
           <motion.button
             type="button"
             aria-label="Close library"
-            className="fixed inset-0 z-[80] bg-black/25 backdrop-blur-[1px]"
+            className={PROPOSAL_EDITOR_LIBRARY_BACKDROP_CLASS}
+            style={panelStyle}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -334,9 +346,8 @@ function ProposalMediaLibrarySidebar() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="proposal-media-library-title"
-            className={cn(
-              "fixed left-0 top-0 z-[90] flex h-full w-[min(100vw,380px)] flex-col border-r border-border bg-background shadow-2xl",
-            )}
+            className={PROPOSAL_EDITOR_LIBRARY_ASIDE_CLASS}
+            style={asideStyle}
             initial={{ x: "-105%" }}
             animate={{ x: 0 }}
             exit={{ x: "-105%" }}
@@ -600,8 +611,10 @@ export function ProposalMediaLibraryProvider({ children }: { children: React.Rea
 
   return (
     <ProposalMediaLibraryContext.Provider value={value}>
-      {children}
-      <ProposalMediaLibrarySidebar />
+      <ProposalEditorLibraryScope>
+        {children}
+        <ProposalMediaLibrarySidebar />
+      </ProposalEditorLibraryScope>
     </ProposalMediaLibraryContext.Provider>
   );
 }

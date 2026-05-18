@@ -462,7 +462,7 @@ export function WorkspaceShellLayout({
             {showRightAside ? (
               <aside
                 aria-label="Dashboard panel"
-                className="hidden w-[400px] shrink-0 border-l border-white/[0.06] bg-[#0D0D16] px-3 py-8 sm:px-4 lg:px-5 xl:block"
+                className="hidden w-[450px] shrink-0 border-l border-white/[0.06] bg-[#0D0D16] px-3 py-8 sm:px-4 lg:px-5 xl:block"
               >
                 <div className="min-w-0 space-y-6">
                   {rightAside ?? <DefaultWorkspaceRightAside />}

@@ -5,7 +5,14 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, FileText, Loader2, Search } from "lucide-react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
+import {
+  PROPOSAL_EDITOR_LIBRARY_ASIDE_CLASS,
+  PROPOSAL_EDITOR_LIBRARY_BACKDROP_CLASS,
+  ProposalEditorLibraryScope,
+  proposalEditorLibraryAsideStyle,
+  proposalEditorLibraryPanelStyle,
+  useProposalEditorLibraryBounds,
+} from "@/components/proposal/proposal-editor-library-scope";
 
 const noop = () => {};
 
@@ -49,6 +56,9 @@ function ContractTemplateLibrarySidebar() {
   const isOpen = Boolean(ctx?.isOpen && ctx.activeParams);
   const activeParams = ctx?.activeParams ?? null;
   const close = ctx?.close ?? noop;
+  const panelBounds = useProposalEditorLibraryBounds(isOpen);
+  const panelStyle = proposalEditorLibraryPanelStyle(panelBounds);
+  const asideStyle = proposalEditorLibraryAsideStyle(panelBounds);
 
   const [query, setQuery] = React.useState("");
   const [rows, setRows] = React.useState<ApiRow[]>([]);
@@ -104,7 +114,8 @@ function ContractTemplateLibrarySidebar() {
           <motion.button
             type="button"
             aria-label="Close contract library"
-            className="fixed inset-0 z-[85] bg-black/25 backdrop-blur-[1px]"
+            className={PROPOSAL_EDITOR_LIBRARY_BACKDROP_CLASS}
+            style={panelStyle}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -115,9 +126,8 @@ function ContractTemplateLibrarySidebar() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="proposal-contract-template-library-title"
-            className={cn(
-              "fixed left-0 top-0 z-[95] flex h-full w-[min(100vw,380px)] flex-col border-r border-border bg-background shadow-2xl",
-            )}
+            className={PROPOSAL_EDITOR_LIBRARY_ASIDE_CLASS}
+            style={asideStyle}
             initial={{ x: "-105%" }}
             animate={{ x: 0 }}
             exit={{ x: "-105%" }}
@@ -280,8 +290,10 @@ export function ProposalContractTemplateLibraryProvider({ children }: { children
 
   return (
     <ProposalContractTemplateLibraryContext.Provider value={value}>
-      {children}
-      <ContractTemplateLibrarySidebar />
+      <ProposalEditorLibraryScope>
+        {children}
+        <ContractTemplateLibrarySidebar />
+      </ProposalEditorLibraryScope>
     </ProposalContractTemplateLibraryContext.Provider>
   );
 }
