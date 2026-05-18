@@ -26,6 +26,7 @@ import type { ProposalLibraryAsset, ProposalLibraryAssetKind } from "@/lib/propo
 import {
   PROPOSAL_EDITOR_LIBRARY_ASIDE_CLASS,
   PROPOSAL_EDITOR_LIBRARY_BACKDROP_CLASS,
+  PROPOSAL_EDITOR_LIBRARY_CLOSE_HANDLE_CLASS,
 } from "@/components/proposal/proposal-editor-library-scope";
 import { cn } from "@/lib/utils";
 
@@ -346,7 +347,7 @@ function ProposalMediaLibrarySidebar() {
           >
             <button
               type="button"
-              className="absolute -right-3 top-1/2 z-[1] flex h-14 w-6 -translate-y-1/2 items-center justify-center rounded-r-md border border-l-0 border-border bg-background text-muted-foreground shadow-md transition-colors hover:bg-muted"
+              className={PROPOSAL_EDITOR_LIBRARY_CLOSE_HANDLE_CLASS}
               aria-label="Close library"
               onClick={() => close()}
             >
