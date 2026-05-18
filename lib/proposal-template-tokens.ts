@@ -1,3 +1,4 @@
+import { formatAddressLines } from "@/lib/format";
 import { formatProposalMergeDate } from "@/lib/proposal-locality-dates";
 import type { CustomerRecord } from "@/types/customer";
 import type { OpportunityRecord } from "@/types/opportunity";
@@ -29,7 +30,18 @@ function firstNameFromFullName(fullName: string): string {
   return first ?? "";
 }
 
-/** Replace merge tokens in strings (case-insensitive): `{{name}}`, `{{first_name}}`, `{{client}}` (same as name), `{{email}}`, `{{company}}`, `{{opportunity}}`, `{{deal_amount}}`, `{{date}}`. */
+function customerAddress(customer: CustomerRecord): string {
+  return formatAddressLines({
+    addressLine1: customer.addressLine1,
+    addressLine2: customer.addressLine2,
+    city: customer.city,
+    region: customer.region,
+    postalCode: customer.postalCode,
+    country: customer.country,
+  }).join(", ");
+}
+
+/** Replace merge tokens in strings (case-insensitive): `{{name}}`, `{{first_name}}`, `{{client}}` (same as name), `{{email}}`, `{{company}}`, `{{address}}`, `{{opportunity}}`, `{{deal_amount}}`, `{{date}}`. */
 export function replaceProposalTokens(text: string, ctx: ProposalTokenContext): string {
   const { customer, opportunity } = ctx;
   const at = ctx.mergedAt ?? new Date();
@@ -54,6 +66,7 @@ export function replaceProposalTokens(text: string, ctx: ProposalTokenContext): 
     client: name,
     email: customer.email?.trim() ?? "",
     company,
+    address: customerAddress(customer),
     opportunity: oppName,
     deal_amount: dealAmount,
     date,
@@ -81,6 +94,11 @@ export const PROPOSAL_MERGE_TOKEN_CHOICES: readonly {
   { insert: "{{client}}", label: "Client", hint: "Synonym for contact name — e.g. “For {{client}}”" },
   { insert: "{{email}}", label: "Email" },
   { insert: "{{company}}", label: "Company" },
+  {
+    insert: "{{address}}",
+    label: "Address",
+    hint: "Contact mailing address from CRM (comma-separated lines)",
+  },
   { insert: "{{opportunity}}", label: "Opportunity title" },
   { insert: "{{deal_amount}}", label: "Deal amount", hint: "Formatted when merging from an opportunity" },
   { insert: "{{date}}", label: "Date", hint: "Long date when the proposal is merged" },
