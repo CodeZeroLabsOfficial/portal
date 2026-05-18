@@ -74,7 +74,7 @@ function proposalTemplateTypeLabel(templateType: ProposalTemplateType): string {
 }
 
 function templateTypeLabel(entry: TemplatesListEntry): string {
-  if (entry.kind === "contract") return entry.row.agreementTitle;
+  if (entry.kind === "contract") return "Contract";
   return proposalTemplateTypeLabel(entry.row.templateType);
 }
 
@@ -244,10 +244,12 @@ export function ProposalTemplatesListPanel({
       const desc = (entry.row.description ?? "").trim();
       const stageLabel = templateStageDisplay(templateStage(entry)).label;
       const typeLabel = templateTypeLabel(entry);
+      const agreementTitle = entry.kind === "contract" ? entry.row.agreementTitle : "";
       const hay = [
         templateName(entry),
         desc,
         typeLabel,
+        agreementTitle,
         stageLabel,
         formatLastEditedInLocality(lastEditedMs(entry), localityTimeZone),
       ]
@@ -379,8 +381,8 @@ export function ProposalTemplatesListPanel({
                           {name}
                         </Link>
                       </td>
-                      <td className="max-w-[200px] px-4 py-3 align-middle text-muted-foreground">
-                        <span className="line-clamp-2">{templateTypeLabel(entry)}</span>
+                      <td className="whitespace-nowrap px-4 py-3 align-middle text-muted-foreground">
+                        {templateTypeLabel(entry)}
                       </td>
                       <td className="px-4 py-3 align-middle">
                         <Badge
