@@ -11,6 +11,7 @@ export const PROPOSAL_MERGE_TOKEN_CHOICES: readonly ProposalMergeTokenChoice[] =
   { insert: "{{client}}", label: "Contact Name", description: "For Customer" },
   { insert: "{{first_name}}", label: "First Name" },
   { insert: "{{company}}", label: "Company", description: "For Company Name" },
+  { insert: "{{acn}}", label: "ACN", description: "Company ACN from customer" },
   { insert: "{{date}}", label: "Date", description: "For Date" },
   { insert: "{{deal_amount}}", label: "Deal amount", description: "Deal amount" },
   { insert: "{{email}}", label: "Email", description: "For Contact Email" },
