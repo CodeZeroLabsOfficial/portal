@@ -352,7 +352,10 @@ function FontSizeControl({ editor }: { editor: Editor }) {
   return (
     <div
       className="inline-flex items-center gap-0.5 rounded text-zinc-200"
-      onMouseDown={(e) => e.stopPropagation()}
+      onPointerDown={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
     >
       <input
         type="number"
@@ -363,12 +366,17 @@ function FontSizeControl({ editor }: { editor: Editor }) {
           const n = Number(e.target.value);
           if (Number.isFinite(n) && n > 0) set(n);
         }}
-        className="w-10 rounded bg-transparent px-1 py-0.5 text-center text-sm tabular-nums outline-none focus:bg-white/10"
+        className={cn(
+          "w-10 rounded bg-transparent px-1 py-0.5 text-center text-sm tabular-nums outline-none focus:bg-white/10",
+          "[appearance:textfield] [-moz-appearance:textfield]",
+          "[&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
+        )}
         aria-label="Font size"
       />
-      <span className="flex flex-col">
+      <span className="flex shrink-0 flex-col">
         <button
           type="button"
+          onPointerDown={(e) => e.preventDefault()}
           onClick={() => set(value + 1)}
           aria-label="Increase font size"
           className="rounded p-0.5 text-zinc-400 hover:bg-white/10 hover:text-white"
@@ -377,6 +385,7 @@ function FontSizeControl({ editor }: { editor: Editor }) {
         </button>
         <button
           type="button"
+          onPointerDown={(e) => e.preventDefault()}
           onClick={() => set(value - 1)}
           aria-label="Decrease font size"
           className="rounded p-0.5 text-zinc-400 hover:bg-white/10 hover:text-white"
@@ -622,6 +631,12 @@ function roundTypography(n: number, decimals = 2) {
   return Math.round(n * p) / p;
 }
 
+const TYPOGRAPHY_NUMERIC_INPUT_CLASS = cn(
+  "min-w-0 flex-1 bg-transparent px-2 text-sm tabular-nums text-zinc-100 outline-none",
+  "[appearance:textfield] [-moz-appearance:textfield]",
+  "[&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
+);
+
 function TypographyNumericField({
   label,
   value,
@@ -645,7 +660,10 @@ function TypographyNumericField({
       <span className="block text-xs text-zinc-400">{label}</span>
       <div
         className="flex h-8 items-center rounded border border-white/10 bg-white/5 pr-0.5"
-        onMouseDown={(e) => e.stopPropagation()}
+        onPointerDown={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
       >
         <input
           type="number"
@@ -657,12 +675,13 @@ function TypographyNumericField({
             const n = Number(e.target.value);
             if (Number.isFinite(n)) onChange(clamp(n));
           }}
-          className="min-w-0 flex-1 bg-transparent px-2 text-sm tabular-nums text-zinc-100 outline-none"
+          className={TYPOGRAPHY_NUMERIC_INPUT_CLASS}
           aria-label={label}
         />
-        <span className="flex flex-col">
+        <span className="flex shrink-0 flex-col">
           <button
             type="button"
+            onPointerDown={(e) => e.preventDefault()}
             onClick={() => onChange(clamp(value + step))}
             aria-label={`Increase ${label}`}
             className="rounded p-0.5 text-zinc-400 hover:bg-white/10 hover:text-white"
@@ -671,6 +690,7 @@ function TypographyNumericField({
           </button>
           <button
             type="button"
+            onPointerDown={(e) => e.preventDefault()}
             onClick={() => onChange(clamp(value - step))}
             aria-label={`Decrease ${label}`}
             className="rounded p-0.5 text-zinc-400 hover:bg-white/10 hover:text-white"

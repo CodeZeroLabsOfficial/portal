@@ -1,4 +1,4 @@
-import { Extension } from "@tiptap/core";
+import { Extension, type CommandProps } from "@tiptap/core";
 
 /** Block nodes that support line height and vertical rhythm overrides. */
 export const PROPOSAL_TYPOGRAPHY_BLOCK_TYPES = ["paragraph", "heading", "blockquote"] as const;
@@ -55,16 +55,23 @@ function parseLetterCase(raw: string | undefined): ProposalLetterCase | null {
 }
 
 function updateActiveTypographyBlock(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  chain: any,
+  { chain, state }: CommandProps,
   attrs: Record<string, unknown>,
-) {
-  const { $from } = chain.editor.state.selection;
-  const type = $from.parent.type.name as string;
+): boolean {
+  const { $from } = state.selection;
+  const node = $from.parent;
+  const type = node.type.name;
   if (!(PROPOSAL_TYPOGRAPHY_BLOCK_TYPES as readonly string[]).includes(type)) {
     return false;
   }
-  return chain.updateAttributes(type, attrs).run();
+  const pos = $from.before($from.depth);
+  return chain()
+    .focus()
+    .command(({ tr }) => {
+      tr.setNodeMarkup(pos, undefined, { ...node.attrs, ...attrs });
+      return true;
+    })
+    .run();
 }
 
 export const FontSize = Extension.create({
@@ -264,25 +271,16 @@ export const ProposalBlockTypography = Extension.create({
   addCommands() {
     return {
       setBlockLineHeight:
-        (value) =>
-        ({ chain }) =>
-          updateActiveTypographyBlock(chain().focus(), { lineHeight: value }),
+        (value) => (props) => updateActiveTypographyBlock(props, { lineHeight: value }),
       setBlockMarginTop:
-        (value) =>
-        ({ chain }) =>
-          updateActiveTypographyBlock(chain().focus(), { marginTop: value }),
+        (value) => (props) => updateActiveTypographyBlock(props, { marginTop: value }),
       setBlockMarginBottom:
-        (value) =>
-        ({ chain }) =>
-          updateActiveTypographyBlock(chain().focus(), { marginBottom: value }),
+        (value) => (props) => updateActiveTypographyBlock(props, { marginBottom: value }),
       setBlockLetterSpacing:
-        (value) =>
-        ({ chain }) =>
-          updateActiveTypographyBlock(chain().focus(), { letterSpacing: value }),
+        (value) => (props) => updateActiveTypographyBlock(props, { letterSpacing: value }),
       setBlockLetterCase:
-        (value) =>
-        ({ chain }) =>
-          updateActiveTypographyBlock(chain().focus(), {
+        (value) => (props) =>
+          updateActiveTypographyBlock(props, {
             letterCase: value === null || value === "none" ? null : value,
           }),
     };
