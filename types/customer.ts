@@ -24,6 +24,8 @@ export interface CustomerRecord {
   companyPhone?: string;
   companyEmail?: string;
   companyWebsite?: string;
+  companyAbn?: string;
+  companyAcn?: string;
   companyAddressLine1?: string;
   companyAddressLine2?: string;
   companyCity?: string;

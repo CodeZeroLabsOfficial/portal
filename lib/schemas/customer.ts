@@ -40,6 +40,8 @@ export const createCustomerSchema = z.object({
   companyPhone: optionalTrimmed,
   companyEmail: optionalCompanyEmail,
   companyWebsite: companyWebsiteField,
+  companyAbn: optionalTrimmed,
+  companyAcn: optionalTrimmed,
   companyAddressLine1: optionalTrimmed,
   companyAddressLine2: optionalTrimmed,
   companyCity: optionalTrimmed,

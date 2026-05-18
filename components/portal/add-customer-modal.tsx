@@ -31,6 +31,8 @@ const defaultValues: CreateCustomerInput = {
   companyPhone: "",
   companyEmail: "",
   companyWebsite: "",
+  companyAbn: "",
+  companyAcn: "",
   companyAddressLine1: "",
   companyAddressLine2: "",
   companyCity: "",
@@ -274,6 +276,30 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
                   {form.formState.errors.companyWebsite.message}
                 </p>
               ) : null}
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="crm-company-abn" className="text-zinc-300">
+                ABN
+              </Label>
+              <Input
+                id="crm-company-abn"
+                autoComplete="off"
+                className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+                placeholder="12 345 678 901"
+                {...form.register("companyAbn")}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="crm-company-acn" className="text-zinc-300">
+                ACN
+              </Label>
+              <Input
+                id="crm-company-acn"
+                autoComplete="off"
+                className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+                placeholder="123 456 789"
+                {...form.register("companyAcn")}
+              />
             </div>
           </div>
 
