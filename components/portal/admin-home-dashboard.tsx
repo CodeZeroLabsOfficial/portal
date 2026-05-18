@@ -257,62 +257,60 @@ export function AdminHomeRightAside({ data }: { data: AdminPortalData }) {
             <ChevronRight className="h-3.5 w-3.5" aria-hidden />
           </a>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full table-fixed text-left text-[13px]">
-            <thead>
-              <tr className="border-b border-border text-muted-foreground">
-                <th className="w-[40%] px-3 py-2.5 font-medium">Transaction ID</th>
-                <th className="w-[30%] px-2 py-2.5 font-medium">Amount</th>
-                <th className="w-[30%] px-2 py-2.5 font-medium">Status</th>
+        <table className="w-full table-fixed text-left text-[13px]">
+          <thead>
+            <tr className="border-b border-border text-muted-foreground">
+              <th className="w-[40%] px-3 py-2.5 font-medium">Transaction ID</th>
+              <th className="w-[30%] px-2 py-2.5 font-medium">Amount</th>
+              <th className="w-[30%] px-2 py-2.5 font-medium">Status</th>
+            </tr>
+          </thead>
+          <tbody className="text-foreground">
+            {recentPayments.length === 0 ? (
+              <tr>
+                <td colSpan={3} className="px-4 py-6 text-center text-muted-foreground">
+                  No payments recorded yet
+                </td>
               </tr>
-            </thead>
-            <tbody className="text-foreground">
-              {recentPayments.length === 0 ? (
-                <tr>
-                  <td colSpan={3} className="px-4 py-6 text-center text-muted-foreground">
-                    No payments recorded yet
-                  </td>
-                </tr>
-              ) : (
-                recentPayments.map((payment) => {
-                  const st = paymentStatusLabel(payment.status);
-                  const refId = payment.stripePaymentIntentId?.trim() || payment.id;
-                  return (
-                    <tr key={payment.id} className="border-b border-border/60 last:border-0">
-                      <td className="truncate px-3 py-3 font-mono text-[12px]">
-                        <a
-                          href={stripePaymentDashboardUrl(payment)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-primary hover:underline"
-                          title={refId}
-                        >
-                          {shortRef(refId)}
-                        </a>
-                      </td>
-                      <td className="truncate px-2 py-3 tabular-nums text-foreground">
-                        {formatCurrencyAmount(payment.amount, payment.currency || DEFAULT_CURRENCY)}
-                      </td>
-                      <td className="px-2 py-3">
-                        <span
-                          className={cn(
-                            "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium",
-                            st.className,
-                          )}
-                        >
-                          {payment.status === "succeeded" ? (
-                            <Check className="h-3 w-3 shrink-0" aria-hidden />
-                          ) : null}
-                          {st.label}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+            ) : (
+              recentPayments.map((payment) => {
+                const st = paymentStatusLabel(payment.status);
+                const refId = payment.stripePaymentIntentId?.trim() || payment.id;
+                return (
+                  <tr key={payment.id} className="border-b border-border/60 last:border-0">
+                    <td className="truncate px-3 py-3 font-mono text-[12px]">
+                      <a
+                        href={stripePaymentDashboardUrl(payment)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline"
+                        title={refId}
+                      >
+                        {shortRef(refId)}
+                      </a>
+                    </td>
+                    <td className="truncate px-2 py-3 tabular-nums text-foreground">
+                      {formatCurrencyAmount(payment.amount, payment.currency || DEFAULT_CURRENCY)}
+                    </td>
+                    <td className="px-2 py-3">
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium",
+                          st.className,
+                        )}
+                      >
+                        {payment.status === "succeeded" ? (
+                          <Check className="h-3 w-3 shrink-0" aria-hidden />
+                        ) : null}
+                        {st.label}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
       </section>
 
       <section className="rounded-xl border border-border/80 bg-card/95 shadow-sm">
