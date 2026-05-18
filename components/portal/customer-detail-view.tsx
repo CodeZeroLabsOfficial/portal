@@ -368,7 +368,8 @@ export function CustomerDetailView({
   }
 
   function printSignedAgreementModal() {
-    printAgreementDocument();
+    const title = signedAgreementModalData?.record.proposalTitle?.trim() || "Services Agreement";
+    printAgreementDocument({ documentTitle: title });
   }
 
   function scrollSignedAgreementModalToSignature() {

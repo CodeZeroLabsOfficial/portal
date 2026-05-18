@@ -449,7 +449,7 @@ export function AgreementBlockPublic({
   }
 
   function onDownload() {
-    printAgreementDocument();
+    printAgreementDocument({ documentTitle: agreementTitle });
   }
 
   async function onSign(
@@ -732,11 +732,7 @@ export function AgreementBlockPublic({
                 ) : null}
               </section>
 
-              <section
-                id="agreement-legal"
-                {...(!accepted ? { "data-agreement-print-exclude": "" } : {})}
-                className="mt-12"
-              >
+              <section id="agreement-legal" className="mt-12">
                 <SectionLabel>The agreement</SectionLabel>
                 <div className="mt-6">
                   <LegalSections legalHtmlWithIds={legalWithHeadingIds.html} />

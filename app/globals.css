@@ -146,6 +146,7 @@
       visibility: hidden;
     }
 
+    body.agreement-print-mode [role="dialog"]:has([data-agreement-print-target]),
     body.agreement-print-mode [data-agreement-print-target],
     body.agreement-print-mode [data-agreement-print-target] * {
       visibility: visible;

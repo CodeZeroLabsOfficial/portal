@@ -33,7 +33,20 @@ export function useAgreementPrintMode() {
   }, []);
 }
 
-export function printAgreementDocument() {
+export function printAgreementDocument(options?: { documentTitle?: string }) {
+  const previousTitle = document.title;
+  const nextTitle = options?.documentTitle?.trim();
+  if (nextTitle) {
+    document.title = nextTitle;
+  }
   document.body.classList.add(AGREEMENT_PRINT_BODY_CLASS);
+
+  function restoreTitle() {
+    if (nextTitle) {
+      document.title = previousTitle;
+    }
+    window.removeEventListener("afterprint", restoreTitle);
+  }
+  window.addEventListener("afterprint", restoreTitle);
   window.print();
 }
