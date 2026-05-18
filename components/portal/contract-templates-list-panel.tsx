@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Loader2, Pencil, Search, Trash2, Copy } from "lucide-react";
+import { Copy, ExternalLink, Loader2, Pencil, Search, Trash2 } from "lucide-react";
 import type { ContractTemplateRecord } from "@/types/contract-template";
 import { deleteContractTemplateAction, cloneContractTemplateAction } from "@/server/actions/contract-templates";
 import { formatLastEditedInLocality } from "@/lib/proposal-locality-dates";
@@ -158,6 +158,21 @@ export function ContractTemplatesListPanel({ templates, localityTimeZone }: Cont
                             type="button"
                             variant="outline"
                             size="icon"
+                            className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            disabled={deletingId === t.id}
+                            aria-label={`Delete “${t.name}”`}
+                            onClick={() => void deleteRow(t.id, t.name)}
+                          >
+                            {deletingId === t.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                            ) : (
+                              <Trash2 className="h-4 w-4" aria-hidden />
+                            )}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
                             className="h-8 w-8"
                             disabled={cloningId === t.id}
                             aria-label={`Clone “${t.name}”`}
@@ -170,27 +185,22 @@ export function ContractTemplatesListPanel({ templates, localityTimeZone }: Cont
                               <Copy className="h-4 w-4" aria-hidden />
                             )}
                           </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                            disabled={deletingId === t.id}
-                            aria-label={`Delete “${t.name}”`}
-                            onClick={() => void deleteRow(t.id, t.name)}
-                          >
-                            {deletingId === t.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                            ) : (
-                              <Trash2 className="h-4 w-4" aria-hidden />
-                            )}
-                          </Button>
                           <Button variant="outline" size="icon" className="h-8 w-8" asChild>
                             <Link href={`/admin/templates/contracts/${t.id}`} aria-label={`Edit “${t.name}”`}>
                               <Pencil className="h-4 w-4" aria-hidden />
                             </Link>
                           </Button>
-                        </div>
+                          <Button variant="outline" size="icon" className="h-8 w-8" asChild>
+                            <Link
+                              href={`/admin/templates/contracts/${t.id}/preview`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              aria-label={`Open public preview for “${t.name}”`}
+                            >
+                              <ExternalLink className="h-4 w-4" aria-hidden />
+                            </Link>
+                          </Button>
+                        </motion.tr>
                       </td>
                     </motion.tr>
                   );

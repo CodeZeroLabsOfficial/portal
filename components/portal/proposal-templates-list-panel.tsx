@@ -228,6 +228,21 @@ export function ProposalTemplatesListPanel({ templates, localityTimeZone }: Prop
                         </td>
                         <td className="px-2 py-3 align-middle">
                           <div className="flex flex-wrap items-center justify-center gap-1">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                              disabled={deletingTemplateId === t.id || stageBusy}
+                              aria-label={`Delete template “${t.name}”`}
+                              onClick={() => void deleteTemplate(t.id, t.name)}
+                            >
+                              {deletingTemplateId === t.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                              ) : (
+                                <Trash2 className="h-4 w-4" aria-hidden />
+                              )}
+                            </Button>
                             {t.stage === "draft" ? (
                               <Button
                                 type="button"
@@ -263,21 +278,6 @@ export function ProposalTemplatesListPanel({ templates, localityTimeZone }: Prop
                                 )}
                               </Button>
                             )}
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                              disabled={deletingTemplateId === t.id || stageBusy}
-                              aria-label={`Delete template “${t.name}”`}
-                              onClick={() => void deleteTemplate(t.id, t.name)}
-                            >
-                              {deletingTemplateId === t.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                              ) : (
-                                <Trash2 className="h-4 w-4" aria-hidden />
-                              )}
-                            </Button>
                             <CloneProposalTemplateButton templateId={t.id} iconOnly />
                             <Button variant="outline" size="icon" className="h-8 w-8" asChild>
                               <Link
