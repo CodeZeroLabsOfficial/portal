@@ -310,9 +310,24 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
             </div>
           </div>
 
-          <div className="grid min-w-0 gap-6 md:grid-cols-2 md:gap-x-8">
-            <div className="min-w-0 space-y-1.5">
-              <Label className="text-zinc-300">Company address</Label>
+          <div className="grid min-w-0 gap-x-8 gap-y-1.5 md:grid-cols-2">
+            <Label className="hidden h-8 content-center text-zinc-300 md:block">Company address</Label>
+            <div className="hidden h-8 items-center justify-between gap-2 md:flex">
+              <Label className="text-zinc-300">Contact address</Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 shrink-0 whitespace-nowrap px-2 text-xs text-primary hover:text-primary"
+                onClick={copyCompanyAddressToContact}
+                disabled={busy}
+              >
+                Copy from company
+              </Button>
+            </div>
+
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <Label className="text-zinc-300 md:hidden">Company address</Label>
               <Input
                 className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
                 placeholder="Line 1"
@@ -347,14 +362,14 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
               </div>
             </div>
 
-            <div className="min-w-0 space-y-1.5">
-              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <div className="flex items-center justify-between gap-2 md:hidden">
                 <Label className="text-zinc-300">Contact address</Label>
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-8 shrink-0 px-2 text-xs text-primary hover:text-primary"
+                  className="h-8 shrink-0 whitespace-nowrap px-2 text-xs text-primary hover:text-primary"
                   onClick={copyCompanyAddressToContact}
                   disabled={busy}
                 >

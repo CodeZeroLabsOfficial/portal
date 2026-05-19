@@ -13,7 +13,7 @@ import {
   createInputToServiceTerms,
   resolveCreateCatalogSlug,
   saveCatalogServiceSchema,
-  saveInputToServiceTerms,
+  saveInputToCatalogTerms,
 } from "@/lib/schemas/catalog-service";
 import { zodErrorToMessage } from "@/lib/zod-error";
 import { COLLECTIONS } from "@/server/firestore/collections";
@@ -139,13 +139,7 @@ export async function saveCatalogServiceAction(
     parsed.data.slug?.trim() ||
     existing.slug ||
     slugifyCatalogServiceName(parsed.data.name);
-  const terms = saveInputToServiceTerms(parsed.data).map((t) => {
-    const prev = existing.terms.find((p) => p.months === t.months);
-    return {
-      ...t,
-      ...(prev?.stripePriceId ? { stripePriceId: prev.stripePriceId } : {}),
-    };
-  });
+  const terms = saveInputToCatalogTerms(existing, parsed.data, slug);
 
   const features = parsed.data.features.map((f) => f.trim()).filter(Boolean);
   const isAddon = existing.serviceType === "addon";

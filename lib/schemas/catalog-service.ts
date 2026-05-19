@@ -1,10 +1,10 @@
 import { z } from "zod";
 import {
-  buildCatalogServicePriceLookupKey,
+  applyCatalogServiceTermLookupKeys,
   normalizeLookupKeyBase,
   slugifyCatalogServiceName,
 } from "@/lib/catalog-service-slug";
-import type { CatalogServiceTerm } from "@/types/catalog-service";
+import type { CatalogServiceRecord, CatalogServiceTerm } from "@/types/catalog-service";
 
 const trimmed = z.string().trim();
 const lookupKeyBaseField = trimmed
@@ -119,36 +119,64 @@ export function saveInputToServiceTerms(input: SaveCatalogServiceInput): Array<{
 }
 
 export function createInputToServiceTerms(input: CreateCatalogServiceInput): CatalogServiceTerm[] {
-  const lookupKeyBase = normalizeLookupKeyBase(input.lookupKeyBase);
+  const slug = resolveCreateCatalogSlug(input);
   const pricingModel = input.billingType === "one_off" ? "flat" : input.pricingModel;
-  const ctx = {
-    lookupKeyBase,
-    serviceType: input.serviceType,
-    billingType: input.billingType,
-    pricingModel,
-  };
 
-  if (pricingModel === "by_term") {
-    return [
-      {
-        months: 12,
-        monthlyAmountMinor: Math.round(input.monthlyCost12Minor ?? 0),
-        lookupKey: buildCatalogServicePriceLookupKey(ctx, 12),
-      },
-      {
-        months: 24,
-        monthlyAmountMinor: Math.round(input.monthlyCost24Minor ?? 0),
-        lookupKey: buildCatalogServicePriceLookupKey(ctx, 24),
-      },
-    ];
-  }
+  const terms: CatalogServiceTerm[] =
+    pricingModel === "by_term"
+      ? [
+          {
+            months: 12,
+            monthlyAmountMinor: Math.round(input.monthlyCost12Minor ?? 0),
+          },
+          {
+            months: 24,
+            monthlyAmountMinor: Math.round(input.monthlyCost24Minor ?? 0),
+          },
+        ]
+      : [
+          {
+            monthlyAmountMinor: Math.round(input.flatAmountMinor ?? 0),
+          },
+        ];
 
-  return [
+  return applyCatalogServiceTermLookupKeys(
     {
-      monthlyAmountMinor: Math.round(input.flatAmountMinor ?? 0),
-      lookupKey: buildCatalogServicePriceLookupKey(ctx),
+      slug,
+      serviceType: input.serviceType,
+      billingType: input.billingType,
+      pricingModel,
     },
-  ];
+    terms,
+  );
+}
+
+export function saveInputToCatalogTerms(
+  existing: Pick<
+    CatalogServiceRecord,
+    "slug" | "serviceType" | "billingType" | "pricingModel" | "terms"
+  >,
+  input: SaveCatalogServiceInput,
+  slug: string,
+): CatalogServiceTerm[] {
+  const pricingModel = existing.pricingModel ?? "by_term";
+  const terms = saveInputToServiceTerms(input).map((t) => {
+    const prev = existing.terms.find((p) => p.months === t.months);
+    return {
+      ...t,
+      ...(prev?.stripePriceId ? { stripePriceId: prev.stripePriceId } : {}),
+    };
+  });
+
+  return applyCatalogServiceTermLookupKeys(
+    {
+      slug,
+      serviceType: existing.serviceType ?? "plan",
+      billingType: existing.billingType ?? "recurring",
+      pricingModel,
+    },
+    terms,
+  );
 }
 
 export function resolveCreateCatalogSlug(input: CreateCatalogServiceInput): string {

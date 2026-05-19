@@ -79,16 +79,47 @@ export function isLegacyCatalogService(
   return !service.serviceType;
 }
 
-export function resolveCatalogServiceTermLookupKey(
-  service: CatalogServiceRecord,
-  term: CatalogServiceTerm,
+function computedCatalogServiceTermLookupKey(
+  service: Pick<
+    CatalogServiceRecord,
+    "slug" | "serviceType" | "billingType" | "pricingModel"
+  >,
+  term: Pick<CatalogServiceTerm, "months">,
 ): string {
-  if (term.lookupKey?.trim()) return term.lookupKey.trim();
   const months = term.months;
   if (isLegacyCatalogService(service)) {
     return legacyCatalogServicePriceLookupKey(service.slug, months ?? 12);
   }
-  return buildCatalogServicePriceLookupKey(catalogServiceLookupContext(service), months);
+  return buildCatalogServicePriceLookupKey(catalogServiceLookupContext(service as CatalogServiceRecord), months);
+}
+
+/** Persist fully-qualified Stripe lookup keys on each term (not just the base segment from the form). */
+export function applyCatalogServiceTermLookupKeys(
+  service: Pick<
+    CatalogServiceRecord,
+    "slug" | "serviceType" | "billingType" | "pricingModel"
+  >,
+  terms: CatalogServiceTerm[],
+): CatalogServiceTerm[] {
+  return terms.map((term) => ({
+    ...term,
+    lookupKey: computedCatalogServiceTermLookupKey(service, term),
+  }));
+}
+
+export function resolveCatalogServiceTermLookupKey(
+  service: CatalogServiceRecord,
+  term: CatalogServiceTerm,
+): string {
+  const computed = computedCatalogServiceTermLookupKey(service, term);
+  const stored = term.lookupKey?.trim();
+  if (!stored) return computed;
+
+  const base = normalizeLookupKeyBase(service.slug);
+  if (stored === base || stored === service.slug.trim()) {
+    return computed;
+  }
+  return stored;
 }
 
 /** @deprecated Use {@link buildCatalogServicePriceLookupKey} or {@link resolveCatalogServiceTermLookupKey}. */
