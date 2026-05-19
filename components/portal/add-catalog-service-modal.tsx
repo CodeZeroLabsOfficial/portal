@@ -60,6 +60,13 @@ function majorInputToMinor(raw: string): number {
   return Math.round(n * 100);
 }
 
+/** Derive lookup key from name; leave empty until the user enters a name. */
+function lookupKeyBaseFromName(name: string): string {
+  const trimmed = name.trim();
+  if (!trimmed) return "";
+  return slugifyCatalogServiceName(trimmed);
+}
+
 export function AddCatalogServiceModal({ open, onOpenChange }: AddCatalogServiceModalProps) {
   const router = useRouter();
   const [serverError, setServerError] = React.useState<string | null>(null);
@@ -84,7 +91,7 @@ export function AddCatalogServiceModal({ open, onOpenChange }: AddCatalogService
   const isByTerm = !isOneOff && pricingModel === "by_term";
 
   const resolvedLookupBase =
-    normalizeLookupKeyBase(lookupKeyBase) || slugifyCatalogServiceName(name);
+    normalizeLookupKeyBase(lookupKeyBase) || lookupKeyBaseFromName(name);
 
   const lookupPreview = React.useMemo(() => {
     const ctx = {
@@ -110,7 +117,7 @@ export function AddCatalogServiceModal({ open, onOpenChange }: AddCatalogService
 
   React.useEffect(() => {
     if (!lookupTouched) {
-      setLookupKeyBase(slugifyCatalogServiceName(name));
+      setLookupKeyBase(lookupKeyBaseFromName(name));
     }
   }, [name, lookupTouched]);
 
@@ -219,12 +226,11 @@ export function AddCatalogServiceModal({ open, onOpenChange }: AddCatalogService
                 id="catalog-service-name"
                 autoComplete="off"
                 className={fieldClass}
-                placeholder={serviceType === "plan" ? "Professional plan" : "Extra location"}
+                placeholder="Service or product name"
                 disabled={busy}
-                {...form.register("name")}
-              />
-              <p className="text-xs text-zinc-500">Stripe product name</p>
-              {form.formState.errors.name ? (
+              {...form.register("name")}
+            />
+            {form.formState.errors.name ? (
                 <p className="text-xs leading-tight text-destructive">{form.formState.errors.name.message}</p>
               ) : null}
             </div>
@@ -242,7 +248,7 @@ export function AddCatalogServiceModal({ open, onOpenChange }: AddCatalogService
                 "min-h-[3.25rem] w-full resize-none rounded-md border px-3 py-2 text-sm",
                 fieldClass,
               )}
-              placeholder="Shown on Stripe prices and product details"
+              placeholder="Provide a brief description of the product or service"
               {...form.register("description")}
             />
           </div>
@@ -304,7 +310,7 @@ export function AddCatalogServiceModal({ open, onOpenChange }: AddCatalogService
                 id="catalog-lookup-key"
                 autoComplete="off"
                 className={cn(fieldClass, "font-mono")}
-                placeholder="professional"
+                placeholder="Enter unique lookup key (e.g. premium_monthly)"
                 value={lookupKeyBase}
                 disabled={busy}
                 onChange={(e) => {
@@ -315,10 +321,12 @@ export function AddCatalogServiceModal({ open, onOpenChange }: AddCatalogService
               {errors.lookupKeyBase ? (
                 <p className="text-xs leading-tight text-destructive">{errors.lookupKeyBase.message}</p>
               ) : null}
-              <p className="text-xs leading-snug text-zinc-500">
-                Stripe lookup key{lookupPreview.length > 1 ? "s" : ""}:{" "}
-                <span className="font-mono text-zinc-400">{lookupPreview.join(" · ")}</span>
-              </p>
+              {resolvedLookupBase ? (
+                <p className="text-xs leading-snug text-zinc-500">
+                  Stripe lookup key{lookupPreview.length > 1 ? "s" : ""}:{" "}
+                  <span className="font-mono text-zinc-400">{lookupPreview.join(" · ")}</span>
+                </p>
+              ) : null}
             </div>
 
             {isFlat ? (
