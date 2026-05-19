@@ -32,7 +32,7 @@ import { formatLastEditedInLocality } from "@/lib/proposal-locality-dates";
 import { CloneProposalTemplateButton } from "@/components/proposal/clone-proposal-template-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { listRowIconActionClassName } from "@/components/ui/hover-reveal-button";
+import { listRowIconActionClassName } from "@/components/ui/list-row-icon-action";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 

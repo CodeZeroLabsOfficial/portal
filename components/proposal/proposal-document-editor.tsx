@@ -138,7 +138,6 @@ import { saveContractTemplateAction } from "@/server/actions/contract-templates"
 import { DeleteContractTemplateButton } from "@/components/portal/delete-contract-template-button";
 import { ContractTemplateAgreementPreview } from "@/components/portal/contract-template-agreement-preview";
 import { Button } from "@/components/ui/button";
-import { HoverRevealAnchor, HoverRevealButton, HoverRevealLink } from "@/components/ui/hover-reveal-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -3630,18 +3629,25 @@ export function ProposalDocumentEditor({
                   templateName={templateName.trim() || initialTemplateName || "Untitled template"}
                 />
               )}
-              <HoverRevealLink
-                label="Preview"
-                href={
-                  isContractTemplate
-                    ? `/admin/templates/contracts/${contractTemplateId}/preview`
-                    : `/admin/templates/${templateId}/preview`
-                }
-                target="_blank"
-                rel="noopener noreferrer"
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 text-muted-foreground hover:text-foreground"
+                asChild
               >
-                <ExternalLink className="h-4 w-4 shrink-0" aria-hidden />
-              </HoverRevealLink>
+                <Link
+                  href={
+                    isContractTemplate
+                      ? `/admin/templates/contracts/${contractTemplateId}/preview`
+                      : `/admin/templates/${templateId}/preview`
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <ExternalLink className="h-4 w-4" aria-hidden />
+                  Preview
+                </Link>
+              </Button>
               <Button type="button" size="sm" disabled={saving} onClick={() => void save()} className="gap-2">
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                 Save
@@ -3683,20 +3689,29 @@ export function ProposalDocumentEditor({
             </div>
             <div className="flex flex-wrap items-center justify-end gap-2">
               {proposalEditShellToolbar.shareToken ? (
-                <HoverRevealAnchor
-                  label="Preview"
-                  href={`/p/${encodeURIComponent(proposalEditShellToolbar.shareToken)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1.5 text-muted-foreground hover:text-foreground"
+                  asChild
                 >
-                  <ExternalLink className="h-4 w-4 shrink-0" aria-hidden />
-                </HoverRevealAnchor>
+                  <Link
+                    href={`/p/${encodeURIComponent(proposalEditShellToolbar.shareToken)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <ExternalLink className="h-4 w-4" aria-hidden />
+                    Preview
+                  </Link>
+                </Button>
               ) : null}
-              <HoverRevealButton
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
                 disabled={sending}
                 onClick={() => void send()}
-                label={publishJustSucceeded && !sending ? "Published" : "Publish"}
+                className="min-w-[7rem] gap-1.5 text-muted-foreground transition-colors hover:text-foreground"
                 aria-label={publishJustSucceeded && !sending ? "Published" : "Publish"}
               >
                 {sending ? (
@@ -3706,7 +3721,8 @@ export function ProposalDocumentEditor({
                 ) : (
                   <Send className="h-4 w-4 shrink-0" aria-hidden />
                 )}
-              </HoverRevealButton>
+                {publishJustSucceeded && !sending ? "Published" : "Publish"}
+              </Button>
               <Button
                 type="button"
                 size="sm"

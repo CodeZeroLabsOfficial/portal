@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Copy, Loader2 } from "lucide-react";
 import { cloneProposalTemplateAction } from "@/server/actions/proposal-templates";
 import { Button } from "@/components/ui/button";
-import { listRowIconActionClassName } from "@/components/ui/hover-reveal-button";
+import { listRowIconActionClassName } from "@/components/ui/list-row-icon-action";
 
 export function CloneProposalTemplateButton({
   templateId,

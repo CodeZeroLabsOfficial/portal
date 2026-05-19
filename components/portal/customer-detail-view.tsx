@@ -46,6 +46,7 @@ import { createDraftProposalFromCustomerAction } from "@/server/actions/proposal
 import { convertLeadToContactAction } from "@/server/actions/opportunities-crm";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { listRowIconActionClassName } from "@/components/ui/list-row-icon-action";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
@@ -815,9 +816,12 @@ export function CustomerDetailView({
                     <div className="flex shrink-0 items-center gap-1.5 sm:ml-auto">
                       <Button
                         type="button"
-                        variant="outline"
+                        variant="ghost"
                         size="icon"
-                        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        className={cn(
+                          listRowIconActionClassName,
+                          "hover:bg-destructive/10 hover:text-destructive",
+                        )}
                         disabled={deletingProposalId === p.id}
                         aria-label={`Delete proposal “${p.title}”`}
                         onClick={() => void deleteProposal(p.id, p.title)}
@@ -828,7 +832,7 @@ export function CustomerDetailView({
                           <Trash2 className="h-4 w-4" aria-hidden />
                         )}
                       </Button>
-                      <Button variant="outline" size="icon" asChild>
+                      <Button variant="ghost" size="icon" className={listRowIconActionClassName} asChild>
                         <Link
                           href={`/admin/proposals/${p.id}?customer=${encodeURIComponent(customer.id)}`}
                           aria-label={`Edit proposal “${p.title}”`}
@@ -837,7 +841,7 @@ export function CustomerDetailView({
                         </Link>
                       </Button>
                       {p.shareToken ? (
-                        <Button variant="outline" size="icon" asChild>
+                        <Button variant="ghost" size="icon" className={listRowIconActionClassName} asChild>
                           <Link
                             href={`/p/${p.shareToken}`}
                             target="_blank"

@@ -10,6 +10,7 @@ import { cloneProposalAction, deleteProposalAction } from "@/server/actions/prop
 import { formatLastEditedInLocality } from "@/lib/proposal-locality-dates";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { listRowIconActionClassName } from "@/components/ui/list-row-icon-action";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
@@ -263,9 +264,12 @@ export function ProposalsListPanel({ proposals, localityTimeZone }: ProposalsLis
                         <div className="flex items-center justify-center gap-1">
                           <Button
                             type="button"
-                            variant="outline"
+                            variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            className={cn(
+                              listRowIconActionClassName,
+                              "hover:bg-destructive/10 hover:text-destructive",
+                            )}
                             disabled={deletingId === p.id}
                             aria-label={`Delete proposal “${p.title}”`}
                             onClick={() => void onDelete(p)}
@@ -278,9 +282,9 @@ export function ProposalsListPanel({ proposals, localityTimeZone }: ProposalsLis
                           </Button>
                           <Button
                             type="button"
-                            variant="outline"
+                            variant="ghost"
                             size="icon"
-                            className="h-8 w-8"
+                            className={listRowIconActionClassName}
                             disabled={cloningId === p.id}
                             aria-label={`Clone proposal “${p.title}”`}
                             onClick={() => void onClone(p)}
@@ -291,13 +295,13 @@ export function ProposalsListPanel({ proposals, localityTimeZone }: ProposalsLis
                               <Copy className="h-4 w-4" aria-hidden />
                             )}
                           </Button>
-                          <Button variant="outline" size="icon" className="h-8 w-8" asChild>
+                          <Button variant="ghost" size="icon" className={listRowIconActionClassName} asChild>
                             <Link href={editHref(p)} aria-label={`Edit proposal “${p.title}”`}>
                               <Pencil className="h-4 w-4" aria-hidden />
                             </Link>
                           </Button>
                           {p.shareToken ? (
-                            <Button variant="outline" size="icon" className="h-8 w-8" asChild>
+                            <Button variant="ghost" size="icon" className={listRowIconActionClassName} asChild>
                               <Link
                                 href={`/p/${p.shareToken}`}
                                 target="_blank"
