@@ -122,7 +122,10 @@ export default async function AdminProposalDetailPage({ params, searchParams }: 
               </dt>
               <dd className="text-foreground">
                 {customerId && recipientDisplayName ? (
-                  <Link href={`/admin/customers/${customerId}`} className="text-primary hover:underline">
+                  <Link
+                    href={`/admin/customers/${customerId}`}
+                    className="text-foreground underline-offset-4 hover:underline"
+                  >
                     {recipientDisplayName}
                   </Link>
                 ) : recipient ? (
@@ -205,7 +208,7 @@ export default async function AdminProposalDetailPage({ params, searchParams }: 
                 {sourceTemplateId ? (
                   <Link
                     href={`/admin/templates/${sourceTemplateId}`}
-                    className="text-primary hover:underline"
+                    className="text-foreground underline-offset-4 hover:underline"
                   >
                     {templateName ?? "Untitled template"}
                   </Link>

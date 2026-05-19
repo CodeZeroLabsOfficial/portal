@@ -404,24 +404,6 @@ export function CustomerDetailView({
               Convert lead
             </Button>
           ) : null}
-          {!customer.portalUserId?.trim() ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="gap-1.5 text-muted-foreground hover:text-foreground"
-              disabled={!customer.email?.trim() || enableAccessBusy}
-              title={!customer.email?.trim() ? "Add an email to this customer first." : undefined}
-              onClick={() => void enablePortalAccess()}
-            >
-              {enableAccessBusy ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              ) : (
-                <LogIn className="h-4 w-4" aria-hidden />
-              )}
-              Enable access
-            </Button>
-          ) : null}
           <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground hover:text-foreground" asChild>
             <Link href={`/admin/customers/${customer.id}/edit`}>
               <Pencil className="h-4 w-4" aria-hidden />
@@ -495,11 +477,29 @@ export function CustomerDetailView({
           </Card>
 
           <Card className="border-border/80 bg-card/80 shadow-sm">
-            <CardHeader className="border-b border-border/60 bg-muted/20">
+            <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0 border-b border-border/60 bg-muted/20">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <LogIn className="h-5 w-5 text-muted-foreground" aria-hidden />
                 Portal access
               </CardTitle>
+              {!customer.portalUserId?.trim() ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="shrink-0 gap-1.5 text-muted-foreground hover:text-foreground"
+                  disabled={!customer.email?.trim() || enableAccessBusy}
+                  title={!customer.email?.trim() ? "Add an email to this customer first." : undefined}
+                  onClick={() => void enablePortalAccess()}
+                >
+                  {enableAccessBusy ? (
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                  ) : (
+                    <LogIn className="h-4 w-4" aria-hidden />
+                  )}
+                  Enable access
+                </Button>
+              ) : null}
             </CardHeader>
             <CardContent className="space-y-4 p-4 text-sm">
               <div className="rounded-xl border border-border/60 bg-background/40 p-3">
