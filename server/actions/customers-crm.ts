@@ -67,11 +67,10 @@ export async function updateCustomerAction(
   }
   const id = parsed.data.id;
   revalidateCrmCustomerPaths(id);
-  revalidatePath(`/admin/customers/${id}/edit`);
   return { ok: true };
 }
 
-/** Staff-only: link or create Auth user for the CRM email and set `portalUserId` (mirrors edit-form “link + create” path). */
+/** Staff-only: link or create Auth user for the CRM email and set `portalUserId`. */
 export async function enableCustomerPortalAccessAction(
   customerId: string,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
@@ -88,7 +87,6 @@ export async function enableCustomerPortalAccessAction(
     return result;
   }
   revalidateCrmCustomerPaths(id);
-  revalidatePath(`/admin/customers/${id}/edit`);
   return { ok: true };
 }
 
@@ -112,7 +110,7 @@ export async function generatePortalPasswordResetLinkAction(
   if (!portalUid) {
     return {
       ok: false,
-      message: "No portal login is linked. Use Edit customer to link or create User Access for this email first.",
+      message: "No portal login is linked. Use Link user on the customer profile first.",
     };
   }
   const auth = getFirebaseAdminAuth();

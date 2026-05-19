@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Building2, FileText, Mail, MapPin, Phone, Tag, Users } from "lucide-react";
+import { Building2, FileText, Loader2, Mail, MapPin, Phone, Sparkles, Tag, Users } from "lucide-react";
 import { z } from "zod";
 import { updateCustomerAction } from "@/server/actions/customers-crm";
 import {
@@ -12,6 +12,7 @@ import {
 import { addressBlockFromFields, addressFieldsFromBlock } from "@/lib/format";
 import type { CustomerRecord } from "@/types/customer";
 import { InlineEditableField } from "@/components/portal/inline-editable-field";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const detailLabelClass =
@@ -21,9 +22,15 @@ const detailLabelIconClass = "h-3.5 w-3.5 shrink-0 opacity-80";
 
 export interface CustomerContactDetailsCardProps {
   customer: CustomerRecord;
+  convertLeadBusy?: boolean;
+  onConvertLead?: () => void;
 }
 
-export function CustomerContactDetailsCard({ customer }: CustomerContactDetailsCardProps) {
+export function CustomerContactDetailsCard({
+  customer,
+  convertLeadBusy = false,
+  onConvertLead,
+}: CustomerContactDetailsCardProps) {
   const router = useRouter();
   const [activeFieldId, setActiveFieldId] = React.useState<string | null>(null);
   const fieldsDisabled = customer.status === "archived";
@@ -50,11 +57,28 @@ export function CustomerContactDetailsCard({ customer }: CustomerContactDetailsC
 
   return (
     <Card className="border-border/80 bg-card/80 shadow-sm lg:col-span-2">
-      <CardHeader className="border-b border-border/60 bg-muted/20">
+      <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0 border-b border-border/60 bg-muted/20">
         <CardTitle className="flex items-center gap-2 text-lg">
           <Users className="h-5 w-5 text-muted-foreground" aria-hidden />
           Contact details
         </CardTitle>
+        {customer.crmType === "lead" && onConvertLead ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="shrink-0 gap-1.5 text-muted-foreground hover:text-foreground"
+            disabled={convertLeadBusy}
+            onClick={onConvertLead}
+          >
+            {convertLeadBusy ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            ) : (
+              <Sparkles className="h-4 w-4" aria-hidden />
+            )}
+            Convert lead
+          </Button>
+        ) : null}
       </CardHeader>
       <CardContent className="space-y-5 p-6 text-sm">
         <dl className="grid gap-4 sm:grid-cols-2">

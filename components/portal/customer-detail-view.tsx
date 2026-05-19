@@ -379,39 +379,12 @@ export function CustomerDetailView({
   return (
     <>
       <div className="space-y-8">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <Button variant="ghost" size="sm" className="-ml-2 gap-1.5 text-muted-foreground hover:text-foreground" asChild>
-          <Link href="/admin/customers">
-            <ArrowLeft className="h-4 w-4" aria-hidden />
-            Customers
-          </Link>
-        </Button>
-        <div className="-mr-2 flex flex-wrap items-center justify-end gap-1">
-          {customer.crmType === "lead" ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="gap-1.5 text-muted-foreground hover:text-foreground"
-              disabled={busy === "convert-lead"}
-              onClick={() => void convertLead()}
-            >
-              {busy === "convert-lead" ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              ) : (
-                <Sparkles className="h-4 w-4" aria-hidden />
-              )}
-              Convert lead
-            </Button>
-          ) : null}
-          <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground hover:text-foreground" asChild>
-            <Link href={`/admin/customers/${customer.id}/edit`}>
-              <Pencil className="h-4 w-4" aria-hidden />
-              Edit
-            </Link>
-          </Button>
-        </div>
-      </div>
+      <Button variant="ghost" size="sm" className="-ml-2 gap-1.5 text-muted-foreground hover:text-foreground" asChild>
+        <Link href="/admin/customers">
+          <ArrowLeft className="h-4 w-4" aria-hidden />
+          Customers
+        </Link>
+      </Button>
 
       <motion.header initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="border-b border-border/80 pb-6">
         <div className="flex min-w-0 items-start gap-4">
@@ -449,7 +422,11 @@ export function CustomerDetailView({
       </motion.header>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <CustomerContactDetailsCard customer={customer} />
+        <CustomerContactDetailsCard
+          customer={customer}
+          convertLeadBusy={busy === "convert-lead"}
+          onConvertLead={() => void convertLead()}
+        />
 
         <div className="flex flex-col gap-4">
           <Card className="border-border/80 bg-card/80 shadow-sm">
@@ -497,7 +474,7 @@ export function CustomerDetailView({
                   ) : (
                     <LogIn className="h-4 w-4" aria-hidden />
                   )}
-                  Enable access
+                  Link user
                 </Button>
               ) : null}
             </CardHeader>
