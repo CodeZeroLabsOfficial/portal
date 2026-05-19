@@ -26,6 +26,7 @@ import {
 import { FormServerError } from "@/components/ui/form-server-error";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NumericStepper } from "@/components/ui/numeric-stepper";
 import { cn } from "@/lib/utils";
 import { WORKSPACE_GLASS_DIALOG_SURFACE_CLASSES } from "@/lib/workspace-glass";
 import type { CatalogServiceKind } from "@/types/catalog-service";
@@ -88,6 +89,9 @@ export function AddCatalogServiceModal({ open, onOpenChange }: AddCatalogService
   const serviceType = form.watch("serviceType");
   const billingType = form.watch("billingType");
   const pricingModel = form.watch("pricingModel");
+  const includedUsers = form.watch("includedUsers") ?? 0;
+  const includedLocations = form.watch("includedLocations") ?? 0;
+  const includedAdmins = form.watch("includedAdmins") ?? 0;
 
   const isPlan = serviceType === "plan";
   const isOneOff = billingType === "one_off";
@@ -255,7 +259,7 @@ export function AddCatalogServiceModal({ open, onOpenChange }: AddCatalogService
                 "min-h-[3.25rem] w-full resize-none rounded-md border px-3 py-2 text-sm",
                 fieldClass,
               )}
-              placeholder="Product description in Stripe (not shown on individual prices)"
+              placeholder="Provide a brief description of the product or service"
               {...form.register("description")}
             />
           </div>
@@ -397,47 +401,57 @@ export function AddCatalogServiceModal({ open, onOpenChange }: AddCatalogService
 
           {isPlan ? (
             <div className="space-y-2">
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="catalog-included-users" className={labelClass}>
+              <p className="text-xs font-medium text-zinc-400">Package entitlements</p>
+              <ul className="space-y-2 rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-2">
+                <li className="flex items-center justify-between gap-3 py-1">
+                  <Label htmlFor="catalog-included-users" className={cn(labelClass, "font-normal")}>
                     Included users
                   </Label>
-                  <Input
+                  <NumericStepper
                     id="catalog-included-users"
-                    type="number"
-                    min={0}
+                    variant="glass"
+                    value={includedUsers}
+                    max={1_000_000}
                     disabled={busy}
-                    className={fieldClass}
-                    {...form.register("includedUsers", { valueAsNumber: true })}
+                    aria-label="Included users"
+                    onChange={(next) =>
+                      form.setValue("includedUsers", next, { shouldDirty: true, shouldValidate: true })
+                    }
                   />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="catalog-included-locations" className={labelClass}>
+                </li>
+                <li className="flex items-center justify-between gap-3 py-1">
+                  <Label htmlFor="catalog-included-locations" className={cn(labelClass, "font-normal")}>
                     Included locations
                   </Label>
-                  <Input
+                  <NumericStepper
                     id="catalog-included-locations"
-                    type="number"
-                    min={0}
+                    variant="glass"
+                    value={includedLocations}
+                    max={1_000_000}
                     disabled={busy}
-                    className={fieldClass}
-                    {...form.register("includedLocations", { valueAsNumber: true })}
+                    aria-label="Included locations"
+                    onChange={(next) =>
+                      form.setValue("includedLocations", next, { shouldDirty: true, shouldValidate: true })
+                    }
                   />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="catalog-included-admins" className={labelClass}>
+                </li>
+                <li className="flex items-center justify-between gap-3 py-1">
+                  <Label htmlFor="catalog-included-admins" className={cn(labelClass, "font-normal")}>
                     Included admins
                   </Label>
-                  <Input
+                  <NumericStepper
                     id="catalog-included-admins"
-                    type="number"
-                    min={0}
+                    variant="glass"
+                    value={includedAdmins}
+                    max={1_000_000}
                     disabled={busy}
-                    className={fieldClass}
-                    {...form.register("includedAdmins", { valueAsNumber: true })}
+                    aria-label="Included admins"
+                    onChange={(next) =>
+                      form.setValue("includedAdmins", next, { shouldDirty: true, shouldValidate: true })
+                    }
                   />
-                </div>
-              </div>
+                </li>
+              </ul>
             </div>
           ) : null}
 
