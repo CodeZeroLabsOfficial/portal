@@ -7,7 +7,6 @@ import { listCatalogServicePickerOptionsForOrg } from "@/server/firestore/catalo
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WorkspaceShell } from "@/components/portal/workspace-shell";
-import { WORKSPACE_MAIN_FLUSH_TOP_CLASS } from "@/lib/workspace-layout";
 import { ProposalDocumentEditorLazy } from "@/components/proposal/proposal-document-editor-lazy";
 import { ProposalShareSettings } from "@/components/proposal/proposal-share-settings";
 import { formatCurrencyAmount } from "@/lib/format";
@@ -223,7 +222,6 @@ export default async function AdminProposalDetailPage({ params, searchParams }: 
       userLabel={user.email || user.uid}
       showMainHeader={false}
       showRightAside={false}
-      mainClassName={WORKSPACE_MAIN_FLUSH_TOP_CLASS}
     >
       <ProposalDocumentEditorLazy
         proposalId={proposal.id}

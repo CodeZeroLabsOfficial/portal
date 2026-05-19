@@ -4,8 +4,6 @@ import { getProposalTemplateForStaff } from "@/server/firestore/proposal-templat
 import { listCatalogServicePickerOptionsForOrg } from "@/server/firestore/catalog-services";
 import { ProposalDocumentEditorLazy } from "@/components/proposal/proposal-document-editor-lazy";
 import { WorkspaceShell } from "@/components/portal/workspace-shell";
-import { WORKSPACE_MAIN_FLUSH_TOP_CLASS } from "@/lib/workspace-layout";
-
 interface PageProps {
   params: Promise<{ templateId: string }>;
 }
@@ -36,7 +34,6 @@ export default async function EditProposalTemplatePage({ params }: PageProps) {
       userLabel={user.email || user.uid}
       showMainHeader={false}
       showRightAside={false}
-      mainClassName={WORKSPACE_MAIN_FLUSH_TOP_CLASS}
     >
       <ProposalDocumentEditorLazy
         variant="template"

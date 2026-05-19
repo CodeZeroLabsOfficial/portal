@@ -1060,9 +1060,10 @@ function TierCard({
               className={cn(
                 "mt-0.5 w-full rounded-md border px-2 py-1.5 text-xs outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring",
                 isRecommended
-                  ? "border-white/35 bg-white/95 text-foreground"
+                  ? "border-white/35 bg-white text-slate-900 [color-scheme:light]"
                   : "border-border bg-background text-foreground",
               )}
+              style={isRecommended ? { color: "#0f172a" } : undefined}
               value={tier.serviceId ?? ""}
               onChange={(e) => {
                 const v = e.target.value.trim();

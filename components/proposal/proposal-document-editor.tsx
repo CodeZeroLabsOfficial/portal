@@ -3557,7 +3557,7 @@ export function ProposalDocumentEditor({
     <ProposalMediaLibraryProvider>
     <ProposalContractTemplateLibraryProvider>
     <BlockMenuProfileContext.Provider value={blockMenuProfile}>
-    <div className="space-y-6">
+    <div className="space-y-8">
       {isNamedTemplateShell && (templateId || contractTemplateId) ? (
         <>
           <div className="flex flex-wrap items-center gap-3">
