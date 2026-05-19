@@ -19,7 +19,7 @@ import { FormServerError } from "@/components/ui/form-server-error";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatCurrencyAmount } from "@/lib/format";
-import type { SubscriptionProductOption } from "@/types/subscription-product";
+import type { CatalogServicePickerOption } from "@/types/catalog-service";
 import { getFirebasePublicConfig } from "@/lib/env/client-public";
 import { cn } from "@/lib/utils";
 import { WORKSPACE_GLASS_DIALOG_SURFACE_CLASSES } from "@/lib/workspace-glass";
@@ -52,7 +52,7 @@ interface AddSubscriptionModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   customerOptions: { id: string; label: string }[];
-  productOptions: SubscriptionProductOption[];
+  catalogServiceOptions: CatalogServicePickerOption[];
 }
 interface SavedCardOption {
   id: string;
@@ -69,7 +69,7 @@ function todayIsoDate(): string {
 
 const defaultValues: CreateSubscriptionInput = {
   customerId: "",
-  priceId: "",
+  serviceId: "",
   startDate: todayIsoDate(),
   durationMonths: 12,
   collectionMethod: "charge_automatically",
@@ -81,7 +81,7 @@ export function AddSubscriptionModal({
   open,
   onOpenChange,
   customerOptions,
-  productOptions,
+  catalogServiceOptions,
 }: AddSubscriptionModalProps) {
   const router = useRouter();
   const [serverError, setServerError] = React.useState<string | null>(null);
@@ -100,7 +100,7 @@ export function AddSubscriptionModal({
     defaultValues,
   });
 
-  const orderedProductOptions = React.useMemo(() => {
+  const orderedServices = React.useMemo(() => {
     const rank = (name: string): number => {
       const n = name.trim().toLowerCase();
       if (n === "starter") return 0;
@@ -109,21 +109,21 @@ export function AddSubscriptionModal({
       if (n === "enterprise") return 3;
       return 100;
     };
-    return [...productOptions].sort((a, b) => {
-      const ra = rank(a.productName);
-      const rb = rank(b.productName);
+    return [...catalogServiceOptions].sort((a, b) => {
+      const ra = rank(a.serviceName);
+      const rb = rank(b.serviceName);
       if (ra !== rb) return ra - rb;
-      return a.productName.localeCompare(b.productName, undefined, { sensitivity: "base" });
+      return a.serviceName.localeCompare(b.serviceName, undefined, { sensitivity: "base" });
     });
-  }, [productOptions]);
+  }, [catalogServiceOptions]);
 
   const collectionMethod = form.watch("collectionMethod");
-  const selectedProductId = form.watch("priceId");
-  const selectedProduct = React.useMemo(
-    () => productOptions.find((p) => p.productId === selectedProductId),
-    [productOptions, selectedProductId],
+  const selectedServiceId = form.watch("serviceId");
+  const selectedService = React.useMemo(
+    () => catalogServiceOptions.find((s) => s.serviceId === selectedServiceId),
+    [catalogServiceOptions, selectedServiceId],
   );
-  const durationOptions = selectedProduct?.durations ?? [];
+  const durationOptions = selectedService?.durations ?? [];
   const selectedCustomerId = form.watch("customerId");
   const effectivePmId = form.watch("defaultPaymentMethodId");
   const publishableKey = getFirebasePublicConfig()?.stripePublishableKey?.trim();
@@ -147,25 +147,24 @@ export function AddSubscriptionModal({
 
   React.useEffect(() => {
     if (!open) return;
-    const firstProduct =
-      orderedProductOptions.find((p) => p.productName.trim().toLowerCase() === "starter") ??
-      orderedProductOptions[0];
-    if (firstProduct && !selectedProductId) {
-      form.setValue("priceId", firstProduct.productId, { shouldValidate: true });
-      if (firstProduct.durations[0]) {
-        form.setValue("durationMonths", firstProduct.durations[0].months, { shouldValidate: true });
+    const firstService =
+      orderedServices.find((s) => s.serviceName.trim().toLowerCase() === "starter") ?? orderedServices[0];
+    if (firstService && !selectedServiceId) {
+      form.setValue("serviceId", firstService.serviceId, { shouldValidate: true });
+      if (firstService.durations[0]) {
+        form.setValue("durationMonths", firstService.durations[0].months, { shouldValidate: true });
       }
     }
-  }, [open, orderedProductOptions, selectedProductId, form]);
+  }, [open, orderedServices, selectedServiceId, form]);
 
   React.useEffect(() => {
-    if (!selectedProduct) return;
+    if (!selectedService) return;
     const current = form.getValues("durationMonths");
-    const valid = selectedProduct.durations.some((d) => d.months === current);
-    if (!valid && selectedProduct.durations[0]) {
-      form.setValue("durationMonths", selectedProduct.durations[0].months, { shouldValidate: true });
+    const valid = selectedService.durations.some((d) => d.months === current);
+    if (!valid && selectedService.durations[0]) {
+      form.setValue("durationMonths", selectedService.durations[0].months, { shouldValidate: true });
     }
-  }, [selectedProduct, form]);
+  }, [selectedService, form]);
 
   React.useEffect(() => {
     if (!open || collectionMethod !== "charge_automatically") return;
@@ -343,12 +342,11 @@ export function AddSubscriptionModal({
     setServerError(null);
     const duration = durationOptions.find((d) => d.months === values.durationMonths);
     if (!duration) {
-      setServerError("Select a valid duration for the selected product.");
+      setServerError("Select a valid duration for the selected service.");
       return;
     }
     const payload: CreateSubscriptionInput = {
       ...values,
-      priceId: duration.priceId,
       daysUntilDue:
         values.collectionMethod === "send_invoice" ? values.daysUntilDue ?? 14 : undefined,
       defaultPaymentMethodId:
@@ -409,20 +407,22 @@ export function AddSubscriptionModal({
 
           <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="subscriptionProduct" className="text-zinc-300">
-                Product
+              <Label htmlFor="subscriptionService" className="text-zinc-300">
+                Service
               </Label>
               <select
-                id="subscriptionProduct"
+                id="subscriptionService"
                 className="flex h-9 w-full rounded-md border border-white/[0.08] bg-white/[0.04] px-3 py-1 text-sm text-white shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#141414]"
-                disabled={busy || orderedProductOptions.length === 0}
-                value={selectedProductId}
-                onChange={(e) => form.setValue("priceId", e.target.value, { shouldValidate: true })}
+                disabled={busy || orderedServices.length === 0}
+                value={selectedServiceId}
+                onChange={(e) => form.setValue("serviceId", e.target.value, { shouldValidate: true })}
               >
-                {orderedProductOptions.length === 0 ? <option value="">No Stripe products found</option> : null}
-                {orderedProductOptions.map((opt) => (
-                  <option key={opt.productId} value={opt.productId}>
-                    {opt.productName}
+                {orderedServices.length === 0 ? (
+                  <option value="">No active services — add one under Services</option>
+                ) : null}
+                {orderedServices.map((opt) => (
+                  <option key={opt.serviceId} value={opt.serviceId}>
+                    {opt.serviceName}
                   </option>
                 ))}
               </select>
@@ -441,7 +441,7 @@ export function AddSubscriptionModal({
               >
                 {durationOptions.length === 0 ? <option value="">No durations</option> : null}
                 {durationOptions.map((d) => (
-                  <option key={`${selectedProductId}-${d.months}`} value={d.months}>
+                  <option key={`${selectedServiceId}-${d.months}`} value={d.months}>
                     {d.months} months · {formatCurrencyAmount(d.unitAmountMinor, d.currency)}
                   </option>
                 ))}

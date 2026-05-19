@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { CircleDot, Clock, Eye, FileText, Mail, Wallet } from "lucide-react";
 import { getCurrentSessionUser } from "@/lib/auth/server-session";
 import { getAdminProposalRecord } from "@/server/firestore/portal-data";
-import { listStripeSubscriptionProductOptions } from "@/server/stripe/subscription-product-options";
+import { listCatalogServicePickerOptionsForOrg } from "@/server/firestore/catalog-services";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WorkspaceShell } from "@/components/portal/workspace-shell";
@@ -72,7 +72,7 @@ export default async function AdminProposalDetailPage({ params, searchParams }: 
     notFound();
   }
 
-  const subscriptionProductOptions = await listStripeSubscriptionProductOptions();
+  const catalogServiceOptions = await listCatalogServicePickerOptionsForOrg(user);
 
   const sp = await searchParams;
   const customerBackId = proposal.customerId?.trim() || firstQueryString(sp.customer);
@@ -230,7 +230,7 @@ export default async function AdminProposalDetailPage({ params, searchParams }: 
         initialDocument={proposal.document}
         initialStatus={proposal.status}
         localityTimeZone={user.timeZone?.trim() || undefined}
-        subscriptionProductOptions={subscriptionProductOptions}
+        catalogServiceOptions={catalogServiceOptions}
         proposalEditShellToolbar={{
           customerBackHref: customerBackId ? `/admin/customers/${encodeURIComponent(customerBackId)}` : null,
           recipientEmail: recipient,

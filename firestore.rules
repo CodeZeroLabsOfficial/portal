@@ -1,0 +1,150 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userDocExists() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function userRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function userOrgId() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.organizationId;
+    }
+
+    function userStripeCustomerId() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.stripeCustomerId;
+    }
+
+    /// Existing admin check
+    function isAdmin() {
+      return userDocExists() && userRole() == 'admin';
+    }
+
+    /// Admin or team/staff
+    function isStaff() {
+      return userDocExists() && (userRole() == 'admin' || userRole() == 'team');
+    }
+
+    // MARK: User-scoped portal data (customer app + profile)
+
+    match /users/{userId} {
+      allow read: if signedIn() && request.auth.uid == userId;
+      allow write: if signedIn() && request.auth.uid == userId;
+
+      match /{collection}/{docId} {
+        allow read, write: if signedIn() && request.auth.uid == userId;
+      }
+    }
+
+    // MARK: CRM
+
+    match /subscriptions/{subscriptionId} {
+      // Customer reads own mirrored Stripe subscriptions by stripe customer id.
+      // Admins may list/read all mirrored subscriptions (dashboard KPIs, ops).
+      allow read: if signedIn()
+        && (
+          (
+            userDocExists()
+            && userStripeCustomerId() is string
+            && resource.data.customerId is string
+            && resource.data.customerId == userStripeCustomerId()
+          )
+          || (
+            isStaff()
+            && userOrgId() is string
+            && resource.data.organizationId is string
+            && resource.data.organizationId == userOrgId()
+          )
+          || isAdmin()
+        );
+
+      // Writes are server-side only (webhooks/admin backend).
+      allow create, update, delete: if false;
+    }
+
+    match /proposals/{proposalId} {
+      // Customer can read proposals directly associated with them.
+      // Staff/admin can read org-scoped proposals.
+      allow read: if signedIn()
+        && (
+          (resource.data.createdByUid is string && resource.data.createdByUid == request.auth.uid)
+          || (
+            request.auth.token.email is string
+            && resource.data.recipientEmail is string
+            && resource.data.recipientEmail == request.auth.token.email
+          )
+          || (
+            isStaff()
+            && userOrgId() is string
+            && resource.data.organizationId is string
+            && resource.data.organizationId == userOrgId()
+          )
+          || isAdmin()
+        );
+
+      // Writes are server-side only.
+      allow create, update, delete: if false;
+    }
+
+    match /customers/{customerId} {
+      allow read: if isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // MARK: Service catalogue (Portal → Stripe on activate; app writes via Admin SDK)
+
+    match /catalog_services/{serviceId} {
+      // Staff may read services for their org (list/get must target their organizationId).
+      allow read: if isStaff()
+        && userOrgId() is string
+        && resource.data.organizationId is string
+        && resource.data.organizationId == userOrgId();
+
+      // Mutations are server-side only (Next.js server actions + Admin SDK).
+      allow create, update, delete: if false;
+    }
+
+    // MARK: Templates (reusable proposal / contract content; app writes via Admin SDK)
+
+    match /contract_templates/{templateId} {
+      // Staff may read templates for their org (list/get must target their organizationId).
+      allow read: if isStaff()
+        && userOrgId() is string
+        && resource.data.organizationId is string
+        && resource.data.organizationId == userOrgId();
+
+      // Mutations are server-side only (Next.js server actions + Admin SDK).
+      allow create, update, delete: if false;
+    }
+
+    // MARK: Tasks
+
+    match /tasks/{taskId} {
+      allow read: if isStaff()
+        && userOrgId() is string
+        && resource.data.organizationId is string
+        && resource.data.organizationId == userOrgId();
+
+      allow update: if isStaff()
+        && userOrgId() is string
+        && resource.data.organizationId is string
+        && resource.data.organizationId == userOrgId()
+        && request.resource.data.organizationId == resource.data.organizationId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "status",
+          "updatedAt",
+          "updatedAtMs"
+        ]);
+      allow create, delete: if false;
+    }
+  }
+}

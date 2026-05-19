@@ -85,7 +85,7 @@ import type {
   TextBlock,
   VideoBlock,
 } from "@/types/proposal";
-import type { SubscriptionProductOption } from "@/types/subscription-product";
+import type { CatalogServicePickerOption } from "@/types/catalog-service";
 import { ProposalRichText } from "@/components/proposal/proposal-rich-text";
 import { ProposalDocumentView } from "@/components/proposal/proposal-document-view";
 import { ProposalSectionShell } from "@/components/proposal/proposal-section-shell";
@@ -178,7 +178,7 @@ import {
   SplashBlockInspector,
 } from "@/components/proposal/proposal-splash-editor";
 import { AccordionBlockEditor } from "@/components/proposal/accordion-block-editor";
-import { EditorStripeCatalogContext } from "@/components/proposal/editor-stripe-catalog-context";
+import { EditorCatalogServicesContext } from "@/components/proposal/editor-catalog-services-context";
 import { proposalRichHtmlToPlainText } from "@/lib/proposal-rich-plain-text";
 
 function newId(): string {
@@ -3196,8 +3196,8 @@ export interface ProposalDocumentEditorProps {
   proposalEditMiddleSlot?: ReactNode;
   /** Settings → Locality IANA zone for preview tab agreement dates and merge-style display. */
   localityTimeZone?: string;
-  /** Same Stripe products as **Add subscription** — used to link plan tiers to `prod_…`. */
-  subscriptionProductOptions?: SubscriptionProductOption[];
+  /** Active catalogue services — link plan tiers via `serviceId`. */
+  catalogServiceOptions?: CatalogServicePickerOption[];
 }
 
 export function ProposalDocumentEditor({
@@ -3213,7 +3213,7 @@ export function ProposalDocumentEditor({
   proposalEditShellToolbar,
   proposalEditMiddleSlot,
   localityTimeZone,
-  subscriptionProductOptions = [],
+  catalogServiceOptions = [],
 }: ProposalDocumentEditorProps) {
   const isTemplate = variant === "template";
   const isContractTemplate = variant === "contract-template";
@@ -3552,7 +3552,7 @@ export function ProposalDocumentEditor({
   }
 
   return (
-    <EditorStripeCatalogContext.Provider value={subscriptionProductOptions}>
+    <EditorCatalogServicesContext.Provider value={catalogServiceOptions}>
     <ProposalEditorLibraryScope>
     <ProposalMediaLibraryProvider>
     <ProposalContractTemplateLibraryProvider>
@@ -4029,6 +4029,6 @@ export function ProposalDocumentEditor({
     </ProposalContractTemplateLibraryProvider>
     </ProposalMediaLibraryProvider>
     </ProposalEditorLibraryScope>
-    </EditorStripeCatalogContext.Provider>
+    </EditorCatalogServicesContext.Provider>
   );
 }

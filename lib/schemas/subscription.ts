@@ -5,7 +5,7 @@ const trimmed = z.string().trim();
 export const createSubscriptionSchema = z
   .object({
     customerId: trimmed.min(1, "Customer is required"),
-    priceId: trimmed.min(1, "Product is required"),
+    serviceId: trimmed.min(1, "Service is required"),
     startDate: trimmed.regex(/^\d{4}-\d{2}-\d{2}$/, "Start date is required"),
     durationMonths: z.number().int().min(1).max(120),
     collectionMethod: z.enum(["charge_automatically", "send_invoice"]).default("charge_automatically"),

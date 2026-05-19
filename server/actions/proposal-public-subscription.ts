@@ -13,7 +13,7 @@ import {
 } from "@/server/firestore/crm-customers";
 import { getProposalRecordByShareToken } from "@/server/firestore/parse-proposal";
 import { ensureStripeCustomer } from "@/server/stripe/proposal-billing";
-import { listStripeSubscriptionProductOptions } from "@/server/stripe/subscription-product-options";
+import { loadBillingCatalogForOrganization } from "@/server/catalog/billing-catalog";
 import { createSubscriptionScheduleForCustomer } from "@/server/stripe/subscription-schedule-create";
 
 const bodySchema = z
@@ -84,17 +84,24 @@ export async function createProposalPublicSubscriptionAction(
   );
   if (!crm) return { ok: false, message: "Customer not found." };
 
-  const catalog = await listStripeSubscriptionProductOptions();
-  if (catalog.length === 0) {
-    return { ok: false, message: "No Stripe subscription products are configured." };
+  const billingCatalog = await loadBillingCatalogForOrganization(proposal.organizationId);
+  if (
+    billingCatalog.catalogServices.length === 0 &&
+    billingCatalog.stripeProductCatalog.length === 0
+  ) {
+    return { ok: false, message: "No subscription services are configured." };
   }
 
-  const pick = resolveFirstPackageSubscriptionFromProposal(proposal, catalog);
+  const pick = resolveFirstPackageSubscriptionFromProposal(
+    proposal,
+    billingCatalog.catalogServices,
+    billingCatalog.stripeProductCatalog,
+  );
   if (!pick) {
     return {
       ok: false,
       message:
-        "Could not resolve a subscription from this proposal. Choose a Stripe product on the plan tier (or set a Price id) and ensure a plan is selected.",
+        "Could not resolve a subscription from this proposal. Link plan tiers to a catalogue service (or legacy Stripe product) and ensure a plan is selected.",
     };
   }
 

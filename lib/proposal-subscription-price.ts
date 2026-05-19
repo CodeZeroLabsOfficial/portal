@@ -1,22 +1,22 @@
 import { iterateProposalContentBlocks } from "@/lib/proposal-blocks";
-import { resolveStripePriceIdFromTierWithCatalog } from "@/lib/proposal-subscription-from-catalog";
+import { resolveStripePriceIdFromTierForBilling } from "@/lib/proposal-subscription-from-catalog";
 import type { PackagesBlock, ProposalBlock, ProposalPublicSelections, ProposalRecord } from "@/types/proposal";
+import type { CatalogServicePickerOption } from "@/types/catalog-service";
 import type { SubscriptionProductOption } from "@/types/subscription-product";
 
 /**
  * First Stripe Price id tied to the buyer's package selection, else the first
  * `payment` block with `stripePriceId`.
- *
- * When `catalog` is provided (same list as the Add subscription modal), tiers
- * with `stripeProductId` resolve to the price for the buyer’s selected term
- * (12 vs 24 months).
  */
 export function resolveSubscriptionStripePriceIdFromBlocks(
   blocks: ProposalBlock[],
   publicSelections?: ProposalPublicSelections,
-  catalog?: SubscriptionProductOption[] | null,
+  catalogServices?: CatalogServicePickerOption[] | null,
+  stripeProductCatalog?: SubscriptionProductOption[] | null,
 ): string | null {
   const selections = publicSelections ?? {};
+  const services = catalogServices ?? [];
+  const stripeCatalog = stripeProductCatalog ?? [];
 
   for (const block of iterateProposalContentBlocks(blocks)) {
     if (block.type !== "packages") continue;
@@ -24,12 +24,13 @@ export function resolveSubscriptionStripePriceIdFromBlocks(
     const sel = selections[pb.id];
     if (!sel || sel.kind !== "packages") continue;
     const tier = pb.tiers.find((t) => t.id === sel.tierId);
-    if (catalog && catalog.length > 0) {
-      const fromCatalog = resolveStripePriceIdFromTierWithCatalog(tier, sel.term, catalog);
-      if (fromCatalog) return fromCatalog;
-    }
-    const pid = tier?.stripePriceId?.trim();
-    if (pid) return pid;
+    const fromBilling = resolveStripePriceIdFromTierForBilling(
+      tier,
+      sel.term,
+      services,
+      stripeCatalog,
+    );
+    if (fromBilling) return fromBilling;
   }
 
   for (const block of iterateProposalContentBlocks(blocks)) {
@@ -44,11 +45,13 @@ export function resolveSubscriptionStripePriceIdFromBlocks(
 
 export function resolveSubscriptionStripePriceIdFromProposal(
   proposal: ProposalRecord,
-  catalog?: SubscriptionProductOption[] | null,
+  catalogServices?: CatalogServicePickerOption[] | null,
+  stripeProductCatalog?: SubscriptionProductOption[] | null,
 ): string | null {
   return resolveSubscriptionStripePriceIdFromBlocks(
     proposal.document.blocks,
     proposal.publicSelections,
-    catalog,
+    catalogServices,
+    stripeProductCatalog,
   );
 }

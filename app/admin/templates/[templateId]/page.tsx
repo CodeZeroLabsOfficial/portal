@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { getCurrentSessionUser, isStaff } from "@/lib/auth/server-session";
 import { getProposalTemplateForStaff } from "@/server/firestore/proposal-templates";
-import { listStripeSubscriptionProductOptions } from "@/server/stripe/subscription-product-options";
+import { listCatalogServicePickerOptionsForOrg } from "@/server/firestore/catalog-services";
 import { ProposalDocumentEditorLazy } from "@/components/proposal/proposal-document-editor-lazy";
 import { WorkspaceShell } from "@/components/portal/workspace-shell";
 import { WORKSPACE_MAIN_FLUSH_TOP_CLASS } from "@/lib/workspace-layout";
@@ -25,7 +25,7 @@ export default async function EditProposalTemplatePage({ params }: PageProps) {
     notFound();
   }
 
-  const subscriptionProductOptions = await listStripeSubscriptionProductOptions();
+  const catalogServiceOptions = await listCatalogServicePickerOptionsForOrg(user);
 
   return (
     <WorkspaceShell
@@ -45,7 +45,7 @@ export default async function EditProposalTemplatePage({ params }: PageProps) {
         initialTemplateDescription={template.description ?? ""}
         initialDocument={template.document}
         localityTimeZone={user.timeZone?.trim() || undefined}
-        subscriptionProductOptions={subscriptionProductOptions}
+        catalogServiceOptions={catalogServiceOptions}
       />
     </WorkspaceShell>
   );

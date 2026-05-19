@@ -6,7 +6,9 @@ import { requireStaffSession } from "@/lib/auth/server-session";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import { getStripe } from "@/lib/stripe/server";
 import { logError } from "@/lib/logging";
+import { resolveStripePriceIdForSubscription } from "@/lib/catalog-service-resolve";
 import { createSubscriptionSchema } from "@/lib/schemas/subscription";
+import { listCatalogServicePickerOptionsForOrg } from "@/server/firestore/catalog-services";
 import { zodErrorToMessage } from "@/lib/zod-error";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { getCustomerRecordForOrg, syncStripeCustomerBasics } from "@/server/firestore/crm-customers";
@@ -36,8 +38,17 @@ export async function createSubscriptionAction(
   if (!parsed.success) {
     return { ok: false, message: zodErrorToMessage(parsed.error) };
   }
-  if (!parsed.data.priceId.trim().startsWith("price_")) {
-    return { ok: false, message: "Invalid Stripe price selected for this subscription." };
+  const catalogServices = await listCatalogServicePickerOptionsForOrg(user);
+  const stripePriceId = resolveStripePriceIdForSubscription(
+    parsed.data.serviceId,
+    parsed.data.durationMonths,
+    catalogServices,
+  );
+  if (!stripePriceId) {
+    return {
+      ok: false,
+      message: "Selected service is not synced to Stripe for this duration. Activate the service in Services.",
+    };
   }
 
   const db = getFirebaseAdminFirestore();
@@ -82,7 +93,7 @@ export async function createSubscriptionAction(
       db,
       customer,
       organizationId: user.organizationId,
-      stripePriceId: parsed.data.priceId,
+      stripePriceId,
       startDateIso: parsed.data.startDate,
       durationMonths: parsed.data.durationMonths,
       collectionMethod: parsed.data.collectionMethod,

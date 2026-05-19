@@ -3,7 +3,7 @@ import { resolveFirstPackageSubscriptionFromProposal } from "@/lib/proposal-subs
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import { getStripe } from "@/lib/stripe/server";
 import { COLLECTIONS } from "@/server/firestore/collections";
-import { listStripeSubscriptionProductOptions } from "@/server/stripe/subscription-product-options";
+import { loadBillingCatalogForOrganization } from "@/server/catalog/billing-catalog";
 import type { ProposalRecord } from "@/types/proposal";
 
 export type ProposalPublicSubscriptionUi = {
@@ -28,8 +28,12 @@ export async function loadProposalPublicSubscriptionUi(
   const stripe = getStripe();
   if (!stripe) return null;
 
-  const catalog = await listStripeSubscriptionProductOptions();
-  const pick = resolveFirstPackageSubscriptionFromProposal(proposal, catalog);
+  const billingCatalog = await loadBillingCatalogForOrganization(proposal.organizationId);
+  const pick = resolveFirstPackageSubscriptionFromProposal(
+    proposal,
+    billingCatalog.catalogServices,
+    billingCatalog.stripeProductCatalog,
+  );
   if (!pick) return null;
 
   const db = getFirebaseAdminFirestore();

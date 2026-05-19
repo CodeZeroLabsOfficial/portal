@@ -180,10 +180,14 @@ export interface PackageTier {
   monthlyCost24Minor: number;
   /** One-time upfront charge for the 12-month term only (minor units). */
   upfrontCost12Minor?: number;
+  /**
+   * Portal service catalogue id — preferred billing link (synced Stripe prices on activate).
+   */
+  serviceId?: string;
   /** Optional Stripe Price id for subscription after agreement (legacy single-price override). */
   stripePriceId?: string;
   /**
-   * Optional Stripe Product id (`prod_…`) — same catalog as **Add subscription**.
+   * Optional Stripe Product id (`prod_…`) — legacy; use `serviceId` when possible.
    * The buyer’s 12 vs 24 month term picks the matching recurring price on that product.
    */
   stripeProductId?: string;

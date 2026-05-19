@@ -1,13 +1,17 @@
 import { resolveSubscriptionStripePriceIdFromProposal } from "@/lib/proposal-subscription-price";
 import type { ProposalRecord } from "@/types/proposal";
-import { getStripe } from "@/lib/stripe/server";
-import { listStripeSubscriptionProductOptions } from "@/server/stripe/subscription-product-options";
+import { loadBillingCatalogForOrganization } from "@/server/catalog/billing-catalog";
 
-/** Resolves `price_…` using Stripe catalog (same grouping as Add subscription). */
+/** Resolves `price_…` from portal catalogue services (legacy Stripe product fallback). */
 export async function resolveSubscriptionStripePriceIdForProposalWithStripe(
   proposal: ProposalRecord,
 ): Promise<string | null> {
-  const stripe = getStripe();
-  const catalog = stripe ? await listStripeSubscriptionProductOptions() : [];
-  return resolveSubscriptionStripePriceIdFromProposal(proposal, catalog);
+  const { catalogServices, stripeProductCatalog } = await loadBillingCatalogForOrganization(
+    proposal.organizationId,
+  );
+  return resolveSubscriptionStripePriceIdFromProposal(
+    proposal,
+    catalogServices,
+    stripeProductCatalog,
+  );
 }

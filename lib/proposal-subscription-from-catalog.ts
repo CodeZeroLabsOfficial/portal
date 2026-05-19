@@ -1,11 +1,13 @@
+import { resolveStripePriceIdFromTier } from "@/lib/catalog-service-resolve";
+import { iterateProposalContentBlocks } from "@/lib/proposal-blocks";
 import type {
   PackageTier,
   PackagesBlock,
   PackagesPublicSelection,
   ProposalBlock,
 } from "@/types/proposal";
+import type { CatalogServicePickerOption } from "@/types/catalog-service";
 import type { SubscriptionProductOption } from "@/types/subscription-product";
-import { iterateProposalContentBlocks } from "@/lib/proposal-blocks";
 
 /** Map proposal package term to commitment length (matches Add subscription “Duration”). */
 export function packagesTermToDurationMonths(term: PackagesPublicSelection["term"]): 12 | 24 {
@@ -38,6 +40,15 @@ export function resolveStripePriceIdFromTierWithCatalog(
   return pid?.startsWith("price_") ? pid : null;
 }
 
+export function resolveStripePriceIdFromTierForBilling(
+  tier: PackageTier | undefined,
+  term: PackagesPublicSelection["term"],
+  catalogServices: CatalogServicePickerOption[],
+  stripeProductCatalog: SubscriptionProductOption[] = [],
+): string | null {
+  return resolveStripePriceIdFromTier(tier, term, catalogServices, stripeProductCatalog);
+}
+
 export interface ResolvedPackageSubscriptionPick {
   priceId: string;
   durationMonths: 12 | 24;
@@ -49,7 +60,8 @@ export interface ResolvedPackageSubscriptionPick {
 /** First packages block with a valid selection and resolvable Stripe price. */
 export function resolveFirstPackageSubscriptionFromProposal(
   proposal: { document: { blocks: ProposalBlock[] }; publicSelections?: Record<string, PackagesPublicSelection> },
-  catalog: SubscriptionProductOption[],
+  catalogServices: CatalogServicePickerOption[],
+  stripeProductCatalog: SubscriptionProductOption[] = [],
 ): ResolvedPackageSubscriptionPick | null {
   const selections = proposal.publicSelections ?? {};
   for (const block of iterateProposalContentBlocks(proposal.document.blocks)) {
@@ -58,11 +70,18 @@ export function resolveFirstPackageSubscriptionFromProposal(
     const sel = selections[pb.id];
     if (!sel || sel.kind !== "packages") continue;
     const tier = pb.tiers.find((t) => t.id === sel.tierId);
-    const priceId = resolveStripePriceIdFromTierWithCatalog(tier, sel.term, catalog);
+    const priceId = resolveStripePriceIdFromTierForBilling(
+      tier,
+      sel.term,
+      catalogServices,
+      stripeProductCatalog,
+    );
     if (!priceId) continue;
-    const productId = tier?.stripeProductId?.trim();
+    const serviceId = tier?.serviceId?.trim();
     const productName =
-      (productId && catalog.find((p) => p.productId === productId)?.productName) ||
+      (serviceId && catalogServices.find((s) => s.serviceId === serviceId)?.serviceName) ||
+      (tier?.stripeProductId &&
+        stripeProductCatalog.find((p) => p.productId === tier.stripeProductId)?.productName) ||
       tier?.name?.trim() ||
       "Plan";
     return {

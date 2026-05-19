@@ -185,6 +185,10 @@ function normalizePackageTierInput(raw: unknown): unknown {
     const pr = o.stripeProductId.trim();
     if (pr.length > 0) tier.stripeProductId = pr.slice(0, 120);
   }
+  if (typeof o.serviceId === "string") {
+    const sid = o.serviceId.trim();
+    if (sid.length > 0) tier.serviceId = sid.slice(0, 120);
+  }
   return tier;
 }
 
@@ -283,6 +287,8 @@ const packageTierSchema = z.object({
   stripePriceId: z.string().min(3).max(120).optional(),
   /** Stripe Product id — durations resolved like Add subscription (optional). */
   stripeProductId: z.string().min(3).max(120).optional(),
+  /** Portal service catalogue id (preferred). */
+  serviceId: z.string().min(1).max(120).optional(),
   features: z.array(z.string()).default([]),
 });
 

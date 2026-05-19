@@ -23,7 +23,7 @@ import {
   WORKSPACE_PAGE_DESCRIPTION_CLASS,
 } from "@/lib/workspace-page-typography";
 import { cn } from "@/lib/utils";
-import type { SubscriptionProductOption } from "@/types/subscription-product";
+import type { CatalogServicePickerOption } from "@/types/catalog-service";
 import { cancelSubscriptionAction, deleteSubscriptionAction } from "@/server/actions/subscriptions-crm";
 
 export interface SubscriptionListRow {
@@ -36,7 +36,7 @@ export interface SubscriptionListRow {
 export interface SubscriptionListPanelProps {
   rows: SubscriptionListRow[];
   customerOptions: { id: string; label: string }[];
-  productOptions: SubscriptionProductOption[];
+  catalogServiceOptions: CatalogServicePickerOption[];
 }
 
 function formatTableDate(ms: number | undefined): string {
@@ -125,7 +125,7 @@ function statusBadge(status: SubscriptionRecord["status"]): { label: string; cla
   };
 }
 
-export function SubscriptionListPanel({ rows, customerOptions, productOptions }: SubscriptionListPanelProps) {
+export function SubscriptionListPanel({ rows, customerOptions, catalogServiceOptions }: SubscriptionListPanelProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -173,7 +173,7 @@ export function SubscriptionListPanel({ rows, customerOptions, productOptions }:
         open={addOpen}
         onOpenChange={setAddOpen}
         customerOptions={customerOptions}
-        productOptions={productOptions}
+        catalogServiceOptions={catalogServiceOptions}
       />
       <motion.div
         initial={{ opacity: 0, y: 6 }}
