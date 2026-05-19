@@ -77,10 +77,8 @@ export async function createCatalogServiceAction(
   );
   if (!write.ok) return write;
 
-  if (parsed.data.syncToStripe) {
-    const syncResult = await pushCatalogServiceToStripe(user, ref.id, { setActive: true });
-    if (!syncResult.ok) return syncResult;
-  }
+  const syncResult = await pushCatalogServiceToStripe(user, ref.id, { setActive: true });
+  if (!syncResult.ok) return syncResult;
 
   revalidateCatalogPaths(ref.id);
   return { ok: true, serviceId: ref.id };

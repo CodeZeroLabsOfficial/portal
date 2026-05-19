@@ -6,7 +6,6 @@ import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useForm, type FieldErrors } from "react-hook-form";
 import {
-  buildCatalogServicePriceLookupKey,
   normalizeLookupKeyBase,
   previewCatalogServiceLookupKeys,
   slugifyCatalogServiceName,
@@ -47,7 +46,6 @@ const defaultValues: CreateCatalogServiceInput = {
   flatAmountMinor: 0,
   monthlyCost12Minor: 0,
   monthlyCost24Minor: 0,
-  syncToStripe: false,
 };
 
 const fieldClass =
@@ -80,7 +78,6 @@ export function AddCatalogServiceModal({ open, onOpenChange }: AddCatalogService
   const serviceType = form.watch("serviceType");
   const billingType = form.watch("billingType");
   const pricingModel = form.watch("pricingModel");
-  const syncToStripe = form.watch("syncToStripe");
 
   const isOneOff = billingType === "one_off";
   const isFlat = isOneOff || pricingModel === "flat";
@@ -182,53 +179,55 @@ export function AddCatalogServiceModal({ open, onOpenChange }: AddCatalogService
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          "max-h-[min(90vh,800px)] w-[min(100vw-2rem,640px)] max-w-[640px] overflow-y-auto p-0 sm:max-w-[640px]",
+          "max-h-[min(90vh,860px)] w-[min(100vw-2rem,880px)] max-w-[880px] overflow-y-auto p-0 sm:max-w-[880px]",
           WORKSPACE_GLASS_DIALOG_SURFACE_CLASSES,
         )}
       >
         <div className="border-b border-white/[0.06] bg-gradient-to-br from-primary/15 via-transparent to-transparent px-6 pb-5 pt-6">
           <DialogHeader className="text-left">
-            <DialogTitle className="text-xl font-semibold tracking-tight text-white">New service</DialogTitle>
+            <DialogTitle className="text-xl font-semibold tracking-tight text-white">Add a new service</DialogTitle>
           </DialogHeader>
         </div>
 
-        <form onSubmit={handleFormSubmit} className="space-y-4 px-6 py-5" noValidate>
+        <form onSubmit={handleFormSubmit} className="space-y-4 px-8 py-6" noValidate>
           <FormServerError message={serverError} rounded="xl" />
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="catalog-service-type" className={labelClass}>
-              Service type <span className="text-destructive">*</span>
-            </Label>
-            <select
-              id="catalog-service-type"
-              className={selectClass}
-              disabled={busy}
-              value={serviceType}
-              onChange={(e) =>
-                form.setValue("serviceType", e.target.value as CatalogServiceKind, { shouldDirty: true })
-              }
-            >
-              <option value="plan">Plan</option>
-              <option value="addon">Add-on</option>
-            </select>
-          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="catalog-service-type" className={labelClass}>
+                Service type <span className="text-destructive">*</span>
+              </Label>
+              <select
+                id="catalog-service-type"
+                className={selectClass}
+                disabled={busy}
+                value={serviceType}
+                onChange={(e) =>
+                  form.setValue("serviceType", e.target.value as CatalogServiceKind, { shouldDirty: true })
+                }
+              >
+                <option value="plan">Plan</option>
+                <option value="addon">Add-on</option>
+              </select>
+            </div>
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="catalog-service-name" className={labelClass}>
-              Name <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="catalog-service-name"
-              autoComplete="off"
-              className={fieldClass}
-              placeholder={serviceType === "plan" ? "Professional plan" : "Extra location"}
-              disabled={busy}
-              {...form.register("name")}
-            />
-            <p className="text-xs text-zinc-500">Stripe product name</p>
-            {form.formState.errors.name ? (
-              <p className="text-xs leading-tight text-destructive">{form.formState.errors.name.message}</p>
-            ) : null}
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="catalog-service-name" className={labelClass}>
+                Name <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="catalog-service-name"
+                autoComplete="off"
+                className={fieldClass}
+                placeholder={serviceType === "plan" ? "Professional plan" : "Extra location"}
+                disabled={busy}
+                {...form.register("name")}
+              />
+              <p className="text-xs text-zinc-500">Stripe product name</p>
+              {form.formState.errors.name ? (
+                <p className="text-xs leading-tight text-destructive">{form.formState.errors.name.message}</p>
+              ) : null}
+            </div>
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -240,7 +239,7 @@ export function AddCatalogServiceModal({ open, onOpenChange }: AddCatalogService
               rows={2}
               disabled={busy}
               className={cn(
-                "min-h-[4rem] w-full rounded-md border px-3 py-2 text-sm",
+                "min-h-[3.25rem] w-full resize-none rounded-md border px-3 py-2 text-sm",
                 fieldClass,
               )}
               placeholder="Shown on Stripe prices and product details"
@@ -248,184 +247,140 @@ export function AddCatalogServiceModal({ open, onOpenChange }: AddCatalogService
             />
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-2">
             <div className="flex flex-col gap-1.5">
-              <Label className={labelClass}>Billing</Label>
-              <div className="flex flex-col gap-2">
-                <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-300">
-                  <input
-                    type="radio"
-                    name="billingType"
-                    className="h-4 w-4"
-                    checked={billingType === "recurring"}
-                    disabled={busy}
-                    onChange={() => form.setValue("billingType", "recurring", { shouldDirty: true })}
-                  />
-                  Recurring
-                </label>
-                <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-300">
-                  <input
-                    type="radio"
-                    name="billingType"
-                    className="h-4 w-4"
-                    checked={billingType === "one_off"}
-                    disabled={busy}
-                    onChange={() => form.setValue("billingType", "one_off", { shouldDirty: true })}
-                  />
-                  One-off
-                </label>
-              </div>
+              <Label htmlFor="catalog-billing-type" className={labelClass}>
+                Billing
+              </Label>
+              <select
+                id="catalog-billing-type"
+                className={selectClass}
+                disabled={busy}
+                value={billingType}
+                onChange={(e) =>
+                  form.setValue("billingType", e.target.value as "recurring" | "one_off", {
+                    shouldDirty: true,
+                  })
+                }
+              >
+                <option value="recurring">Recurring</option>
+                <option value="one_off">One-off</option>
+              </select>
             </div>
 
             <div className={cn("flex flex-col gap-1.5", isOneOff && "opacity-50")}>
-              <Label className={labelClass}>Pricing model</Label>
-              <div className="flex flex-col gap-2">
-                <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-300">
-                  <input
-                    type="radio"
-                    name="pricingModel"
-                    className="h-4 w-4"
-                    checked={pricingModel === "flat"}
-                    disabled={busy || isOneOff}
-                    onChange={() => form.setValue("pricingModel", "flat", { shouldDirty: true })}
-                  />
-                  Flat rate (one price)
-                </label>
-                <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-300">
-                  <input
-                    type="radio"
-                    name="pricingModel"
-                    className="h-4 w-4"
-                    checked={pricingModel === "by_term"}
-                    disabled={busy || isOneOff}
-                    onChange={() => form.setValue("pricingModel", "by_term", { shouldDirty: true })}
-                  />
-                  12 & 24 month
-                </label>
-              </div>
+              <Label htmlFor="catalog-pricing-model" className={labelClass}>
+                Pricing model
+              </Label>
+              <select
+                id="catalog-pricing-model"
+                className={selectClass}
+                disabled={busy || isOneOff}
+                value={isOneOff ? "flat" : pricingModel}
+                onChange={(e) =>
+                  form.setValue("pricingModel", e.target.value as "flat" | "by_term", { shouldDirty: true })
+                }
+              >
+                <option value="flat">Flat rate (one price)</option>
+                <option value="by_term">12 & 24 month</option>
+              </select>
               {isOneOff ? (
                 <p className="text-xs text-zinc-500">One-off charges use a single flat price.</p>
               ) : null}
             </div>
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="catalog-lookup-key" className={labelClass}>
-              Lookup key <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="catalog-lookup-key"
-              autoComplete="off"
-              className={cn(fieldClass, "font-mono")}
-              placeholder="professional"
-              value={lookupKeyBase}
-              disabled={busy}
-              onChange={(e) => {
-                setLookupTouched(true);
-                setLookupKeyBase(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_"));
-              }}
-            />
-            {errors.lookupKeyBase ? (
-              <p className="text-xs leading-tight text-destructive">{errors.lookupKeyBase.message}</p>
-            ) : null}
-            <p className="text-xs text-zinc-500">
-              Stripe lookup key{lookupPreview.length > 1 ? "s" : ""}:{" "}
-              <span className="font-mono text-zinc-400">{lookupPreview.join(" · ")}</span>
-            </p>
-            {serviceType === "plan" && isByTerm ? (
-              <p className="text-xs text-zinc-600">
-                Example:{" "}
-                <span className="font-mono text-zinc-500">
-                  {buildCatalogServicePriceLookupKey(
-                    {
-                      lookupKeyBase: resolvedLookupBase || "professional",
-                      serviceType: "plan",
-                      billingType: "recurring",
-                      pricingModel: "by_term",
-                    },
-                    24,
-                  )}
-                </span>
-              </p>
-            ) : null}
-          </div>
-
-          {isFlat ? (
+          <div
+            className={cn(
+              "grid gap-4",
+              isFlat ? "md:grid-cols-[1fr_minmax(10rem,14rem)]" : "md:grid-cols-3",
+            )}
+          >
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="catalog-flat-price" className={labelClass}>
-                {isOneOff ? "One-off price (AUD)" : "Monthly price (AUD)"}{" "}
-                <span className="text-destructive">*</span>
+              <Label htmlFor="catalog-lookup-key" className={labelClass}>
+                Lookup key <span className="text-destructive">*</span>
               </Label>
               <Input
-                id="catalog-flat-price"
-                inputMode="decimal"
-                placeholder="0.00"
-                value={flatPrice}
+                id="catalog-lookup-key"
+                autoComplete="off"
+                className={cn(fieldClass, "font-mono")}
+                placeholder="professional"
+                value={lookupKeyBase}
                 disabled={busy}
-                className={fieldClass}
-                onChange={(e) => setFlatPrice(e.target.value)}
+                onChange={(e) => {
+                  setLookupTouched(true);
+                  setLookupKeyBase(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_"));
+                }}
               />
-              {errors.flatAmountMinor ? (
-                <p className="text-xs leading-tight text-destructive">{errors.flatAmountMinor.message}</p>
+              {errors.lookupKeyBase ? (
+                <p className="text-xs leading-tight text-destructive">{errors.lookupKeyBase.message}</p>
               ) : null}
+              <p className="text-xs leading-snug text-zinc-500">
+                Stripe lookup key{lookupPreview.length > 1 ? "s" : ""}:{" "}
+                <span className="font-mono text-zinc-400">{lookupPreview.join(" · ")}</span>
+              </p>
             </div>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2">
+
+            {isFlat ? (
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="catalog-m12" className={labelClass}>
-                  12-month monthly (AUD) <span className="text-destructive">*</span>
+                <Label htmlFor="catalog-flat-price" className={labelClass}>
+                  {isOneOff ? "One-off price (AUD)" : "Monthly price (AUD)"}{" "}
+                  <span className="text-destructive">*</span>
                 </Label>
                 <Input
-                  id="catalog-m12"
+                  id="catalog-flat-price"
                   inputMode="decimal"
                   placeholder="0.00"
-                  value={monthly12}
+                  value={flatPrice}
                   disabled={busy}
                   className={fieldClass}
-                  onChange={(e) => setMonthly12(e.target.value)}
+                  onChange={(e) => setFlatPrice(e.target.value)}
                 />
-                {errors.monthlyCost12Minor ? (
-                  <p className="text-xs leading-tight text-destructive">{errors.monthlyCost12Minor.message}</p>
+                {errors.flatAmountMinor ? (
+                  <p className="text-xs leading-tight text-destructive">{errors.flatAmountMinor.message}</p>
                 ) : null}
               </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="catalog-m24" className={labelClass}>
-                  24-month monthly (AUD) <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="catalog-m24"
-                  inputMode="decimal"
-                  placeholder="0.00"
-                  value={monthly24}
-                  disabled={busy}
-                  className={fieldClass}
-                  onChange={(e) => setMonthly24(e.target.value)}
-                />
-                {errors.monthlyCost24Minor ? (
-                  <p className="text-xs leading-tight text-destructive">{errors.monthlyCost24Minor.message}</p>
-                ) : null}
-              </div>
-            </div>
-          )}
+            ) : (
+              <>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="catalog-m12" className={labelClass}>
+                    12-month monthly (AUD) <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="catalog-m12"
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    value={monthly12}
+                    disabled={busy}
+                    className={fieldClass}
+                    onChange={(e) => setMonthly12(e.target.value)}
+                  />
+                  {errors.monthlyCost12Minor ? (
+                    <p className="text-xs leading-tight text-destructive">{errors.monthlyCost12Minor.message}</p>
+                  ) : null}
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="catalog-m24" className={labelClass}>
+                    24-month monthly (AUD) <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="catalog-m24"
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    value={monthly24}
+                    disabled={busy}
+                    className={fieldClass}
+                    onChange={(e) => setMonthly24(e.target.value)}
+                  />
+                  {errors.monthlyCost24Minor ? (
+                    <p className="text-xs leading-tight text-destructive">{errors.monthlyCost24Minor.message}</p>
+                  ) : null}
+                </div>
+              </>
+            )}
+          </div>
 
-          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] p-3 transition-colors hover:bg-white/[0.05]">
-            <input
-              type="checkbox"
-              className="mt-1 h-4 w-4 rounded border-border"
-              checked={Boolean(syncToStripe)}
-              disabled={busy}
-              onChange={(e) => form.setValue("syncToStripe", e.target.checked, { shouldDirty: true })}
-            />
-            <span className="text-sm leading-snug text-zinc-300">
-              <span className="font-medium text-white">Activate & sync to Stripe</span>
-              <span className="mt-0.5 block text-xs text-zinc-500">
-                Creates the Stripe product and price{lookupPreview.length > 1 ? "s" : ""} immediately. Requires at
-                least $0.50 per price when enabled.
-              </span>
-            </span>
-          </label>
-
-          <DialogFooter className="gap-2 pt-2 sm:gap-0">
+          <DialogFooter className="gap-2 border-t border-white/[0.06] pt-4 sm:justify-end">
             <Button
               type="button"
               variant="ghost"

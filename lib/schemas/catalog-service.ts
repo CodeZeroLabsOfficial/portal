@@ -46,7 +46,6 @@ export const createCatalogServiceSchema = z
     flatAmountMinor: z.number().finite().min(0).optional(),
     monthlyCost12Minor: z.number().finite().min(0).optional(),
     monthlyCost24Minor: z.number().finite().min(0).optional(),
-    syncToStripe: z.boolean().default(false),
   })
   .superRefine((data, ctx) => {
     const effectivePricing =
@@ -59,10 +58,10 @@ export const createCatalogServiceSchema = z
           message: "Price is required",
           path: ["flatAmountMinor"],
         });
-      } else if (data.syncToStripe && data.flatAmountMinor < STRIPE_MIN_MINOR) {
+      } else if (data.flatAmountMinor < STRIPE_MIN_MINOR) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: `Price must be at least ${STRIPE_MIN_MINOR / 100} AUD when syncing to Stripe`,
+          message: `Price must be at least ${STRIPE_MIN_MINOR / 100} AUD`,
           path: ["flatAmountMinor"],
         });
       }
@@ -73,10 +72,10 @@ export const createCatalogServiceSchema = z
           message: "12-month price is required",
           path: ["monthlyCost12Minor"],
         });
-      } else if (data.syncToStripe && data.monthlyCost12Minor < STRIPE_MIN_MINOR) {
+      } else if (data.monthlyCost12Minor < STRIPE_MIN_MINOR) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: `12-month price must be at least ${STRIPE_MIN_MINOR / 100} AUD when syncing to Stripe`,
+          message: `12-month price must be at least ${STRIPE_MIN_MINOR / 100} AUD`,
           path: ["monthlyCost12Minor"],
         });
       }
@@ -86,10 +85,10 @@ export const createCatalogServiceSchema = z
           message: "24-month price is required",
           path: ["monthlyCost24Minor"],
         });
-      } else if (data.syncToStripe && data.monthlyCost24Minor < STRIPE_MIN_MINOR) {
+      } else if (data.monthlyCost24Minor < STRIPE_MIN_MINOR) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: `24-month price must be at least ${STRIPE_MIN_MINOR / 100} AUD when syncing to Stripe`,
+          message: `24-month price must be at least ${STRIPE_MIN_MINOR / 100} AUD`,
           path: ["monthlyCost24Minor"],
         });
       }
