@@ -18,7 +18,7 @@ firebase deploy --only firestore
 
 Use the Firebase Console **Rules** tab to diff against production before the first deploy if you already maintain rules only in the console.
 
-## `catalog_services`
+## `services`
 
 Matches `contract_templates`: **staff read** for the user’s org; **all writes denied** (Services CRUD uses Next.js Server Actions + Admin SDK).
 
@@ -32,7 +32,7 @@ Matches `contract_templates`: **staff read** for the user’s org; **all writes 
 If you add client reads later, filter by org:
 
 ```js
-collection(db, 'catalog_services').where('organizationId', '==', myOrgId)
+collection(db, 'services').where('organizationId', '==', myOrgId)
 ```
 
 ### Block to add in Firebase Console
@@ -40,7 +40,7 @@ collection(db, 'catalog_services').where('organizationId', '==', myOrgId)
 Place after `customers` and before `contract_templates` (or alongside Templates):
 
 ```
-    match /catalog_services/{serviceId} {
+    match /services/{serviceId} {
       allow read: if isStaff()
         && userOrgId() is string
         && resource.data.organizationId is string

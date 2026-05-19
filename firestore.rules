@@ -102,7 +102,7 @@ service cloud.firestore {
 
     // MARK: Service catalogue (Portal → Stripe on activate; app writes via Admin SDK)
 
-    match /catalog_services/{serviceId} {
+    match /services/{serviceId} {
       // Staff may read services for their org (list/get must target their organizationId).
       allow read: if isStaff()
         && userOrgId() is string

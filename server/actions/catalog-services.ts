@@ -6,6 +6,7 @@ import { requireStaffSession } from "@/lib/auth/server-session";
 import { slugifyCatalogServiceName } from "@/lib/catalog-service-slug";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import { runAdminWrite } from "@/lib/firebase/admin-write";
+import { logError } from "@/lib/logging";
 import { getStripe } from "@/lib/stripe/server";
 import { saveCatalogServiceSchema, saveInputToServiceTerms } from "@/lib/schemas/catalog-service";
 import { zodErrorToMessage } from "@/lib/zod-error";
@@ -30,7 +31,7 @@ export async function createCatalogServiceAction(): Promise<
   const db = getFirebaseAdminFirestore();
   if (!db) return { ok: false, message: "Database unavailable." };
 
-  const ref = db.collection(COLLECTIONS.catalogServices).doc();
+  const ref = db.collection(COLLECTIONS.services).doc();
   const name = "New service";
   const write = await runAdminWrite(
     "catalog_service_create_failed",
@@ -103,7 +104,7 @@ export async function saveCatalogServiceAction(
     "Could not save the service.",
     () =>
       db
-        .collection(COLLECTIONS.catalogServices)
+        .collection(COLLECTIONS.services)
         .doc(serviceId)
         .set(
           {
@@ -160,7 +161,7 @@ export async function activateCatalogServiceAction(
     { serviceId: id, uid: user.uid },
     "Could not activate the service.",
     () =>
-      db.collection(COLLECTIONS.catalogServices).doc(id).set(
+      db.collection(COLLECTIONS.services).doc(id).set(
         {
           status: "active",
           stripeProductId: sync.stripeProductId,
@@ -201,7 +202,7 @@ export async function syncCatalogServiceStripeAction(
     { serviceId: id, uid: user.uid },
     "Could not sync to Stripe.",
     () =>
-      db.collection(COLLECTIONS.catalogServices).doc(id).set(
+      db.collection(COLLECTIONS.services).doc(id).set(
         {
           stripeProductId: sync.stripeProductId,
           terms: sync.terms,
@@ -235,13 +236,51 @@ export async function archiveCatalogServiceAction(
     { serviceId: id, uid: user.uid },
     "Could not archive the service.",
     () =>
-      db.collection(COLLECTIONS.catalogServices).doc(id).set(
+      db.collection(COLLECTIONS.services).doc(id).set(
         {
           status: "archived",
           updatedAt: FieldValue.serverTimestamp(),
         },
         { merge: true },
       ),
+  );
+  if (!write.ok) return write;
+
+  revalidateCatalogPaths(id);
+  return { ok: true };
+}
+
+export async function deleteCatalogServiceAction(
+  serviceId: string,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const user = await requireStaffSession();
+  if (!user) return { ok: false, message: "Unauthorized." };
+
+  const id = serviceId.trim();
+  if (!id) return { ok: false, message: "Service id is required." };
+
+  const existing = await getCatalogServiceForStaff(user, id);
+  if (!existing) return { ok: false, message: "Service not found." };
+
+  const stripeProductId = existing.stripeProductId?.trim();
+  const stripe = getStripe();
+  if (stripe && stripeProductId) {
+    try {
+      await stripe.products.update(stripeProductId, { active: false });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logError("catalog_service_stripe_product_deactivate_failed", { serviceId: id, message });
+    }
+  }
+
+  const db = getFirebaseAdminFirestore();
+  if (!db) return { ok: false, message: "Database unavailable." };
+
+  const write = await runAdminWrite(
+    "catalog_service_delete_failed",
+    { serviceId: id, uid: user.uid },
+    "Could not delete the service.",
+    () => db.collection(COLLECTIONS.services).doc(id).delete(),
   );
   if (!write.ok) return write;
 

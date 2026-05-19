@@ -9,6 +9,7 @@ import {
   activateCatalogServiceAction,
   archiveCatalogServiceAction,
   createCatalogServiceAction,
+  deleteCatalogServiceAction,
   syncCatalogServiceStripeAction,
 } from "@/server/actions/catalog-services";
 import { formatCurrencyAmount } from "@/lib/format";
@@ -295,26 +296,38 @@ export function CatalogServicesListPanel({ services }: CatalogServicesListPanelP
                                   Re-sync prices
                                 </DropdownMenuItem>
                               ) : null}
+                              <DropdownMenuSeparator />
                               {service.status !== "archived" ? (
-                                <>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem
-                                    className="text-destructive focus:text-destructive"
-                                    onSelect={() => {
-                                      if (
-                                        !window.confirm(
-                                          "Archive this service? It will be hidden from new proposals and subscriptions.",
-                                        )
-                                      ) {
-                                        return;
-                                      }
-                                      void runRowAction(() => archiveCatalogServiceAction(service.id));
-                                    }}
-                                  >
-                                    Archive
-                                  </DropdownMenuItem>
-                                </>
+                                <DropdownMenuItem
+                                  onSelect={() => {
+                                    if (
+                                      !window.confirm(
+                                        "Archive this service? It will be hidden from new proposals and subscriptions.",
+                                      )
+                                    ) {
+                                      return;
+                                    }
+                                    void runRowAction(() => archiveCatalogServiceAction(service.id));
+                                  }}
+                                >
+                                  Archive
+                                </DropdownMenuItem>
                               ) : null}
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onSelect={() => {
+                                  if (
+                                    !window.confirm(
+                                      "Delete this service permanently? It will be removed from the catalogue. Linked Stripe product will be deactivated if present; existing subscriptions are not changed.",
+                                    )
+                                  ) {
+                                    return;
+                                  }
+                                  void runRowAction(() => deleteCatalogServiceAction(service.id));
+                                }}
+                              >
+                                Delete
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </td>

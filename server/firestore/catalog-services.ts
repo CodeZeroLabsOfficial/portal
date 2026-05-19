@@ -129,7 +129,7 @@ export async function listCatalogServicesForOrg(user: PortalUser): Promise<Catal
   const orgId = user.organizationId ?? "default";
   try {
     const snap = await db
-      .collection(COLLECTIONS.catalogServices)
+      .collection(COLLECTIONS.services)
       .where("organizationId", "==", orgId)
       .limit(200)
       .get();
@@ -150,7 +150,7 @@ export async function getCatalogServiceForStaff(
   const id = serviceId.trim();
   if (!id) return null;
   try {
-    const snap = await db.collection(COLLECTIONS.catalogServices).doc(id).get();
+    const snap = await db.collection(COLLECTIONS.services).doc(id).get();
     if (!snap.exists) return null;
     const record = parseCatalogServiceRecord(snap.id, snap.data() as Record<string, unknown>);
     const orgId = user.organizationId ?? "default";
@@ -180,7 +180,7 @@ export async function listCatalogServicePickerOptionsForOrganizationId(
   if (!db) return [];
   const orgId = organizationId?.trim() || "default";
   try {
-    const snap = await db.collection(COLLECTIONS.catalogServices).where("organizationId", "==", orgId).limit(100).get();
+    const snap = await db.collection(COLLECTIONS.services).where("organizationId", "==", orgId).limit(100).get();
     return snap.docs
       .map((d) => parseCatalogServiceRecord(d.id, d.data() as Record<string, unknown>))
       .filter((s) => s.status === "active")
@@ -202,7 +202,7 @@ export async function getCatalogServiceByIdForOrganization(
   if (!id) return null;
   const orgId = organizationId?.trim() || "default";
   try {
-    const snap = await db.collection(COLLECTIONS.catalogServices).doc(id).get();
+    const snap = await db.collection(COLLECTIONS.services).doc(id).get();
     if (!snap.exists) return null;
     const record = parseCatalogServiceRecord(snap.id, snap.data() as Record<string, unknown>);
     if (record.organizationId !== orgId) return null;
