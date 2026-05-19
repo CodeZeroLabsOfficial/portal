@@ -397,10 +397,6 @@ export function AddCatalogServiceModal({ open, onOpenChange }: AddCatalogService
 
           {isPlan ? (
             <div className="space-y-2">
-              <p className="text-xs font-medium text-zinc-400">Package entitlements</p>
-              <p className="text-xs text-zinc-500">
-                Shown in the Packages block when this plan is linked on a proposal.
-              </p>
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="catalog-included-users" className={labelClass}>

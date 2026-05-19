@@ -127,7 +127,7 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          "max-h-[min(90vh,800px)] w-[min(100vw-2rem,880px)] max-w-[880px] overflow-y-auto p-0 sm:max-w-[880px]",
+          "max-h-[min(92vh,900px)] w-[min(100vw-2rem,72rem)] !max-w-[min(100vw-2rem,72rem)] overflow-x-hidden overflow-y-auto p-0 sm:!max-w-[min(100vw-2rem,72rem)]",
           WORKSPACE_GLASS_DIALOG_SURFACE_CLASSES,
         )}
       >
@@ -139,7 +139,7 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
 
         <form
           onSubmit={form.handleSubmit(onSubmit)}
-          className="space-y-3 px-6 py-5"
+          className="min-w-0 space-y-3 px-6 py-5"
           noValidate
         >
           <FormServerError message={serverError} rounded="xl" />
@@ -165,7 +165,7 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
           </div>
 
           <input type="hidden" {...form.register("name")} />
-          <div className="grid gap-x-6 gap-y-1.5 sm:grid-cols-2">
+          <div className="grid min-w-0 gap-x-6 gap-y-1.5 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="crm-first-name" className="text-zinc-300">
                 First name
@@ -322,24 +322,24 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
               placeholder="Line 2"
               {...form.register("companyAddressLine2")}
             />
-            <div className="grid gap-1.5 sm:grid-cols-2">
+            <div className="grid min-w-0 gap-1.5 sm:grid-cols-2 lg:grid-cols-4">
               <Input
-                className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+                className="min-w-0 border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
                 placeholder="City"
                 {...form.register("companyCity")}
               />
               <Input
-                className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+                className="min-w-0 border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
                 placeholder="State / region"
                 {...form.register("companyRegion")}
               />
               <Input
-                className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+                className="min-w-0 border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
                 placeholder="Postal code"
                 {...form.register("companyPostalCode")}
               />
               <Input
-                className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+                className="min-w-0 border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
                 placeholder="Country"
                 {...form.register("companyCountry")}
               />
@@ -370,24 +370,24 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
               placeholder="Line 2"
               {...form.register("addressLine2")}
             />
-            <div className="grid gap-1.5 sm:grid-cols-2">
+            <div className="grid min-w-0 gap-1.5 sm:grid-cols-2 lg:grid-cols-4">
               <Input
-                className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+                className="min-w-0 border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
                 placeholder="City"
                 {...form.register("city")}
               />
               <Input
-                className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+                className="min-w-0 border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
                 placeholder="State / region"
                 {...form.register("region")}
               />
               <Input
-                className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+                className="min-w-0 border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
                 placeholder="Postal code"
                 {...form.register("postalCode")}
               />
               <Input
-                className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+                className="min-w-0 border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
                 placeholder="Country"
                 {...form.register("country")}
               />
@@ -422,9 +422,9 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
             </div>
             <div className="space-y-1.5">
               {customRows.map((row, i) => (
-                <div key={i} className="flex gap-2">
+                <div key={i} className="flex min-w-0 gap-2">
                   <Input
-                    className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+                    className="min-w-0 flex-1 border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
                     placeholder="Key"
                     value={row.key}
                     onChange={(e) =>
@@ -434,7 +434,7 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
                     }
                   />
                   <Input
-                    className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+                    className="min-w-0 flex-1 border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
                     placeholder="Value"
                     value={row.value}
                     onChange={(e) =>
