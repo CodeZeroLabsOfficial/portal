@@ -310,87 +310,89 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <Label className="text-zinc-300">Company address</Label>
-            <Input
-              className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
-              placeholder="Line 1"
-              {...form.register("companyAddressLine1")}
-            />
-            <Input
-              className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
-              placeholder="Line 2"
-              {...form.register("companyAddressLine2")}
-            />
-            <div className="grid min-w-0 gap-1.5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid min-w-0 gap-6 md:grid-cols-2 md:gap-x-8">
+            <div className="min-w-0 space-y-1.5">
+              <Label className="text-zinc-300">Company address</Label>
               <Input
-                className="min-w-0 border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
-                placeholder="City"
-                {...form.register("companyCity")}
+                className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+                placeholder="Line 1"
+                {...form.register("companyAddressLine1")}
               />
               <Input
-                className="min-w-0 border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
-                placeholder="State / region"
-                {...form.register("companyRegion")}
+                className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+                placeholder="Line 2"
+                {...form.register("companyAddressLine2")}
               />
-              <Input
-                className="min-w-0 border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
-                placeholder="Postal code"
-                {...form.register("companyPostalCode")}
-              />
-              <Input
-                className="min-w-0 border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
-                placeholder="Country"
-                {...form.register("companyCountry")}
-              />
+              <div className="grid min-w-0 grid-cols-2 gap-1.5">
+                <Input
+                  className="min-w-0 border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+                  placeholder="City"
+                  {...form.register("companyCity")}
+                />
+                <Input
+                  className="min-w-0 border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+                  placeholder="State / region"
+                  {...form.register("companyRegion")}
+                />
+                <Input
+                  className="min-w-0 border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+                  placeholder="Postal code"
+                  {...form.register("companyPostalCode")}
+                />
+                <Input
+                  className="min-w-0 border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+                  placeholder="Country"
+                  {...form.register("companyCountry")}
+                />
+              </div>
             </div>
-          </div>
 
-          <div className="space-y-1.5">
-            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-              <Label className="text-zinc-300">Contact address</Label>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-8 shrink-0 px-2 text-xs text-primary hover:text-primary"
-                onClick={copyCompanyAddressToContact}
-                disabled={busy}
-              >
-                Copy from above
-              </Button>
-            </div>
-            <Input
-              className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
-              placeholder="Line 1"
-              {...form.register("addressLine1")}
-            />
-            <Input
-              className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
-              placeholder="Line 2"
-              {...form.register("addressLine2")}
-            />
-            <div className="grid min-w-0 gap-1.5 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="min-w-0 space-y-1.5">
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                <Label className="text-zinc-300">Contact address</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 shrink-0 px-2 text-xs text-primary hover:text-primary"
+                  onClick={copyCompanyAddressToContact}
+                  disabled={busy}
+                >
+                  Copy from company
+                </Button>
+              </div>
               <Input
-                className="min-w-0 border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
-                placeholder="City"
-                {...form.register("city")}
+                className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+                placeholder="Line 1"
+                {...form.register("addressLine1")}
               />
               <Input
-                className="min-w-0 border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
-                placeholder="State / region"
-                {...form.register("region")}
+                className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+                placeholder="Line 2"
+                {...form.register("addressLine2")}
               />
-              <Input
-                className="min-w-0 border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
-                placeholder="Postal code"
-                {...form.register("postalCode")}
-              />
-              <Input
-                className="min-w-0 border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
-                placeholder="Country"
-                {...form.register("country")}
-              />
+              <div className="grid min-w-0 grid-cols-2 gap-1.5">
+                <Input
+                  className="min-w-0 border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+                  placeholder="City"
+                  {...form.register("city")}
+                />
+                <Input
+                  className="min-w-0 border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+                  placeholder="State / region"
+                  {...form.register("region")}
+                />
+                <Input
+                  className="min-w-0 border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+                  placeholder="Postal code"
+                  {...form.register("postalCode")}
+                />
+                <Input
+                  className="min-w-0 border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
+                  placeholder="Country"
+                  {...form.register("country")}
+                />
+              </div>
             </div>
           </div>
 
