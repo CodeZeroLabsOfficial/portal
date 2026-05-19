@@ -32,6 +32,7 @@ import { formatLastEditedInLocality } from "@/lib/proposal-locality-dates";
 import { CloneProposalTemplateButton } from "@/components/proposal/clone-proposal-template-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { listRowIconActionClassName } from "@/components/ui/hover-reveal-button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
@@ -402,9 +403,12 @@ export function ProposalTemplatesListPanel({
                         <div className="flex flex-wrap items-center justify-center gap-1">
                           <Button
                             type="button"
-                            variant="outline"
+                            variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            className={cn(
+                              listRowIconActionClassName,
+                              "hover:bg-destructive/10 hover:text-destructive",
+                            )}
                             disabled={deleting || stageBusy}
                             aria-label={`Delete template “${name}”`}
                             onClick={() => void deleteEntry(entry)}
@@ -418,9 +422,9 @@ export function ProposalTemplatesListPanel({
                           {stage === "draft" ? (
                             <Button
                               type="button"
-                              variant="outline"
+                              variant="ghost"
                               size="icon"
-                              className="h-8 w-8"
+                              className={listRowIconActionClassName}
                               disabled={stageBusy || deleting}
                               aria-label={`Publish template “${name}”`}
                               title="Publish"
@@ -435,9 +439,9 @@ export function ProposalTemplatesListPanel({
                           ) : (
                             <Button
                               type="button"
-                              variant="outline"
+                              variant="ghost"
                               size="icon"
-                              className="h-8 w-8"
+                              className={listRowIconActionClassName}
                               disabled={stageBusy || deleting}
                               aria-label={`Mark template “${name}” as draft`}
                               title="Mark as draft"
@@ -455,9 +459,9 @@ export function ProposalTemplatesListPanel({
                           ) : (
                             <Button
                               type="button"
-                              variant="outline"
+                              variant="ghost"
                               size="icon"
-                              className="h-8 w-8"
+                              className={listRowIconActionClassName}
                               disabled={cloningContractId === entry.row.id || deleting || stageBusy}
                               aria-label={`Clone “${name}”`}
                               title="Duplicate"
@@ -470,12 +474,12 @@ export function ProposalTemplatesListPanel({
                               )}
                             </Button>
                           )}
-                          <Button variant="outline" size="icon" className="h-8 w-8" asChild>
+                          <Button variant="ghost" size="icon" className={listRowIconActionClassName} asChild>
                             <Link href={editHref(entry)} aria-label={`Edit template “${name}”`}>
                               <Pencil className="h-4 w-4" aria-hidden />
                             </Link>
                           </Button>
-                          <Button variant="outline" size="icon" className="h-8 w-8" asChild>
+                          <Button variant="ghost" size="icon" className={listRowIconActionClassName} asChild>
                             <Link
                               href={previewHref(entry)}
                               target="_blank"

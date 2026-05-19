@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Copy, Loader2 } from "lucide-react";
 import { cloneProposalTemplateAction } from "@/server/actions/proposal-templates";
 import { Button } from "@/components/ui/button";
+import { listRowIconActionClassName } from "@/components/ui/hover-reveal-button";
 
 export function CloneProposalTemplateButton({
   templateId,
@@ -33,9 +34,9 @@ export function CloneProposalTemplateButton({
     return (
       <Button
         type="button"
-        variant="outline"
+        variant="ghost"
         size="icon"
-        className="h-8 w-8"
+        className={listRowIconActionClassName}
         disabled={busy}
         aria-label="Clone template"
         title="Clone template"

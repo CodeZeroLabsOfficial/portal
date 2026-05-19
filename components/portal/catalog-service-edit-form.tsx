@@ -111,6 +111,9 @@ const detailLabelClass =
 
 const detailLabelIconClass = "h-3.5 w-3.5 shrink-0 opacity-80";
 
+/** Compact width for numeric entitlement fields (view + stepper edit). */
+const entitlementFieldClass = "w-full max-w-[11rem]";
+
 type ServiceFieldOverrides = {
   name?: string;
   description?: string;
@@ -347,11 +350,12 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
                   <Users className={detailLabelIconClass} aria-hidden />
                   Entitlements
                 </p>
-                <dl className="grid gap-4 sm:grid-cols-3">
+                <dl className="flex flex-wrap gap-x-8 gap-y-4">
                   <div className="space-y-1">
                     <dt className="text-[13px] text-muted-foreground">Included users</dt>
                     <dd>
                       <InlineEditableField
+                        className={entitlementFieldClass}
                         fieldId="includedUsers"
                         activeFieldId={activeFieldId}
                         onActiveFieldIdChange={setActiveFieldId}
@@ -374,6 +378,7 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
                     <dt className="text-[13px] text-muted-foreground">Included locations</dt>
                     <dd>
                       <InlineEditableField
+                        className={entitlementFieldClass}
                         fieldId="includedLocations"
                         activeFieldId={activeFieldId}
                         onActiveFieldIdChange={setActiveFieldId}
@@ -396,6 +401,7 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
                     <dt className="text-[13px] text-muted-foreground">Included admins</dt>
                     <dd>
                       <InlineEditableField
+                        className={entitlementFieldClass}
                         fieldId="includedAdmins"
                         activeFieldId={activeFieldId}
                         onActiveFieldIdChange={setActiveFieldId}
