@@ -30,7 +30,10 @@ import {
 import { Input } from "@/components/ui/input";
 import type { CatalogServicePickerOption } from "@/types/catalog-service";
 import { useEditorCatalogServices } from "@/components/proposal/editor-catalog-services-context";
-import { packageTierFromCatalogService } from "@/lib/catalog-service-tier";
+import {
+  isCatalogServicePlanPickerOption,
+  packageTierFromCatalogService,
+} from "@/lib/catalog-service-tier";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -295,12 +298,14 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
       if (n === "enterprise") return 3;
       return 100;
     };
-    return [...catalogServices].sort((a, b) => {
-      const ra = rank(a.serviceName);
-      const rb = rank(b.serviceName);
-      if (ra !== rb) return ra - rb;
-      return a.serviceName.localeCompare(b.serviceName, undefined, { sensitivity: "base" });
-    });
+    return [...catalogServices]
+      .filter(isCatalogServicePlanPickerOption)
+      .sort((a, b) => {
+        const ra = rank(a.serviceName);
+        const rb = rank(b.serviceName);
+        if (ra !== rb) return ra - rb;
+        return a.serviceName.localeCompare(b.serviceName, undefined, { sensitivity: "base" });
+      });
   }, [catalogServices]);
   const [term, setTerm] = React.useState<"12_months" | "24_months">("24_months");
   const [addonsSectionOpen, setAddonsSectionOpen] = React.useState(true);

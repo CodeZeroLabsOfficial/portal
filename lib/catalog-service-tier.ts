@@ -1,6 +1,15 @@
 import type { CatalogServicePickerOption } from "@/types/catalog-service";
 import type { PackageTier } from "@/types/proposal";
 
+/** Plans only — excludes add-ons (and legacy flat-priced services) from package tier pickers. */
+export function isCatalogServicePlanPickerOption(
+  service: Pick<CatalogServicePickerOption, "serviceType" | "pricingModel">,
+): boolean {
+  if (service.serviceType === "addon") return false;
+  if (service.serviceType === "plan") return true;
+  return service.pricingModel === "by_term";
+}
+
 export function packageTierFromCatalogService(
   service: CatalogServicePickerOption,
   tierId: string,
