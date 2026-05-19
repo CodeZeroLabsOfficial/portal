@@ -11,12 +11,9 @@ import {
   CreditCard,
   DollarSign,
   Layers,
-  Loader2,
   Package,
-  Pencil,
   Tag,
   Users,
-  X,
 } from "lucide-react";
 import {
   archiveCatalogServiceAction,
@@ -26,11 +23,10 @@ import {
 } from "@/server/actions/catalog-services";
 import type { CatalogServiceRecord, CatalogServiceStatus } from "@/types/catalog-service";
 import { CatalogServiceStripeIntegrationsCard } from "@/components/portal/catalog-service-stripe-integrations-card";
+import { InlineEditableField } from "@/components/portal/inline-editable-field";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { formatCurrencyAmount } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -110,26 +106,18 @@ function pricingDetailLabel(service: CatalogServiceRecord): React.ReactNode {
   return `${formatted}/mo`;
 }
 
-const fieldInputClass =
-  "h-9 rounded-md border-border/80 bg-background/60 text-[14px] text-foreground";
-
 const detailLabelClass =
   "flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground";
 
 const detailLabelIconClass = "h-3.5 w-3.5 shrink-0 opacity-80";
 
-const descriptionTextareaClass =
-  "min-h-[5rem] w-full resize-y rounded-md border border-border/80 bg-background/60 px-3 py-2 text-[14px] text-foreground";
-
-function formValuesFromService(service: CatalogServiceRecord) {
-  return {
-    name: service.name,
-    description: service.description ?? "",
-    includedUsers: String(service.includedUsers),
-    includedLocations: String(service.includedLocations),
-    includedAdmins: String(service.includedAdmins),
-  };
-}
+type ServiceFieldOverrides = {
+  name?: string;
+  description?: string;
+  includedUsers?: number;
+  includedLocations?: number;
+  includedAdmins?: number;
+};
 
 export interface CatalogServiceEditFormProps {
   service: CatalogServiceRecord;
@@ -139,41 +127,51 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
   const router = useRouter();
   const [message, setMessage] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
-  const [isEditingDetails, setIsEditingDetails] = React.useState(false);
-
-  const initial = formValuesFromService(service);
-  const [name, setName] = React.useState(initial.name);
-  const [description, setDescription] = React.useState(initial.description);
-  const [includedUsers, setIncludedUsers] = React.useState(initial.includedUsers);
-  const [includedLocations, setIncludedLocations] = React.useState(initial.includedLocations);
-  const [includedAdmins, setIncludedAdmins] = React.useState(initial.includedAdmins);
+  const [activeFieldId, setActiveFieldId] = React.useState<string | null>(null);
 
   const st = statusBadge(service.status);
-  const readOnly = service.status === "archived" || busy;
+  const fieldsDisabled = service.status === "archived";
+  const readOnly = fieldsDisabled || busy;
   const isPlan = service.serviceType !== "addon";
-  const canEditDetails = service.status !== "archived" && !busy;
 
-  function resetFormFromService(next: CatalogServiceRecord) {
-    const values = formValuesFromService(next);
-    setName(values.name);
-    setDescription(values.description);
-    setIncludedUsers(values.includedUsers);
-    setIncludedLocations(values.includedLocations);
-    setIncludedAdmins(values.includedAdmins);
+  function buildSavePayload(overrides: ServiceFieldOverrides = {}) {
+    return {
+      serviceId: service.id,
+      name: (overrides.name ?? service.name).trim(),
+      description:
+        overrides.description !== undefined
+          ? overrides.description.trim() || undefined
+          : service.description?.trim() || undefined,
+      currency: service.currency,
+      includedUsers: overrides.includedUsers ?? service.includedUsers,
+      includedLocations: overrides.includedLocations ?? service.includedLocations,
+      includedAdmins: overrides.includedAdmins ?? service.includedAdmins,
+      monthlyCost12Minor: termMinor(service, 12),
+      monthlyCost24Minor: termMinor(service, 24),
+      ...(typeof service.upfrontCost12Minor === "number"
+        ? { upfrontCost12Minor: service.upfrontCost12Minor }
+        : {}),
+      features: service.features,
+    };
   }
 
-  function cancelEditingDetails() {
-    resetFormFromService(service);
-    setIsEditingDetails(false);
-    setMessage(null);
-  }
-
-  React.useEffect(() => {
-    if (!isEditingDetails) {
-      resetFormFromService(service);
+  async function persistField(
+    overrides: ServiceFieldOverrides,
+  ): Promise<{ ok: boolean; message?: string }> {
+    const res = await saveCatalogServiceAction(buildSavePayload(overrides));
+    if (res.ok) {
+      router.refresh();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only sync when server data changes while not editing
-  }, [service.id, service.updatedAt, service.name, service.description, isEditingDetails]);
+    return res;
+  }
+
+  function parseNonNegativeInt(raw: string, label: string): { ok: true; value: number } | { ok: false; message: string } {
+    const n = Number.parseInt(raw, 10);
+    if (!Number.isFinite(n) || n < 0) {
+      return { ok: false, message: `Enter a valid ${label}.` };
+    }
+    return { ok: true, value: n };
+  }
 
   async function runAction(
     fn: () => Promise<{ ok: boolean; message?: string }>,
@@ -181,6 +179,7 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
   ) {
     setBusy(true);
     setMessage(null);
+    setActiveFieldId(null);
     const res = await fn();
     setBusy(false);
     if (!res.ok) {
@@ -193,34 +192,6 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
       return;
     }
     router.refresh();
-  }
-
-  function buildSavePayload() {
-    return {
-      serviceId: service.id,
-      name: name.trim(),
-      description: description.trim() || undefined,
-      currency: service.currency,
-      includedUsers: Number(includedUsers) || 0,
-      includedLocations: Number(includedLocations) || 0,
-      includedAdmins: Number(includedAdmins) || 0,
-      monthlyCost12Minor: termMinor(service, 12),
-      monthlyCost24Minor: termMinor(service, 24),
-      ...(typeof service.upfrontCost12Minor === "number"
-        ? { upfrontCost12Minor: service.upfrontCost12Minor }
-        : {}),
-      features: service.features,
-    };
-  }
-
-  async function onSave() {
-    await runAction(async () => {
-      const res = await saveCatalogServiceAction(buildSavePayload());
-      if (res.ok) {
-        setIsEditingDetails(false);
-      }
-      return res;
-    });
   }
 
   return (
@@ -261,18 +232,6 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
               Archive
             </Button>
           ) : null}
-          {service.status !== "archived" ? (
-            <Button
-              type="button"
-              size="sm"
-              className="min-w-[5.5rem] gap-2"
-              disabled={readOnly || busy || !isEditingDetails}
-              onClick={() => void onSave()}
-            >
-              {busy ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden /> : null}
-              Save
-            </Button>
-          ) : null}
         </div>
       </div>
 
@@ -281,35 +240,10 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="border-border/80 bg-card/80 shadow-sm lg:col-span-2">
           <CardHeader className="border-b border-border/60 bg-muted/20">
-            <div className="flex items-center justify-between gap-2">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Package className="h-5 w-5 text-muted-foreground" aria-hidden />
-                Service details
-              </CardTitle>
-              {canEditDetails ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
-                  aria-label={isEditingDetails ? "Cancel editing" : "Edit service details"}
-                  onClick={() => {
-                    if (isEditingDetails) {
-                      cancelEditingDetails();
-                      return;
-                    }
-                    resetFormFromService(service);
-                    setIsEditingDetails(true);
-                  }}
-                >
-                  {isEditingDetails ? (
-                    <X className="h-4 w-4 shrink-0" aria-hidden />
-                  ) : (
-                    <Pencil className="h-4 w-4 shrink-0" aria-hidden />
-                  )}
-                </Button>
-              ) : null}
-            </div>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Package className="h-5 w-5 text-muted-foreground" aria-hidden />
+              Service details
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-5 p-6 text-sm">
             <dl className="grid gap-4 sm:grid-cols-2">
@@ -318,19 +252,27 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
                   <Tag className={detailLabelIconClass} aria-hidden />
                   Name
                 </dt>
-                {isEditingDetails ? (
-                  <dd className="mt-1.5">
-                    <Input
-                      id="service-name"
-                      value={name}
-                      disabled={readOnly}
-                      className={fieldInputClass}
-                      onChange={(e) => setName(e.target.value)}
-                    />
-                  </dd>
-                ) : (
-                  <dd className="text-foreground">{service.name.trim() || "—"}</dd>
-                )}
+                <dd>
+                  <InlineEditableField
+                    fieldId="name"
+                    activeFieldId={activeFieldId}
+                    onActiveFieldIdChange={setActiveFieldId}
+                    value={service.name}
+                    editLabel="name"
+                    placeholder="Service name"
+                    disabled={fieldsDisabled}
+                    onSave={async (next) => {
+                      const trimmed = next.trim();
+                      if (!trimmed) {
+                        return { ok: false, message: "Name is required." };
+                      }
+                      if (trimmed.length > 120) {
+                        return { ok: false, message: "Name must be 120 characters or fewer." };
+                      }
+                      return persistField({ name: trimmed });
+                    }}
+                  />
+                </dd>
               </div>
               <div className="space-y-1">
                 <dt className={detailLabelClass}>
@@ -380,21 +322,23 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
                 <AlignLeft className={detailLabelIconClass} aria-hidden />
                 Description
               </p>
-              {isEditingDetails ? (
-                <textarea
-                  id="service-description"
-                  rows={3}
-                  value={description}
-                  disabled={readOnly}
-                  className={descriptionTextareaClass}
-                  placeholder="Provide a brief description of the product or service"
-                  onChange={(e) => setDescription(e.target.value)}
-                />
-              ) : (
-                <p className="text-sm text-foreground">
-                  {service.description?.trim() ? service.description.trim() : "—"}
-                </p>
-              )}
+              <InlineEditableField
+                fieldId="description"
+                activeFieldId={activeFieldId}
+                onActiveFieldIdChange={setActiveFieldId}
+                value={service.description ?? ""}
+                editLabel="description"
+                placeholder="Provide a brief description of the product or service"
+                multiline
+                disabled={fieldsDisabled}
+                onSave={async (next) => {
+                  const trimmed = next.trim();
+                  if (trimmed.length > 500) {
+                    return { ok: false, message: "Description must be 500 characters or fewer." };
+                  }
+                  return persistField({ description: trimmed });
+                }}
+              />
             </div>
 
             {isPlan ? (
@@ -403,70 +347,70 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
                   <Users className={detailLabelIconClass} aria-hidden />
                   Entitlements
                 </p>
-                {isEditingDetails ? (
-                  <div className="grid gap-4 sm:grid-cols-3">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="users" className="text-[13px] text-muted-foreground">
-                        Included users
-                      </Label>
-                      <Input
-                        id="users"
-                        type="number"
-                        min={0}
-                        value={includedUsers}
-                        disabled={readOnly}
-                        className={fieldInputClass}
-                        onChange={(e) => setIncludedUsers(e.target.value)}
+                <dl className="grid gap-4 sm:grid-cols-1">
+                  <div className="space-y-1">
+                    <dt className="text-[13px] text-muted-foreground">Included users</dt>
+                    <dd>
+                      <InlineEditableField
+                        fieldId="includedUsers"
+                        activeFieldId={activeFieldId}
+                        onActiveFieldIdChange={setActiveFieldId}
+                        value={String(service.includedUsers)}
+                        editLabel="included users"
+                        inputType="number"
+                        inputMin={0}
+                        disabled={fieldsDisabled}
+                        onSave={async (next) => {
+                          const parsed = parseNonNegativeInt(next, "number of users");
+                          if (!parsed.ok) return parsed;
+                          return persistField({ includedUsers: parsed.value });
+                        }}
                       />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="locations" className="text-[13px] text-muted-foreground">
-                        Included locations
-                      </Label>
-                      <Input
-                        id="locations"
-                        type="number"
-                        min={0}
-                        value={includedLocations}
-                        disabled={readOnly}
-                        className={fieldInputClass}
-                        onChange={(e) => setIncludedLocations(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="admins" className="text-[13px] text-muted-foreground">
-                        Included admins
-                      </Label>
-                      <Input
-                        id="admins"
-                        type="number"
-                        min={0}
-                        value={includedAdmins}
-                        disabled={readOnly}
-                        className={fieldInputClass}
-                        onChange={(e) => setIncludedAdmins(e.target.value)}
-                      />
-                    </div>
+                    </dd>
                   </div>
-                ) : (
-                  <dl className="grid gap-4 sm:grid-cols-3">
-                    <div className="space-y-1">
-                      <dt className="text-[13px] text-muted-foreground">Included users</dt>
-                      <dd className="tabular-nums text-foreground">{service.includedUsers}</dd>
-                    </div>
-                    <div className="space-y-1">
-                      <dt className="text-[13px] text-muted-foreground">Included locations</dt>
-                      <dd className="tabular-nums text-foreground">{service.includedLocations}</dd>
-                    </div>
-                    <div className="space-y-1">
-                      <dt className="text-[13px] text-muted-foreground">Included admins</dt>
-                      <dd className="tabular-nums text-foreground">{service.includedAdmins}</dd>
-                    </div>
-                  </dl>
-                )}
+                  <div className="space-y-1">
+                    <dt className="text-[13px] text-muted-foreground">Included locations</dt>
+                    <dd>
+                      <InlineEditableField
+                        fieldId="includedLocations"
+                        activeFieldId={activeFieldId}
+                        onActiveFieldIdChange={setActiveFieldId}
+                        value={String(service.includedLocations)}
+                        editLabel="included locations"
+                        inputType="number"
+                        inputMin={0}
+                        disabled={fieldsDisabled}
+                        onSave={async (next) => {
+                          const parsed = parseNonNegativeInt(next, "number of locations");
+                          if (!parsed.ok) return parsed;
+                          return persistField({ includedLocations: parsed.value });
+                        }}
+                      />
+                    </dd>
+                  </div>
+                  <div className="space-y-1">
+                    <dt className="text-[13px] text-muted-foreground">Included admins</dt>
+                    <dd>
+                      <InlineEditableField
+                        fieldId="includedAdmins"
+                        activeFieldId={activeFieldId}
+                        onActiveFieldIdChange={setActiveFieldId}
+                        value={String(service.includedAdmins)}
+                        editLabel="included admins"
+                        inputType="number"
+                        inputMin={0}
+                        disabled={fieldsDisabled}
+                        onSave={async (next) => {
+                          const parsed = parseNonNegativeInt(next, "number of admins");
+                          if (!parsed.ok) return parsed;
+                          return persistField({ includedAdmins: parsed.value });
+                        }}
+                      />
+                    </dd>
+                  </div>
+                </dl>
               </div>
             ) : null}
-
           </CardContent>
         </Card>
 

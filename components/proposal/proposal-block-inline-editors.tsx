@@ -19,7 +19,6 @@ import {
 } from "@/lib/package-tier-limits";
 import { effectivePricingLineQuantity } from "@/lib/pricing-line-quantity";
 import {
-  normalizePackagesTotalSectionLabelForPersistence,
   packageAddonsTotalMinor,
   packageCommitmentTotalMinor,
   packageMonthlyTotalMinor,
@@ -356,7 +355,6 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
   }
 
   const addonLineItems = block.addonLineItems ?? [];
-  const addonQtyUnitDraft = ((block.addonQuantityUnitLabel ?? "").trim() || "Unit").slice(0, 40);
   const editableAddonQty = block.allowAddonQuantityEdit !== false;
 
   function patchAddonLine(id: string, next: Partial<PricingLineItem>) {
@@ -428,8 +426,6 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
       addonLineItems: addonLineItems.length > 0 ? addonLineItems : [],
       addonsTitle: block.addonsTitle?.trim() || "Add-ons",
       allowAddonQuantityEdit: true,
-      addonQuantityUnitLabel: block.addonQuantityUnitLabel?.trim() || "Unit",
-      totalSectionLabel: normalizePackagesTotalSectionLabelForPersistence(block.totalSectionLabel),
     });
   }
 
@@ -622,38 +618,6 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
               id="packages-inline-addons-table"
               className="w-full"
             >
-              <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2 border-b border-dashed border-border/50 bg-muted/10 px-4 py-2 text-[11px]">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-muted-foreground">Qty label</span>
-                  <Input
-                    value={addonQtyUnitDraft}
-                    onChange={(e) =>
-                      patch({
-                        addonQuantityUnitLabel: e.target.value.trim()
-                          ? e.target.value.trim().slice(0, 40)
-                          : undefined,
-                      })
-                    }
-                    placeholder="Unit"
-                    className="h-8 w-28 bg-background text-xs"
-                    aria-label="Add-on quantity suffix"
-                  />
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-muted-foreground">Summary label</span>
-                  <Input
-                    value={block.totalSectionLabel ?? ""}
-                    onChange={(e) =>
-                      patch({
-                        totalSectionLabel: normalizePackagesTotalSectionLabelForPersistence(e.target.value),
-                      })
-                    }
-                    placeholder="Total"
-                    className="h-8 w-32 bg-background text-xs"
-                    aria-label="Packages summary bar title"
-                  />
-                </div>
-              </div>
               <div className="overflow-x-auto bg-card text-left">
                 <table className="w-full min-w-[480px] text-left text-sm">
                   <thead>
@@ -724,9 +688,8 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
                           </td>
                           {qtyProps ? (
                             <td className="px-4 py-3 text-right align-middle">
-                              <span className="inline-flex items-center justify-end gap-1.5 tabular-nums">
+                              <span className="inline-flex items-center justify-end tabular-nums">
                                 <InlineNumber {...qtyProps} />
-                                <span className="text-xs text-muted-foreground">{addonQtyUnitDraft}</span>
                               </span>
                             </td>
                           ) : null}
