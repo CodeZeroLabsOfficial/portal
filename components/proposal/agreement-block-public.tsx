@@ -26,8 +26,12 @@ import { readableForeground, resolveAgreementButtonColor } from "@/lib/block-sty
 import { formatCurrencyAmount } from "@/lib/format";
 import { effectiveCatalogAddonUnitAmount } from "@/lib/catalog-service-tier";
 import { effectivePricingLineQuantity } from "@/lib/pricing-line-quantity";
+import { resolveProposalAddonBillingKind } from "@/lib/proposal-addon-billing";
+import type { CatalogServicePickerOption } from "@/types/catalog-service";
 import {
   packageMonthlyTotalMinor,
+  packageOneOffAddonsTotalMinor,
+  packageTierUpfrontMinor,
   packagesAddonsSectionActive,
   packagesSelectionTermLabel,
 } from "@/lib/proposal-packages-totals";
@@ -61,6 +65,8 @@ export interface AgreementBlockPublicProps {
   publicSubscriptionUi?: ProposalPublicSubscriptionUi | null;
   /** CRM-linked customer fields for agreement pre-fill (public page only). */
   customerSignerPrefill?: ProposalCustomerSignerPrefill | null;
+  /** Active catalogue services — classifies recurring vs one-off add-ons in the summary. */
+  catalogServices?: readonly CatalogServicePickerOption[];
   /** When false (editor / preview) the CTA is disabled and the sign form is read-only. */
   interactive?: boolean;
   /** Renders nested blocks above the sign button (same pipeline as the public document viewer). */
@@ -136,12 +142,15 @@ interface PackageSelectionSummary {
   termLabel: string;
   monthlyMinor: number;
   monthlyTotalMinor: number;
+  upfrontMinor: number;
+  oneOffAddonsMinor: number;
   addonLines: Array<{
     id: string;
     label: string;
     quantity: number;
     unitAmountMinor: number;
     lineTotalMinor: number;
+    billingKind: "recurring" | "one_off";
   }>;
   /** When set, public subscription checkout can use this Stripe Price id. */
   stripePriceId?: string;
@@ -158,6 +167,7 @@ function packagesBlocksFromDocument(blocks: ProposalBlock[]): PackagesBlock[] {
 function buildPackageSelectionSummary(
   block: PackagesBlock,
   selection: PackagesPublicSelection,
+  catalogServices: readonly CatalogServicePickerOption[] = [],
 ): PackageSelectionSummary | null {
   const tier = block.tiers.find((t) => t.id === selection.tierId);
   if (!tier) return null;
@@ -166,7 +176,15 @@ function buildPackageSelectionSummary(
     selection.term === "24_months"
       ? (tier.monthlyCost24Minor ?? 0)
       : (tier.monthlyCost12Minor ?? 0);
-  const monthlyTotal = packageMonthlyTotalMinor(block, selection);
+  const monthlyTotal = packageMonthlyTotalMinor(block, selection, undefined, undefined, catalogServices);
+  const upfrontMinor = packageTierUpfrontMinor(block, selection);
+  const oneOffAddonsMinor = packageOneOffAddonsTotalMinor(
+    block,
+    selection,
+    undefined,
+    undefined,
+    catalogServices,
+  );
 
   const addonLines: PackageSelectionSummary["addonLines"] = [];
   if (packagesAddonsSectionActive(block)) {
@@ -178,6 +196,7 @@ function buildPackageSelectionSummary(
           ? Math.floor(rawQ)
           : effectivePricingLineQuantity(li);
       if (quantity <= 0) continue;
+      const billingKind = resolveProposalAddonBillingKind(li, catalogServices);
       const unitAmountMinor = effectiveCatalogAddonUnitAmount(li, selection.term);
       addonLines.push({
         id: li.id,
@@ -185,6 +204,7 @@ function buildPackageSelectionSummary(
         quantity,
         unitAmountMinor,
         lineTotalMinor: Math.round(unitAmountMinor * quantity),
+        billingKind: billingKind === "one_off" ? "one_off" : "recurring",
       });
     }
   }
@@ -197,6 +217,8 @@ function buildPackageSelectionSummary(
     termLabel: packagesSelectionTermLabel(block, selection.term),
     monthlyMinor: monthly,
     monthlyTotalMinor: monthlyTotal,
+    upfrontMinor,
+    oneOffAddonsMinor,
     addonLines,
     stripePriceId: tier.stripePriceId?.trim() || undefined,
   };
@@ -244,6 +266,11 @@ function PackageSummaryCard({ summary }: { summary: PackageSelectionSummary }) {
                 </span>
                 <span className="tabular-nums text-zinc-900">
                   {formatCurrencyAmount(line.lineTotalMinor, summary.currency)}
+                  {line.billingKind === "one_off" ? (
+                    <span className="text-zinc-500"> one-time</span>
+                  ) : (
+                    <span className="text-zinc-500">/mo</span>
+                  )}
                 </span>
               </li>
             ))}
@@ -251,12 +278,28 @@ function PackageSummaryCard({ summary }: { summary: PackageSelectionSummary }) {
         </div>
       ) : null}
 
+      {summary.upfrontMinor > 0 ? (
+        <div className="mt-5 flex items-baseline justify-between border-t border-zinc-200 pt-4 text-sm">
+          <span className="font-medium text-zinc-900">Upfront fee</span>
+          <span className="tabular-nums font-semibold text-zinc-900">
+            {formatCurrencyAmount(summary.upfrontMinor, summary.currency)}
+            <span className="font-normal text-zinc-500"> one-time</span>
+          </span>
+        </div>
+      ) : null}
+
       <div className="mt-5 flex items-baseline justify-between rounded-xl bg-zinc-100 px-4 py-3">
-        <span className="text-sm font-semibold text-zinc-900">Monthly total</span>
+        <span className="text-sm font-semibold text-zinc-900">Monthly subscription</span>
         <span className="text-lg font-semibold tabular-nums text-zinc-900">
           {formatCurrencyAmount(summary.monthlyTotalMinor, summary.currency)}
         </span>
       </div>
+      {summary.oneOffAddonsMinor > 0 ? (
+        <p className="mt-2 text-right text-xs text-zinc-500">
+          Plus {formatCurrencyAmount(summary.oneOffAddonsMinor, summary.currency)} in one-time add-ons due at
+          signing.
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -326,6 +369,7 @@ export function AgreementBlockPublic({
   interactive = true,
   publicSubscriptionUi = null,
   customerSignerPrefill = null,
+  catalogServices = [],
   renderAgreementChild,
 }: AgreementBlockPublicProps) {
   const router = useRouter();
@@ -355,11 +399,11 @@ export function AgreementBlockPublic({
     for (const pb of blocks) {
       const sel = publicSelections?.[pb.id];
       if (!sel) continue;
-      const built = buildPackageSelectionSummary(pb, sel);
+      const built = buildPackageSelectionSummary(pb, sel, catalogServices);
       if (built) out.push(built);
     }
     return out;
-  }, [allBlocks, publicSelections]);
+  }, [allBlocks, publicSelections, catalogServices]);
 
   const planSelectionComplete = React.useMemo(
     () => isDocumentPackageSelectionComplete(allBlocks, publicSelections),

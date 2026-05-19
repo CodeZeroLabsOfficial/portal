@@ -16,6 +16,7 @@ import { getUserStoredTimeZone } from "@/server/firestore/user-locality";
 import { hydrateAgreementBlocksInDocument } from "@/server/proposal/hydrate-agreement-contract-templates";
 import { loadProposalCustomerSignerPrefill } from "@/server/proposal/public-proposal-customer-signer-prefill";
 import { loadProposalPublicSubscriptionUi } from "@/server/proposal/public-proposal-subscription-ui";
+import { listCatalogServicePickerOptionsForOrganizationId } from "@/server/firestore/catalog-services";
 
 interface PublicProposalPageProps {
   params: Promise<{ token: string }>;
@@ -64,14 +65,15 @@ export default async function PublicProposalPage(props: PublicProposalPageProps)
     : proposal.document;
 
   const agreementPresent = hasAgreementBlock(publicDocument.blocks);
-  const [publicSubscriptionUi, customerSignerPrefill] = unlocked
+  const [publicSubscriptionUi, customerSignerPrefill, catalogServices] = unlocked
     ? await Promise.all([
         agreementPresent ? loadProposalPublicSubscriptionUi(proposal) : Promise.resolve(null),
         proposal.customerId?.trim()
           ? loadProposalCustomerSignerPrefill(proposal)
           : Promise.resolve(null),
+        listCatalogServicePickerOptionsForOrganizationId(proposal.organizationId),
       ])
-    : [null, null];
+    : [null, null, []];
   /**
    * Mirror {@link ProposalPublicFooter}'s null-return condition: when an agreement
    * block drives signing and the proposal hasn't been accepted yet, the footer
@@ -110,6 +112,7 @@ export default async function PublicProposalPage(props: PublicProposalPageProps)
               localityTimeZone={localityTimeZone}
               publicSubscriptionUi={publicSubscriptionUi}
               customerSignerPrefill={customerSignerPrefill}
+              catalogServices={catalogServices}
             />
           </div>
           {showFooter ? (

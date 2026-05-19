@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { utcDateIsoFromMillis } from "@/lib/date-utc-iso";
-import { resolveFirstPackageSubscriptionFromProposal } from "@/lib/proposal-subscription-from-catalog";
+import { resolveProposalCommerce } from "@/lib/proposal-commerce";
 import { zodErrorToMessage } from "@/lib/zod-error";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import { getStripe } from "@/lib/stripe/server";
@@ -14,6 +14,7 @@ import {
 import { getProposalRecordByShareToken } from "@/server/firestore/parse-proposal";
 import { ensureStripeCustomer } from "@/server/stripe/proposal-billing";
 import { loadBillingCatalogForOrganization } from "@/server/catalog/billing-catalog";
+import { chargeProposalOneOffItems } from "@/server/stripe/proposal-one-off-billing";
 import { createSubscriptionScheduleForCustomer } from "@/server/stripe/subscription-schedule-create";
 
 const bodySchema = z
@@ -44,14 +45,17 @@ function revalidateAfterPublicSubscription(proposalId: string, shareToken: strin
   revalidatePath(`/admin/proposals/${proposalId}`);
 }
 
+export type CreateProposalPublicSubscriptionResult =
+  | { ok: true; subscriptionId: string; oneOffInvoiceId?: string; oneOffWarning?: string }
+  | { ok: false; message: string };
+
 /**
- * Creates the same Stripe subscription schedule as **Add subscription**, using
- * the accepted proposal’s plan selection, customer link, and agreement date
- * as the billing start date.
+ * Creates a Stripe subscription schedule for the plan and recurring add-ons, then
+ * invoices one-time charges (upfront fees and one-off catalogue add-ons).
  */
 export async function createProposalPublicSubscriptionAction(
   raw: unknown,
-): Promise<{ ok: true; subscriptionId: string } | { ok: false; message: string }> {
+): Promise<CreateProposalPublicSubscriptionResult> {
   const parsed = bodySchema.safeParse(raw);
   if (!parsed.success) {
     return { ok: false, message: zodErrorToMessage(parsed.error) };
@@ -92,17 +96,22 @@ export async function createProposalPublicSubscriptionAction(
     return { ok: false, message: "No subscription services are configured." };
   }
 
-  const pick = resolveFirstPackageSubscriptionFromProposal(
+  const commerce = resolveProposalCommerce(
     proposal,
     billingCatalog.catalogServices,
     billingCatalog.stripeProductCatalog,
   );
-  if (!pick) {
+  if (!commerce?.pick) {
     return {
       ok: false,
       message:
+        commerce?.billingErrors[0] ??
         "Could not resolve a subscription from this proposal. Link plan tiers to a catalogue service (or legacy Stripe product) and ensure a plan is selected.",
     };
+  }
+
+  if (commerce.billingErrors.length > 0) {
+    return { ok: false, message: commerce.billingErrors[0]! };
   }
 
   const startDateIso = utcDateIsoFromMillis(proposal.acceptedAt);
@@ -113,15 +122,19 @@ export async function createProposalPublicSubscriptionAction(
   }
 
   const customerRow = { ...crm, stripeCustomerId };
+  const additionalSubscriptionItems = commerce.subscriptionItems
+    .filter((item) => item.priceId !== commerce.pick!.priceId)
+    .map((item) => ({ priceId: item.priceId, quantity: item.quantity }));
 
   const scheduleResult = await createSubscriptionScheduleForCustomer({
     stripe,
     db,
     customer: customerRow,
     organizationId: proposal.organizationId,
-    stripePriceId: pick.priceId,
+    stripePriceId: commerce.pick.priceId,
+    additionalSubscriptionItems,
     startDateIso,
-    durationMonths: pick.durationMonths,
+    durationMonths: commerce.pick.durationMonths,
     collectionMethod: billing.collectionMethod,
     daysUntilDue: billing.collectionMethod === "send_invoice" ? billing.daysUntilDue ?? 14 : undefined,
     defaultPaymentMethodId:
@@ -138,6 +151,36 @@ export async function createProposalPublicSubscriptionAction(
 
   if (!scheduleResult.ok) return scheduleResult;
 
+  let oneOffInvoiceId: string | undefined;
+  let oneOffWarning: string | undefined;
+
+  if (commerce.oneOffItems.length > 0) {
+    const oneOffResult = await chargeProposalOneOffItems({
+      stripe,
+      stripeCustomerId,
+      items: commerce.oneOffItems,
+      organizationId: proposal.organizationId,
+      proposalId: proposal.id,
+      proposalTitle: proposal.title,
+      collectionMethod: billing.collectionMethod,
+      daysUntilDue: billing.collectionMethod === "send_invoice" ? billing.daysUntilDue ?? 14 : undefined,
+      defaultPaymentMethodId:
+        billing.collectionMethod === "charge_automatically"
+          ? billing.defaultPaymentMethodId
+          : undefined,
+    });
+    if (!oneOffResult.ok) {
+      oneOffWarning = `Subscription was created, but one-time charges could not be invoiced: ${oneOffResult.message}`;
+    } else {
+      oneOffInvoiceId = oneOffResult.invoiceId;
+    }
+  }
+
   revalidateAfterPublicSubscription(proposal.id, proposal.shareToken, crm.id);
-  return scheduleResult;
+  return {
+    ok: true,
+    subscriptionId: scheduleResult.subscriptionId,
+    ...(oneOffInvoiceId ? { oneOffInvoiceId } : {}),
+    ...(oneOffWarning ? { oneOffWarning } : {}),
+  };
 }

@@ -645,7 +645,11 @@ export function AgreementSignatureForm({
               ? subscriptionBillingSnapshot.defaultPaymentMethodId
               : undefined,
         });
-        if (!subRes.ok) subscriptionError = subRes.message;
+        if (!subRes.ok) {
+          subscriptionError = subRes.message;
+        } else if (subRes.oneOffWarning) {
+          subscriptionError = subRes.oneOffWarning;
+        }
       }
       await onSubmit(payload, { subscriptionError });
     } catch {

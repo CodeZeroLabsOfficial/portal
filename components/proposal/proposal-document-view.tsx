@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import type { CatalogServicePickerOption } from "@/types/catalog-service";
 import type {
   AccordionBlock,
   AgreementBlock,
@@ -75,6 +76,8 @@ export interface ProposalDocumentViewProps {
   publicSubscriptionUi?: ProposalPublicSubscriptionUi | null;
   /** CRM customer name / email / company for agreement field prefill (public page when `customerId` is set). */
   customerSignerPrefill?: ProposalCustomerSignerPrefill | null;
+  /** Active catalogue — recurring vs one-off add-on labels in the agreement summary. */
+  catalogServices?: readonly CatalogServicePickerOption[];
 }
 
 function AccordionPublicView({ block }: { block: AccordionBlock }) {
@@ -154,6 +157,7 @@ interface ProposalRenderContext {
   localityTimeZone?: string;
   publicSubscriptionUi?: ProposalPublicSubscriptionUi | null;
   customerSignerPrefill?: ProposalCustomerSignerPrefill | null;
+  catalogServices?: readonly CatalogServicePickerOption[];
 }
 
 function BlockView({
@@ -459,6 +463,7 @@ function BlockView({
           interactive={Boolean(shareToken)}
           publicSubscriptionUi={proposalContext?.publicSubscriptionUi}
           customerSignerPrefill={proposalContext?.customerSignerPrefill}
+          catalogServices={proposalContext?.catalogServices}
           renderAgreementChild={(child) => (
             <BlockView
               key={child.id}
@@ -576,6 +581,7 @@ export function ProposalDocumentView({
   localityTimeZone,
   publicSubscriptionUi = null,
   customerSignerPrefill = null,
+  catalogServices = [],
 }: ProposalDocumentViewProps) {
   const style = React.useMemo(() => {
     if (!branding?.primaryColor && !branding?.fontFamily) return undefined;
@@ -598,6 +604,7 @@ export function ProposalDocumentView({
       localityTimeZone,
       publicSubscriptionUi,
       customerSignerPrefill,
+      catalogServices,
     }),
     [
       document.blocks,
@@ -609,6 +616,7 @@ export function ProposalDocumentView({
       localityTimeZone,
       publicSubscriptionUi,
       customerSignerPrefill,
+      catalogServices,
     ],
   );
 

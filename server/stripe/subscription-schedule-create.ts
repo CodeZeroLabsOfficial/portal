@@ -51,12 +51,19 @@ function productNameFromPriceObject(product: unknown): string | undefined {
   return typeof obj.id === "string" ? obj.id : undefined;
 }
 
+export type SubscriptionScheduleLineItem = {
+  priceId: string;
+  quantity: number;
+};
+
 export type CreateSubscriptionScheduleParams = {
   stripe: Stripe;
   db: Firestore;
   customer: CustomerRecord;
   organizationId?: string;
   stripePriceId: string;
+  /** Extra recurring lines (catalogue add-ons) on the same schedule phase. */
+  additionalSubscriptionItems?: SubscriptionScheduleLineItem[];
   startDateIso: string;
   durationMonths: number;
   collectionMethod: "charge_automatically" | "send_invoice";
@@ -83,6 +90,7 @@ export async function createSubscriptionScheduleForCustomer(
     customer,
     organizationId,
     stripePriceId: rawPriceId,
+    additionalSubscriptionItems = [],
     startDateIso,
     durationMonths,
     collectionMethod,
@@ -131,13 +139,48 @@ export async function createSubscriptionScheduleForCustomer(
     const iterations = Math.max(1, Math.floor(durationMonths / intervalMonths));
     const subscriptionEnd = addUtcMonthsClamped(startAt, durationMonths);
 
+    const phaseItems: Array<{ price: string; quantity: number }> = [
+      { price: selectedPriceId, quantity: 1 },
+    ];
+    const seenPrices = new Set<string>([selectedPriceId]);
+
+    for (const extra of additionalSubscriptionItems) {
+      const pid = extra.priceId.trim();
+      const qty = Math.max(1, Math.floor(extra.quantity));
+      if (!pid.startsWith("price_")) {
+        return { ok: false, message: "Invalid Stripe price on a subscription add-on." };
+      }
+      if (seenPrices.has(pid)) {
+        const existing = phaseItems.find((i) => i.price === pid);
+        if (existing) existing.quantity += qty;
+        continue;
+      }
+      const extraPrice = await stripe.prices.retrieve(pid);
+      if (!extraPrice.recurring) {
+        return {
+          ok: false,
+          message: "Add-on prices must be recurring to attach to a subscription schedule.",
+        };
+      }
+      const extraInterval = recurringIntervalMonths(extraPrice.recurring);
+      if (extraInterval !== intervalMonths) {
+        return {
+          ok: false,
+          message:
+            "Add-on billing interval must match the plan interval. Use one-off billing type for one-time add-ons.",
+        };
+      }
+      seenPrices.add(pid);
+      phaseItems.push({ price: pid, quantity: qty });
+    }
+
     const schedule = await stripe.subscriptionSchedules.create({
       customer: stripeCustomerId,
       start_date: startAt <= nowMs ? "now" : startAtUnix,
       end_behavior: "cancel",
       phases: [
         {
-          items: [{ price: selectedPriceId, quantity: 1 }],
+          items: phaseItems,
           iterations,
           proration_behavior: "none",
         },
@@ -172,12 +215,27 @@ export async function createSubscriptionScheduleForCustomer(
       await db.collection(COLLECTIONS.subscriptions).doc(subscriptionId).set(mergeFields, { merge: true });
       await mirrorSubscriptionRowToLinkedPortalUser(db, stripeCustomerId, subscriptionId, mergeFields);
     } else {
-      const scheduledMonthlyAmountMinor =
-        typeof price.unit_amount === "number"
-          ? price.recurring?.interval === "year"
+      let scheduledMonthlyAmountMinor: number | undefined;
+      if (typeof price.unit_amount === "number") {
+        scheduledMonthlyAmountMinor =
+          price.recurring?.interval === "year"
             ? Math.round(price.unit_amount / 12)
-            : price.unit_amount
-          : undefined;
+            : price.unit_amount;
+      }
+      for (const extra of additionalSubscriptionItems) {
+        try {
+          const ep = await stripe.prices.retrieve(extra.priceId.trim());
+          if (typeof ep.unit_amount === "number") {
+            const line =
+              ep.recurring?.interval === "year"
+                ? Math.round((ep.unit_amount * Math.max(1, extra.quantity)) / 12)
+                : ep.unit_amount * Math.max(1, extra.quantity);
+            scheduledMonthlyAmountMinor = (scheduledMonthlyAmountMinor ?? 0) + line;
+          }
+        } catch {
+          /* best-effort mirror */
+        }
+      }
       const scheduleRecord = {
         id: schedule.id,
         customerId: stripeCustomerId,

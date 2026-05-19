@@ -30,6 +30,7 @@ import {
   isProposalPackageSelectionComplete,
   isPublicProposalPackageSelectionsLocked,
 } from "@/lib/proposal-package-selection";
+import { loadBillingCatalogForOrganization } from "@/server/catalog/billing-catalog";
 import { resolveSubscriptionStripePriceIdForProposalWithStripe } from "@/server/stripe/resolve-proposal-subscription-with-catalog";
 import { runAdminWrite } from "@/lib/firebase/admin-write";
 import { uploadSignedAgreementSignaturePng } from "@/lib/firebase/admin-storage";
@@ -345,7 +346,11 @@ export async function acceptProposalPublicAction(
   await applyProposalAcceptCrmSideEffects(db, proposal, parsed.data.signerName);
 
   const stripeSubscriptionPriceId = await resolveSubscriptionStripePriceIdForProposalWithStripe(proposal);
-  const commerceSnapshot = buildSignedAgreementCommerceSnapshot(proposalForAgreement);
+  const billingCatalog = await loadBillingCatalogForOrganization(proposal.organizationId);
+  const commerceSnapshot = buildSignedAgreementCommerceSnapshot(
+    proposalForAgreement,
+    billingCatalog.catalogServices,
+  );
   if (proposal.customerId && stripeSubscriptionPriceId) {
     await persistCustomerSubscriptionIntentAfterAccept(
       db,

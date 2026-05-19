@@ -1,12 +1,19 @@
 import Stripe from "stripe";
 import { DEFAULT_CURRENCY } from "@/lib/constants";
 import { findProposalBlockById, iterateProposalContentBlocks } from "@/lib/proposal-blocks";
-import type { CustomerRecord } from "@/types/customer";
+import { resolveProposalCommerce, type ProposalStripeOneOffItem } from "@/lib/proposal-commerce";
 import { packageCommitmentTotalMinor } from "@/lib/proposal-packages-totals";
+import type { CustomerRecord } from "@/types/customer";
+import type { CatalogServicePickerOption } from "@/types/catalog-service";
 import type { PackagesBlock, PricingBlock, ProposalRecord } from "@/types/proposal";
+import { loadBillingCatalogForOrganization } from "@/server/catalog/billing-catalog";
+import { chargeProposalOneOffItems } from "@/server/stripe/proposal-one-off-billing";
 
-/** Sum line items from pricing blocks and accepted package selections (publicSelections). */
-export function computeProposalTotalMinor(proposal: ProposalRecord): number {
+/** Sum pricing blocks and accepted package selections (recurring commitment + one-offs). */
+export function computeProposalTotalMinor(
+  proposal: ProposalRecord,
+  catalogServices?: readonly CatalogServicePickerOption[],
+): number {
   let total = 0;
   const blocks = proposal.document.blocks;
 
@@ -29,8 +36,42 @@ export function computeProposalTotalMinor(proposal: ProposalRecord): number {
       if (!raw || raw.type !== "packages") continue;
       const pb = raw as PackagesBlock;
       if (!pb.tiers.some((t) => t.id === sel.tierId)) continue;
-      total += packageCommitmentTotalMinor(pb, sel);
+      total += packageCommitmentTotalMinor(pb, sel, catalogServices);
     }
+  }
+
+  return total;
+}
+
+/** One-off package charges + pricing blocks (for payment checkout / invoices). */
+export function computeProposalOneOffTotalMinor(
+  proposal: ProposalRecord,
+  catalogServices?: readonly CatalogServicePickerOption[],
+): number {
+  let total = 0;
+  const blocks = proposal.document.blocks;
+
+  for (const block of iterateProposalContentBlocks(blocks)) {
+    if (block.type === "pricing") {
+      const pb = block as PricingBlock;
+      for (const line of pb.lineItems) {
+        const q = line.quantity;
+        const qty =
+          typeof q === "number" && Number.isFinite(q) && q >= 0 ? Math.floor(q) : 1;
+        total += Math.round(line.unitAmountMinor * qty);
+      }
+    }
+  }
+
+  const commerce = catalogServices
+    ? resolveProposalCommerce(
+        proposal,
+        [...catalogServices],
+        [],
+      )
+    : null;
+  if (commerce) {
+    total += commerce.oneOffTotalMinor;
   }
 
   return total;
@@ -78,50 +119,100 @@ export async function ensureStripeCustomer(
   return { stripeCustomerId: created.id, created: true };
 }
 
+function pricingBlockOneOffItems(proposal: ProposalRecord): ProposalStripeOneOffItem[] {
+  const items: ProposalStripeOneOffItem[] = [];
+  const currency = resolveProposalCurrency(proposal);
+  for (const block of iterateProposalContentBlocks(proposal.document.blocks)) {
+    if (block.type !== "pricing") continue;
+    const pb = block as PricingBlock;
+    for (const line of pb.lineItems) {
+      const qty =
+        typeof line.quantity === "number" && Number.isFinite(line.quantity) && line.quantity >= 0
+          ? Math.floor(line.quantity)
+          : 1;
+      if (qty <= 0) continue;
+      items.push({
+        amountMinor: line.unitAmountMinor,
+        quantity: qty,
+        currency,
+        description: line.label?.trim() || pb.title?.trim() || "Line item",
+      });
+    }
+  }
+  return items;
+}
+
 export async function createStripeInvoiceForProposal(
   stripe: Stripe,
   proposal: ProposalRecord,
   crm: CustomerRecord,
   organizationId?: string,
 ): Promise<{ invoiceId: string; hostedInvoiceUrl: string | null; stripeCustomerId: string }> {
-  const amount = computeProposalTotalMinor(proposal);
-  if (amount < 50) {
-    throw new Error(
-      "Computed proposal total is below the Stripe minimum (50 minor units). Add pricing or package selections.",
-    );
+  const billingCatalog = await loadBillingCatalogForOrganization(organizationId);
+  const commerce = resolveProposalCommerce(
+    proposal,
+    billingCatalog.catalogServices,
+    billingCatalog.stripeProductCatalog,
+  );
+
+  const oneOffItems: ProposalStripeOneOffItem[] = [
+    ...pricingBlockOneOffItems(proposal),
+    ...(commerce?.oneOffItems ?? []),
+  ];
+
+  if (oneOffItems.length === 0) {
+    const legacyAmount = computeProposalTotalMinor(proposal, billingCatalog.catalogServices);
+    if (legacyAmount < 50) {
+      throw new Error(
+        "Computed proposal total is below the Stripe minimum (50 minor units). Add pricing or package selections.",
+      );
+    }
+    const currency = resolveProposalCurrency(proposal);
+    const { stripeCustomerId } = await ensureStripeCustomer(stripe, crm, organizationId);
+    const invoice = await stripe.invoices.create({
+      customer: stripeCustomerId,
+      collection_method: "send_invoice",
+      days_until_due: 14,
+      auto_advance: false,
+      metadata: {
+        proposal_id: proposal.id,
+        ...(organizationId ? { organization_id: organizationId } : {}),
+      },
+      description: `Proposal: ${proposal.title}`,
+    });
+    await stripe.invoiceItems.create({
+      customer: stripeCustomerId,
+      invoice: invoice.id,
+      amount: legacyAmount,
+      currency,
+      description: proposal.document.title || proposal.title,
+      metadata: { proposal_id: proposal.id },
+    });
+    const finalized = await stripe.invoices.finalizeInvoice(invoice.id, { auto_advance: true });
+    return {
+      invoiceId: finalized.id,
+      hostedInvoiceUrl: finalized.hosted_invoice_url ?? null,
+      stripeCustomerId,
+    };
   }
 
-  const currency = resolveProposalCurrency(proposal);
   const { stripeCustomerId } = await ensureStripeCustomer(stripe, crm, organizationId);
-
-  const invoice = await stripe.invoices.create({
-    customer: stripeCustomerId,
-    collection_method: "send_invoice",
-    days_until_due: 14,
-    auto_advance: false,
-    metadata: {
-      proposal_id: proposal.id,
-      ...(organizationId ? { organization_id: organizationId } : {}),
-    },
-    description: `Proposal: ${proposal.title}`,
+  const result = await chargeProposalOneOffItems({
+    stripe,
+    stripeCustomerId,
+    items: oneOffItems,
+    organizationId,
+    proposalId: proposal.id,
+    proposalTitle: proposal.title,
+    collectionMethod: "send_invoice",
+    daysUntilDue: 14,
   });
-
-  await stripe.invoiceItems.create({
-    customer: stripeCustomerId,
-    invoice: invoice.id,
-    amount,
-    currency,
-    description: proposal.document.title || proposal.title,
-    metadata: {
-      proposal_id: proposal.id,
-    },
-  });
-
-  const finalized = await stripe.invoices.finalizeInvoice(invoice.id, { auto_advance: true });
-
+  if (!result.ok) {
+    throw new Error(result.message);
+  }
   return {
-    invoiceId: finalized.id,
-    hostedInvoiceUrl: finalized.hosted_invoice_url ?? null,
+    invoiceId: result.invoiceId,
+    hostedInvoiceUrl: result.hostedInvoiceUrl,
     stripeCustomerId,
   };
 }
@@ -138,20 +229,37 @@ export async function createCheckoutSessionForProposal(
 ): Promise<{ url: string | null; stripeCustomerId: string; createdStripeCustomer: boolean }> {
   const ensured = await ensureStripeCustomer(stripe, crm, organizationId);
   const { stripeCustomerId, created: createdStripeCustomer } = ensured;
-  const amount = computeProposalTotalMinor(proposal);
   const currency = resolveProposalCurrency(proposal);
 
   const successUrl = checkoutUrls?.successUrl ?? `${origin}/customer?stripe_session={CHECKOUT_SESSION_ID}`;
   const cancelUrl = checkoutUrls?.cancelUrl ?? `${origin}/customer?stripe_checkout=cancel`;
 
+  const billingCatalog = await loadBillingCatalogForOrganization(organizationId);
+  const commerce = resolveProposalCommerce(
+    proposal,
+    billingCatalog.catalogServices,
+    billingCatalog.stripeProductCatalog,
+  );
+
   if (mode === "subscription") {
-    if (!subscriptionPriceId?.trim()) {
-      throw new Error("Configure a Stripe Price id for subscriptions (subscriptionPriceId).");
+    const subscriptionItems = commerce?.subscriptionItems ?? [];
+    if (subscriptionItems.length === 0) {
+      const fallbackId = subscriptionPriceId?.trim();
+      if (!fallbackId) {
+        throw new Error(
+          "Configure a subscription from package selection or pass subscriptionPriceId.",
+        );
+      }
+      subscriptionItems.push({ priceId: fallbackId, quantity: 1, label: "Plan" });
     }
+
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       customer: ensured.stripeCustomerId,
-      line_items: [{ price: subscriptionPriceId.trim(), quantity: 1 }],
+      line_items: subscriptionItems.map((item) => ({
+        price: item.priceId,
+        quantity: Math.max(1, item.quantity),
+      })),
       success_url: successUrl,
       cancel_url: cancelUrl,
       metadata: {
@@ -162,28 +270,58 @@ export async function createCheckoutSessionForProposal(
     return { url: session.url, stripeCustomerId, createdStripeCustomer };
   }
 
-  if (amount < 50) {
-    throw new Error(
-      "Computed proposal total is below the Stripe minimum (50 minor units). Add pricing or package selections.",
-    );
+  const oneOffItems: ProposalStripeOneOffItem[] = [
+    ...pricingBlockOneOffItems(proposal),
+    ...(commerce?.oneOffItems ?? []),
+  ];
+
+  const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
+
+  for (const item of oneOffItems) {
+    const qty = Math.max(1, Math.floor(item.quantity));
+    if (item.priceId?.trim()) {
+      line_items.push({ price: item.priceId.trim(), quantity: qty });
+      continue;
+    }
+    if (typeof item.amountMinor === "number") {
+      line_items.push({
+        quantity: qty,
+        price_data: {
+          currency: item.currency.toLowerCase(),
+          unit_amount: item.amountMinor,
+          product_data: {
+            name: item.description,
+            metadata: { proposal_id: proposal.id },
+          },
+        },
+      });
+    }
+  }
+
+  if (line_items.length === 0) {
+    const amount = computeProposalOneOffTotalMinor(proposal, billingCatalog.catalogServices);
+    if (amount < 50) {
+      throw new Error(
+        "No one-time charges to collect. Add pricing lines, upfront fees, or one-off add-ons.",
+      );
+    }
+    line_items.push({
+      quantity: 1,
+      price_data: {
+        currency,
+        unit_amount: amount,
+        product_data: {
+          name: proposal.title,
+          metadata: { proposal_id: proposal.id },
+        },
+      },
+    });
   }
 
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     customer: ensured.stripeCustomerId,
-    line_items: [
-      {
-        quantity: 1,
-        price_data: {
-          currency,
-          unit_amount: amount,
-          product_data: {
-            name: proposal.title,
-            metadata: { proposal_id: proposal.id },
-          },
-        },
-      },
-    ],
+    line_items,
     success_url: successUrl,
     cancel_url: cancelUrl,
     metadata: {
