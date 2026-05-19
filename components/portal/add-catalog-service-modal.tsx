@@ -4,7 +4,7 @@ import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, type FieldErrors } from "react-hook-form";
 import {
   buildCatalogServicePriceLookupKey,
   normalizeLookupKeyBase,
@@ -123,6 +123,28 @@ export function AddCatalogServiceModal({ open, onOpenChange }: AddCatalogService
     }
   }, [isOneOff, pricingModel, form]);
 
+  function syncFormFromControls() {
+    form.setValue("lookupKeyBase", resolvedLookupBase, { shouldValidate: false });
+    if (isFlat) {
+      form.setValue("flatAmountMinor", majorInputToMinor(flatPrice), { shouldValidate: false });
+    } else {
+      form.setValue("monthlyCost12Minor", majorInputToMinor(monthly12), { shouldValidate: false });
+      form.setValue("monthlyCost24Minor", majorInputToMinor(monthly24), { shouldValidate: false });
+    }
+  }
+
+  function onInvalid(errors: FieldErrors<CreateCatalogServiceInput>) {
+    const messages = [
+      errors.name?.message,
+      errors.lookupKeyBase?.message,
+      errors.flatAmountMinor?.message,
+      errors.monthlyCost12Minor?.message,
+      errors.monthlyCost24Minor?.message,
+      errors.pricingModel?.message,
+    ].filter((m): m is string => typeof m === "string" && m.length > 0);
+    setServerError(messages[0] ?? "Please check the form and try again.");
+  }
+
   async function onSubmit(values: CreateCatalogServiceInput) {
     setServerError(null);
     const effectivePricing = values.billingType === "one_off" ? "flat" : values.pricingModel;
@@ -146,7 +168,15 @@ export function AddCatalogServiceModal({ open, onOpenChange }: AddCatalogService
     router.refresh();
   }
 
+  function handleFormSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setServerError(null);
+    syncFormFromControls();
+    void form.handleSubmit(onSubmit, onInvalid)(e);
+  }
+
   const busy = form.formState.isSubmitting;
+  const { errors } = form.formState;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -162,11 +192,7 @@ export function AddCatalogServiceModal({ open, onOpenChange }: AddCatalogService
           </DialogHeader>
         </div>
 
-        <form
-          onSubmit={form.handleSubmit(onSubmit)}
-          className="space-y-4 px-6 py-5"
-          noValidate
-        >
+        <form onSubmit={handleFormSubmit} className="space-y-4 px-6 py-5" noValidate>
           <FormServerError message={serverError} rounded="xl" />
 
           <div className="flex flex-col gap-1.5">
@@ -299,6 +325,9 @@ export function AddCatalogServiceModal({ open, onOpenChange }: AddCatalogService
                 setLookupKeyBase(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_"));
               }}
             />
+            {errors.lookupKeyBase ? (
+              <p className="text-xs leading-tight text-destructive">{errors.lookupKeyBase.message}</p>
+            ) : null}
             <p className="text-xs text-zinc-500">
               Stripe lookup key{lookupPreview.length > 1 ? "s" : ""}:{" "}
               <span className="font-mono text-zinc-400">{lookupPreview.join(" · ")}</span>
@@ -336,6 +365,9 @@ export function AddCatalogServiceModal({ open, onOpenChange }: AddCatalogService
                 className={fieldClass}
                 onChange={(e) => setFlatPrice(e.target.value)}
               />
+              {errors.flatAmountMinor ? (
+                <p className="text-xs leading-tight text-destructive">{errors.flatAmountMinor.message}</p>
+              ) : null}
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
@@ -352,6 +384,9 @@ export function AddCatalogServiceModal({ open, onOpenChange }: AddCatalogService
                   className={fieldClass}
                   onChange={(e) => setMonthly12(e.target.value)}
                 />
+                {errors.monthlyCost12Minor ? (
+                  <p className="text-xs leading-tight text-destructive">{errors.monthlyCost12Minor.message}</p>
+                ) : null}
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="catalog-m24" className={labelClass}>
@@ -366,6 +401,9 @@ export function AddCatalogServiceModal({ open, onOpenChange }: AddCatalogService
                   className={fieldClass}
                   onChange={(e) => setMonthly24(e.target.value)}
                 />
+                {errors.monthlyCost24Minor ? (
+                  <p className="text-xs leading-tight text-destructive">{errors.monthlyCost24Minor.message}</p>
+                ) : null}
               </div>
             </div>
           )}
