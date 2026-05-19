@@ -31,7 +31,12 @@ import {
 import { cn } from "@/lib/utils";
 
 function termMinor(service: CatalogServiceRecord, months: 12 | 24): number {
-  return service.terms.find((t) => t.months === months)?.monthlyAmountMinor ?? 0;
+  const match = service.terms.find((t) => t.months === months);
+  if (match) return match.monthlyAmountMinor;
+  if (service.pricingModel === "flat" && service.terms.length === 1) {
+    return service.terms[0]!.monthlyAmountMinor;
+  }
+  return 0;
 }
 
 function formatTableDate(ms: number | undefined): string {

@@ -4,7 +4,10 @@ import { millisFromFirestore } from "@/lib/firestore/timestamp";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import type {
+  CatalogServiceBillingType,
+  CatalogServiceKind,
   CatalogServicePickerOption,
+  CatalogServicePricingModel,
   CatalogServiceRecord,
   CatalogServiceStatus,
   CatalogServiceTerm,
@@ -30,12 +33,14 @@ function parseTerms(data: Record<string, unknown>): CatalogServiceTerm[] {
       typeof o.monthlyAmountMinor === "number" && Number.isFinite(o.monthlyAmountMinor)
         ? Math.max(0, Math.round(o.monthlyAmountMinor))
         : null;
-    if (!months || monthlyAmountMinor === null) continue;
+    if (monthlyAmountMinor === null) continue;
     const stripePriceId = asString(o.stripePriceId)?.trim();
+    const lookupKey = asString(o.lookupKey)?.trim();
     out.push({
-      months,
+      ...(months ? { months } : {}),
       monthlyAmountMinor,
       ...(stripePriceId ? { stripePriceId } : {}),
+      ...(lookupKey ? { lookupKey } : {}),
     });
   }
   return out;
@@ -59,12 +64,32 @@ export function parseCatalogServiceRecord(id: string, data: Record<string, unkno
       ? Math.max(0, Math.round(data.upfrontCost12Minor))
       : undefined;
 
+  const serviceTypeRaw = asString(data.serviceType);
+  const serviceType: CatalogServiceKind | undefined =
+    serviceTypeRaw === "plan" || serviceTypeRaw === "addon" ? serviceTypeRaw : undefined;
+
+  const billingTypeRaw = asString(data.billingType);
+  const billingType: CatalogServiceBillingType | undefined =
+    billingTypeRaw === "recurring" || billingTypeRaw === "one_off" ? billingTypeRaw : undefined;
+
+  const pricingModelRaw = asString(data.pricingModel);
+  const pricingModel: CatalogServicePricingModel | undefined =
+    pricingModelRaw === "flat" || pricingModelRaw === "by_term" ? pricingModelRaw : undefined;
+
+  const terms = parseTerms(data);
+  const inferredPricing: CatalogServicePricingModel | undefined =
+    pricingModel ?? (terms.length >= 2 ? "by_term" : terms.length === 1 ? "flat" : undefined);
+
   return {
     id,
     organizationId: asString(data.organizationId) ?? "",
     createdByUid: asString(data.createdByUid) ?? "",
     name: asString(data.name)?.trim() || "Untitled service",
     slug: asString(data.slug)?.trim() || "service",
+    ...(serviceType ? { serviceType } : {}),
+    ...(asString(data.description)?.trim() ? { description: asString(data.description)!.trim() } : {}),
+    ...(billingType ? { billingType } : {}),
+    ...(inferredPricing ? { pricingModel: inferredPricing } : {}),
     status,
     currency: (asString(data.currency) ?? "aud").toLowerCase(),
     sortOrder:
@@ -85,7 +110,7 @@ export function parseCatalogServiceRecord(id: string, data: Record<string, unkno
         : 0,
     ...(typeof upfront === "number" ? { upfrontCost12Minor: upfront } : {}),
     features,
-    terms: parseTerms(data),
+    terms,
     ...(asString(data.stripeProductId)?.trim()
       ? { stripeProductId: asString(data.stripeProductId)!.trim() }
       : {}),
@@ -100,20 +125,42 @@ export function parseCatalogServiceRecord(id: string, data: Record<string, unkno
 }
 
 export function catalogServiceToPickerOption(service: CatalogServiceRecord): CatalogServicePickerOption | null {
-  const durations = service.terms
-    .filter((t) => t.stripePriceId?.trim().startsWith("price_"))
-    .map((t) => ({
-      months: t.months,
-      priceId: t.stripePriceId!.trim(),
-      currency: service.currency,
-      unitAmountMinor: t.monthlyAmountMinor,
-    }));
+  const synced = service.terms.filter((t) => t.stripePriceId?.trim().startsWith("price_"));
+  if (synced.length === 0) return null;
+
+  const pricingModel =
+    service.pricingModel ?? (synced.length >= 2 ? "by_term" : "flat");
+
+  let durations: CatalogServicePickerOption["durations"];
+  if (pricingModel === "by_term") {
+    durations = synced
+      .filter((t): t is CatalogServiceTerm & { months: CatalogServiceTermMonths } => t.months === 12 || t.months === 24)
+      .map((t) => ({
+        months: t.months,
+        priceId: t.stripePriceId!.trim(),
+        currency: service.currency,
+        unitAmountMinor: t.monthlyAmountMinor,
+      }));
+  } else {
+    const term = synced[0]!;
+    const priceId = term.stripePriceId!.trim();
+    const unitAmountMinor = term.monthlyAmountMinor;
+    durations = [
+      { months: 12, priceId, currency: service.currency, unitAmountMinor },
+      { months: 24, priceId, currency: service.currency, unitAmountMinor },
+    ];
+  }
+
   if (durations.length === 0) return null;
+
   return {
     serviceId: service.id,
     serviceName: service.name,
     currency: service.currency,
     status: service.status,
+    ...(service.serviceType ? { serviceType: service.serviceType } : {}),
+    ...(service.billingType ? { billingType: service.billingType } : {}),
+    pricingModel,
     durations,
     includedUsers: service.includedUsers,
     includedLocations: service.includedLocations,

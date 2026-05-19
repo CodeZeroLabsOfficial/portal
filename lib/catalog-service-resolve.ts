@@ -10,7 +10,18 @@ export function resolveStripePriceIdFromCatalogService(
 ): string | null {
   if (!service) return null;
   const terms = "terms" in service ? service.terms : service.durations;
-  const match = terms.find((t) => t.months === durationMonths);
+  const pricingModel =
+    "pricingModel" in service && service.pricingModel
+      ? service.pricingModel
+      : terms.length >= 2
+        ? "by_term"
+        : "flat";
+
+  let match = terms.find((t) => t.months === durationMonths);
+  if (!match && pricingModel === "flat" && terms.length > 0) {
+    match = terms[0];
+  }
+
   const pid =
     "stripePriceId" in (match ?? {})
       ? (match as { stripePriceId?: string })?.stripePriceId?.trim()

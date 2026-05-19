@@ -10,6 +10,8 @@ import { logError } from "@/lib/logging";
 import { getStripe } from "@/lib/stripe/server";
 import {
   createCatalogServiceSchema,
+  createInputToServiceTerms,
+  resolveCreateCatalogSlug,
   saveCatalogServiceSchema,
   saveInputToServiceTerms,
 } from "@/lib/schemas/catalog-service";
@@ -42,17 +44,10 @@ export async function createCatalogServiceAction(
 
   const ref = db.collection(COLLECTIONS.services).doc();
   const name = parsed.data.name.trim();
-  const slug = parsed.data.slug?.trim() || slugifyCatalogServiceName(name);
-  const terms = saveInputToServiceTerms({
-    ...parsed.data,
-    name,
-    slug,
-    sortOrder: 0,
-    includedUsers: 0,
-    includedLocations: 0,
-    includedAdmins: 0,
-    features: [],
-  });
+  const slug = resolveCreateCatalogSlug(parsed.data);
+  const pricingModel = parsed.data.billingType === "one_off" ? "flat" : parsed.data.pricingModel;
+  const terms = createInputToServiceTerms(parsed.data);
+  const description = parsed.data.description?.trim() ?? "";
 
   const write = await runAdminWrite(
     "catalog_service_create_failed",
@@ -64,6 +59,10 @@ export async function createCatalogServiceAction(
         createdByUid: user.uid,
         name,
         slug,
+        serviceType: parsed.data.serviceType,
+        description,
+        billingType: parsed.data.billingType,
+        pricingModel,
         status: "draft",
         currency: parsed.data.currency.toLowerCase(),
         sortOrder: 0,
