@@ -9,6 +9,7 @@ import {
   Calculator,
   CircleDot,
   CreditCard,
+  DollarSign,
   Layers,
   Loader2,
   Package,
@@ -28,6 +29,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { formatCurrencyAmount } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 function termMinor(service: CatalogServiceRecord, months: 12 | 24): number {
@@ -69,6 +71,41 @@ function pricingModelLabel(service: CatalogServiceRecord): string {
   if (service.pricingModel === "flat") return "Flat rate";
   if (service.pricingModel === "by_term") return "Fixed term (12 / 24 mo)";
   return "—";
+}
+
+function pricingDetailLabel(service: CatalogServiceRecord): React.ReactNode {
+  const terms = service.terms;
+  if (terms.length === 0) return "—";
+
+  const currency = service.currency;
+  const isByTerm = service.pricingModel === "by_term";
+  const term12 = terms.find((t) => t.months === 12);
+  const term24 = terms.find((t) => t.months === 24);
+
+  if (isByTerm && (term12 || term24)) {
+    const lines: string[] = [];
+    if (term12 && term12.monthlyAmountMinor > 0) {
+      lines.push(`12 mo · ${formatCurrencyAmount(term12.monthlyAmountMinor, currency)}/mo`);
+    }
+    if (term24 && term24.monthlyAmountMinor > 0) {
+      lines.push(`24 mo · ${formatCurrencyAmount(term24.monthlyAmountMinor, currency)}/mo`);
+    }
+    if (lines.length === 0) return "—";
+    if (lines.length === 1) return lines[0];
+    return (
+      <span className="flex flex-col gap-0.5">
+        {lines.map((line) => (
+          <span key={line}>{line}</span>
+        ))}
+      </span>
+    );
+  }
+
+  const amount = terms[0]?.monthlyAmountMinor ?? 0;
+  if (amount <= 0) return "—";
+  const formatted = formatCurrencyAmount(amount, currency);
+  if (service.billingType === "one_off") return formatted;
+  return `${formatted}/mo`;
 }
 
 const fieldInputClass =
@@ -202,38 +239,41 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
           </CardHeader>
           <CardContent className="space-y-5 p-6 text-sm">
             <dl className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1 sm:col-span-2">
-                <dt className={detailLabelClass}>
-                  <Tag className={detailLabelIconClass} aria-hidden />
-                  Name
-                </dt>
-                <dd className="text-foreground">{service.name.trim() || "—"}</dd>
-              </div>
-              <div className="space-y-1">
-                <dt className={detailLabelClass}>
-                  <CircleDot className={detailLabelIconClass} aria-hidden />
-                  Status
-                </dt>
-                <dd>
-                  <Badge variant="outline" className={cn("font-normal", st.className)}>
-                    {st.label}
-                  </Badge>
-                </dd>
+              <div className="flex flex-col gap-4 sm:col-span-2 sm:flex-row sm:items-start sm:justify-between sm:gap-8">
+                <div className="min-w-0 flex-1 space-y-1">
+                  <dt className={detailLabelClass}>
+                    <Tag className={detailLabelIconClass} aria-hidden />
+                    Name
+                  </dt>
+                  <dd className="text-foreground">{service.name.trim() || "—"}</dd>
+                </div>
+                <div className="shrink-0 space-y-1">
+                  <dt className={detailLabelClass}>
+                    <CircleDot className={detailLabelIconClass} aria-hidden />
+                    Status
+                  </dt>
+                  <dd>
+                    <Badge variant="outline" className={cn("font-normal", st.className)}>
+                      {st.label}
+                    </Badge>
+                  </dd>
+                </div>
               </div>
               <div className="space-y-1">
                 <dt className={detailLabelClass}>
                   <Layers className={detailLabelIconClass} aria-hidden />
                   Type
                 </dt>
-                <dd>
-                  {service.serviceType ? (
-                    <Badge variant="outline" className="font-normal">
-                      {serviceTypeLabel(service)}
-                    </Badge>
-                  ) : (
-                    <span className="text-foreground">—</span>
-                  )}
+                <dd className="text-foreground">
+                  {service.serviceType ? serviceTypeLabel(service) : "—"}
                 </dd>
+              </div>
+              <div className="space-y-1">
+                <dt className={detailLabelClass}>
+                  <Calculator className={detailLabelIconClass} aria-hidden />
+                  Pricing model
+                </dt>
+                <dd className="text-foreground">{pricingModelLabel(service)}</dd>
               </div>
               <div className="space-y-1">
                 <dt className={detailLabelClass}>
@@ -244,10 +284,10 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
               </div>
               <div className="space-y-1">
                 <dt className={detailLabelClass}>
-                  <Calculator className={detailLabelIconClass} aria-hidden />
-                  Pricing model
+                  <DollarSign className={detailLabelIconClass} aria-hidden />
+                  Pricing
                 </dt>
-                <dd className="text-foreground">{pricingModelLabel(service)}</dd>
+                <dd className="text-foreground">{pricingDetailLabel(service)}</dd>
               </div>
             </dl>
 
