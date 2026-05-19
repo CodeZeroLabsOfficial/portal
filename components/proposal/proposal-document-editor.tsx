@@ -115,6 +115,7 @@ import {
 import { BlockToolbar } from "@/components/proposal/proposal-block-toolbar";
 import { DeleteProposalTemplateButton } from "@/components/proposal/delete-proposal-template-button";
 import { ColumnsBlockLayoutControls } from "@/components/proposal/columns-block-layout-controls";
+import { syncProposalBlocksPackageTiersFromCatalog } from "@/lib/proposal-package-catalog-sync";
 import {
   clampFr,
   ColumnLayoutCount,
@@ -168,7 +169,6 @@ import {
 } from "@/lib/block-style";
 import {
   DEFAULT_PACKAGES_UPFRONT_COST_12_MINOR,
-  PACKAGE_TIER_UNLIMITED_VALUE,
 } from "@/lib/package-tier-limits";
 import { packagesAddonsSectionActive } from "@/lib/proposal-packages-totals";
 import { resolveSectionBackground } from "@/lib/section-background";
@@ -522,9 +522,9 @@ function createBlock(type: ProposalBlock["type"]): ProposalBlock {
           {
             id: t4,
             name: "Enterprise",
-            includedUsers: PACKAGE_TIER_UNLIMITED_VALUE,
-            includedLocations: PACKAGE_TIER_UNLIMITED_VALUE,
-            includedAdmins: PACKAGE_TIER_UNLIMITED_VALUE,
+            includedUsers: 0,
+            includedLocations: 0,
+            includedAdmins: 0,
             monthlyCost12Minor: 149_900,
             monthlyCost24Minor: 99_900,
             upfrontCost12Minor: DEFAULT_PACKAGES_UPFRONT_COST_12_MINOR,
@@ -3248,6 +3248,12 @@ export function ProposalDocumentEditor({
       setRootColumnsLayoutEditingId(null);
     }
   }, [blocks, rootColumnsLayoutEditingId]);
+
+  /** Proposal templates track the services catalogue; built proposals keep their snapshot. */
+  React.useEffect(() => {
+    if (!isTemplate || catalogServiceOptions.length === 0) return;
+    setBlocks((prev) => syncProposalBlocksPackageTiersFromCatalog(prev, catalogServiceOptions));
+  }, [isTemplate, catalogServiceOptions]);
 
   React.useEffect(() => {
     return () => {

@@ -8,7 +8,9 @@ import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import { runAdminWrite } from "@/lib/firebase/admin-write";
 import { omitUndefinedDeep } from "@/lib/omit-undefined-deep";
 import { encodeProposalDocumentForFirestore } from "@/lib/proposal-firestore-document";
+import { syncProposalDocumentPackageTiersFromCatalog } from "@/lib/proposal-package-catalog-sync";
 import { parseProposalDocument } from "@/lib/schemas/proposal-document";
+import { listCatalogServicePickerOptionsForOrganizationId } from "@/server/firestore/catalog-services";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { getProposalTemplateForStaff } from "@/server/firestore/proposal-templates";
 import { hydrateAgreementBlocksInDocument } from "@/server/proposal/hydrate-agreement-contract-templates";
@@ -131,6 +133,10 @@ export async function saveProposalTemplateAction(
     normalized,
     user.organizationId ?? "default",
   );
+  const catalogServices = await listCatalogServicePickerOptionsForOrganizationId(
+    user.organizationId ?? "default",
+  );
+  const syncedDocument = syncProposalDocumentPackageTiersFromCatalog(hydrated, catalogServices);
 
   const db = getFirebaseAdminFirestore();
   if (!db) return { ok: false, message: "Database unavailable." };
@@ -148,7 +154,10 @@ export async function saveProposalTemplateAction(
           description: parsed.data.description?.trim()
             ? parsed.data.description.trim()
             : FieldValue.delete(),
-          document: omitUndefinedDeep(encodeProposalDocumentForFirestore(hydrated)) as Record<string, unknown>,          updatedAt: FieldValue.serverTimestamp(),
+          document: omitUndefinedDeep(
+            encodeProposalDocumentForFirestore(syncedDocument),
+          ) as Record<string, unknown>,
+          updatedAt: FieldValue.serverTimestamp(),
         }),
   );
   if (!write.ok) return write;

@@ -3,6 +3,8 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { getCurrentSessionUser, isStaff } from "@/lib/auth/server-session";
 import { getProposalTemplateForStaff } from "@/server/firestore/proposal-templates";
+import { syncProposalDocumentPackageTiersFromCatalog } from "@/lib/proposal-package-catalog-sync";
+import { listCatalogServicePickerOptionsForOrg } from "@/server/firestore/catalog-services";
 import { hydrateAgreementBlocksInDocument } from "@/server/proposal/hydrate-agreement-contract-templates";
 import { ProposalDocumentView } from "@/components/proposal/proposal-document-view";
 import { PROPOSAL_PUBLIC_DOCUMENT_OUTER_CLASSES } from "@/lib/proposal-public-layout";
@@ -31,9 +33,14 @@ export default async function ProposalTemplatePublicPreviewPage({ params }: Page
     notFound();
   }
 
-  const previewDocument = await hydrateAgreementBlocksInDocument(
-    template.document,
-    user.organizationId ?? "default",
+  const organizationId = user.organizationId ?? "default";
+  const [hydrated, catalogServices] = await Promise.all([
+    hydrateAgreementBlocksInDocument(template.document, organizationId),
+    listCatalogServicePickerOptionsForOrg(user),
+  ]);
+  const previewDocument = syncProposalDocumentPackageTiersFromCatalog(
+    hydrated,
+    catalogServices,
   );
 
   /** Drop the trailing breathing room when the doc already ends in a full-bleed band — matches `/p/[token]`. */
