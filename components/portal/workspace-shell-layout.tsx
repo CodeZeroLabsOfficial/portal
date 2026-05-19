@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { AddCatalogServiceModal } from "@/components/portal/add-catalog-service-modal";
 import { AddCustomerModal } from "@/components/portal/add-customer-modal";
 import { AddTaskDialog } from "@/components/portal/add-task-dialog";
 import { useAdminWorkspace } from "@/components/portal/admin-workspace-provider";
@@ -152,6 +153,7 @@ export function WorkspaceShellLayout({
   const { organizationId: adminOrganizationId } = useAdminWorkspace();
   const [collapsed, setCollapsed] = React.useState(false);
   const [addCustomerOpen, setAddCustomerOpen] = React.useState(false);
+  const [addCatalogServiceOpen, setAddCatalogServiceOpen] = React.useState(false);
   const [addTaskOpen, setAddTaskOpen] = React.useState(false);
   const [creatingTemplate, setCreatingTemplate] = React.useState(false);
 
@@ -220,6 +222,7 @@ export function WorkspaceShellLayout({
       {isAdminRoute ? (
         <>
           <AddCustomerModal open={addCustomerOpen} onOpenChange={setAddCustomerOpen} />
+          <AddCatalogServiceModal open={addCatalogServiceOpen} onOpenChange={setAddCatalogServiceOpen} />
           <AddTaskDialog
             open={addTaskOpen}
             onOpenChange={setAddTaskOpen}
@@ -366,6 +369,12 @@ export function WorkspaceShellLayout({
                         onSelect={() => setAddCustomerOpen(true)}
                       >
                         New customer
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="cursor-pointer text-zinc-200 focus:bg-white/[0.08] focus:text-white"
+                        onSelect={() => setAddCatalogServiceOpen(true)}
+                      >
+                        New service
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="cursor-pointer text-zinc-200 focus:bg-white/[0.08] focus:text-white"

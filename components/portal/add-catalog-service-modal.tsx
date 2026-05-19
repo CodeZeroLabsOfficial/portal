@@ -288,7 +288,7 @@ export function AddCatalogServiceModal({ open, onOpenChange }: AddCatalogService
                 }
               >
                 <option value="flat">Flat rate (one price)</option>
-                <option value="by_term">12 & 24 month</option>
+                <option value="by_term">Fixed term</option>
               </select>
               {isOneOff ? (
                 <p className="text-xs text-zinc-500">One-off charges use a single flat price.</p>

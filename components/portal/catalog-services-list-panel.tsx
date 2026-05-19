@@ -13,7 +13,7 @@ import {
 } from "@/server/actions/catalog-services";
 import { AddCatalogServiceModal } from "@/components/portal/add-catalog-service-modal";
 import { formatCurrencyAmount } from "@/lib/format";
-import type { CatalogServiceRecord, CatalogServiceStatus } from "@/types/catalog-service";
+import type { CatalogServiceKind, CatalogServiceRecord, CatalogServiceStatus } from "@/types/catalog-service";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -71,6 +71,12 @@ function statusBadge(status: CatalogServiceStatus): { label: string; className: 
   };
 }
 
+function serviceTypeLabel(serviceType: CatalogServiceKind | undefined): string {
+  if (serviceType === "plan") return "Plan";
+  if (serviceType === "addon") return "Add-on";
+  return "—";
+}
+
 function stripeSyncLabel(service: CatalogServiceRecord): string {
   if (!service.stripeProductId?.trim()) return "Not synced";
   if (service.stripeSyncedAt) return "Synced";
@@ -98,6 +104,7 @@ export function CatalogServicesListPanel({ services }: CatalogServicesListPanelP
       const hay = [
         service.name,
         service.slug,
+        service.serviceType,
         service.status,
         service.stripeProductId,
         service.currency,
@@ -161,6 +168,7 @@ export function CatalogServicesListPanel({ services }: CatalogServicesListPanelP
               <tr className="border-b border-border text-muted-foreground">
                 <th className="px-4 py-2.5 font-medium">Status</th>
                 <th className="px-4 py-2.5 font-medium">Service name</th>
+                <th className="px-4 py-2.5 font-medium">Type</th>
                 <th className="px-4 py-2.5 font-medium">12 mo monthly</th>
                 <th className="px-4 py-2.5 font-medium">24 mo monthly</th>
                 <th className="px-4 py-2.5 font-medium">Stripe</th>
@@ -171,13 +179,13 @@ export function CatalogServicesListPanel({ services }: CatalogServicesListPanelP
             <tbody className="text-foreground">
               {services.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-sm text-muted-foreground">
+                  <td colSpan={8} className="px-4 py-10 text-center text-sm text-muted-foreground">
                     <p className="mx-auto max-w-md leading-relaxed">No services yet.</p>
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-sm text-muted-foreground">
+                  <td colSpan={8} className="px-4 py-10 text-center text-sm text-muted-foreground">
                     No services match your search.
                   </td>
                 </tr>
@@ -221,9 +229,9 @@ export function CatalogServicesListPanel({ services }: CatalogServicesListPanelP
                           >
                             {service.name}
                           </Link>
-                          <p className="mt-0.5 truncate font-mono text-[11px] text-muted-foreground">
-                            {service.slug}
-                          </p>
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 align-middle text-muted-foreground">
+                          {serviceTypeLabel(service.serviceType)}
                         </td>
                         <td className="whitespace-nowrap px-4 py-3 align-middle tabular-nums text-muted-foreground">
                           {formatCurrencyAmount(termMinor(service, 12), service.currency)}
