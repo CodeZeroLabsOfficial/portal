@@ -554,15 +554,6 @@ export async function saveProposalPackageSelectionAction(
     }
   }
 
-  const mergedOpt: Record<string, boolean> = {};
-  for (const li of addonLines) {
-    if (!li.optional) continue;
-    const incoming = parsed.data.addonOptionalOff?.[li.id];
-    const fromPrev = prevEntry?.addonOptionalOff?.[li.id];
-    const off = incoming === true || fromPrev === true;
-    if (off) mergedOpt[li.id] = true;
-  }
-
   const now = Date.now();
   const selectionPayload: Record<string, unknown> = {
     kind: "packages",
@@ -572,9 +563,6 @@ export async function saveProposalPackageSelectionAction(
   };
   if (addonLines.length > 0 && Object.keys(mergedQty).length > 0) {
     selectionPayload.addonQuantities = mergedQty;
-  }
-  if (Object.keys(mergedOpt).length > 0) {
-    selectionPayload.addonOptionalOff = mergedOpt;
   }
 
   const write = await runAdminWrite(

@@ -172,8 +172,6 @@ function buildPackageSelectionSummary(
   if (packagesAddonsSectionActive(block)) {
     const lines = block.addonLineItems ?? [];
     for (const li of lines) {
-      const off = li.optional && selection.addonOptionalOff?.[li.id];
-      if (off) continue;
       const rawQ = selection.addonQuantities?.[li.id];
       const quantity =
         typeof rawQ === "number" && Number.isFinite(rawQ) && rawQ >= 0

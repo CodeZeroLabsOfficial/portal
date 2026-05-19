@@ -396,12 +396,11 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
           term,
           updatedAt: 0,
           addonQuantities: mockAddonQty,
-          addonOptionalOff: {},
         }
       : undefined;
   const addonsPreviewMinor = previewSel
     ? packageAddonsTotalMinor(block, previewSel)
-    : packageAddonsTotalMinor(block, undefined, mockAddonQty, {}, term);
+    : packageAddonsTotalMinor(block, undefined, mockAddonQty, term);
   const previewTermMonths = packageTermMonths({ term });
   const monthlyPreviewMinor = previewSel
     ? packageMonthlyTotalMinor(block, previewSel)
@@ -623,17 +622,8 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
               id="packages-inline-addons-table"
               className="w-full"
             >
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-dashed border-border/50 bg-muted/10 px-4 py-2 text-[11px]">
-                <label className="flex cursor-pointer items-center gap-1.5 text-muted-foreground">
-                  <input
-                    type="checkbox"
-                    checked={editableAddonQty}
-                    onChange={(e) => patch({ allowAddonQuantityEdit: e.target.checked })}
-                    className="h-3 w-3 accent-primary"
-                  />
-                  Editable qty
-                </label>
-                <div className="flex flex-1 flex-wrap items-center gap-2 sm:justify-end">
+              <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2 border-b border-dashed border-border/50 bg-muted/10 px-4 py-2 text-[11px]">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="text-muted-foreground">Qty label</span>
                   <Input
                     value={addonQtyUnitDraft}
@@ -714,15 +704,6 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
                                   inputClassName="w-full font-medium text-foreground"
                                 />
                               )}
-                              <label className="flex cursor-pointer items-center gap-2 text-[11px] text-muted-foreground">
-                                <input
-                                  type="checkbox"
-                                  checked={Boolean(li.optional)}
-                                  onChange={(e) => patchAddonLine(li.id, { optional: e.target.checked })}
-                                  className="h-3 w-3 accent-primary"
-                                />
-                                Optional (buyer can turn off)
-                              </label>
                             </div>
                           </td>
                           <td className="px-4 py-3 text-right align-middle tabular-nums text-muted-foreground">
@@ -773,7 +754,7 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
                           </p>
                         ) : availableCatalogAddons.length === 0 ? (
                           <p className="px-2 py-1.5 text-sm text-muted-foreground">
-                            All catalogue add-ons are already in this table.
+                            All catalogue items have been added to this table.
                           </p>
                         ) : (
                           <DropdownMenu>
@@ -783,7 +764,7 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
                                 className="flex w-full items-center gap-2 rounded-md border border-dashed border-border bg-transparent px-2 py-1.5 text-left text-sm text-muted-foreground transition-colors hover:border-primary/60 hover:bg-muted/30 hover:text-foreground data-[state=open]:border-primary/60 data-[state=open]:bg-muted/30 data-[state=open]:text-foreground"
                               >
                                 <Plus className="h-3.5 w-3.5" />
-                                Add add-on from Services
+                                Add catalogue items
                               </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent

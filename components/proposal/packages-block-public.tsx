@@ -67,10 +67,6 @@ export function PackagesBlockPublic({
     }
     return next;
   });
-  const [addonOptOff, setAddonOptOff] = React.useState<Record<string, boolean>>(() =>
-    initialSelection?.addonOptionalOff ? { ...initialSelection.addonOptionalOff } : {},
-  );
-
   React.useEffect(() => {
     if (initialSelection?.tierId) setSelectedTierId(initialSelection.tierId);
     if (initialSelection?.term) setTerm(initialSelection.term);
@@ -87,9 +83,6 @@ export function PackagesBlockPublic({
           : effectivePricingLineQuantity(li);
     }
     setAddonQty(next);
-    setAddonOptOff(
-      initialSelection?.addonOptionalOff ? { ...initialSelection.addonOptionalOff } : {},
-    );
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only rehydrate after server refresh (`updatedAt`) or add-on line set changes
   }, [addonIdsKey, initialSelection?.updatedAt]);
 
@@ -116,14 +109,13 @@ export function PackagesBlockPublic({
         term,
         updatedAt: initialSelection?.updatedAt ?? 0,
         addonQuantities: addonQty,
-        addonOptionalOff: addonOptOff,
       }
     : undefined;
 
   const addonsSubtotalMinor =
     selectionDraft != null
       ? packageAddonsTotalMinor(block, selectionDraft)
-      : packageAddonsTotalMinor(block, undefined, addonQty, addonOptOff, term);
+      : packageAddonsTotalMinor(block, undefined, addonQty, term);
   const termMonths = packageTermMonths({ term });
   const monthlyTotalMinor = selectionDraft
     ? packageMonthlyTotalMinor(block, selectionDraft)
@@ -132,17 +124,15 @@ export function PackagesBlockPublic({
     ? packageCommitmentTotalMinor(block, selectionDraft)
     : addonsSubtotalMinor * termMonths;
 
-  async function flushAddonsToServer(nextQty?: Record<string, number>, nextOpt?: Record<string, boolean>) {
+  async function flushAddonsToServer(nextQty?: Record<string, number>) {
     if (!interactive || !shareToken || !selectedTierId) return;
     const q = nextQty ?? addonQty;
-    const o = nextOpt ?? addonOptOff;
     const res = await saveProposalPackageSelectionAction({
       shareToken,
       blockId: block.id,
       tierId: selectedTierId,
       term,
       addonQuantities: q,
-      addonOptionalOff: o,
     });
     if (res.ok) router.refresh();
   }
@@ -173,7 +163,6 @@ export function PackagesBlockPublic({
       tierId,
       term,
       addonQuantities: addonQty,
-      addonOptionalOff: addonOptOff,
     });
     setPendingTierId(null);
     if (!res.ok) {
@@ -501,36 +490,12 @@ export function PackagesBlockPublic({
                   <tbody className="[&_tr]:border-b [&_tr]:border-dashed [&_tr]:border-border/40">
                     {addonLines.map((li) => {
                       const qRaw = addonQty[li.id] ?? effectivePricingLineQuantity(li);
-                      const hidden = Boolean(li.optional && addonOptOff[li.id]);
                       const unitMinor = effectiveCatalogAddonUnitAmount(li, term);
                       const lineTotal = Math.round(unitMinor * qRaw);
                       return (
-                        <tr key={li.id} className={cn("transition-opacity", hidden && "opacity-40")}>
+                        <tr key={li.id}>
                           <td className="px-4 py-3 !text-left align-middle">
-                            <div className="flex min-w-0 w-full flex-col items-start gap-1 text-left">
-                              <span className="block w-full text-left font-medium text-foreground">{li.label}</span>
-                              {li.optional ? (
-                                <label className="flex cursor-pointer items-center gap-2 text-[12px] text-muted-foreground">
-                                  <input
-                                    type="checkbox"
-                                    className="h-3.5 w-3.5 rounded border-border accent-primary"
-                                    checked={!addonOptOff[li.id]}
-                                    disabled={!interactive || !selectedTierId}
-                                    onChange={(e) => {
-                                      const on = e.target.checked;
-                                      setAddonOptOff((prev) => ({ ...prev, [li.id]: !on }));
-                                      if (interactive && shareToken && selectedTierId) {
-                                        void flushAddonsToServer(
-                                          addonQty,
-                                          { ...addonOptOff, [li.id]: !on },
-                                        );
-                                      }
-                                    }}
-                                  />
-                                  Include add-on
-                                </label>
-                              ) : null}
-                            </div>
+                            <span className="block w-full text-left font-medium text-foreground">{li.label}</span>
                           </td>
                           <td className="px-4 py-3 text-center align-middle tabular-nums text-muted-foreground">
                             {formatCurrencyAmount(unitMinor, currency)}
@@ -544,7 +509,7 @@ export function PackagesBlockPublic({
                                     type="button"
                                     variant="outline"
                                     size="sm"
-                                    disabled={hidden || !interactive || !selectedTierId}
+                                    disabled={!interactive || !selectedTierId}
                                     className={cn(
                                       "h-8 gap-1 rounded-md border-border/60 px-2.5 text-xs font-medium",
                                       "animate-in fade-in-0 zoom-in-95 duration-200",
@@ -565,7 +530,7 @@ export function PackagesBlockPublic({
                                   >
                                     <button
                                       type="button"
-                                      disabled={hidden || !interactive || !selectedTierId}
+                                      disabled={!interactive || !selectedTierId}
                                       className={cn(
                                         "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-sm text-foreground outline-none transition-colors",
                                         "hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
@@ -584,7 +549,7 @@ export function PackagesBlockPublic({
                                     </span>
                                     <button
                                       type="button"
-                                      disabled={hidden || !interactive || !selectedTierId}
+                                      disabled={!interactive || !selectedTierId}
                                       className={cn(
                                         "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-sm text-foreground outline-none transition-colors",
                                         "hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
@@ -601,7 +566,7 @@ export function PackagesBlockPublic({
                             </td>
                           ) : null}
                           <td className="px-4 py-3 text-right align-middle tabular-nums font-medium text-foreground">
-                            {hidden ? "—" : formatCurrencyAmount(lineTotal, currency)}
+                            {formatCurrencyAmount(lineTotal, currency)}
                           </td>
                         </tr>
                       );

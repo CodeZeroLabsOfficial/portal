@@ -91,7 +91,6 @@ export function buildSignedAgreementCommerceSnapshot(
     );
     if (packagesAddonsSectionActive(pb)) {
       for (const li of pb.addonLineItems ?? []) {
-        if (li.optional && sel.addonOptionalOff?.[li.id]) continue;
         const rawQ = sel.addonQuantities?.[li.id];
         const quantity =
           typeof rawQ === "number" && Number.isFinite(rawQ) && rawQ >= 0

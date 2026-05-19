@@ -56,10 +56,8 @@ export function packageCommitmentTotalMinor(block: PackagesBlock, sel: PackagesP
 function addonLineTotal(
   li: PricingLineItem,
   qtyMap: Record<string, number> | undefined,
-  optionalOff: Record<string, boolean> | undefined,
   term: PackagesPublicSelection["term"] | undefined,
 ): number {
-  if (li.optional && optionalOff?.[li.id]) return 0;
   const raw = qtyMap?.[li.id];
   const q =
     typeof raw === "number" && Number.isFinite(raw) && raw >= 0
@@ -103,21 +101,17 @@ export function computeProposalDealValue(
 /** Sum of add-on line totals (per month) using persisted selection and/or live viewer maps. */
 export function packageAddonsTotalMinor(
   block: PackagesBlock,
-  sel:
-    | Pick<PackagesPublicSelection, "addonQuantities" | "addonOptionalOff" | "term">
-    | undefined,
+  sel: Pick<PackagesPublicSelection, "addonQuantities" | "term"> | undefined,
   liveQty?: Record<string, number>,
-  liveOptOff?: Record<string, boolean>,
   liveTerm?: PackagesPublicSelection["term"],
 ): number {
   if (!packagesAddonsSectionActive(block)) return 0;
   const items = block.addonLineItems ?? [];
   const qtyMap = { ...sel?.addonQuantities, ...liveQty };
-  const optOff = { ...sel?.addonOptionalOff, ...liveOptOff };
   const term = liveTerm ?? sel?.term;
   let sum = 0;
   for (const li of items) {
-    sum += addonLineTotal(li, qtyMap, optOff, term);
+    sum += addonLineTotal(li, qtyMap, term);
   }
   return sum;
 }
