@@ -13,8 +13,10 @@ import {
   Layers,
   Loader2,
   Package,
+  Pencil,
   Tag,
   Users,
+  X,
 } from "lucide-react";
 import {
   archiveCatalogServiceAction,
@@ -116,6 +118,19 @@ const detailLabelClass =
 
 const detailLabelIconClass = "h-3.5 w-3.5 shrink-0 opacity-80";
 
+const descriptionTextareaClass =
+  "min-h-[5rem] w-full resize-y rounded-md border border-border/80 bg-background/60 px-3 py-2 text-[14px] text-foreground";
+
+function formValuesFromService(service: CatalogServiceRecord) {
+  return {
+    name: service.name,
+    description: service.description ?? "",
+    includedUsers: String(service.includedUsers),
+    includedLocations: String(service.includedLocations),
+    includedAdmins: String(service.includedAdmins),
+  };
+}
+
 export interface CatalogServiceEditFormProps {
   service: CatalogServiceRecord;
 }
@@ -124,14 +139,41 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
   const router = useRouter();
   const [message, setMessage] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
+  const [isEditingDetails, setIsEditingDetails] = React.useState(false);
 
-  const [includedUsers, setIncludedUsers] = React.useState(String(service.includedUsers));
-  const [includedLocations, setIncludedLocations] = React.useState(String(service.includedLocations));
-  const [includedAdmins, setIncludedAdmins] = React.useState(String(service.includedAdmins));
+  const initial = formValuesFromService(service);
+  const [name, setName] = React.useState(initial.name);
+  const [description, setDescription] = React.useState(initial.description);
+  const [includedUsers, setIncludedUsers] = React.useState(initial.includedUsers);
+  const [includedLocations, setIncludedLocations] = React.useState(initial.includedLocations);
+  const [includedAdmins, setIncludedAdmins] = React.useState(initial.includedAdmins);
 
   const st = statusBadge(service.status);
   const readOnly = service.status === "archived" || busy;
   const isPlan = service.serviceType !== "addon";
+  const canEditDetails = service.status !== "archived" && !busy;
+
+  function resetFormFromService(next: CatalogServiceRecord) {
+    const values = formValuesFromService(next);
+    setName(values.name);
+    setDescription(values.description);
+    setIncludedUsers(values.includedUsers);
+    setIncludedLocations(values.includedLocations);
+    setIncludedAdmins(values.includedAdmins);
+  }
+
+  function cancelEditingDetails() {
+    resetFormFromService(service);
+    setIsEditingDetails(false);
+    setMessage(null);
+  }
+
+  React.useEffect(() => {
+    if (!isEditingDetails) {
+      resetFormFromService(service);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only sync when server data changes while not editing
+  }, [service.id, service.updatedAt, service.name, service.description, isEditingDetails]);
 
   async function runAction(
     fn: () => Promise<{ ok: boolean; message?: string }>,
@@ -156,7 +198,8 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
   function buildSavePayload() {
     return {
       serviceId: service.id,
-      name: service.name.trim(),
+      name: name.trim(),
+      description: description.trim() || undefined,
       currency: service.currency,
       includedUsers: Number(includedUsers) || 0,
       includedLocations: Number(includedLocations) || 0,
@@ -171,7 +214,13 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
   }
 
   async function onSave() {
-    await runAction(() => saveCatalogServiceAction(buildSavePayload()));
+    await runAction(async () => {
+      const res = await saveCatalogServiceAction(buildSavePayload());
+      if (res.ok) {
+        setIsEditingDetails(false);
+      }
+      return res;
+    });
   }
 
   return (
@@ -217,7 +266,7 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
               type="button"
               size="sm"
               className="min-w-[5.5rem] gap-2"
-              disabled={readOnly || busy}
+              disabled={readOnly || busy || !isEditingDetails}
               onClick={() => void onSave()}
             >
               {busy ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden /> : null}
@@ -232,19 +281,56 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="border-border/80 bg-card/80 shadow-sm lg:col-span-2">
           <CardHeader className="border-b border-border/60 bg-muted/20">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Package className="h-5 w-5 text-muted-foreground" aria-hidden />
-              Service details
-            </CardTitle>
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Package className="h-5 w-5 text-muted-foreground" aria-hidden />
+                Service details
+              </CardTitle>
+              {canEditDetails ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
+                  aria-label={isEditingDetails ? "Cancel editing" : "Edit service details"}
+                  onClick={() => {
+                    if (isEditingDetails) {
+                      cancelEditingDetails();
+                      return;
+                    }
+                    resetFormFromService(service);
+                    setIsEditingDetails(true);
+                  }}
+                >
+                  {isEditingDetails ? (
+                    <X className="h-4 w-4 shrink-0" aria-hidden />
+                  ) : (
+                    <Pencil className="h-4 w-4 shrink-0" aria-hidden />
+                  )}
+                </Button>
+              ) : null}
+            </div>
           </CardHeader>
           <CardContent className="space-y-5 p-6 text-sm">
             <dl className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1">
+              <div className="space-y-1 sm:col-span-2">
                 <dt className={detailLabelClass}>
                   <Tag className={detailLabelIconClass} aria-hidden />
                   Name
                 </dt>
-                <dd className="text-foreground">{service.name.trim() || "—"}</dd>
+                {isEditingDetails ? (
+                  <dd className="mt-1.5">
+                    <Input
+                      id="service-name"
+                      value={name}
+                      disabled={readOnly}
+                      className={fieldInputClass}
+                      onChange={(e) => setName(e.target.value)}
+                    />
+                  </dd>
+                ) : (
+                  <dd className="text-foreground">{service.name.trim() || "—"}</dd>
+                )}
               </div>
               <div className="space-y-1">
                 <dt className={detailLabelClass}>
@@ -289,66 +375,95 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
               </div>
             </dl>
 
-            {service.description?.trim() ? (
-              <div className="space-y-1 border-t border-border/60 pt-4">
-                <p className={detailLabelClass}>
-                  <AlignLeft className={detailLabelIconClass} aria-hidden />
-                  Description
+            <div className="space-y-1 border-t border-border/60 pt-4">
+              <p className={detailLabelClass}>
+                <AlignLeft className={detailLabelIconClass} aria-hidden />
+                Description
+              </p>
+              {isEditingDetails ? (
+                <textarea
+                  id="service-description"
+                  rows={3}
+                  value={description}
+                  disabled={readOnly}
+                  className={descriptionTextareaClass}
+                  placeholder="Provide a brief description of the product or service"
+                  onChange={(e) => setDescription(e.target.value)}
+                />
+              ) : (
+                <p className="text-sm text-foreground">
+                  {service.description?.trim() ? service.description.trim() : "—"}
                 </p>
-                <p className="text-sm text-foreground">{service.description.trim()}</p>
-              </div>
-            ) : null}
+              )}
+            </div>
 
             {isPlan ? (
               <div className="space-y-4 border-t border-border/60 pt-4">
-                <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <p className={detailLabelClass}>
                   <Users className={detailLabelIconClass} aria-hidden />
                   Entitlements
                 </p>
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="users" className="text-[13px] text-muted-foreground">
-                      Included users
-                    </Label>
-                    <Input
-                      id="users"
-                      type="number"
-                      min={0}
-                      value={includedUsers}
-                      disabled={readOnly}
-                      className={fieldInputClass}
-                      onChange={(e) => setIncludedUsers(e.target.value)}
-                    />
+                {isEditingDetails ? (
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="users" className="text-[13px] text-muted-foreground">
+                        Included users
+                      </Label>
+                      <Input
+                        id="users"
+                        type="number"
+                        min={0}
+                        value={includedUsers}
+                        disabled={readOnly}
+                        className={fieldInputClass}
+                        onChange={(e) => setIncludedUsers(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="locations" className="text-[13px] text-muted-foreground">
+                        Included locations
+                      </Label>
+                      <Input
+                        id="locations"
+                        type="number"
+                        min={0}
+                        value={includedLocations}
+                        disabled={readOnly}
+                        className={fieldInputClass}
+                        onChange={(e) => setIncludedLocations(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="admins" className="text-[13px] text-muted-foreground">
+                        Included admins
+                      </Label>
+                      <Input
+                        id="admins"
+                        type="number"
+                        min={0}
+                        value={includedAdmins}
+                        disabled={readOnly}
+                        className={fieldInputClass}
+                        onChange={(e) => setIncludedAdmins(e.target.value)}
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="locations" className="text-[13px] text-muted-foreground">
-                      Included locations
-                    </Label>
-                    <Input
-                      id="locations"
-                      type="number"
-                      min={0}
-                      value={includedLocations}
-                      disabled={readOnly}
-                      className={fieldInputClass}
-                      onChange={(e) => setIncludedLocations(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="admins" className="text-[13px] text-muted-foreground">
-                      Included admins
-                    </Label>
-                    <Input
-                      id="admins"
-                      type="number"
-                      min={0}
-                      value={includedAdmins}
-                      disabled={readOnly}
-                      className={fieldInputClass}
-                      onChange={(e) => setIncludedAdmins(e.target.value)}
-                    />
-                  </div>
-                </div>
+                ) : (
+                  <dl className="grid gap-4 sm:grid-cols-3">
+                    <div className="space-y-1">
+                      <dt className="text-[13px] text-muted-foreground">Included users</dt>
+                      <dd className="tabular-nums text-foreground">{service.includedUsers}</dd>
+                    </div>
+                    <div className="space-y-1">
+                      <dt className="text-[13px] text-muted-foreground">Included locations</dt>
+                      <dd className="tabular-nums text-foreground">{service.includedLocations}</dd>
+                    </div>
+                    <div className="space-y-1">
+                      <dt className="text-[13px] text-muted-foreground">Included admins</dt>
+                      <dd className="tabular-nums text-foreground">{service.includedAdmins}</dd>
+                    </div>
+                  </dl>
+                )}
               </div>
             ) : null}
 

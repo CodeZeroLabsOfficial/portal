@@ -148,6 +148,12 @@ export interface PricingLineItem {
   quantity?: number;
   /** When true, buyer can toggle off (add-on). */
   optional?: boolean;
+  /** Portal service catalogue id — when set, label and unit price follow Services. */
+  serviceId?: string;
+  /** Per-month unit amount for 12-month plan term (catalogue add-ons). */
+  unitAmount12Minor?: number;
+  /** Per-month unit amount for 24-month plan term (catalogue add-ons). */
+  unitAmount24Minor?: number;
 }
 
 export interface PricingBlock extends ProposalBlockBase {

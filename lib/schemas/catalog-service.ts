@@ -17,6 +17,7 @@ const STRIPE_MIN_MINOR = 50;
 export const saveCatalogServiceSchema = z.object({
   serviceId: trimmed.min(1).optional(),
   name: trimmed.min(1, "Name is required").max(120),
+  description: trimmed.max(500).optional(),
   slug: trimmed
     .max(40)
     .regex(/^[a-z0-9_]+$/, "Slug must be lowercase letters, numbers, and underscores")

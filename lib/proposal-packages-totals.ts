@@ -5,6 +5,7 @@ import type {
   ProposalBlock,
   ProposalPublicSelections,
 } from "@/types/proposal";
+import { effectiveCatalogAddonUnitAmount } from "@/lib/catalog-service-tier";
 import { effectivePricingLineQuantity } from "@/lib/pricing-line-quantity";
 import { iterateProposalContentBlocks } from "@/lib/proposal-blocks";
 
@@ -56,6 +57,7 @@ function addonLineTotal(
   li: PricingLineItem,
   qtyMap: Record<string, number> | undefined,
   optionalOff: Record<string, boolean> | undefined,
+  term: PackagesPublicSelection["term"] | undefined,
 ): number {
   if (li.optional && optionalOff?.[li.id]) return 0;
   const raw = qtyMap?.[li.id];
@@ -63,7 +65,8 @@ function addonLineTotal(
     typeof raw === "number" && Number.isFinite(raw) && raw >= 0
       ? Math.floor(raw)
       : effectivePricingLineQuantity(li);
-  return Math.round(li.unitAmountMinor * q);
+  const unit = effectiveCatalogAddonUnitAmount(li, term);
+  return Math.round(unit * q);
 }
 
 export interface ProposalDealValueSummary {
@@ -100,17 +103,21 @@ export function computeProposalDealValue(
 /** Sum of add-on line totals (per month) using persisted selection and/or live viewer maps. */
 export function packageAddonsTotalMinor(
   block: PackagesBlock,
-  sel: Pick<PackagesPublicSelection, "addonQuantities" | "addonOptionalOff"> | undefined,
+  sel:
+    | Pick<PackagesPublicSelection, "addonQuantities" | "addonOptionalOff" | "term">
+    | undefined,
   liveQty?: Record<string, number>,
   liveOptOff?: Record<string, boolean>,
+  liveTerm?: PackagesPublicSelection["term"],
 ): number {
   if (!packagesAddonsSectionActive(block)) return 0;
   const items = block.addonLineItems ?? [];
   const qtyMap = { ...sel?.addonQuantities, ...liveQty };
   const optOff = { ...sel?.addonOptionalOff, ...liveOptOff };
+  const term = liveTerm ?? sel?.term;
   let sum = 0;
   for (const li of items) {
-    sum += addonLineTotal(li, qtyMap, optOff);
+    sum += addonLineTotal(li, qtyMap, optOff, term);
   }
   return sum;
 }

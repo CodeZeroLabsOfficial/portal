@@ -24,6 +24,7 @@ import type {
 import { iterateProposalContentBlocks } from "@/lib/proposal-blocks";
 import { readableForeground, resolveAgreementButtonColor } from "@/lib/block-style";
 import { formatCurrencyAmount } from "@/lib/format";
+import { effectiveCatalogAddonUnitAmount } from "@/lib/catalog-service-tier";
 import { effectivePricingLineQuantity } from "@/lib/pricing-line-quantity";
 import {
   packageMonthlyTotalMinor,
@@ -179,12 +180,13 @@ function buildPackageSelectionSummary(
           ? Math.floor(rawQ)
           : effectivePricingLineQuantity(li);
       if (quantity <= 0) continue;
+      const unitAmountMinor = effectiveCatalogAddonUnitAmount(li, selection.term);
       addonLines.push({
         id: li.id,
         label: li.label?.trim() || "Add-on",
         quantity,
-        unitAmountMinor: li.unitAmountMinor,
-        lineTotalMinor: Math.round(li.unitAmountMinor * quantity),
+        unitAmountMinor,
+        lineTotalMinor: Math.round(unitAmountMinor * quantity),
       });
     }
   }

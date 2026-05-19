@@ -31,8 +31,13 @@ import { Input } from "@/components/ui/input";
 import type { CatalogServicePickerOption } from "@/types/catalog-service";
 import { useEditorCatalogServices } from "@/components/proposal/editor-catalog-services-context";
 import {
+  catalogAddonUnitAmountForTerm,
+  effectiveCatalogAddonUnitAmount,
+  isCatalogServiceAddonPickerOption,
   isCatalogServicePlanPickerOption,
   packageTierFromCatalogService,
+  pricingLineItemFromCatalogAddon,
+  syncCatalogAddonLineItemsForTerm,
 } from "@/lib/catalog-service-tier";
 import {
   DropdownMenu,
@@ -307,7 +312,26 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
         return a.serviceName.localeCompare(b.serviceName, undefined, { sensitivity: "base" });
       });
   }, [catalogServices]);
+  const catalogAddons = React.useMemo(
+    () =>
+      [...catalogServices]
+        .filter(isCatalogServiceAddonPickerOption)
+        .sort((a, b) =>
+          a.serviceName.localeCompare(b.serviceName, undefined, { sensitivity: "base" }),
+        ),
+    [catalogServices],
+  );
   const [term, setTerm] = React.useState<"12_months" | "24_months">("24_months");
+  const setTermWithAddonSync = React.useCallback(
+    (next: "12_months" | "24_months") => {
+      setTerm(next);
+      const synced = syncCatalogAddonLineItemsForTerm(block.addonLineItems ?? [], next, catalogAddons);
+      if (synced !== (block.addonLineItems ?? [])) {
+        onChange({ ...block, addonLineItems: synced });
+      }
+    },
+    [block, catalogAddons, onChange],
+  );
   const [addonsSectionOpen, setAddonsSectionOpen] = React.useState(true);
   const style = resolveBlockStyle(block.style);
   const isVisual = style.variant === "visual";
@@ -344,15 +368,20 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
   function removeAddonLine(id: string) {
     onChange({ ...block, addonLineItems: addonLineItems.filter((l) => l.id !== id) });
   }
-  function addAddonLine() {
+  function addCatalogAddon(service: CatalogServicePickerOption) {
+    if (addonLineItems.some((li) => li.serviceId === service.serviceId)) return;
     onChange({
       ...block,
       addonLineItems: [
         ...addonLineItems,
-        { id: newId(), label: "Add-on", unitAmountMinor: 0, quantity: 0 },
+        pricingLineItemFromCatalogAddon(service, term, newId()),
       ],
     });
   }
+
+  const availableCatalogAddons = catalogAddons.filter(
+    (s) => !addonLineItems.some((li) => li.serviceId === s.serviceId),
+  );
 
   const previewTierId = tiers.find((t) => t.recommended)?.id ?? tiers[0]?.id ?? null;
   const mockAddonQty: Record<string, number> = {};
@@ -372,7 +401,7 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
       : undefined;
   const addonsPreviewMinor = previewSel
     ? packageAddonsTotalMinor(block, previewSel)
-    : packageAddonsTotalMinor(block, undefined, mockAddonQty, {});
+    : packageAddonsTotalMinor(block, undefined, mockAddonQty, {}, term);
   const previewTermMonths = packageTermMonths({ term });
   const monthlyPreviewMinor = previewSel
     ? packageMonthlyTotalMinor(block, previewSel)
@@ -395,13 +424,9 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
   const addonsActive = packagesAddonsSectionActive(block);
 
   function enableAddonsTable() {
-    const nextLines =
-      addonLineItems.length > 0
-        ? addonLineItems
-        : [{ id: newId(), label: "Line item", unitAmountMinor: 0, quantity: 0 }];
     patch({
       addonsSectionEnabled: true,
-      addonLineItems: nextLines,
+      addonLineItems: addonLineItems.length > 0 ? addonLineItems : [],
       addonsTitle: block.addonsTitle?.trim() || "Add-ons",
       allowAddonQuantityEdit: true,
       addonQuantityUnitLabel: block.addonQuantityUnitLabel?.trim() || "Unit",
@@ -441,7 +466,7 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
           >
             <TermPill
               active={term === "12_months"}
-              onActivate={() => setTerm("12_months")}
+              onActivate={() => setTermWithAddonSync("12_months")}
               label={label12}
               onLabelChange={(v) => patch({ plan12Label: v })}
               activeColor={style.primaryColor}
@@ -449,7 +474,7 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
             />
             <TermPill
               active={term === "24_months"}
-              onActivate={() => setTerm("24_months")}
+              onActivate={() => setTermWithAddonSync("24_months")}
               label={label24}
               onLabelChange={(v) => patch({ plan24Label: v })}
               activeColor={style.primaryColor}
@@ -653,7 +678,11 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
                   <tbody className="[&_tr]:border-b [&_tr]:border-dashed [&_tr]:border-border/40">
                     {addonLineItems.map((li) => {
                       const q = effectivePricingLineQuantity(li);
-                      const lineTotal = Math.round(li.unitAmountMinor * q);
+                      const linkedService = li.serviceId
+                        ? catalogAddons.find((s) => s.serviceId === li.serviceId)
+                        : undefined;
+                      const unitMinor = effectiveCatalogAddonUnitAmount(li, term);
+                      const lineTotal = Math.round(unitMinor * q);
                       const qtyProps = editableAddonQty
                         ? {
                             tone: "light" as const,
@@ -670,15 +699,21 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
                         <tr key={li.id} className="group/row">
                           <td className="px-4 py-3 text-left align-middle">
                             <div className="flex flex-col items-start gap-1">
-                              <InlineText
-                                tone="light"
-                                value={li.label}
-                                placeholder="Add-on label"
-                                onChange={(v) => patchAddonLine(li.id, { label: v })}
-                                ariaLabel="Add-on label"
-                                className="font-medium text-foreground"
-                                inputClassName="w-full font-medium text-foreground"
-                              />
+                              {linkedService ? (
+                                <span className="block w-full font-medium text-foreground">
+                                  {linkedService.serviceName}
+                                </span>
+                              ) : (
+                                <InlineText
+                                  tone="light"
+                                  value={li.label}
+                                  placeholder="Add-on label"
+                                  onChange={(v) => patchAddonLine(li.id, { label: v })}
+                                  ariaLabel="Add-on label"
+                                  className="font-medium text-foreground"
+                                  inputClassName="w-full font-medium text-foreground"
+                                />
+                              )}
                               <label className="flex cursor-pointer items-center gap-2 text-[11px] text-muted-foreground">
                                 <input
                                   type="checkbox"
@@ -691,14 +726,20 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
                             </div>
                           </td>
                           <td className="px-4 py-3 text-right align-middle tabular-nums text-muted-foreground">
-                            <InlinePrice
-                              tone="light"
-                              minor={li.unitAmountMinor}
-                              currency={currency}
-                              onChange={(v) => patchAddonLine(li.id, { unitAmountMinor: v })}
-                              ariaLabel="Unit price"
-                              className="text-muted-foreground"
-                            />
+                            {linkedService ? (
+                              <span className="tabular-nums">
+                                {formatCurrencyAmount(unitMinor, currency)}
+                              </span>
+                            ) : (
+                              <InlinePrice
+                                tone="light"
+                                minor={li.unitAmountMinor}
+                                currency={currency}
+                                onChange={(v) => patchAddonLine(li.id, { unitAmountMinor: v })}
+                                ariaLabel="Unit price"
+                                className="text-muted-foreground"
+                              />
+                            )}
                           </td>
                           {qtyProps ? (
                             <td className="px-4 py-3 text-right align-middle">
@@ -726,14 +767,48 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
                     })}
                     <tr>
                       <td colSpan={editableAddonQty ? 5 : 4} className="px-4 py-2">
-                        <button
-                          type="button"
-                          onClick={addAddonLine}
-                          className="flex w-full items-center gap-2 rounded-md border border-dashed border-border bg-transparent px-2 py-1.5 text-left text-sm text-muted-foreground transition-colors hover:border-primary/60 hover:bg-muted/30 hover:text-foreground"
-                        >
-                          <Plus className="h-3.5 w-3.5" />
-                          Add add-on line
-                        </button>
+                        {catalogAddons.length === 0 ? (
+                          <p className="px-2 py-1.5 text-sm text-muted-foreground">
+                            Add active add-ons in Admin → Services (activate to sync Stripe prices).
+                          </p>
+                        ) : availableCatalogAddons.length === 0 ? (
+                          <p className="px-2 py-1.5 text-sm text-muted-foreground">
+                            All catalogue add-ons are already in this table.
+                          </p>
+                        ) : (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                type="button"
+                                className="flex w-full items-center gap-2 rounded-md border border-dashed border-border bg-transparent px-2 py-1.5 text-left text-sm text-muted-foreground transition-colors hover:border-primary/60 hover:bg-muted/30 hover:text-foreground data-[state=open]:border-primary/60 data-[state=open]:bg-muted/30 data-[state=open]:text-foreground"
+                              >
+                                <Plus className="h-3.5 w-3.5" />
+                                Add add-on from Services
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent
+                              align="start"
+                              className="max-h-64 w-[min(320px,calc(100vw-2rem))] overflow-y-auto p-1"
+                            >
+                              {availableCatalogAddons.map((service) => (
+                                <DropdownMenuItem
+                                  key={service.serviceId}
+                                  className="cursor-pointer flex-col items-start gap-0.5 rounded-sm py-2"
+                                  onSelect={() => addCatalogAddon(service)}
+                                >
+                                  <span className="font-medium text-foreground">{service.serviceName}</span>
+                                  <span className="text-xs text-muted-foreground tabular-nums">
+                                    {formatCurrencyAmount(
+                                      catalogAddonUnitAmountForTerm(service, term),
+                                      currency,
+                                    )}
+                                    / mo
+                                  </span>
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
                       </td>
                     </tr>
                   </tbody>

@@ -142,6 +142,7 @@ export async function saveCatalogServiceAction(
 
   const features = parsed.data.features.map((f) => f.trim()).filter(Boolean);
   const isAddon = existing.serviceType === "addon";
+  const description = parsed.data.description?.trim() ?? "";
 
   const write = await runAdminWrite(
     "catalog_service_save_failed",
@@ -154,6 +155,7 @@ export async function saveCatalogServiceAction(
         .set(
           {
             name: parsed.data.name.trim(),
+            description,
             slug,
             currency: parsed.data.currency.toLowerCase(),
             sortOrder: FieldValue.delete(),

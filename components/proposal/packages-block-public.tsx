@@ -6,6 +6,7 @@ import { Check, ChevronDown, Loader2, Minus, Plus } from "lucide-react";
 import type { PackagesBlock, PackagesPublicSelection } from "@/types/proposal";
 import { formatCurrencyAmount } from "@/lib/format";
 import { formatPackageTierIncluded } from "@/lib/package-tier-limits";
+import { effectiveCatalogAddonUnitAmount } from "@/lib/catalog-service-tier";
 import { effectivePricingLineQuantity } from "@/lib/pricing-line-quantity";
 import {
   packageAddonsTotalMinor,
@@ -122,7 +123,7 @@ export function PackagesBlockPublic({
   const addonsSubtotalMinor =
     selectionDraft != null
       ? packageAddonsTotalMinor(block, selectionDraft)
-      : packageAddonsTotalMinor(block, undefined, addonQty, addonOptOff);
+      : packageAddonsTotalMinor(block, undefined, addonQty, addonOptOff, term);
   const termMonths = packageTermMonths({ term });
   const monthlyTotalMinor = selectionDraft
     ? packageMonthlyTotalMinor(block, selectionDraft)
@@ -501,7 +502,8 @@ export function PackagesBlockPublic({
                     {addonLines.map((li) => {
                       const qRaw = addonQty[li.id] ?? effectivePricingLineQuantity(li);
                       const hidden = Boolean(li.optional && addonOptOff[li.id]);
-                      const lineTotal = Math.round(li.unitAmountMinor * qRaw);
+                      const unitMinor = effectiveCatalogAddonUnitAmount(li, term);
+                      const lineTotal = Math.round(unitMinor * qRaw);
                       return (
                         <tr key={li.id} className={cn("transition-opacity", hidden && "opacity-40")}>
                           <td className="px-4 py-3 !text-left align-middle">
@@ -531,7 +533,7 @@ export function PackagesBlockPublic({
                             </div>
                           </td>
                           <td className="px-4 py-3 text-center align-middle tabular-nums text-muted-foreground">
-                            {formatCurrencyAmount(li.unitAmountMinor, currency)}
+                            {formatCurrencyAmount(unitMinor, currency)}
                           </td>
                           {allowAddonEdit ? (
                             <td className="px-4 py-3 text-center align-middle">

@@ -1,4 +1,5 @@
 import type { PackagesBlock, ProposalRecord } from "@/types/proposal";
+import { effectiveCatalogAddonUnitAmount } from "@/lib/catalog-service-tier";
 import { findFirstAgreementBlock, iterateProposalContentBlocks } from "@/lib/proposal-blocks";
 import {
   packageMonthlyTotalMinor,
@@ -97,11 +98,12 @@ export function buildSignedAgreementCommerceSnapshot(
             ? Math.floor(rawQ)
             : effectivePricingLineQuantity(li);
         if (quantity <= 0) continue;
-        const lineTotal = Math.round(li.unitAmountMinor * quantity);
+        const unitAmountMinor = effectiveCatalogAddonUnitAmount(li, sel.term);
+        const lineTotal = Math.round(unitAmountMinor * quantity);
         addons.push({
           label: li.label?.trim() || "Add-on",
           quantity,
-          unitAmountMinor: li.unitAmountMinor,
+          unitAmountMinor,
           lineTotalMinor: lineTotal,
           currency: cur,
           packageBlockTitle: blockTitle,

@@ -46,6 +46,9 @@ const pricingLineSchema = z.object({
   unitAmountMinor: z.number().finite(),
   quantity: z.number().finite().min(0).optional(),
   optional: z.boolean().optional(),
+  serviceId: z.string().trim().min(1).optional(),
+  unitAmount12Minor: z.number().finite().min(0).optional(),
+  unitAmount24Minor: z.number().finite().min(0).optional(),
 });
 
 /** Reasonable colour string (allow any short CSS colour ≤ 32 chars). */
@@ -209,6 +212,14 @@ function normalizeAddonLineItemInput(raw: unknown): unknown {
     row.quantity = Math.floor(o.quantity);
   }
   if (o.optional === true) row.optional = true;
+  const serviceId = typeof o.serviceId === "string" ? o.serviceId.trim() : "";
+  if (serviceId) row.serviceId = serviceId;
+  if (typeof o.unitAmount12Minor === "number" && Number.isFinite(o.unitAmount12Minor)) {
+    row.unitAmount12Minor = Math.max(0, Math.round(o.unitAmount12Minor));
+  }
+  if (typeof o.unitAmount24Minor === "number" && Number.isFinite(o.unitAmount24Minor)) {
+    row.unitAmount24Minor = Math.max(0, Math.round(o.unitAmount24Minor));
+  }
   return row;
 }
 
