@@ -96,16 +96,16 @@ export function CatalogServicePlanFeaturesSection({
               {features.map((feat, idx) => (
                 <li
                   key={`${idx}-${feat}`}
-                  className="group/feat relative rounded-xl border border-border/70 bg-muted/20 p-4 shadow-sm transition-colors hover:border-border hover:bg-muted/30"
+                  className="group/feat flex items-start gap-3"
                 >
-                  <span
-                    className="absolute bottom-3 right-3 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-                    aria-hidden
-                  >
-                    <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
-                  </span>
-                  <div className="pr-8">
+                    <span
+                      className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                      aria-hidden
+                    >
+                      <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
+                    </span>
                     <InlineEditableField
+                      className="min-w-0 flex-1 font-medium"
                       fieldId={`feature-${idx}`}
                       activeFieldId={activeFieldId}
                       onActiveFieldIdChange={onActiveFieldIdChange}
@@ -114,7 +114,6 @@ export function CatalogServicePlanFeaturesSection({
                       placeholder="Feature name"
                       emptyDisplay="Untitled feature"
                       disabled={disabled || saving}
-                      className="font-medium"
                       onSave={async (next) => {
                         const trimmed = next.trim();
                         const updated = [...features];
@@ -126,13 +125,12 @@ export function CatalogServicePlanFeaturesSection({
                         return persist(updated);
                       }}
                     />
-                  </div>
                   {!disabled ? (
                     <button
                       type="button"
                       disabled={saving}
                       aria-label={`Remove feature ${idx + 1}`}
-                      className="absolute right-3 top-3 rounded-md p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-hover/feat:opacity-100"
+                      className="mt-0.5 shrink-0 rounded-md p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-hover/feat:opacity-100"
                       onClick={() => void persist(features.filter((_, i) => i !== idx))}
                     >
                       <Trash2 className="h-4 w-4" aria-hidden />
