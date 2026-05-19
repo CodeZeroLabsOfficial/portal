@@ -36,14 +36,6 @@ export function CatalogServiceStripeIntegrationsCard({
 }: CatalogServiceStripeIntegrationsCardProps) {
   const linked = stripeLinked(service);
   const status = service.status as CatalogServiceStatus;
-  const priceLines = service.terms
-    .map((t) => {
-      const id = t.stripePriceId?.trim();
-      if (!id) return null;
-      const label = t.months ? `${t.months}-month` : "Price";
-      return { label, id };
-    })
-    .filter((x): x is { label: string; id: string } => x !== null);
 
   return (
     <Card className={cn("border-border/80 bg-card/80 shadow-sm", className)}>
@@ -55,44 +47,33 @@ export function CatalogServiceStripeIntegrationsCard({
       </CardHeader>
       <CardContent className="space-y-4 p-4 text-sm">
         <div className="rounded-xl border border-border/60 bg-background/40 p-3">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-muted-foreground">Stripe</span>
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0 space-y-1">
+              <span className="text-muted-foreground">Stripe</span>
+              {service.stripeSyncedAt ? (
+                <p className="text-xs text-muted-foreground">
+                  Last synced{" "}
+                  {new Date(service.stripeSyncedAt).toLocaleString(undefined, {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })}
+                </p>
+              ) : !linked ? (
+                <p className="text-xs text-muted-foreground">
+                  Activate or re-sync to create the product and prices in Stripe.
+                </p>
+              ) : null}
+            </div>
             {linked ? (
-              <Badge variant="outline" className="border-emerald-500/40 text-emerald-600 dark:text-emerald-400">
+              <Badge variant="outline" className="shrink-0 border-emerald-500/40 text-emerald-600 dark:text-emerald-400">
                 {stripeStatusLabel(service)}
               </Badge>
             ) : (
-              <Badge variant="secondary">Not synced</Badge>
+              <Badge variant="secondary" className="shrink-0">
+                Not synced
+              </Badge>
             )}
           </div>
-          {service.stripeProductId?.trim() ? (
-            <p className="mt-2 break-all font-mono text-[11px] text-muted-foreground">
-              {service.stripeProductId.trim()}
-            </p>
-          ) : (
-            <p className="mt-2 text-xs text-muted-foreground">
-              Activate or re-sync to create the product and prices in Stripe.
-            </p>
-          )}
-          {priceLines.length > 0 ? (
-            <ul className="mt-3 space-y-1.5 border-t border-border/50 pt-3">
-              {priceLines.map((line) => (
-                <li key={line.id}>
-                  <span className="text-xs text-muted-foreground">{line.label}</span>
-                  <p className="break-all font-mono text-[11px] text-foreground/90">{line.id}</p>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-          {service.stripeSyncedAt ? (
-            <p className="mt-3 text-xs text-muted-foreground">
-              Last synced{" "}
-              {new Date(service.stripeSyncedAt).toLocaleString(undefined, {
-                dateStyle: "medium",
-                timeStyle: "short",
-              })}
-            </p>
-          ) : null}
         </div>
 
         <div className="flex flex-col gap-2">

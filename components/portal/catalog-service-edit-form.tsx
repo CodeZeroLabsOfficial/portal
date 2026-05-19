@@ -3,11 +3,9 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
 import {
   ArrowLeft,
   CircleDot,
-  Coins,
   Layers,
   Loader2,
   Package,
@@ -27,9 +25,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  WORKSPACE_DETAIL_PAGE_TITLE_CLASS,
-} from "@/lib/workspace-page-typography";
 import { cn } from "@/lib/utils";
 
 function termMinor(service: CatalogServiceRecord, months: 12 | 24): number {
@@ -156,27 +151,28 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="-ml-2 gap-1.5 text-muted-foreground hover:text-foreground"
-          asChild
-        >
-          <Link href="/admin/services">
-            <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
-            Services
-          </Link>
-        </Button>
-        <div className="-mr-2 flex flex-wrap items-center justify-end gap-1">
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="-ml-2 gap-1.5 text-muted-foreground hover:text-foreground"
+            asChild
+          >
+            <Link href="/admin/services">
+              <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
+              Services
+            </Link>
+          </Button>
+        </div>
+        <div className="flex flex-wrap items-center justify-end gap-2">
           {service.status !== "archived" ? (
             <Button
               type="button"
-              variant="ghost"
               size="sm"
-              className="gap-1.5 text-muted-foreground hover:text-foreground"
-              disabled={readOnly}
+              className="min-w-[5.5rem] gap-2"
+              disabled={readOnly || busy}
               onClick={() => void onSave()}
             >
               {busy ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden /> : null}
@@ -207,33 +203,6 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
         </div>
       </div>
 
-      <motion.header
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="border-b border-border/80 pb-6"
-      >
-        <div className="flex min-w-0 items-start gap-4">
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border border-border/60 bg-muted ring-1 ring-border">
-            <Package className="h-7 w-7 text-muted-foreground" aria-hidden />
-          </div>
-          <div className="min-w-0 space-y-2">
-            <h1 className={cn("truncate", WORKSPACE_DETAIL_PAGE_TITLE_CLASS)}>
-              {name.trim() || service.name}
-            </h1>
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="outline" className={cn("font-normal", st.className)}>
-                {st.label}
-              </Badge>
-              {service.serviceType ? (
-                <Badge variant="outline" className="font-normal">
-                  {serviceTypeLabel(service)}
-                </Badge>
-              ) : null}
-            </div>
-          </div>
-        </div>
-      </motion.header>
-
       {message ? <p className="text-sm text-destructive">{message}</p> : null}
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -244,7 +213,7 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
               Service details
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6 p-6 text-sm">
+          <CardContent className="space-y-5 p-6 text-sm">
             <div className="space-y-1.5">
               <Label htmlFor="service-name" className={detailLabelClass}>
                 Name
@@ -275,7 +244,15 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
                   <Layers className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
                   Type
                 </dt>
-                <dd className="text-foreground">{serviceTypeLabel(service)}</dd>
+                <dd>
+                  {service.serviceType ? (
+                    <Badge variant="outline" className="font-normal">
+                      {serviceTypeLabel(service)}
+                    </Badge>
+                  ) : (
+                    <span className="text-foreground">—</span>
+                  )}
+                </dd>
               </div>
               <div className="space-y-1">
                 <dt className={detailLabelClass}>Billing</dt>
@@ -284,13 +261,6 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
               <div className="space-y-1">
                 <dt className={detailLabelClass}>Pricing model</dt>
                 <dd className="text-foreground">{pricingModelLabel(service)}</dd>
-              </div>
-              <div className="space-y-1">
-                <dt className={detailLabelClass}>
-                  <Coins className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
-                  Currency
-                </dt>
-                <dd className="text-foreground">{service.currency.toUpperCase()}</dd>
               </div>
             </dl>
 

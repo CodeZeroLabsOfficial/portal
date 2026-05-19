@@ -219,8 +219,8 @@ export function SubscriptionListPanel({ rows, customerOptions, catalogServiceOpt
           <table className="w-full min-w-[1080px] text-left text-[13px]">
             <thead>
               <tr className="border-b border-border text-muted-foreground">
-                <th className="px-4 py-2.5 font-medium">Status</th>
                 <th className="px-4 py-2.5 font-medium">Account name</th>
+                <th className="px-4 py-2.5 font-medium">Status</th>
                 <th className="px-4 py-2.5 font-medium">Product</th>
                 <th className="px-4 py-2.5 font-medium">Monthly amount</th>
                 <th className="px-4 py-2.5 font-medium">Collection method</th>
@@ -299,12 +299,12 @@ export function SubscriptionListPanel({ rows, customerOptions, catalogServiceOpt
                       transition={{ duration: 0.18, delay: index * 0.012 }}
                       className="border-b border-border/60 last:border-0"
                     >
+                      <td className="max-w-[260px] px-4 py-3 align-middle">{accountCell}</td>
                       <td className="px-4 py-3 align-middle">
                         <Badge variant="outline" className={cn("font-normal capitalize", st.className)}>
                           {st.label}
                         </Badge>
                       </td>
-                      <td className="max-w-[260px] px-4 py-3 align-middle">{accountCell}</td>
                       <td className="max-w-[220px] truncate px-4 py-3 align-middle text-muted-foreground">
                         {s.productName?.trim() || "—"}
                       </td>
