@@ -1,8 +1,11 @@
 import { packageTierFromCatalogService } from "@/lib/catalog-service-tier";
 import type { CatalogServicePickerOption } from "@/types/catalog-service";
 import type {
+  AgreementBlock,
+  ColumnsBlock,
   PackageTier,
   PackagesBlock,
+  ProposalAgreementChildBlock,
   ProposalBlock,
   ProposalColumnChildBlock,
   ProposalContentBlock,
@@ -53,25 +56,74 @@ function syncPackagesBlock(
   return { ...block, tiers: nextTiers };
 }
 
-function syncContentBlock(
-  block: ProposalContentBlock,
+function syncColumnChild(
+  block: ProposalColumnChildBlock,
   catalogServices: readonly CatalogServicePickerOption[],
-): ProposalContentBlock {
+): ProposalColumnChildBlock {
+  if (block.type === "packages") {
+    return syncPackagesBlock(block, catalogServices);
+  }
+  if (block.type === "agreement") {
+    return syncAgreementBlock(block, catalogServices);
+  }
+  return block;
+}
+
+function syncColumnsBlock(
+  block: ColumnsBlock,
+  catalogServices: readonly CatalogServicePickerOption[],
+): ColumnsBlock {
+  let changed = false;
+  const stacks = block.stacks.map((stack) =>
+    stack.map((child) => {
+      const next = syncColumnChild(child, catalogServices);
+      if (next !== child) changed = true;
+      return next;
+    }),
+  );
+  return changed ? { ...block, stacks } : block;
+}
+
+function syncAgreementChild(
+  block: ProposalAgreementChildBlock,
+  catalogServices: readonly CatalogServicePickerOption[],
+): ProposalAgreementChildBlock {
   if (block.type === "packages") {
     return syncPackagesBlock(block, catalogServices);
   }
   if (block.type === "columns") {
-    let changed = false;
-    const stacks = block.stacks.map((stack) =>
-      stack.map((child) => {
-        const next = syncContentBlock(child as ProposalContentBlock, catalogServices);
-        if (next !== child) changed = true;
-        return next as ProposalColumnChildBlock;
-      }),
-    );
-    return changed ? { ...block, stacks } : block;
+    return syncColumnsBlock(block, catalogServices);
   }
   return block;
+}
+
+function syncContentBlock(
+  block: ProposalContentBlock,
+  catalogServices: readonly CatalogServicePickerOption[],
+): ProposalContentBlock {
+  if (block.type === "agreement") {
+    return syncAgreementBlock(block, catalogServices);
+  }
+  if (block.type === "packages") {
+    return syncPackagesBlock(block, catalogServices);
+  }
+  if (block.type === "columns") {
+    return syncColumnsBlock(block, catalogServices);
+  }
+  return block;
+}
+
+function syncAgreementBlock(
+  block: AgreementBlock,
+  catalogServices: readonly CatalogServicePickerOption[],
+): AgreementBlock {
+  let changed = false;
+  const children = block.children.map((child) => {
+    const next = syncAgreementChild(child, catalogServices);
+    if (next !== child) changed = true;
+    return next;
+  });
+  return changed ? { ...block, children } : block;
 }
 
 function syncBlock(
@@ -91,13 +143,7 @@ function syncBlock(
     return changed ? { ...block, children } : block;
   }
   if (block.type === "agreement") {
-    let changed = false;
-    const children = block.children.map((child) => {
-      const next = syncContentBlock(child as ProposalContentBlock, catalogServices);
-      if (next !== child) changed = true;
-      return next as ProposalContentBlock;
-    });
-    return changed ? { ...block, children } : block;
+    return syncAgreementBlock(block, catalogServices);
   }
   return block;
 }
