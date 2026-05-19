@@ -30,13 +30,19 @@ import {
 } from "@/lib/workspace-page-typography";
 import { cn } from "@/lib/utils";
 
-function termMinor(service: CatalogServiceRecord, months: 12 | 24): number {
-  const match = service.terms.find((t) => t.months === months);
-  if (match) return match.monthlyAmountMinor;
-  if (service.pricingModel === "flat" && service.terms.length === 1) {
-    return service.terms[0]!.monthlyAmountMinor;
+function pricingLabel(service: CatalogServiceRecord): string {
+  const terms = service.terms;
+  if (terms.length === 0) return "—";
+
+  const amounts = terms.map((t) => t.monthlyAmountMinor);
+  const distinct = new Set(amounts);
+
+  if (terms.length === 1 || distinct.size === 1) {
+    const amount = amounts[0] ?? 0;
+    return amount > 0 ? formatCurrencyAmount(amount, service.currency) : "—";
   }
-  return 0;
+
+  return "Multiple";
 }
 
 function formatTableDate(ms: number | undefined): string {
@@ -163,14 +169,13 @@ export function CatalogServicesListPanel({ services }: CatalogServicesListPanelP
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[960px] text-left text-[13px]">
+          <table className="w-full min-w-[880px] text-left text-[13px]">
             <thead>
               <tr className="border-b border-border text-muted-foreground">
-                <th className="px-4 py-2.5 font-medium">Status</th>
                 <th className="px-4 py-2.5 font-medium">Service name</th>
+                <th className="px-4 py-2.5 font-medium">Status</th>
                 <th className="px-4 py-2.5 font-medium">Type</th>
-                <th className="px-4 py-2.5 font-medium">12 mo monthly</th>
-                <th className="px-4 py-2.5 font-medium">24 mo monthly</th>
+                <th className="px-4 py-2.5 font-medium">Pricing</th>
                 <th className="px-4 py-2.5 font-medium">Stripe</th>
                 <th className="px-4 py-2.5 font-medium">Updated</th>
                 <th className="w-14 px-2 py-2.5 text-center font-medium">Action</th>
@@ -179,13 +184,13 @@ export function CatalogServicesListPanel({ services }: CatalogServicesListPanelP
             <tbody className="text-foreground">
               {services.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-sm text-muted-foreground">
+                  <td colSpan={7} className="px-4 py-10 text-center text-sm text-muted-foreground">
                     <p className="mx-auto max-w-md leading-relaxed">No services yet.</p>
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-sm text-muted-foreground">
+                  <td colSpan={7} className="px-4 py-10 text-center text-sm text-muted-foreground">
                     No services match your search.
                   </td>
                 </tr>
@@ -217,11 +222,6 @@ export function CatalogServicesListPanel({ services }: CatalogServicesListPanelP
                         transition={{ duration: 0.18, delay: index * 0.012 }}
                         className="border-b border-border/60 last:border-0"
                       >
-                        <td className="px-4 py-3 align-middle">
-                          <Badge variant="outline" className={cn("font-normal", st.className)}>
-                            {st.label}
-                          </Badge>
-                        </td>
                         <td className="max-w-[280px] px-4 py-3 align-middle">
                           <Link
                             href={`/admin/services/${service.id}`}
@@ -230,14 +230,16 @@ export function CatalogServicesListPanel({ services }: CatalogServicesListPanelP
                             {service.name}
                           </Link>
                         </td>
+                        <td className="px-4 py-3 align-middle">
+                          <Badge variant="outline" className={cn("font-normal", st.className)}>
+                            {st.label}
+                          </Badge>
+                        </td>
                         <td className="whitespace-nowrap px-4 py-3 align-middle text-muted-foreground">
                           {serviceTypeLabel(service.serviceType)}
                         </td>
                         <td className="whitespace-nowrap px-4 py-3 align-middle tabular-nums text-muted-foreground">
-                          {formatCurrencyAmount(termMinor(service, 12), service.currency)}
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-3 align-middle tabular-nums text-muted-foreground">
-                          {formatCurrencyAmount(termMinor(service, 24), service.currency)}
+                          {pricingLabel(service)}
                         </td>
                         <td className="px-4 py-3 align-middle text-muted-foreground">
                           {stripeSyncLabel(service)}
