@@ -46,6 +46,9 @@ const defaultValues: CreateCatalogServiceInput = {
   flatAmountMinor: 0,
   monthlyCost12Minor: 0,
   monthlyCost24Minor: 0,
+  includedUsers: 0,
+  includedLocations: 0,
+  includedAdmins: 0,
 };
 
 const fieldClass =
@@ -86,6 +89,7 @@ export function AddCatalogServiceModal({ open, onOpenChange }: AddCatalogService
   const billingType = form.watch("billingType");
   const pricingModel = form.watch("pricingModel");
 
+  const isPlan = serviceType === "plan";
   const isOneOff = billingType === "one_off";
   const isFlat = isOneOff || pricingModel === "flat";
   const isByTerm = !isOneOff && pricingModel === "by_term";
@@ -161,6 +165,9 @@ export function AddCatalogServiceModal({ open, onOpenChange }: AddCatalogService
       flatAmountMinor: isFlat ? majorInputToMinor(flatPrice) : undefined,
       monthlyCost12Minor: isByTerm ? majorInputToMinor(monthly12) : undefined,
       monthlyCost24Minor: isByTerm ? majorInputToMinor(monthly24) : undefined,
+      includedUsers: isPlan ? Math.max(0, Math.floor(Number(values.includedUsers) || 0)) : 0,
+      includedLocations: isPlan ? Math.max(0, Math.floor(Number(values.includedLocations) || 0)) : 0,
+      includedAdmins: isPlan ? Math.max(0, Math.floor(Number(values.includedAdmins) || 0)) : 0,
     };
     const result = await createCatalogServiceAction(payload);
     if (!result.ok) {
@@ -387,6 +394,56 @@ export function AddCatalogServiceModal({ open, onOpenChange }: AddCatalogService
               </>
             )}
           </div>
+
+          {isPlan ? (
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-zinc-400">Package entitlements</p>
+              <p className="text-xs text-zinc-500">
+                Shown in the Packages block when this plan is linked on a proposal.
+              </p>
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="catalog-included-users" className={labelClass}>
+                    Included users
+                  </Label>
+                  <Input
+                    id="catalog-included-users"
+                    type="number"
+                    min={0}
+                    disabled={busy}
+                    className={fieldClass}
+                    {...form.register("includedUsers", { valueAsNumber: true })}
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="catalog-included-locations" className={labelClass}>
+                    Included locations
+                  </Label>
+                  <Input
+                    id="catalog-included-locations"
+                    type="number"
+                    min={0}
+                    disabled={busy}
+                    className={fieldClass}
+                    {...form.register("includedLocations", { valueAsNumber: true })}
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="catalog-included-admins" className={labelClass}>
+                    Included admins
+                  </Label>
+                  <Input
+                    id="catalog-included-admins"
+                    type="number"
+                    min={0}
+                    disabled={busy}
+                    className={fieldClass}
+                    {...form.register("includedAdmins", { valueAsNumber: true })}
+                  />
+                </div>
+              </div>
+            </div>
+          ) : null}
 
           <DialogFooter className="gap-2 border-t border-white/[0.06] pt-4 sm:justify-end">
             <Button

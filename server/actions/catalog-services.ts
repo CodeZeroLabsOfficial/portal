@@ -19,6 +19,7 @@ import { zodErrorToMessage } from "@/lib/zod-error";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { getCatalogServiceForStaff } from "@/server/firestore/catalog-services";
 import { syncCatalogServiceToStripe } from "@/server/stripe/catalog-service-stripe-sync";
+import type { CatalogServiceKind } from "@/types/catalog-service";
 
 function revalidateCatalogPaths(serviceId?: string) {
   revalidatePath("/admin/services", "layout");
@@ -26,6 +27,34 @@ function revalidateCatalogPaths(serviceId?: string) {
   revalidatePath("/admin/subscriptions", "layout");
   revalidatePath("/admin/proposals", "layout");
   revalidatePath("/admin/templates", "layout");
+}
+
+/** Plan-only catalogue fields — omitted (not stored) for add-ons. */
+function planOnlyCatalogFirestoreFields(
+  serviceType: CatalogServiceKind,
+  plan: {
+    includedUsers: number;
+    includedLocations: number;
+    includedAdmins: number;
+    features: string[];
+  },
+): Record<string, number | string[]> {
+  if (serviceType === "addon") return {};
+  return {
+    includedUsers: Math.max(0, Math.floor(plan.includedUsers)),
+    includedLocations: Math.max(0, Math.floor(plan.includedLocations)),
+    includedAdmins: Math.max(0, Math.floor(plan.includedAdmins)),
+    features: plan.features,
+  };
+}
+
+function deletePlanOnlyCatalogFirestoreFields(): Record<string, FieldValue> {
+  return {
+    includedUsers: FieldValue.delete(),
+    includedLocations: FieldValue.delete(),
+    includedAdmins: FieldValue.delete(),
+    features: FieldValue.delete(),
+  };
 }
 
 export async function createCatalogServiceAction(
@@ -66,10 +95,12 @@ export async function createCatalogServiceAction(
         status: "draft",
         currency: parsed.data.currency.toLowerCase(),
         sortOrder: 0,
-        includedUsers: 0,
-        includedLocations: 0,
-        includedAdmins: 0,
-        features: [],
+        ...planOnlyCatalogFirestoreFields(parsed.data.serviceType, {
+          includedUsers: parsed.data.includedUsers ?? 0,
+          includedLocations: parsed.data.includedLocations ?? 0,
+          includedAdmins: parsed.data.includedAdmins ?? 0,
+          features: [],
+        }),
         terms,
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
@@ -117,6 +148,7 @@ export async function saveCatalogServiceAction(
   });
 
   const features = parsed.data.features.map((f) => f.trim()).filter(Boolean);
+  const isAddon = existing.serviceType === "addon";
 
   const write = await runAdminWrite(
     "catalog_service_save_failed",
@@ -132,13 +164,17 @@ export async function saveCatalogServiceAction(
             slug,
             currency: parsed.data.currency.toLowerCase(),
             sortOrder: parsed.data.sortOrder,
-            includedUsers: parsed.data.includedUsers,
-            includedLocations: parsed.data.includedLocations,
-            includedAdmins: parsed.data.includedAdmins,
+            ...(isAddon
+              ? deletePlanOnlyCatalogFirestoreFields()
+              : planOnlyCatalogFirestoreFields("plan", {
+                  includedUsers: parsed.data.includedUsers,
+                  includedLocations: parsed.data.includedLocations,
+                  includedAdmins: parsed.data.includedAdmins,
+                  features,
+                })),
             ...(typeof parsed.data.upfrontCost12Minor === "number"
               ? { upfrontCost12Minor: Math.round(parsed.data.upfrontCost12Minor) }
               : {}),
-            features,
             terms,
             updatedAt: FieldValue.serverTimestamp(),
           },

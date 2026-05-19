@@ -51,22 +51,25 @@ export function parseCatalogServiceRecord(id: string, data: Record<string, unkno
   const status: CatalogServiceStatus =
     statusRaw === "draft" || statusRaw === "active" || statusRaw === "archived" ? statusRaw : "draft";
 
-  const features = Array.isArray(data.features)
-    ? data.features
-        .filter((f): f is string => typeof f === "string")
-        .map((f) => f.trim())
-        .filter(Boolean)
-        .slice(0, 40)
-    : [];
+  const serviceTypeRaw = asString(data.serviceType);
+  const serviceType: CatalogServiceKind | undefined =
+    serviceTypeRaw === "plan" || serviceTypeRaw === "addon" ? serviceTypeRaw : undefined;
+
+  const features =
+    serviceType === "addon"
+      ? []
+      : Array.isArray(data.features)
+        ? data.features
+            .filter((f): f is string => typeof f === "string")
+            .map((f) => f.trim())
+            .filter(Boolean)
+            .slice(0, 40)
+        : [];
 
   const upfront =
     typeof data.upfrontCost12Minor === "number" && Number.isFinite(data.upfrontCost12Minor)
       ? Math.max(0, Math.round(data.upfrontCost12Minor))
       : undefined;
-
-  const serviceTypeRaw = asString(data.serviceType);
-  const serviceType: CatalogServiceKind | undefined =
-    serviceTypeRaw === "plan" || serviceTypeRaw === "addon" ? serviceTypeRaw : undefined;
 
   const billingTypeRaw = asString(data.billingType);
   const billingType: CatalogServiceBillingType | undefined =
@@ -97,17 +100,23 @@ export function parseCatalogServiceRecord(id: string, data: Record<string, unkno
         ? Math.max(0, Math.floor(data.sortOrder))
         : 0,
     includedUsers:
-      typeof data.includedUsers === "number" && Number.isFinite(data.includedUsers)
-        ? Math.max(0, Math.floor(data.includedUsers))
-        : 0,
+      serviceType === "addon"
+        ? 0
+        : typeof data.includedUsers === "number" && Number.isFinite(data.includedUsers)
+          ? Math.max(0, Math.floor(data.includedUsers))
+          : 0,
     includedLocations:
-      typeof data.includedLocations === "number" && Number.isFinite(data.includedLocations)
-        ? Math.max(0, Math.floor(data.includedLocations))
-        : 0,
+      serviceType === "addon"
+        ? 0
+        : typeof data.includedLocations === "number" && Number.isFinite(data.includedLocations)
+          ? Math.max(0, Math.floor(data.includedLocations))
+          : 0,
     includedAdmins:
-      typeof data.includedAdmins === "number" && Number.isFinite(data.includedAdmins)
-        ? Math.max(0, Math.floor(data.includedAdmins))
-        : 0,
+      serviceType === "addon"
+        ? 0
+        : typeof data.includedAdmins === "number" && Number.isFinite(data.includedAdmins)
+          ? Math.max(0, Math.floor(data.includedAdmins))
+          : 0,
     ...(typeof upfront === "number" ? { upfrontCost12Minor: upfront } : {}),
     features,
     terms,

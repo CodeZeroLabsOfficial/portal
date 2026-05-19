@@ -46,6 +46,9 @@ export const createCatalogServiceSchema = z
     flatAmountMinor: z.number().finite().min(0).optional(),
     monthlyCost12Minor: z.number().finite().min(0).optional(),
     monthlyCost24Minor: z.number().finite().min(0).optional(),
+    includedUsers: z.number().int().min(0).max(1_000_000).default(0),
+    includedLocations: z.number().int().min(0).max(1_000_000).default(0),
+    includedAdmins: z.number().int().min(0).max(1_000_000).default(0),
   })
   .superRefine((data, ctx) => {
     const effectivePricing =
