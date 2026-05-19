@@ -36,7 +36,6 @@ export interface CatalogServiceRecord {
   pricingModel?: CatalogServicePricingModel;
   status: CatalogServiceStatus;
   currency: string;
-  sortOrder: number;
   includedUsers: number;
   includedLocations: number;
   includedAdmins: number;

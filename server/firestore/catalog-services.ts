@@ -95,10 +95,6 @@ export function parseCatalogServiceRecord(id: string, data: Record<string, unkno
     ...(inferredPricing ? { pricingModel: inferredPricing } : {}),
     status,
     currency: (asString(data.currency) ?? "aud").toLowerCase(),
-    sortOrder:
-      typeof data.sortOrder === "number" && Number.isFinite(data.sortOrder)
-        ? Math.max(0, Math.floor(data.sortOrder))
-        : 0,
     includedUsers:
       serviceType === "addon"
         ? 0
@@ -191,7 +187,7 @@ export async function listCatalogServicesForOrg(user: PortalUser): Promise<Catal
       .get();
     return snap.docs
       .map((d) => parseCatalogServiceRecord(d.id, d.data() as Record<string, unknown>))
-      .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
+      .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
   } catch {
     return [];
   }

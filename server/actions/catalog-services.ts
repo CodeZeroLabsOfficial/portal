@@ -94,7 +94,6 @@ export async function createCatalogServiceAction(
         pricingModel,
         status: "draft",
         currency: parsed.data.currency.toLowerCase(),
-        sortOrder: 0,
         ...planOnlyCatalogFirestoreFields(parsed.data.serviceType, {
           includedUsers: parsed.data.includedUsers ?? 0,
           includedLocations: parsed.data.includedLocations ?? 0,
@@ -157,7 +156,7 @@ export async function saveCatalogServiceAction(
             name: parsed.data.name.trim(),
             slug,
             currency: parsed.data.currency.toLowerCase(),
-            sortOrder: parsed.data.sortOrder,
+            sortOrder: FieldValue.delete(),
             ...(isAddon
               ? deletePlanOnlyCatalogFirestoreFields()
               : planOnlyCatalogFirestoreFields("plan", {
@@ -207,6 +206,7 @@ async function pushCatalogServiceToStripe(
     stripeProductId: sync.stripeProductId,
     terms: sync.terms,
     stripeSyncedAt: sync.stripeSyncedAt,
+    sortOrder: FieldValue.delete(),
     updatedAt: FieldValue.serverTimestamp(),
   };
   if (opts.setActive) {

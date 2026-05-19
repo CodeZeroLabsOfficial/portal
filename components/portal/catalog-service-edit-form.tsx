@@ -4,23 +4,31 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ChevronLeft, Loader2 } from "lucide-react";
+import {
+  ArrowLeft,
+  CircleDot,
+  Coins,
+  Layers,
+  Loader2,
+  Package,
+  Users,
+} from "lucide-react";
 import {
   archiveCatalogServiceAction,
   saveAndActivateCatalogServiceAction,
   saveAndSyncCatalogServiceStripeAction,
   saveCatalogServiceAction,
 } from "@/server/actions/catalog-services";
-import { slugifyCatalogServiceName } from "@/lib/catalog-service-slug";
 import { formatCurrencyAmount } from "@/lib/format";
 import type { CatalogServiceRecord, CatalogServiceStatus } from "@/types/catalog-service";
+import { CatalogServiceStripeIntegrationsCard } from "@/components/portal/catalog-service-stripe-integrations-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  WORKSPACE_HUB_PAGE_TITLE_CLASS,
-  WORKSPACE_PAGE_DESCRIPTION_CLASS,
+  WORKSPACE_DETAIL_PAGE_TITLE_CLASS,
 } from "@/lib/workspace-page-typography";
 import { cn } from "@/lib/utils";
 
@@ -58,19 +66,29 @@ function statusBadge(status: CatalogServiceStatus): { label: string; className: 
   };
 }
 
-function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="overflow-hidden rounded-xl border border-border/80 bg-card/80 shadow-sm backdrop-blur-sm">
-      <div className="border-b border-border px-4 py-3">
-        <h2 className="text-sm font-semibold text-foreground">{title}</h2>
-      </div>
-      <div className="p-4">{children}</div>
-    </section>
-  );
+function serviceTypeLabel(service: CatalogServiceRecord): string {
+  if (service.serviceType === "plan") return "Plan";
+  if (service.serviceType === "addon") return "Add-on";
+  return "—";
+}
+
+function billingLabel(service: CatalogServiceRecord): string {
+  if (service.billingType === "one_off") return "One-off";
+  if (service.billingType === "recurring") return "Recurring";
+  return "—";
+}
+
+function pricingModelLabel(service: CatalogServiceRecord): string {
+  if (service.pricingModel === "flat") return "Flat rate";
+  if (service.pricingModel === "by_term") return "Fixed term (12 / 24 mo)";
+  return "—";
 }
 
 const fieldInputClass =
   "h-9 rounded-md border-border/80 bg-background/60 text-[14px] text-foreground";
+
+const detailLabelClass =
+  "flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground";
 
 export interface CatalogServiceEditFormProps {
   service: CatalogServiceRecord;
@@ -82,8 +100,6 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
   const [busy, setBusy] = React.useState(false);
 
   const [name, setName] = React.useState(service.name);
-  const [slug, setSlug] = React.useState(service.slug);
-  const [sortOrder, setSortOrder] = React.useState(String(service.sortOrder));
   const [includedUsers, setIncludedUsers] = React.useState(String(service.includedUsers));
   const [includedLocations, setIncludedLocations] = React.useState(String(service.includedLocations));
   const [includedAdmins, setIncludedAdmins] = React.useState(String(service.includedAdmins));
@@ -94,6 +110,7 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
 
   const st = statusBadge(service.status);
   const readOnly = service.status === "archived" || busy;
+  const isPlan = service.serviceType !== "addon";
 
   async function runAction(
     fn: () => Promise<{ ok: boolean; message?: string }>,
@@ -123,9 +140,7 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
     return {
       serviceId: service.id,
       name: name.trim(),
-      slug: slug.trim() || slugifyCatalogServiceName(name),
       currency: service.currency,
-      sortOrder: Number(sortOrder) || 0,
       includedUsers: Number(includedUsers) || 0,
       includedLocations: Number(includedLocations) || 0,
       includedAdmins: Number(includedAdmins) || 0,
@@ -142,83 +157,30 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
 
   return (
     <div className="space-y-8">
-      <motion.div
-        initial={{ opacity: 0, y: 6 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25 }}
-        className="flex flex-wrap items-start justify-between gap-4"
-      >
-        <div>
-          <Link
-            href="/admin/services"
-            className="mb-2 inline-flex items-center gap-1 text-[13px] font-medium text-muted-foreground hover:text-foreground"
-          >
-            <ChevronLeft className="h-4 w-4 shrink-0" aria-hidden />
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="-ml-2 gap-1.5 text-muted-foreground hover:text-foreground"
+          asChild
+        >
+          <Link href="/admin/services">
+            <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
             Services
           </Link>
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className={WORKSPACE_HUB_PAGE_TITLE_CLASS}>{name.trim() || service.name}</h1>
-            <Badge variant="outline" className={cn("font-normal", st.className)}>
-              {st.label}
-            </Badge>
-          </div>
-          <p className={WORKSPACE_PAGE_DESCRIPTION_CLASS}>
-            {service.stripeProductId ? (
-              <span className="font-mono text-[12px]">{service.stripeProductId}</span>
-            ) : (
-              "Not synced to Stripe yet"
-            )}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+        </Button>
+        <div className="-mr-2 flex flex-wrap items-center justify-end gap-1">
           {service.status !== "archived" ? (
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              className="text-[14px] font-medium text-muted-foreground hover:text-foreground"
+              className="gap-1.5 text-muted-foreground hover:text-foreground"
               disabled={readOnly}
               onClick={() => void onSave()}
             >
-              Save
-            </Button>
-          ) : null}
-          {service.status === "draft" ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="gap-1.5 text-[14px] font-medium text-muted-foreground hover:text-foreground"
-              disabled={busy}
-              onClick={() => void runAction(() => saveAndActivateCatalogServiceAction(buildSavePayload()))}
-            >
               {busy ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden /> : null}
-              Activate & sync
-            </Button>
-          ) : null}
-          {service.status === "active" ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="text-[14px] font-medium text-muted-foreground hover:text-foreground"
-              disabled={busy}
-              onClick={() => void runAction(() => saveAndSyncCatalogServiceStripeAction(buildSavePayload()))}
-            >
-              Re-sync Stripe
-            </Button>
-          ) : null}
-          {service.stripeProductId ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="text-[14px] font-medium text-muted-foreground hover:text-foreground"
-              onClick={() =>
-                window.open(`https://dashboard.stripe.com/products/${service.stripeProductId}`, "_blank")
-              }
-            >
-              Open in Stripe
+              Save
             </Button>
           ) : null}
           {service.status !== "archived" ? (
@@ -226,7 +188,7 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
               type="button"
               variant="ghost"
               size="sm"
-              className="text-[14px] font-medium text-destructive hover:text-destructive"
+              className="gap-1.5 text-destructive hover:text-destructive"
               disabled={busy}
               onClick={() => {
                 if (
@@ -243,177 +205,244 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
             </Button>
           ) : null}
         </div>
-      </motion.div>
+      </div>
+
+      <motion.header
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="border-b border-border/80 pb-6"
+      >
+        <div className="flex min-w-0 items-start gap-4">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border border-border/60 bg-muted ring-1 ring-border">
+            <Package className="h-7 w-7 text-muted-foreground" aria-hidden />
+          </div>
+          <div className="min-w-0 space-y-2">
+            <h1 className={cn("truncate", WORKSPACE_DETAIL_PAGE_TITLE_CLASS)}>
+              {name.trim() || service.name}
+            </h1>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline" className={cn("font-normal", st.className)}>
+                {st.label}
+              </Badge>
+              {service.serviceType ? (
+                <Badge variant="outline" className="font-normal">
+                  {serviceTypeLabel(service)}
+                </Badge>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      </motion.header>
 
       {message ? <p className="text-sm text-destructive">{message}</p> : null}
 
-      <FormSection title="Service details">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="service-name" className="text-[13px] text-muted-foreground">
-              Name
-            </Label>
-            <Input
-              id="service-name"
-              value={name}
-              disabled={readOnly}
-              className={fieldInputClass}
-              onChange={(e) => {
-                setName(e.target.value);
-                if (!slug || slug === slugifyCatalogServiceName(service.name)) {
-                  setSlug(slugifyCatalogServiceName(e.target.value));
-                }
-              }}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="service-slug" className="text-[13px] text-muted-foreground">
-              Slug (Stripe lookup keys)
-            </Label>
-            <Input
-              id="service-slug"
-              value={slug}
-              disabled={readOnly}
-              className={cn(fieldInputClass, "font-mono")}
-              onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_"))}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="service-sort" className="text-[13px] text-muted-foreground">
-              Sort order
-            </Label>
-            <Input
-              id="service-sort"
-              type="number"
-              min={0}
-              value={sortOrder}
-              disabled={readOnly}
-              className={fieldInputClass}
-              onChange={(e) => setSortOrder(e.target.value)}
-            />
-          </div>
-        </div>
-      </FormSection>
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Card className="border-border/80 bg-card/80 shadow-sm lg:col-span-2">
+          <CardHeader className="border-b border-border/60 bg-muted/20">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Package className="h-5 w-5 text-muted-foreground" aria-hidden />
+              Service details
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6 p-6 text-sm">
+            <div className="space-y-1.5">
+              <Label htmlFor="service-name" className={detailLabelClass}>
+                Name
+              </Label>
+              <Input
+                id="service-name"
+                value={name}
+                disabled={readOnly}
+                className={fieldInputClass}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
 
-      <FormSection title={`Pricing (${service.currency.toUpperCase()} per month)`}>
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="m12" className="text-[13px] text-muted-foreground">
-              12-month term
-            </Label>
-            <Input
-              id="m12"
-              inputMode="decimal"
-              placeholder="0.00"
-              value={monthly12}
-              disabled={readOnly}
-              className={fieldInputClass}
-              onChange={(e) => setMonthly12(e.target.value)}
-            />
-            {service.terms.find((t) => t.months === 12)?.stripePriceId ? (
-              <p className="font-mono text-[11px] text-muted-foreground">
-                {service.terms.find((t) => t.months === 12)?.stripePriceId}
-              </p>
+            <dl className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1">
+                <dt className={detailLabelClass}>
+                  <CircleDot className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
+                  Status
+                </dt>
+                <dd>
+                  <Badge variant="outline" className={cn("font-normal", st.className)}>
+                    {st.label}
+                  </Badge>
+                </dd>
+              </div>
+              <div className="space-y-1">
+                <dt className={detailLabelClass}>
+                  <Layers className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
+                  Type
+                </dt>
+                <dd className="text-foreground">{serviceTypeLabel(service)}</dd>
+              </div>
+              <div className="space-y-1">
+                <dt className={detailLabelClass}>Billing</dt>
+                <dd className="text-foreground">{billingLabel(service)}</dd>
+              </div>
+              <div className="space-y-1">
+                <dt className={detailLabelClass}>Pricing model</dt>
+                <dd className="text-foreground">{pricingModelLabel(service)}</dd>
+              </div>
+              <div className="space-y-1">
+                <dt className={detailLabelClass}>
+                  <Coins className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
+                  Currency
+                </dt>
+                <dd className="text-foreground">{service.currency.toUpperCase()}</dd>
+              </div>
+            </dl>
+
+            {service.description?.trim() ? (
+              <div className="space-y-1 border-t border-border/60 pt-4">
+                <p className={detailLabelClass}>Description</p>
+                <p className="text-sm text-foreground">{service.description.trim()}</p>
+              </div>
             ) : null}
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="m24" className="text-[13px] text-muted-foreground">
-              24-month term
-            </Label>
-            <Input
-              id="m24"
-              inputMode="decimal"
-              placeholder="0.00"
-              value={monthly24}
-              disabled={readOnly}
-              className={fieldInputClass}
-              onChange={(e) => setMonthly24(e.target.value)}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="upfront" className="text-[13px] text-muted-foreground">
-              Upfront (12-month only)
-            </Label>
-            <Input
-              id="upfront"
-              inputMode="decimal"
-              placeholder="0.00"
-              value={upfront12}
-              disabled={readOnly}
-              className={fieldInputClass}
-              onChange={(e) => setUpfront12(e.target.value)}
-            />
-          </div>
-          {service.stripeSyncedAt ? (
-            <p className="text-[13px] text-muted-foreground sm:col-span-3">
-              Last synced{" "}
-              {new Date(service.stripeSyncedAt).toLocaleString(undefined, {
-                dateStyle: "medium",
-                timeStyle: "short",
-              })}
-              {" · "}
-              Preview 12 mo: {formatCurrencyAmount(majorInputToMinor(monthly12), service.currency)}
-            </p>
-          ) : null}
-        </div>
-      </FormSection>
 
-      <FormSection title="Entitlements">
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="users" className="text-[13px] text-muted-foreground">
-              Included users
-            </Label>
-            <Input
-              id="users"
-              type="number"
-              min={0}
-              value={includedUsers}
-              disabled={readOnly}
-              className={fieldInputClass}
-              onChange={(e) => setIncludedUsers(e.target.value)}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="locations" className="text-[13px] text-muted-foreground">
-              Included locations
-            </Label>
-            <Input
-              id="locations"
-              type="number"
-              min={0}
-              value={includedLocations}
-              disabled={readOnly}
-              className={fieldInputClass}
-              onChange={(e) => setIncludedLocations(e.target.value)}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="admins" className="text-[13px] text-muted-foreground">
-              Included admins
-            </Label>
-            <Input
-              id="admins"
-              type="number"
-              min={0}
-              value={includedAdmins}
-              disabled={readOnly}
-              className={fieldInputClass}
-              onChange={(e) => setIncludedAdmins(e.target.value)}
-            />
-          </div>
-        </div>
-      </FormSection>
+            <div className="space-y-4 border-t border-border/60 pt-4">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Pricing ({service.currency.toUpperCase()} per month)
+              </p>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="m12" className="text-[13px] text-muted-foreground">
+                    12-month term
+                  </Label>
+                  <Input
+                    id="m12"
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    value={monthly12}
+                    disabled={readOnly}
+                    className={fieldInputClass}
+                    onChange={(e) => setMonthly12(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="m24" className="text-[13px] text-muted-foreground">
+                    24-month term
+                  </Label>
+                  <Input
+                    id="m24"
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    value={monthly24}
+                    disabled={readOnly}
+                    className={fieldInputClass}
+                    onChange={(e) => setMonthly24(e.target.value)}
+                  />
+                </div>
+                {isPlan ? (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="upfront" className="text-[13px] text-muted-foreground">
+                      Upfront (12-month only)
+                    </Label>
+                    <Input
+                      id="upfront"
+                      inputMode="decimal"
+                      placeholder="0.00"
+                      value={upfront12}
+                      disabled={readOnly}
+                      className={fieldInputClass}
+                      onChange={(e) => setUpfront12(e.target.value)}
+                    />
+                  </div>
+                ) : null}
+              </div>
+              {majorInputToMinor(monthly12) > 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  Preview 12 mo: {formatCurrencyAmount(majorInputToMinor(monthly12), service.currency)}
+                </p>
+              ) : null}
+            </div>
 
-      <FormSection title="Features">
-        <textarea
-          className="min-h-[120px] w-full rounded-md border border-border/80 bg-background/60 px-3 py-2 text-[14px] text-foreground"
-          value={featuresText}
-          disabled={readOnly}
-          placeholder="One feature per line"
-          onChange={(e) => setFeaturesText(e.target.value)}
+            {isPlan ? (
+              <div className="space-y-4 border-t border-border/60 pt-4">
+                <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  <Users className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
+                  Entitlements
+                </p>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="users" className="text-[13px] text-muted-foreground">
+                      Included users
+                    </Label>
+                    <Input
+                      id="users"
+                      type="number"
+                      min={0}
+                      value={includedUsers}
+                      disabled={readOnly}
+                      className={fieldInputClass}
+                      onChange={(e) => setIncludedUsers(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="locations" className="text-[13px] text-muted-foreground">
+                      Included locations
+                    </Label>
+                    <Input
+                      id="locations"
+                      type="number"
+                      min={0}
+                      value={includedLocations}
+                      disabled={readOnly}
+                      className={fieldInputClass}
+                      onChange={(e) => setIncludedLocations(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="admins" className="text-[13px] text-muted-foreground">
+                      Included admins
+                    </Label>
+                    <Input
+                      id="admins"
+                      type="number"
+                      min={0}
+                      value={includedAdmins}
+                      disabled={readOnly}
+                      className={fieldInputClass}
+                      onChange={(e) => setIncludedAdmins(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            <div className="space-y-2 border-t border-border/60 pt-4">
+              <Label htmlFor="features" className={detailLabelClass}>
+                Features
+              </Label>
+              <textarea
+                id="features"
+                className="min-h-[120px] w-full rounded-md border border-border/80 bg-background/60 px-3 py-2 text-[14px] text-foreground"
+                value={featuresText}
+                disabled={readOnly}
+                placeholder="One feature per line"
+                onChange={(e) => setFeaturesText(e.target.value)}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <CatalogServiceStripeIntegrationsCard
+          service={service}
+          busy={busy}
+          readOnly={readOnly}
+          onActivateSync={
+            service.status === "draft"
+              ? () => void runAction(() => saveAndActivateCatalogServiceAction(buildSavePayload()))
+              : undefined
+          }
+          onResync={
+            service.status === "active"
+              ? () => void runAction(() => saveAndSyncCatalogServiceStripeAction(buildSavePayload()))
+              : undefined
+          }
         />
-      </FormSection>
+      </div>
     </div>
   );
 }

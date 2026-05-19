@@ -22,7 +22,6 @@ export const saveCatalogServiceSchema = z.object({
     .regex(/^[a-z0-9_]+$/, "Slug must be lowercase letters, numbers, and underscores")
     .optional(),
   currency: trimmed.min(3).max(3).default("aud"),
-  sortOrder: z.number().int().min(0).max(9999).default(0),
   includedUsers: z.number().int().min(0).max(1_000_000),
   includedLocations: z.number().int().min(0).max(1_000_000),
   includedAdmins: z.number().int().min(0).max(1_000_000),
