@@ -194,18 +194,6 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
           {service.status !== "archived" ? (
             <Button
               type="button"
-              size="sm"
-              className="min-w-[5.5rem] gap-2"
-              disabled={readOnly || busy}
-              onClick={() => void onSave()}
-            >
-              {busy ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden /> : null}
-              Save
-            </Button>
-          ) : null}
-          {service.status !== "archived" ? (
-            <Button
-              type="button"
               variant="ghost"
               size="sm"
               className="gap-1.5 text-destructive hover:text-destructive"
@@ -224,6 +212,18 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
               Archive
             </Button>
           ) : null}
+          {service.status !== "archived" ? (
+            <Button
+              type="button"
+              size="sm"
+              className="min-w-[5.5rem] gap-2"
+              disabled={readOnly || busy}
+              onClick={() => void onSave()}
+            >
+              {busy ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden /> : null}
+              Save
+            </Button>
+          ) : null}
         </div>
       </div>
 
@@ -239,25 +239,23 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
           </CardHeader>
           <CardContent className="space-y-5 p-6 text-sm">
             <dl className="grid gap-4 sm:grid-cols-2">
-              <div className="flex flex-col gap-4 sm:col-span-2 sm:flex-row sm:items-start sm:justify-between sm:gap-8">
-                <div className="min-w-0 flex-1 space-y-1">
-                  <dt className={detailLabelClass}>
-                    <Tag className={detailLabelIconClass} aria-hidden />
-                    Name
-                  </dt>
-                  <dd className="text-foreground">{service.name.trim() || "—"}</dd>
-                </div>
-                <div className="shrink-0 space-y-1">
-                  <dt className={detailLabelClass}>
-                    <CircleDot className={detailLabelIconClass} aria-hidden />
-                    Status
-                  </dt>
-                  <dd>
-                    <Badge variant="outline" className={cn("font-normal", st.className)}>
-                      {st.label}
-                    </Badge>
-                  </dd>
-                </div>
+              <div className="space-y-1">
+                <dt className={detailLabelClass}>
+                  <Tag className={detailLabelIconClass} aria-hidden />
+                  Name
+                </dt>
+                <dd className="text-foreground">{service.name.trim() || "—"}</dd>
+              </div>
+              <div className="space-y-1">
+                <dt className={detailLabelClass}>
+                  <CircleDot className={detailLabelIconClass} aria-hidden />
+                  Status
+                </dt>
+                <dd>
+                  <Badge variant="outline" className={cn("font-normal", st.className)}>
+                    {st.label}
+                  </Badge>
+                </dd>
               </div>
               <div className="space-y-1">
                 <dt className={detailLabelClass}>
