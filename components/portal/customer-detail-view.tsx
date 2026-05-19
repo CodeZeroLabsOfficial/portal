@@ -8,7 +8,6 @@ import { motion } from "framer-motion";
 import {
   ArrowLeft,
   ArrowRight,
-  Building2,
   Clock,
   Copy,
   CreditCard,
@@ -21,15 +20,11 @@ import {
   ListChecks,
   Loader2,
   LogIn,
-  Mail,
-  MapPin,
   MessageSquare,
   Pencil,
-  Phone,
   Plus,
   Sparkles,
   Trash2,
-  Users,
   X,
 } from "lucide-react";
 import type { CustomerActivityRecord, CustomerNoteRecord, CustomerRecord } from "@/types/customer";
@@ -60,7 +55,8 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { formatAddressLines, initialsFromName } from "@/lib/format";
+import { initialsFromName } from "@/lib/format";
+import { CustomerContactDetailsCard } from "@/components/portal/customer-contact-details-card";
 import { sanitizeProposalHtml } from "@/lib/sanitize-proposal-html";
 import { WORKSPACE_DETAIL_PAGE_TITLE_CLASS } from "@/lib/workspace-page-typography";
 import { cn } from "@/lib/utils";
@@ -380,15 +376,6 @@ export function CustomerDetailView({
   const canImg =
     url &&
     (url.includes("googleusercontent.com") || url.includes("firebasestorage.googleapis.com"));
-  const addressLines = formatAddressLines({
-    addressLine1: customer.addressLine1,
-    addressLine2: customer.addressLine2,
-    city: customer.city,
-    region: customer.region,
-    postalCode: customer.postalCode,
-    country: customer.country,
-  });
-
   return (
     <>
       <div className="space-y-8">
@@ -415,6 +402,24 @@ export function CustomerDetailView({
                 <Sparkles className="h-4 w-4" aria-hidden />
               )}
               Convert lead
+            </Button>
+          ) : null}
+          {!customer.portalUserId?.trim() ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 text-muted-foreground hover:text-foreground"
+              disabled={!customer.email?.trim() || enableAccessBusy}
+              title={!customer.email?.trim() ? "Add an email to this customer first." : undefined}
+              onClick={() => void enablePortalAccess()}
+            >
+              {enableAccessBusy ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              ) : (
+                <LogIn className="h-4 w-4" aria-hidden />
+              )}
+              Enable access
             </Button>
           ) : null}
           <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground hover:text-foreground" asChild>
@@ -462,86 +467,7 @@ export function CustomerDetailView({
       </motion.header>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="border-border/80 bg-card/80 shadow-sm lg:col-span-2">
-          <CardHeader className="border-b border-border/60 bg-muted/20">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Users className="h-5 w-5 text-muted-foreground" aria-hidden />
-              Contact details
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-5 p-6">
-            <dl className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1">
-                <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Name</dt>
-                <dd className="text-sm text-foreground">{customer.name || "—"}</dd>
-              </div>
-              <div className="space-y-1">
-                <dt className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  <Mail className="h-3.5 w-3.5" aria-hidden />
-                  Email
-                </dt>
-                <dd className="text-sm text-foreground">{customer.email}</dd>
-              </div>
-              <div className="space-y-1">
-                <dt className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  <Phone className="h-3.5 w-3.5" aria-hidden />
-                  Phone
-                </dt>
-                <dd className="text-sm text-foreground">{customer.phone || customer.companyPhone || "—"}</dd>
-              </div>
-              <div className="space-y-1">
-                <dt className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  <Building2 className="h-3.5 w-3.5" aria-hidden />
-                  Company
-                </dt>
-                <dd className="text-sm text-foreground">{customer.company || "—"}</dd>
-              </div>
-              <div className="space-y-1">
-                <dt className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  <FileText className="h-3.5 w-3.5" aria-hidden />
-                  ABN
-                </dt>
-                <dd className="text-sm text-foreground">
-                  {customer.companyAbn?.trim() ? customer.companyAbn.trim() : <span className="text-muted-foreground">—</span>}
-                </dd>
-              </div>
-              <div className="space-y-1">
-                <dt className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  <FileText className="h-3.5 w-3.5" aria-hidden />
-                  ACN
-                </dt>
-                <dd className="text-sm text-foreground">
-                  {customer.companyAcn?.trim() ? customer.companyAcn.trim() : <span className="text-muted-foreground">—</span>}
-                </dd>
-              </div>
-              <div className="space-y-1 sm:col-span-2">
-                <dt className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  <MapPin className="h-3.5 w-3.5" aria-hidden />
-                  Address
-                </dt>
-                <dd className="text-sm text-foreground">
-                  {addressLines.length > 0 ? (
-                    <span className="whitespace-pre-line">{addressLines.join("\n")}</span>
-                  ) : (
-                    "—"
-                  )}
-                </dd>
-              </div>
-            </dl>
-            {customer.tags.length > 0 ? (
-              <div className="flex flex-wrap gap-1.5 pt-1">
-                {customer.tags.map((t) => (
-                  <span
-                    key={t}
-                    className="rounded-full border border-border/60 bg-background/60 px-2.5 py-0.5 text-xs font-medium text-foreground/90"
-                  >
-                    {t}
-                  </span>
-                ))}
-              </div>
-            ) : null}
-          </CardContent>
-        </Card>
+        <CustomerContactDetailsCard customer={customer} />
 
         <div className="flex flex-col gap-4">
           <Card className="border-border/80 bg-card/80 shadow-sm">
@@ -594,40 +520,26 @@ export function CustomerDetailView({
 
               {portalSetupError ? <p className="text-xs text-destructive">{portalSetupError}</p> : null}
 
-              <div className="flex flex-wrap gap-2">
-                {customer.portalUserId?.trim() ? (
-                  <>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="secondary"
-                      className="gap-1.5"
-                      disabled={portalSetupBusy}
-                      onClick={() => void generatePortalPasswordSetupLink()}
-                    >
-                      {portalSetupBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : null}
-                      Generate password setup link
-                    </Button>
-                    {portalSetupLink ? (
-                      <Button type="button" size="sm" variant="ghost" onClick={() => setPortalSetupLink(null)}>
-                        Clear link
-                      </Button>
-                    ) : null}
-                  </>
-                ) : (
+              {customer.portalUserId?.trim() ? (
+                <div className="flex flex-wrap gap-2">
                   <Button
                     type="button"
                     size="sm"
+                    variant="secondary"
                     className="gap-1.5"
-                    disabled={!customer.email?.trim() || enableAccessBusy}
-                    title={!customer.email?.trim() ? "Add an email to this customer first." : undefined}
-                    onClick={() => void enablePortalAccess()}
+                    disabled={portalSetupBusy}
+                    onClick={() => void generatePortalPasswordSetupLink()}
                   >
-                    {enableAccessBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : null}
-                    Enable Access
+                    {portalSetupBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : null}
+                    Generate password setup link
                   </Button>
-                )}
-              </div>
+                  {portalSetupLink ? (
+                    <Button type="button" size="sm" variant="ghost" onClick={() => setPortalSetupLink(null)}>
+                      Clear link
+                    </Button>
+                  ) : null}
+                </div>
+              ) : null}
 
               {portalSetupLink && customer.portalUserId?.trim() ? (
                 <div className="space-y-2">

@@ -67,3 +67,34 @@ export function formatAddressLines(a: AddressFields): string[] {
   if (tail) lines.push(tail);
   return lines;
 }
+
+/** Multi-line address block for inline edit display (round-trips with {@link addressFieldsFromBlock}). */
+export function addressBlockFromFields(a: AddressFields): string {
+  return formatAddressLines(a).join("\n");
+}
+
+/** Parses a multi-line address block back into structured fields (best-effort). */
+export function addressFieldsFromBlock(text: string): AddressFields {
+  const lines = text
+    .split(/\n/)
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
+  if (lines.length === 0) {
+    return {
+      addressLine1: "",
+      addressLine2: "",
+      city: "",
+      region: "",
+      postalCode: "",
+      country: "",
+    };
+  }
+  return {
+    addressLine1: lines[0] ?? "",
+    addressLine2: lines[1] ?? "",
+    city: lines.length > 2 ? lines.slice(2).join(", ") : "",
+    region: "",
+    postalCode: "",
+    country: "",
+  };
+}

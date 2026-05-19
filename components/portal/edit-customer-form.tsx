@@ -7,6 +7,7 @@ import { ArrowLeft, Link2, Loader2, Sparkles } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { customerToFormDefaults } from "@/lib/customer-form-defaults";
 import { updateCustomerFormSchema, type UpdateCustomerFormInput } from "@/lib/schemas/customer";
 import {
   linkStripeCustomerIdAction,
@@ -19,40 +20,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { FormServerError } from "@/components/ui/form-server-error";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
-function customerToFormDefaults(customer: CustomerRecord): UpdateCustomerFormInput {
-  const customFields = Object.entries(customer.customFields)
-    .filter(([k]) => k.trim().length > 0)
-    .map(([key, value]) => ({ key, value }));
-  return {
-    id: customer.id,
-    name: customer.name,
-    email: customer.email,
-    company: customer.company ?? "",
-    companyPhone: customer.companyPhone ?? "",
-    companyEmail: customer.companyEmail ?? "",
-    companyWebsite: customer.companyWebsite ?? "",
-    companyAbn: customer.companyAbn ?? "",
-    companyAcn: customer.companyAcn ?? "",
-    companyAddressLine1: customer.companyAddressLine1 ?? "",
-    companyAddressLine2: customer.companyAddressLine2 ?? "",
-    companyCity: customer.companyCity ?? "",
-    companyRegion: customer.companyRegion ?? "",
-    companyPostalCode: customer.companyPostalCode ?? "",
-    companyCountry: customer.companyCountry ?? "",
-    phone: customer.phone ?? "",
-    addressLine1: customer.addressLine1 ?? "",
-    addressLine2: customer.addressLine2 ?? "",
-    city: customer.city ?? "",
-    region: customer.region ?? "",
-    postalCode: customer.postalCode ?? "",
-    country: customer.country ?? "",
-    tags: customer.tags,
-    customFields,
-    linkAuthByEmail: Boolean(customer.portalUserId),
-    createAuthUserIfMissing: false,
-  };
-}
 
 export interface EditCustomerFormProps {
   customer: CustomerRecord;

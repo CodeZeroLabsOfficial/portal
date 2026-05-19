@@ -359,6 +359,8 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
                         editLabel="included users"
                         inputType="number"
                         inputMin={0}
+                        inputMax={1_000_000}
+                        useNumericStepper
                         disabled={fieldsDisabled}
                         onSave={async (next) => {
                           const parsed = parseNonNegativeInt(next, "number of users");
@@ -379,6 +381,8 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
                         editLabel="included locations"
                         inputType="number"
                         inputMin={0}
+                        inputMax={1_000_000}
+                        useNumericStepper
                         disabled={fieldsDisabled}
                         onSave={async (next) => {
                           const parsed = parseNonNegativeInt(next, "number of locations");
@@ -399,6 +403,8 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
                         editLabel="included admins"
                         inputType="number"
                         inputMin={0}
+                        inputMax={1_000_000}
+                        useNumericStepper
                         disabled={fieldsDisabled}
                         onSave={async (next) => {
                           const parsed = parseNonNegativeInt(next, "number of admins");

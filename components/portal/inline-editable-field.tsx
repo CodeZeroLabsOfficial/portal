@@ -4,6 +4,7 @@ import * as React from "react";
 import { Check, Loader2, Pencil, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NumericStepper } from "@/components/ui/numeric-stepper";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
@@ -22,7 +23,20 @@ export interface InlineEditableFieldProps {
   multiline?: boolean;
   inputType?: "text" | "number";
   inputMin?: number;
+  inputMax?: number;
+  /** When true with `inputType="number"`, edit mode uses +/- stepper instead of a text input. */
+  useNumericStepper?: boolean;
   className?: string;
+}
+
+function parseDraftNumber(raw: string, min: number, max?: number): number {
+  const n = Number.parseInt(raw, 10);
+  const base = Number.isFinite(n) ? n : min;
+  const floored = Math.max(min, Math.floor(base));
+  if (typeof max === "number" && Number.isFinite(max)) {
+    return Math.min(max, floored);
+  }
+  return floored;
 }
 
 const viewBoxClass =
@@ -46,8 +60,11 @@ export function InlineEditableField({
   multiline = false,
   inputType = "text",
   inputMin = 0,
+  inputMax,
+  useNumericStepper = false,
   className,
 }: InlineEditableFieldProps) {
+  const showStepper = useNumericStepper && inputType === "number";
   const [draft, setDraft] = React.useState(value);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -63,13 +80,13 @@ export function InlineEditableField({
   }, [isEditing, value]);
 
   React.useEffect(() => {
-    if (isEditing) {
+    if (isEditing && !showStepper) {
       inputRef.current?.focus();
       if (inputRef.current && "select" in inputRef.current) {
         inputRef.current.select();
       }
     }
-  }, [isEditing]);
+  }, [isEditing, showStepper]);
 
   function startEditing() {
     if (disabled || saving) return;
@@ -109,9 +126,11 @@ export function InlineEditableField({
   }
 
   if (isEditing) {
+    const numericDraft = showStepper ? parseDraftNumber(draft, inputMin, inputMax) : 0;
+
     return (
       <div className={cn("space-y-1", className)}>
-        <div className="flex items-start gap-1.5">
+        <div className={cn("flex gap-1.5", showStepper ? "items-center" : "items-start")}>
           {multiline ? (
             <Textarea
               ref={inputRef as React.RefObject<HTMLTextAreaElement>}
@@ -134,6 +153,16 @@ export function InlineEditableField({
                   void confirmEditing();
                 }
               }}
+            />
+          ) : showStepper ? (
+            <NumericStepper
+              value={numericDraft}
+              min={inputMin}
+              max={inputMax}
+              disabled={saving}
+              aria-label={editLabel}
+              className="min-w-0 flex-1"
+              onChange={(next) => setDraft(String(next))}
             />
           ) : (
             <Input
@@ -158,7 +187,19 @@ export function InlineEditableField({
               }}
             />
           )}
-          <div className="flex shrink-0 items-center gap-1 pt-0.5">
+          <div
+            className={cn("flex shrink-0 items-center gap-1", !showStepper && "pt-0.5")}
+            onKeyDown={
+              showStepper
+                ? (e) => {
+                    if (e.key === "Escape") {
+                      e.preventDefault();
+                      cancelEditing();
+                    }
+                  }
+                : undefined
+            }
+          >
             <Button
               type="button"
               size="icon"

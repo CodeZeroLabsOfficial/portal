@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { CircleDot, Clock, Eye, FileText, Mail, Wallet } from "lucide-react";
+import { CircleDot, Clock, Eye, FileText, LayoutTemplate, Mail, Wallet } from "lucide-react";
 import { getCurrentSessionUser } from "@/lib/auth/server-session";
+import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
+import { getCustomerRecordForOrg } from "@/server/firestore/crm-customers";
 import { getAdminProposalRecord } from "@/server/firestore/portal-data";
+import { getProposalTemplateNameForOrganization } from "@/server/firestore/proposal-templates";
 import { listCatalogServicePickerOptionsForOrg } from "@/server/firestore/catalog-services";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -77,6 +80,19 @@ export default async function AdminProposalDetailPage({ params, searchParams }: 
   const customerBackId = proposal.customerId?.trim() || firstQueryString(sp.customer);
 
   const recipient = proposal.recipientEmail?.trim() || null;
+  const customerId = proposal.customerId?.trim() || null;
+  const sourceTemplateId = proposal.sourceTemplateId?.trim() || null;
+  const db = getFirebaseAdminFirestore();
+  const [recipientCustomer, templateName] = await Promise.all([
+    customerId ? getCustomerRecordForOrg(user, customerId) : Promise.resolve(null),
+    sourceTemplateId && db
+      ? getProposalTemplateNameForOrganization(db, proposal.organizationId, sourceTemplateId)
+      : Promise.resolve(null),
+  ]);
+  const recipientDisplayName =
+    recipientCustomer?.name.trim() ||
+    recipientCustomer?.email.trim() ||
+    null;
   const hasPackagesBlocks =
     listPackagesBlocksInDocument(proposal.document.blocks).length > 0;
   const packageSelectionComplete = isDocumentPackageSelectionComplete(
@@ -101,6 +117,23 @@ export default async function AdminProposalDetailPage({ params, searchParams }: 
           <dl className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1">
               <dt className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <Mail className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
+                Recipient
+              </dt>
+              <dd className="text-foreground">
+                {customerId && recipientDisplayName ? (
+                  <Link href={`/admin/customers/${customerId}`} className="text-primary hover:underline">
+                    {recipientDisplayName}
+                  </Link>
+                ) : recipient ? (
+                  <span className="text-muted-foreground">{recipient}</span>
+                ) : (
+                  "—"
+                )}
+              </dd>
+            </div>
+            <div className="space-y-1">
+              <dt className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 <CircleDot className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
                 Status
               </dt>
@@ -120,23 +153,6 @@ export default async function AdminProposalDetailPage({ params, searchParams }: 
                 >
                   {proposalDetailsStatusLabel(proposal.status)}
                 </Badge>
-              </dd>
-            </div>
-            <div className="space-y-1">
-              <dt className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                <Wallet className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
-                Value
-              </dt>
-              <dd className="text-foreground">
-                {dealValue ? (
-                  <span className="font-medium tabular-nums">
-                    {formatCurrencyAmount(dealValue.totalMinor, dealValue.currency)}
-                  </span>
-                ) : hasPackagesBlocks ? (
-                  <span className="text-muted-foreground">No selection</span>
-                ) : (
-                  "—"
-                )}
               </dd>
             </div>
             <div className="space-y-1">
@@ -163,49 +179,42 @@ export default async function AdminProposalDetailPage({ params, searchParams }: 
                 )}
               </dd>
             </div>
-            <div className="space-y-1 sm:col-span-2">
+            <div className="space-y-1">
               <dt className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                <Mail className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
-                Recipient
+                <Wallet className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
+                Value
               </dt>
-              <dd className="text-foreground">{recipient ?? "—"}</dd>
+              <dd className="text-foreground">
+                {dealValue ? (
+                  <span className="font-medium tabular-nums">
+                    {formatCurrencyAmount(dealValue.totalMinor, dealValue.currency)}
+                  </span>
+                ) : hasPackagesBlocks ? (
+                  <span className="text-muted-foreground">No selection</span>
+                ) : (
+                  "—"
+                )}
+              </dd>
+            </div>
+            <div className="space-y-1">
+              <dt className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <LayoutTemplate className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
+                Template
+              </dt>
+              <dd className="text-foreground">
+                {sourceTemplateId ? (
+                  <Link
+                    href={`/admin/templates/${sourceTemplateId}`}
+                    className="text-primary hover:underline"
+                  >
+                    {templateName ?? "Untitled template"}
+                  </Link>
+                ) : (
+                  "—"
+                )}
+              </dd>
             </div>
           </dl>
-
-          {(proposal.sourceTemplateId || proposal.customerId || proposal.opportunityId) && (
-            <div className="space-y-3 border-t border-border/60 pt-4">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Linked records</p>
-              <ul className="space-y-2">
-                {proposal.sourceTemplateId ? (
-                  <li>
-                    <span className="text-muted-foreground">Template · </span>
-                    <Link
-                      href={`/admin/templates/${proposal.sourceTemplateId}`}
-                      className="text-primary hover:underline"
-                    >
-                      Open template
-                    </Link>
-                  </li>
-                ) : null}
-                {proposal.customerId ? (
-                  <li>
-                    <span className="text-muted-foreground">Customer · </span>
-                    <Link href={`/admin/customers/${proposal.customerId}`} className="text-primary hover:underline">
-                      Open CRM profile
-                    </Link>
-                  </li>
-                ) : null}
-                {proposal.opportunityId ? (
-                  <li>
-                    <span className="text-muted-foreground">Opportunity · </span>
-                    <Link href={`/admin/opportunities/${proposal.opportunityId}`} className="text-primary hover:underline">
-                      Pipeline record
-                    </Link>
-                  </li>
-                ) : null}
-              </ul>
-            </div>
-          )}
         </CardContent>
       </Card>
 
