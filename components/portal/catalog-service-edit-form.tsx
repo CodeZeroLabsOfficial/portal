@@ -247,7 +247,7 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
           </CardHeader>
           <CardContent className="space-y-5 p-6 text-sm">
             <dl className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1 sm:col-span-2">
+              <div className="space-y-1">
                 <dt className={detailLabelClass}>
                   <Tag className={detailLabelIconClass} aria-hidden />
                   Name
@@ -347,7 +347,7 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
                   <Users className={detailLabelIconClass} aria-hidden />
                   Entitlements
                 </p>
-                <dl className="grid gap-4 sm:grid-cols-1">
+                <dl className="grid gap-4 sm:grid-cols-3">
                   <div className="space-y-1">
                     <dt className="text-[13px] text-muted-foreground">Included users</dt>
                     <dd>
