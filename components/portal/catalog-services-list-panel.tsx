@@ -4,14 +4,14 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Loader2, MoreHorizontal, Plus, Search } from "lucide-react";
+import { MoreHorizontal, Plus, Search } from "lucide-react";
 import {
   activateCatalogServiceAction,
   archiveCatalogServiceAction,
-  createCatalogServiceAction,
   deleteCatalogServiceAction,
   syncCatalogServiceStripeAction,
 } from "@/server/actions/catalog-services";
+import { AddCatalogServiceModal } from "@/components/portal/add-catalog-service-modal";
 import { formatCurrencyAmount } from "@/lib/format";
 import type { CatalogServiceRecord, CatalogServiceStatus } from "@/types/catalog-service";
 import { Badge } from "@/components/ui/badge";
@@ -79,7 +79,7 @@ export interface CatalogServicesListPanelProps {
 export function CatalogServicesListPanel({ services }: CatalogServicesListPanelProps) {
   const router = useRouter();
   const [query, setQuery] = React.useState("");
-  const [creating, setCreating] = React.useState(false);
+  const [addOpen, setAddOpen] = React.useState(false);
   const [pendingId, setPendingId] = React.useState<string | null>(null);
 
   React.useEffect(() => {
@@ -106,20 +106,10 @@ export function CatalogServicesListPanel({ services }: CatalogServicesListPanelP
     });
   }, [services, query]);
 
-  async function handleCreate() {
-    setCreating(true);
-    const res = await createCatalogServiceAction();
-    setCreating(false);
-    if (!res.ok) {
-      window.alert(res.message);
-      return;
-    }
-    router.push(`/admin/services/${res.serviceId}`);
-    router.refresh();
-  }
-
   return (
     <div className="space-y-8">
+      <AddCatalogServiceModal open={addOpen} onOpenChange={setAddOpen} />
+
       <motion.div
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
@@ -135,15 +125,10 @@ export function CatalogServicesListPanel({ services }: CatalogServicesListPanelP
           variant="ghost"
           size="sm"
           className="gap-1.5 text-[14px] font-medium text-muted-foreground hover:text-foreground"
-          disabled={creating}
-          onClick={() => void handleCreate()}
+          onClick={() => setAddOpen(true)}
         >
-          {creating ? (
-            <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
-          ) : (
-            <Plus className="h-4 w-4 shrink-0" aria-hidden />
-          )}
-          New service
+          <Plus className="h-4 w-4 shrink-0" aria-hidden />
+          Add service
         </Button>
       </motion.div>
 

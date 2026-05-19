@@ -8,7 +8,11 @@ import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import { runAdminWrite } from "@/lib/firebase/admin-write";
 import { logError } from "@/lib/logging";
 import { getStripe } from "@/lib/stripe/server";
-import { saveCatalogServiceSchema, saveInputToServiceTerms } from "@/lib/schemas/catalog-service";
+import {
+  createCatalogServiceSchema,
+  saveCatalogServiceSchema,
+  saveInputToServiceTerms,
+} from "@/lib/schemas/catalog-service";
 import { zodErrorToMessage } from "@/lib/zod-error";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { getCatalogServiceForStaff } from "@/server/firestore/catalog-services";
@@ -22,17 +26,34 @@ function revalidateCatalogPaths(serviceId?: string) {
   revalidatePath("/admin/templates", "layout");
 }
 
-export async function createCatalogServiceAction(): Promise<
-  { ok: true; serviceId: string } | { ok: false; message: string }
-> {
+export async function createCatalogServiceAction(
+  raw: unknown,
+): Promise<{ ok: true; serviceId: string } | { ok: false; message: string }> {
   const user = await requireStaffSession();
   if (!user) return { ok: false, message: "Unauthorized." };
+
+  const parsed = createCatalogServiceSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { ok: false, message: zodErrorToMessage(parsed.error) };
+  }
 
   const db = getFirebaseAdminFirestore();
   if (!db) return { ok: false, message: "Database unavailable." };
 
   const ref = db.collection(COLLECTIONS.services).doc();
-  const name = "New service";
+  const name = parsed.data.name.trim();
+  const slug = parsed.data.slug?.trim() || slugifyCatalogServiceName(name);
+  const terms = saveInputToServiceTerms({
+    ...parsed.data,
+    name,
+    slug,
+    sortOrder: 0,
+    includedUsers: 0,
+    includedLocations: 0,
+    includedAdmins: 0,
+    features: [],
+  });
+
   const write = await runAdminWrite(
     "catalog_service_create_failed",
     { serviceId: ref.id, uid: user.uid },
@@ -42,23 +63,25 @@ export async function createCatalogServiceAction(): Promise<
         organizationId: user.organizationId ?? "default",
         createdByUid: user.uid,
         name,
-        slug: slugifyCatalogServiceName(name),
+        slug,
         status: "draft",
-        currency: "aud",
+        currency: parsed.data.currency.toLowerCase(),
         sortOrder: 0,
         includedUsers: 0,
         includedLocations: 0,
         includedAdmins: 0,
         features: [],
-        terms: [
-          { months: 12, monthlyAmountMinor: 0 },
-          { months: 24, monthlyAmountMinor: 0 },
-        ],
+        terms,
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       }),
   );
   if (!write.ok) return write;
+
+  if (parsed.data.syncToStripe) {
+    const syncResult = await pushCatalogServiceToStripe(user, ref.id, { setActive: true });
+    if (!syncResult.ok) return syncResult;
+  }
 
   revalidateCatalogPaths(ref.id);
   return { ok: true, serviceId: ref.id };
@@ -131,20 +154,17 @@ export async function saveCatalogServiceAction(
   return { ok: true };
 }
 
-export async function activateCatalogServiceAction(
+async function pushCatalogServiceToStripe(
+  user: NonNullable<Awaited<ReturnType<typeof requireStaffSession>>>,
   serviceId: string,
+  opts: { setActive: boolean },
 ): Promise<{ ok: true } | { ok: false; message: string }> {
-  const user = await requireStaffSession();
-  if (!user) return { ok: false, message: "Unauthorized." };
-
   const id = serviceId.trim();
-  if (!id) return { ok: false, message: "Service id is required." };
-
   const existing = await getCatalogServiceForStaff(user, id);
   if (!existing) return { ok: false, message: "Service not found." };
 
   if (existing.terms.length === 0) {
-    return { ok: false, message: "Add 12- and 24-month pricing before activating." };
+    return { ok: false, message: "Add 12- and 24-month pricing before syncing to Stripe." };
   }
 
   const stripe = getStripe();
@@ -156,26 +176,76 @@ export async function activateCatalogServiceAction(
   const db = getFirebaseAdminFirestore();
   if (!db) return { ok: false, message: "Database unavailable." };
 
+  const payload: Record<string, unknown> = {
+    stripeProductId: sync.stripeProductId,
+    terms: sync.terms,
+    stripeSyncedAt: sync.stripeSyncedAt,
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+  if (opts.setActive) {
+    payload.status = "active";
+  }
+
   const write = await runAdminWrite(
-    "catalog_service_activate_failed",
+    opts.setActive ? "catalog_service_activate_failed" : "catalog_service_sync_failed",
     { serviceId: id, uid: user.uid },
-    "Could not activate the service.",
-    () =>
-      db.collection(COLLECTIONS.services).doc(id).set(
-        {
-          status: "active",
-          stripeProductId: sync.stripeProductId,
-          terms: sync.terms,
-          stripeSyncedAt: sync.stripeSyncedAt,
-          updatedAt: FieldValue.serverTimestamp(),
-        },
-        { merge: true },
-      ),
+    opts.setActive ? "Could not activate the service." : "Could not sync to Stripe.",
+    () => db.collection(COLLECTIONS.services).doc(id).set(payload, { merge: true }),
   );
   if (!write.ok) return write;
 
   revalidateCatalogPaths(id);
   return { ok: true };
+}
+
+/** Persists the form, then activates and syncs the saved record to Stripe. */
+export async function saveAndActivateCatalogServiceAction(
+  raw: unknown,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const save = await saveCatalogServiceAction(raw);
+  if (!save.ok) return save;
+
+  const parsed = saveCatalogServiceSchema.safeParse(raw);
+  const serviceId = parsed.success ? parsed.data.serviceId?.trim() : "";
+  if (!serviceId) {
+    return { ok: false, message: "Service id is required." };
+  }
+
+  const user = await requireStaffSession();
+  if (!user) return { ok: false, message: "Unauthorized." };
+
+  return pushCatalogServiceToStripe(user, serviceId, { setActive: true });
+}
+
+/** Persists the form, then re-syncs the saved record to Stripe. */
+export async function saveAndSyncCatalogServiceStripeAction(
+  raw: unknown,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const save = await saveCatalogServiceAction(raw);
+  if (!save.ok) return save;
+
+  const parsed = saveCatalogServiceSchema.safeParse(raw);
+  const serviceId = parsed.success ? parsed.data.serviceId?.trim() : "";
+  if (!serviceId) {
+    return { ok: false, message: "Service id is required." };
+  }
+
+  const user = await requireStaffSession();
+  if (!user) return { ok: false, message: "Unauthorized." };
+
+  return pushCatalogServiceToStripe(user, serviceId, { setActive: false });
+}
+
+export async function activateCatalogServiceAction(
+  serviceId: string,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const user = await requireStaffSession();
+  if (!user) return { ok: false, message: "Unauthorized." };
+
+  const id = serviceId.trim();
+  if (!id) return { ok: false, message: "Service id is required." };
+
+  return pushCatalogServiceToStripe(user, id, { setActive: true });
 }
 
 export async function syncCatalogServiceStripeAction(
@@ -185,37 +255,9 @@ export async function syncCatalogServiceStripeAction(
   if (!user) return { ok: false, message: "Unauthorized." };
 
   const id = serviceId.trim();
-  const existing = await getCatalogServiceForStaff(user, id);
-  if (!existing) return { ok: false, message: "Service not found." };
+  if (!id) return { ok: false, message: "Service id is required." };
 
-  const stripe = getStripe();
-  if (!stripe) return { ok: false, message: "Stripe is not configured on the server." };
-
-  const sync = await syncCatalogServiceToStripe(stripe, existing);
-  if (!sync.ok) return sync;
-
-  const db = getFirebaseAdminFirestore();
-  if (!db) return { ok: false, message: "Database unavailable." };
-
-  const write = await runAdminWrite(
-    "catalog_service_sync_failed",
-    { serviceId: id, uid: user.uid },
-    "Could not sync to Stripe.",
-    () =>
-      db.collection(COLLECTIONS.services).doc(id).set(
-        {
-          stripeProductId: sync.stripeProductId,
-          terms: sync.terms,
-          stripeSyncedAt: sync.stripeSyncedAt,
-          updatedAt: FieldValue.serverTimestamp(),
-        },
-        { merge: true },
-      ),
-  );
-  if (!write.ok) return write;
-
-  revalidateCatalogPaths(id);
-  return { ok: true };
+  return pushCatalogServiceToStripe(user, id, { setActive: false });
 }
 
 export async function archiveCatalogServiceAction(

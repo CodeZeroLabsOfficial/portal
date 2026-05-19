@@ -6,10 +6,10 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ChevronLeft, Loader2 } from "lucide-react";
 import {
-  activateCatalogServiceAction,
   archiveCatalogServiceAction,
+  saveAndActivateCatalogServiceAction,
+  saveAndSyncCatalogServiceStripeAction,
   saveCatalogServiceAction,
-  syncCatalogServiceStripeAction,
 } from "@/server/actions/catalog-services";
 import { slugifyCatalogServiceName } from "@/lib/catalog-service-slug";
 import { formatCurrencyAmount } from "@/lib/format";
@@ -115,27 +115,29 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
     router.refresh();
   }
 
-  async function onSave() {
+  function buildSavePayload() {
     const features = featuresText
       .split("\n")
       .map((l) => l.trim())
       .filter(Boolean);
-    await runAction(() =>
-      saveCatalogServiceAction({
-        serviceId: service.id,
-        name: name.trim(),
-        slug: slug.trim() || slugifyCatalogServiceName(name),
-        currency: service.currency,
-        sortOrder: Number(sortOrder) || 0,
-        includedUsers: Number(includedUsers) || 0,
-        includedLocations: Number(includedLocations) || 0,
-        includedAdmins: Number(includedAdmins) || 0,
-        monthlyCost12Minor: majorInputToMinor(monthly12),
-        monthlyCost24Minor: majorInputToMinor(monthly24),
-        upfrontCost12Minor: majorInputToMinor(upfront12) || undefined,
-        features,
-      }),
-    );
+    return {
+      serviceId: service.id,
+      name: name.trim(),
+      slug: slug.trim() || slugifyCatalogServiceName(name),
+      currency: service.currency,
+      sortOrder: Number(sortOrder) || 0,
+      includedUsers: Number(includedUsers) || 0,
+      includedLocations: Number(includedLocations) || 0,
+      includedAdmins: Number(includedAdmins) || 0,
+      monthlyCost12Minor: majorInputToMinor(monthly12),
+      monthlyCost24Minor: majorInputToMinor(monthly24),
+      upfrontCost12Minor: majorInputToMinor(upfront12) || undefined,
+      features,
+    };
+  }
+
+  async function onSave() {
+    await runAction(() => saveCatalogServiceAction(buildSavePayload()));
   }
 
   return (
@@ -188,7 +190,7 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
               size="sm"
               className="gap-1.5 text-[14px] font-medium text-muted-foreground hover:text-foreground"
               disabled={busy}
-              onClick={() => void runAction(() => activateCatalogServiceAction(service.id))}
+              onClick={() => void runAction(() => saveAndActivateCatalogServiceAction(buildSavePayload()))}
             >
               {busy ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden /> : null}
               Activate & sync
@@ -201,7 +203,7 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
               size="sm"
               className="text-[14px] font-medium text-muted-foreground hover:text-foreground"
               disabled={busy}
-              onClick={() => void runAction(() => syncCatalogServiceStripeAction(service.id))}
+              onClick={() => void runAction(() => saveAndSyncCatalogServiceStripeAction(buildSavePayload()))}
             >
               Re-sync Stripe
             </Button>
