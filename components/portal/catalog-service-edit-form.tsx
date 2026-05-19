@@ -22,6 +22,7 @@ import {
   saveCatalogServiceAction,
 } from "@/server/actions/catalog-services";
 import type { CatalogServiceRecord, CatalogServiceStatus } from "@/types/catalog-service";
+import { CatalogServicePlanFeaturesSection } from "@/components/portal/catalog-service-plan-features-section";
 import { CatalogServiceStripeIntegrationsCard } from "@/components/portal/catalog-service-stripe-integrations-card";
 import { InlineEditableField } from "@/components/portal/inline-editable-field";
 import { Badge } from "@/components/ui/badge";
@@ -120,6 +121,7 @@ type ServiceFieldOverrides = {
   includedUsers?: number;
   includedLocations?: number;
   includedAdmins?: number;
+  features?: string[];
 };
 
 export interface CatalogServiceEditFormProps {
@@ -154,7 +156,7 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
       ...(typeof service.upfrontCost12Minor === "number"
         ? { upfrontCost12Minor: service.upfrontCost12Minor }
         : {}),
-      features: service.features,
+      features: overrides.features ?? service.features,
     };
   }
 
@@ -421,6 +423,19 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
                     </dd>
                   </div>
                 </dl>
+                <CatalogServicePlanFeaturesSection
+                  features={service.features}
+                  disabled={fieldsDisabled}
+                  activeFieldId={activeFieldId}
+                  onActiveFieldIdChange={setActiveFieldId}
+                  onSaveFeatures={async (features) => {
+                    const res = await persistField({ features });
+                    if (!res.ok) {
+                      setMessage(res.message ?? "Could not save features.");
+                    }
+                    return res;
+                  }}
+                />
               </div>
             ) : null}
           </CardContent>
