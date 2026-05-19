@@ -226,7 +226,7 @@ export function CustomerListPanel({ rows }: CustomerListPanelProps) {
                     "h-9 appearance-none rounded-full border border-border/80 bg-background/60 py-0 pr-8 text-[13px] font-medium text-foreground sm:pl-3",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   )}
-                  aria-label="Filter by CRM type"
+                  aria-label="Filter by type"
                 >
                   <option value="all">All types</option>
                   <option value="leads">Leads only</option>
@@ -290,7 +290,7 @@ export function CustomerListPanel({ rows }: CustomerListPanelProps) {
                 <th className="px-4 py-2.5 font-medium">Company</th>
                 <th className="px-4 py-2.5 font-medium">Subscriptions</th>
                 <th className="px-4 py-2.5 font-medium">Tags</th>
-                <th className="px-4 py-2.5 font-medium">CRM</th>
+                <th className="px-4 py-2.5 font-medium">Type</th>
                 <th className="px-4 py-2.5 font-medium">Status</th>
                 <th className="w-14 px-2 py-2.5 text-center font-medium">Action</th>
               </tr>
