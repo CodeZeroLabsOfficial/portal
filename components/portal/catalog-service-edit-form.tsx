@@ -88,7 +88,6 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
   const [message, setMessage] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
 
-  const [name, setName] = React.useState(service.name);
   const [includedUsers, setIncludedUsers] = React.useState(String(service.includedUsers));
   const [includedLocations, setIncludedLocations] = React.useState(String(service.includedLocations));
   const [includedAdmins, setIncludedAdmins] = React.useState(String(service.includedAdmins));
@@ -120,7 +119,7 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
   function buildSavePayload() {
     return {
       serviceId: service.id,
-      name: name.trim(),
+      name: service.name.trim(),
       currency: service.currency,
       includedUsers: Number(includedUsers) || 0,
       includedLocations: Number(includedLocations) || 0,
@@ -202,21 +201,14 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-5 p-6 text-sm">
-            <div className="space-y-1.5">
-              <Label htmlFor="service-name" className={detailLabelClass}>
-                <Tag className={detailLabelIconClass} aria-hidden />
-                Name
-              </Label>
-              <Input
-                id="service-name"
-                value={name}
-                disabled={readOnly}
-                className={fieldInputClass}
-                onChange={(e) => setName(e.target.value)}
-              />
-            </div>
-
             <dl className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1 sm:col-span-2">
+                <dt className={detailLabelClass}>
+                  <Tag className={detailLabelIconClass} aria-hidden />
+                  Name
+                </dt>
+                <dd className="text-foreground">{service.name.trim() || "—"}</dd>
+              </div>
               <div className="space-y-1">
                 <dt className={detailLabelClass}>
                   <CircleDot className={detailLabelIconClass} aria-hidden />

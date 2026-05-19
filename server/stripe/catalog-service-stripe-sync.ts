@@ -40,13 +40,17 @@ function termNeedsNewPrice(
   return false;
 }
 
-function priceNickname(service: CatalogServiceRecord, term: CatalogServiceTerm): string {
-  const label = service.name.trim() || "Service";
-  const desc = service.description?.trim();
-  if (term.months) {
-    return desc ? `${label} · ${term.months} mo — ${desc.slice(0, 80)}` : `${label} · ${term.months} months`;
-  }
-  return desc ? `${label} — ${desc.slice(0, 100)}` : label;
+/** Stripe Price nickname — not the catalogue description (that belongs on the Product only). */
+function priceNickname(
+  serviceName: string,
+  term: CatalogServiceTerm,
+  billingType: "recurring" | "one_off",
+): string {
+  const label = serviceName.trim() || "Service";
+  if (term.months === 12) return `${label} · 12 month term`;
+  if (term.months === 24) return `${label} · 24 month term`;
+  if (billingType === "one_off") return `${label} · one-off`;
+  return `${label} · monthly`;
 }
 
 /**
@@ -141,14 +145,13 @@ export async function syncCatalogServiceToStripe(
         product: productId,
         currency,
         unit_amount: term.monthlyAmountMinor,
-        nickname: priceNickname(service, term),
+        nickname: priceNickname(serviceName, term, billingType),
         lookup_key: lookupKey,
         transfer_lookup_key: true,
         metadata: {
           catalog_service_id: service.id,
           service_slug: slug,
           lookup_key: lookupKey,
-          ...(description ? { description: description.slice(0, 500) } : {}),
           ...(term.months ? { duration_months: String(term.months) } : {}),
           ...(service.serviceType ? { service_type: service.serviceType } : {}),
           billing_type: billingType,

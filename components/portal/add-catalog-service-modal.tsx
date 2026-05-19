@@ -255,7 +255,7 @@ export function AddCatalogServiceModal({ open, onOpenChange }: AddCatalogService
                 "min-h-[3.25rem] w-full resize-none rounded-md border px-3 py-2 text-sm",
                 fieldClass,
               )}
-              placeholder="Provide a brief description of the product or service"
+              placeholder="Product description in Stripe (not shown on individual prices)"
               {...form.register("description")}
             />
           </div>
