@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { getCurrentSessionUser } from "@/lib/auth/server-session";
 import { listCatalogServicesForOrg } from "@/server/firestore/catalog-services";
 import { CatalogServicesListPanel } from "@/components/portal/catalog-services-list-panel";
-import { NewCatalogServiceButton } from "@/components/portal/new-catalog-service-button";
 import { WorkspaceShell } from "@/components/portal/workspace-shell";
 
 export const dynamic = "force-dynamic";
@@ -20,16 +19,13 @@ export default async function AdminServicesPage() {
   return (
     <WorkspaceShell
       title="Services"
-      description="Product catalogue synced to Stripe."
+      description="Synced service catalogue."
       roleLabel={user.role}
       displayName={user.displayName ?? ""}
       userLabel={user.email || user.uid}
       showMainHeader={false}
       showRightAside={false}
     >
-      <div className="mb-6 flex justify-end">
-        <NewCatalogServiceButton />
-      </div>
       <CatalogServicesListPanel services={services} />
     </WorkspaceShell>
   );

@@ -1,8 +1,10 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { motion } from "framer-motion";
+import { ChevronLeft, Loader2 } from "lucide-react";
 import {
   activateCatalogServiceAction,
   archiveCatalogServiceAction,
@@ -11,12 +13,15 @@ import {
 } from "@/server/actions/catalog-services";
 import { slugifyCatalogServiceName } from "@/lib/catalog-service-slug";
 import { formatCurrencyAmount } from "@/lib/format";
-import type { CatalogServiceRecord } from "@/types/catalog-service";
+import type { CatalogServiceRecord, CatalogServiceStatus } from "@/types/catalog-service";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  WORKSPACE_HUB_PAGE_TITLE_CLASS,
+  WORKSPACE_PAGE_DESCRIPTION_CLASS,
+} from "@/lib/workspace-page-typography";
 import { cn } from "@/lib/utils";
 
 function termMinor(service: CatalogServiceRecord, months: 12 | 24): number {
@@ -34,11 +39,38 @@ function majorInputToMinor(raw: string): number {
   return Math.round(n * 100);
 }
 
-const STATUS_BADGE: Record<CatalogServiceRecord["status"], string> = {
-  draft: "border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-200",
-  active: "border-emerald-500/40 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200",
-  archived: "border-muted-foreground/30 bg-muted/50 text-muted-foreground",
-};
+function statusBadge(status: CatalogServiceStatus): { label: string; className: string } {
+  if (status === "active") {
+    return {
+      label: "Active",
+      className: "border-emerald-500/35 bg-emerald-500/12 text-emerald-600 dark:text-emerald-300",
+    };
+  }
+  if (status === "draft") {
+    return {
+      label: "Draft",
+      className: "border-amber-500/40 bg-amber-500/12 text-amber-700 dark:text-amber-300",
+    };
+  }
+  return {
+    label: "Archived",
+    className: "border-border bg-muted/50 text-muted-foreground",
+  };
+}
+
+function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="overflow-hidden rounded-xl border border-border/80 bg-card/80 shadow-sm backdrop-blur-sm">
+      <div className="border-b border-border px-4 py-3">
+        <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+      </div>
+      <div className="p-4">{children}</div>
+    </section>
+  );
+}
+
+const fieldInputClass =
+  "h-9 rounded-md border-border/80 bg-background/60 text-[14px] text-foreground";
 
 export interface CatalogServiceEditFormProps {
   service: CatalogServiceRecord;
@@ -60,13 +92,24 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
   const [upfront12, setUpfront12] = React.useState(minorToMajorInput(service.upfrontCost12Minor ?? 0));
   const [featuresText, setFeaturesText] = React.useState(service.features.join("\n"));
 
-  async function runAction(fn: () => Promise<{ ok: boolean; message?: string }>) {
+  const st = statusBadge(service.status);
+  const readOnly = service.status === "archived" || busy;
+
+  async function runAction(
+    fn: () => Promise<{ ok: boolean; message?: string }>,
+    opts?: { redirectToList?: boolean },
+  ) {
     setBusy(true);
     setMessage(null);
     const res = await fn();
     setBusy(false);
     if (!res.ok) {
       setMessage(res.message ?? "Something went wrong.");
+      return;
+    }
+    if (opts?.redirectToList) {
+      router.push("/admin/services");
+      router.refresh();
       return;
     }
     router.refresh();
@@ -96,42 +139,84 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className={cn(STATUS_BADGE[service.status])}>
-            {service.status}
-          </Badge>
-          {service.stripeProductId ? (
-            <span className="font-mono text-xs text-muted-foreground">{service.stripeProductId}</span>
-          ) : null}
+    <div className="space-y-8">
+      <motion.div
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25 }}
+        className="flex flex-wrap items-start justify-between gap-4"
+      >
+        <div>
+          <Link
+            href="/admin/services"
+            className="mb-2 inline-flex items-center gap-1 text-[13px] font-medium text-muted-foreground hover:text-foreground"
+          >
+            <ChevronLeft className="h-4 w-4 shrink-0" aria-hidden />
+            Services
+          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className={WORKSPACE_HUB_PAGE_TITLE_CLASS}>{name.trim() || service.name}</h1>
+            <Badge variant="outline" className={cn("font-normal", st.className)}>
+              {st.label}
+            </Badge>
+          </div>
+          <p className={WORKSPACE_PAGE_DESCRIPTION_CLASS}>
+            {service.stripeProductId ? (
+              <span className="font-mono text-[12px]">{service.stripeProductId}</span>
+            ) : (
+              "Not synced to Stripe yet"
+            )}
+          </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {service.status !== "archived" ? (
-            <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => void onSave()}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-[14px] font-medium text-muted-foreground hover:text-foreground"
+              disabled={readOnly}
+              onClick={() => void onSave()}
+            >
               Save
             </Button>
           ) : null}
           {service.status === "draft" ? (
             <Button
               type="button"
+              variant="ghost"
               size="sm"
+              className="gap-1.5 text-[14px] font-medium text-muted-foreground hover:text-foreground"
               disabled={busy}
               onClick={() => void runAction(() => activateCatalogServiceAction(service.id))}
             >
-              {busy ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : null}
-              Activate & sync to Stripe
+              {busy ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden /> : null}
+              Activate & sync
             </Button>
           ) : null}
           {service.status === "active" ? (
             <Button
               type="button"
-              variant="secondary"
+              variant="ghost"
               size="sm"
+              className="text-[14px] font-medium text-muted-foreground hover:text-foreground"
               disabled={busy}
               onClick={() => void runAction(() => syncCatalogServiceStripeAction(service.id))}
             >
-              Re-sync Stripe prices
+              Re-sync Stripe
+            </Button>
+          ) : null}
+          {service.stripeProductId ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-[14px] font-medium text-muted-foreground hover:text-foreground"
+              onClick={() =>
+                window.open(`https://dashboard.stripe.com/products/${service.stripeProductId}`, "_blank")
+              }
+            >
+              Open in Stripe
             </Button>
           ) : null}
           {service.status !== "archived" ? (
@@ -139,31 +224,38 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
               type="button"
               variant="ghost"
               size="sm"
+              className="text-[14px] font-medium text-destructive hover:text-destructive"
               disabled={busy}
               onClick={() => {
-                if (!window.confirm("Archive this service? It will be hidden from new proposals.")) return;
-                void runAction(() => archiveCatalogServiceAction(service.id));
+                if (
+                  !window.confirm(
+                    "Archive this service? It will be hidden from new proposals and subscriptions.",
+                  )
+                ) {
+                  return;
+                }
+                void runAction(() => archiveCatalogServiceAction(service.id), { redirectToList: true });
               }}
             >
               Archive
             </Button>
           ) : null}
         </div>
-      </div>
+      </motion.div>
 
       {message ? <p className="text-sm text-destructive">{message}</p> : null}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Service details</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
+      <FormSection title="Service details">
+        <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="service-name">Name</Label>
+            <Label htmlFor="service-name" className="text-[13px] text-muted-foreground">
+              Name
+            </Label>
             <Input
               id="service-name"
               value={name}
-              disabled={service.status === "archived" || busy}
+              disabled={readOnly}
+              className={fieldInputClass}
               onChange={(e) => {
                 setName(e.target.value);
                 if (!slug || slug === slugifyCatalogServiceName(service.name)) {
@@ -173,42 +265,47 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="service-slug">Slug (Stripe lookup keys)</Label>
+            <Label htmlFor="service-slug" className="text-[13px] text-muted-foreground">
+              Slug (Stripe lookup keys)
+            </Label>
             <Input
               id="service-slug"
               value={slug}
-              disabled={service.status === "archived" || busy}
+              disabled={readOnly}
+              className={cn(fieldInputClass, "font-mono")}
               onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_"))}
-              className="font-mono text-sm"
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="service-sort">Sort order</Label>
+            <Label htmlFor="service-sort" className="text-[13px] text-muted-foreground">
+              Sort order
+            </Label>
             <Input
               id="service-sort"
               type="number"
               min={0}
               value={sortOrder}
-              disabled={service.status === "archived" || busy}
+              disabled={readOnly}
+              className={fieldInputClass}
               onChange={(e) => setSortOrder(e.target.value)}
             />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </FormSection>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Pricing ({service.currency.toUpperCase()} / month)</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-3">
+      <FormSection title={`Pricing (${service.currency.toUpperCase()} per month)`}>
+        <div className="grid gap-4 sm:grid-cols-3">
           <div className="space-y-1.5">
-            <Label htmlFor="m12">12-month term</Label>
+            <Label htmlFor="m12" className="text-[13px] text-muted-foreground">
+              12-month term
+            </Label>
             <Input
               id="m12"
               inputMode="decimal"
               placeholder="0.00"
               value={monthly12}
-              disabled={service.status === "archived" || busy}
+              disabled={readOnly}
+              className={fieldInputClass}
               onChange={(e) => setMonthly12(e.target.value)}
             />
             {service.terms.find((t) => t.months === 12)?.stripePriceId ? (
@@ -218,95 +315,103 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
             ) : null}
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="m24">24-month term</Label>
+            <Label htmlFor="m24" className="text-[13px] text-muted-foreground">
+              24-month term
+            </Label>
             <Input
               id="m24"
               inputMode="decimal"
               placeholder="0.00"
               value={monthly24}
-              disabled={service.status === "archived" || busy}
+              disabled={readOnly}
+              className={fieldInputClass}
               onChange={(e) => setMonthly24(e.target.value)}
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="upfront">Upfront (12-month only)</Label>
+            <Label htmlFor="upfront" className="text-[13px] text-muted-foreground">
+              Upfront (12-month only)
+            </Label>
             <Input
               id="upfront"
               inputMode="decimal"
               placeholder="0.00"
               value={upfront12}
-              disabled={service.status === "archived" || busy}
+              disabled={readOnly}
+              className={fieldInputClass}
               onChange={(e) => setUpfront12(e.target.value)}
             />
           </div>
           {service.stripeSyncedAt ? (
-            <p className="text-xs text-muted-foreground sm:col-span-3">
+            <p className="text-[13px] text-muted-foreground sm:col-span-3">
               Last synced{" "}
               {new Date(service.stripeSyncedAt).toLocaleString(undefined, {
                 dateStyle: "medium",
                 timeStyle: "short",
               })}
               {" · "}
-              Preview 12m: {formatCurrencyAmount(majorInputToMinor(monthly12), service.currency)}
+              Preview 12 mo: {formatCurrencyAmount(majorInputToMinor(monthly12), service.currency)}
             </p>
           ) : null}
-        </CardContent>
-      </Card>
+        </div>
+      </FormSection>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Entitlements</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-3">
+      <FormSection title="Entitlements">
+        <div className="grid gap-4 sm:grid-cols-3">
           <div className="space-y-1.5">
-            <Label htmlFor="users">Included users</Label>
+            <Label htmlFor="users" className="text-[13px] text-muted-foreground">
+              Included users
+            </Label>
             <Input
               id="users"
               type="number"
               min={0}
               value={includedUsers}
-              disabled={service.status === "archived" || busy}
+              disabled={readOnly}
+              className={fieldInputClass}
               onChange={(e) => setIncludedUsers(e.target.value)}
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="locations">Included locations</Label>
+            <Label htmlFor="locations" className="text-[13px] text-muted-foreground">
+              Included locations
+            </Label>
             <Input
               id="locations"
               type="number"
               min={0}
               value={includedLocations}
-              disabled={service.status === "archived" || busy}
+              disabled={readOnly}
+              className={fieldInputClass}
               onChange={(e) => setIncludedLocations(e.target.value)}
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="admins">Included admins</Label>
+            <Label htmlFor="admins" className="text-[13px] text-muted-foreground">
+              Included admins
+            </Label>
             <Input
               id="admins"
               type="number"
               min={0}
               value={includedAdmins}
-              disabled={service.status === "archived" || busy}
+              disabled={readOnly}
+              className={fieldInputClass}
               onChange={(e) => setIncludedAdmins(e.target.value)}
             />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </FormSection>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Features (one per line)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <textarea
-            className="min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-            value={featuresText}
-            disabled={service.status === "archived" || busy}
-            onChange={(e) => setFeaturesText(e.target.value)}
-          />
-        </CardContent>
-      </Card>
+      <FormSection title="Features">
+        <textarea
+          className="min-h-[120px] w-full rounded-md border border-border/80 bg-background/60 px-3 py-2 text-[14px] text-foreground"
+          value={featuresText}
+          disabled={readOnly}
+          placeholder="One feature per line"
+          onChange={(e) => setFeaturesText(e.target.value)}
+        />
+      </FormSection>
     </div>
   );
 }
