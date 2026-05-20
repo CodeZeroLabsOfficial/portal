@@ -371,11 +371,6 @@ function SplashLogoSettingsPanel({
 
   return (
     <div className="max-h-[min(58vh,460px)] overflow-y-auto overflow-x-hidden px-4 py-4">
-      <p className="mb-3 text-[10px] leading-snug text-muted-foreground">
-        Company logo appears on this splash when it is the first block in the document. Save the template to persist
-        changes.
-      </p>
-
       <div className="space-y-1.5">
         <button
           type="button"
@@ -419,32 +414,8 @@ function SplashLogoSettingsPanel({
           </div>
           <div className="min-w-0 flex-1 text-left">
             <p className="text-xs font-semibold leading-tight text-foreground">Company logo</p>
-            <p className="mt-0.5 truncate text-[10px] leading-snug text-muted-foreground">
-              {logoUrl
-                ? logoUrl
-                : canEditLogo && mediaLibrary
-                  ? "Library or paste a URL below"
-                  : "Set on the proposal template"}
-            </p>
           </div>
         </button>
-        {canEditLogo ? (
-          <div className="space-y-1 pt-0.5">
-            <Label className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-              Logo URL
-            </Label>
-            <Input
-              value={logoUrl}
-              onChange={(e) => {
-                if (!onBrandingChange) return;
-                setBrandingLogoUrl(brandingCtx?.branding, e.target.value, onBrandingChange);
-              }}
-              placeholder="https://…"
-              spellCheck={false}
-              className="h-8 rounded-md border-border/80 text-xs"
-            />
-          </div>
-        ) : null}
       </div>
 
       <Separator className="my-4" />
@@ -474,9 +445,6 @@ function SplashLogoSettingsPanel({
               value={resolveSplashLogoHorizontal(block)}
               onChange={(horizontal) => onChange(applySplashLogoHorizontal(block, horizontal))}
             />
-            <p className="text-[10px] leading-snug text-muted-foreground">
-              Logo stays in the top third of the splash. Headline position is set on the Layout tab.
-            </p>
 
             <div className="space-y-2">
               <Label className="text-[11px] font-semibold text-muted-foreground">Logo size</Label>
@@ -779,9 +747,6 @@ export function ProposalSplashBackgroundPicker({
                   </div>
                   <div className="min-w-0 flex-1 text-left">
                     <p className="text-xs font-semibold leading-tight text-foreground">Background video</p>
-                    <p className="mt-0.5 truncate text-[10px] leading-snug text-muted-foreground">
-                      {model.videoUrl?.trim() || (mediaLibrary ? "Choose from library" : "Library unavailable")}
-                    </p>
                   </div>
                 </button>
                 <SplashBackgroundTintPopover
@@ -835,9 +800,6 @@ export function ProposalSplashBackgroundPicker({
                   </div>
                   <div className="min-w-0 flex-1 text-left">
                     <p className="text-xs font-semibold leading-tight text-foreground">Mobile image fallback</p>
-                    <p className="mt-0.5 truncate text-[10px] leading-snug text-muted-foreground">
-                      {model.posterUrl?.trim() || (mediaLibrary ? "Choose from library" : "Library unavailable")}
-                    </p>
                   </div>
                 </button>
               </TabsContent>
@@ -896,12 +858,6 @@ export function ProposalSplashBackgroundPicker({
                   ))}
                   <option value="custom">Custom…</option>
                 </select>
-                {logoReservesTopBand ? (
-                  <p className="text-[10px] leading-snug text-muted-foreground">
-                    Top positions are unavailable while the company logo is shown — it uses the top third of
-                    the splash.
-                  </p>
-                ) : null}
                 {showCustomLayout ? (
                   <div className="flex flex-wrap items-end gap-4 pt-2">
                     <FocalPointGrid value={fp} onChange={(next) => patchBg({ focalPoint: next })} />
