@@ -929,7 +929,7 @@ export interface ProposalRichTextProps {
   onEditorMinHeightPxChange?: (next: number | undefined) => void;
   /** Show a bottom-right drag handle to change `editorMinHeightPx` (text blocks in the builder). */
   resizableHeight?: boolean;
-  /** Column cells: only show the bubble when a non-empty text range is selected. */
+  /** When true (default), the formatting bubble only appears for a non-empty text selection. */
   bubbleMenuRequiresTextSelection?: boolean;
 }
 
@@ -1009,7 +1009,7 @@ export function ProposalRichText({
   editorMinHeightPx,
   onEditorMinHeightPxChange,
   resizableHeight = false,
-  bubbleMenuRequiresTextSelection = false,
+  bubbleMenuRequiresTextSelection = true,
 }: ProposalRichTextProps) {
   const sectionChrome = useProposalSectionEditorChrome();
   const seamless = sectionChrome?.seamless ?? false;

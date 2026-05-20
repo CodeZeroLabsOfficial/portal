@@ -1,4 +1,4 @@
-import type { PointerEvent, ReactNode } from "react";
+import type { MouseEvent, PointerEvent, ReactNode } from "react";
 import type { IconBlock } from "@/types/proposal";
 import { cn } from "@/lib/utils";
 import { resolveProposalPresetIcon } from "@/lib/proposal-icon-presets";
@@ -22,6 +22,7 @@ export type ProposalIconBlockDisplayProps = {
   glyphChromeActive?: boolean;
   /** Builder: pointer down on the glyph (e.g. show icon picker bubble). */
   onGlyphPointerDown?: (e: PointerEvent) => void;
+  onGlyphClick?: (e: MouseEvent) => void;
 };
 
 /** Public + builder: icon/emoji and caption with hanging-indent multi-line caption layout. */
@@ -32,6 +33,7 @@ export function ProposalIconBlockDisplay({
   iconToolbarSlot,
   glyphChromeActive = false,
   onGlyphPointerDown,
+  onGlyphClick,
 }: ProposalIconBlockDisplayProps) {
   const IconGlyph = resolveProposalPresetIcon(block.iconName);
   const emoji = block.emoji?.trim();
@@ -69,6 +71,7 @@ export function ProposalIconBlockDisplay({
             onGlyphPointerDown && "cursor-pointer",
           )}
           onPointerDown={onGlyphPointerDown}
+          onClick={onGlyphClick}
         >
           {iconToolbarSlot ? (
             <div className="pointer-events-none absolute bottom-full left-1/2 z-30 mb-1.5 -translate-x-1/2 whitespace-nowrap">

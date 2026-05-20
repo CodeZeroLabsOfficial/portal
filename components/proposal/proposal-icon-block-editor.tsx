@@ -38,7 +38,7 @@ export function ProposalIconBlockEditorRow({
   }, [isSelected]);
 
   return (
-    <div className="-mx-1 rounded-md px-1 py-0.5">
+    <div className="-mx-1 rounded-md px-1 py-0.5" onClick={(e) => e.stopPropagation()}>
       <ProposalIconBlockDisplay
         block={block}
         glyphChromeActive={glyphActive}
@@ -46,6 +46,9 @@ export function ProposalIconBlockEditorRow({
           e.stopPropagation();
           setGlyphActive(true);
           onSelect();
+        }}
+        onGlyphClick={(e) => {
+          e.stopPropagation();
         }}
         iconToolbarSlot={glyphActive ? toolbar : undefined}
         labelSlot={
@@ -56,6 +59,7 @@ export function ProposalIconBlockEditorRow({
               setGlyphActive(false);
               onSelect();
             }}
+            onClick={(e) => e.stopPropagation()}
           >
             <ProposalRichText
               key={block.id}
@@ -63,7 +67,6 @@ export function ProposalIconBlockEditorRow({
               html={iconBlockLabelEditorHtml(block)}
               placeholder="Add a description…"
               className="!border-0 !bg-transparent !px-0 !py-0 !shadow-none"
-              bubbleMenuRequiresTextSelection
               onChange={(html) =>
                 onChange({
                   ...block,

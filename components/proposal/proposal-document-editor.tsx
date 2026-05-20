@@ -763,6 +763,7 @@ function SortableShell({
         >
           <SectionChildDragHandle
             aria-label="Drag to reorder"
+            onPointerDown={() => onSelect()}
             {...attributes}
             {...listeners}
           />
@@ -786,6 +787,7 @@ function SortableShell({
         <div
           role="presentation"
           onClick={(e) => {
+            if ((e.target as HTMLElement).closest("[data-proposal-columns-content]")) return;
             e.stopPropagation();
             onSelect();
           }}
@@ -1037,7 +1039,6 @@ function NestedColumnBlockFields({
           variant="header"
           html={headerBlockEditorHtml(hb)}
           placeholder="Heading"
-          bubbleMenuRequiresTextSelection
           onChange={(html) =>
             patchNested({
               ...hb,
@@ -1056,7 +1057,6 @@ function NestedColumnBlockFields({
           onEditorMinHeightPxChange={(next) => patchNested({ ...block, editorMinHeightPx: next })}
           resizableHeight
           placeholder={textPlaceholder}
-          bubbleMenuRequiresTextSelection
           onChange={(html) => patchNested({ ...block, html, body: undefined })}
         />
       );
@@ -1109,6 +1109,7 @@ function ColumnPane({
   return (
     <div
       className="min-w-0"
+      onClick={(e) => e.stopPropagation()}
       onPointerDownCapture={() => {
         setActiveColumnIndex(columnIndex);
         if (stack.length === 0) setSelectedCellId(null);
@@ -1187,8 +1188,31 @@ function ColumnsBlockFields({
   const onChangeRef = React.useRef(onChange);
   onChangeRef.current = onChange;
   const [dragDividerIndex, setDragDividerIndex] = React.useState<number | null>(null);
-  const [selectedCellId, setSelectedCellId] = React.useState<string | null>(null);
+  const [selectedCellId, setSelectedCellIdState] = React.useState<string | null>(null);
   const [activeColumnIndex, setActiveColumnIndex] = React.useState(0);
+  const selectedCellIdRef = React.useRef(selectedCellId);
+  selectedCellIdRef.current = selectedCellId;
+  const onInnerCellActiveRef = React.useRef(onInnerCellActiveChange);
+  onInnerCellActiveRef.current = onInnerCellActiveChange;
+
+  const reportInnerCellActive = React.useCallback((cellId: string | null) => {
+    onInnerCellActiveRef.current?.(cellId);
+  }, []);
+
+  const setSelectedCellId = React.useCallback(
+    (value: React.SetStateAction<string | null>) => {
+      setSelectedCellIdState((prev) => {
+        const next = typeof value === "function" ? value(prev) : value;
+        reportInnerCellActive(next);
+        return next;
+      });
+    },
+    [reportInnerCellActive],
+  );
+
+  const markColumnContentActive = React.useCallback(() => {
+    reportInnerCellActive(selectedCellIdRef.current ?? "__content__");
+  }, [reportInnerCellActive]);
 
   React.useEffect(() => {
     setActiveColumnIndex((i) =>
@@ -1202,22 +1226,20 @@ function ColumnsBlockFields({
   );
 
   React.useEffect(() => {
-    if (ancestorSelectedBlockId !== block.id) setSelectedCellId(null);
-  }, [ancestorSelectedBlockId, block.id]);
-
-  React.useEffect(() => {
-    onInnerCellActiveChange?.(selectedCellId);
-  }, [selectedCellId, onInnerCellActiveChange]);
+    if (ancestorSelectedBlockId != null && ancestorSelectedBlockId !== block.id) {
+      setSelectedCellId(null);
+    }
+  }, [ancestorSelectedBlockId, block.id, setSelectedCellId]);
 
   React.useEffect(() => {
     registerClearCellSelection?.(() => setSelectedCellId(null));
     return () => registerClearCellSelection?.(null);
-  }, [registerClearCellSelection]);
+  }, [registerClearCellSelection, setSelectedCellId]);
 
   React.useEffect(() => {
     const ids = new Set(block.stacks.flatMap((s) => s.map((c) => c.id)));
     if (selectedCellId && !ids.has(selectedCellId)) setSelectedCellId(null);
-  }, [block.stacks, selectedCellId]);
+  }, [block.stacks, selectedCellId, setSelectedCellId]);
 
   React.useEffect(() => {
     if (!resizeMode) return;
@@ -1300,6 +1322,12 @@ function ColumnsBlockFields({
         const itemsClasses = columnsBlockMdItemsClass(block.rowAlign);
         const columnRow = (
           <div
+            data-proposal-columns-content
+            onPointerDownCapture={markColumnContentActive}
+            onFocusCapture={(e) => {
+              const el = e.target as HTMLElement;
+              if (el.closest(".tiptap") || el.closest(".ProseMirror")) markColumnContentActive();
+            }}
             className={cn(
               "flex flex-col gap-6 md:flex-row",
               PROPOSAL_DOCUMENT_COLUMNS_ROW_GAP_CLASSES,
