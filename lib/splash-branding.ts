@@ -1,40 +1,66 @@
 import type { SplashBlock } from "@/types/proposal";
 
 export type SplashBlockAlignment = SplashBlock["alignment"];
+export type SplashHorizontalAlign = SplashBlockAlignment["horizontal"];
 
-/** Logo position presets (no focal point — logo layer only). */
-export const SPLASH_LOGO_LAYOUT_PRESETS = [
-  { id: "tl", label: "Top left", vertical: "top" as const, horizontal: "left" as const },
-  { id: "tc", label: "Top center", vertical: "top", horizontal: "center" },
-  { id: "tr", label: "Top right", vertical: "top", horizontal: "right" },
-  { id: "ml", label: "Middle left", vertical: "center", horizontal: "left" },
-  { id: "c", label: "Center", vertical: "center", horizontal: "center" },
-  { id: "mr", label: "Middle right", vertical: "center", horizontal: "right" },
-  { id: "bl", label: "Bottom left", vertical: "bottom", horizontal: "left" },
-  { id: "bc", label: "Bottom center", vertical: "bottom", horizontal: "center" },
-  { id: "br", label: "Bottom right", vertical: "bottom", horizontal: "right" },
+export const SPLASH_HORIZONTAL_ALIGN_OPTIONS = [
+  { id: "left" as const, label: "Left" },
+  { id: "center" as const, label: "Center" },
+  { id: "right" as const, label: "Right" },
 ] as const;
 
-export function resolveSplashLogoAlignment(block: SplashBlock): SplashBlockAlignment {
-  return block.logoAlignment ?? block.alignment;
+/** Headline presets that occupy the logo header band (top third). */
+export const SPLASH_HEADLINE_TOP_LAYOUT_PRESET_IDS = ["tl", "tc", "tr"] as const;
+
+const TOP_PRESET_TO_MIDDLE: Record<(typeof SPLASH_HEADLINE_TOP_LAYOUT_PRESET_IDS)[number], string> = {
+  tl: "ml",
+  tc: "c",
+  tr: "mr",
+};
+
+/** Company logo is fixed to the top third; only horizontal placement is configurable. */
+export function resolveSplashLogoHorizontal(block: SplashBlock): SplashHorizontalAlign {
+  return block.logoAlignment?.horizontal ?? block.alignment?.horizontal ?? "left";
 }
 
-export function matchSplashLogoLayoutPresetId(block: SplashBlock): string {
-  const a = resolveSplashLogoAlignment(block);
-  for (const p of SPLASH_LOGO_LAYOUT_PRESETS) {
-    if (p.vertical === a.vertical && p.horizontal === a.horizontal) return p.id;
-  }
-  return "custom";
-}
-
-export function applySplashLogoLayoutPreset(block: SplashBlock, presetId: string): SplashBlock {
-  if (presetId === "custom") return block;
-  const p = SPLASH_LOGO_LAYOUT_PRESETS.find((x) => x.id === presetId);
-  if (!p) return block;
+export function applySplashLogoHorizontal(
+  block: SplashBlock,
+  horizontal: SplashHorizontalAlign,
+): SplashBlock {
   return {
     ...block,
-    logoAlignment: { vertical: p.vertical, horizontal: p.horizontal },
+    logoAlignment: { vertical: "top", horizontal },
   };
+}
+
+export function splashLogoReservesTopBand(block: SplashBlock, logoUrl: string | undefined): boolean {
+  return Boolean(logoUrl?.trim() && block.showLogo !== false);
+}
+
+/** Move headline out of the top band when the logo header is active. */
+export function sanitizeSplashContentAlignmentForLogo(
+  block: SplashBlock,
+  logoUrl: string | undefined,
+): SplashBlock {
+  if (!splashLogoReservesTopBand(block, logoUrl) || block.alignment.vertical !== "top") {
+    return block;
+  }
+  return {
+    ...block,
+    alignment: { ...block.alignment, vertical: "center" },
+  };
+}
+
+export function mapHeadlineLayoutPresetForLogo(
+  presetId: string,
+  logoUrl: string | undefined,
+  block: SplashBlock,
+): string {
+  if (!splashLogoReservesTopBand(block, logoUrl)) return presetId;
+  if (presetId in TOP_PRESET_TO_MIDDLE) {
+    return TOP_PRESET_TO_MIDDLE[presetId as keyof typeof TOP_PRESET_TO_MIDDLE];
+  }
+  return presetId;
 }
 
 /** Whether the splash should render the template company logo. */
@@ -49,31 +75,16 @@ export function splashShowsCompanyLogo(
   return block.showLogo !== false;
 }
 
-export function splashLogoAlignmentsMatchContent(block: SplashBlock): boolean {
-  const logo = resolveSplashLogoAlignment(block);
-  return logo.vertical === block.alignment.vertical && logo.horizontal === block.alignment.horizontal;
-}
-
-/** Absolute logo anchor inside the splash inner column. */
-export function splashLogoAbsolutePositionClasses(alignment: SplashBlockAlignment): string {
-  const { vertical, horizontal } = alignment;
+/** Overlay band: top third of the splash; headline centers in the full area beneath. */
+export function splashLogoTopThirdBandClasses(horizontal: SplashHorizontalAlign): string {
   return [
-    "pointer-events-none absolute z-20 flex w-auto max-w-[min(100%,22.5rem)]",
-    vertical === "top" && "top-5 sm:top-6",
-    vertical === "center" && "top-1/2 -translate-y-1/2",
-    vertical === "bottom" && "bottom-5 sm:bottom-6",
-    horizontal === "left" && "left-0 justify-start",
-    horizontal === "center" && "left-1/2 -translate-x-1/2 justify-center",
-    horizontal === "right" && "right-0 justify-end",
+    "pointer-events-none absolute inset-x-0 top-0 z-20 flex h-1/3 min-h-[4.5rem] max-h-[12rem] items-center px-0",
+    horizontal === "left" && "justify-start",
+    horizontal === "center" && "justify-center",
+    horizontal === "right" && "justify-end",
   ]
     .filter(Boolean)
     .join(" ");
-}
-
-export function splashLogoRowJustifyClasses(horizontal: SplashBlockAlignment["horizontal"]): string {
-  if (horizontal === "left") return "justify-start";
-  if (horizontal === "right") return "justify-end";
-  return "justify-center";
 }
 
 export const SPLASH_LOGO_SIZE_OPTIONS = [

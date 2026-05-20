@@ -115,7 +115,7 @@ export interface SplashBlock extends ProposalBlockBase {
   background: SplashBlockBackground;
   height: SplashBlockHeight;
   alignment: { vertical: "top" | "center" | "bottom"; horizontal: "left" | "center" | "right" };
-  /** Company logo position when template branding is shown on the first root splash. */
+  /** Company logo in the top third of the splash (horizontal only; vertical is always `top`). */
   logoAlignment?: { vertical: "top" | "center" | "bottom"; horizontal: "left" | "center" | "right" };
   /** When false, hides template logo on this splash (first root splash only). Default: show when branding exists. */
   showLogo?: boolean;

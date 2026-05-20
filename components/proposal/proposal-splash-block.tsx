@@ -10,18 +10,16 @@ import {
   resolveSplashBackdrop,
   splashHeightMinStyle,
 } from "@/lib/splash-block";
-import type { SplashBlockAlignment } from "@/lib/splash-branding";
 import {
-  resolveSplashLogoAlignment,
-  splashLogoAbsolutePositionClasses,
-  splashLogoAlignmentsMatchContent,
-  splashLogoRowJustifyClasses,
+  resolveSplashLogoHorizontal,
+  sanitizeSplashContentAlignmentForLogo,
   splashLogoSizeClasses,
+  splashLogoTopThirdBandClasses,
 } from "@/lib/splash-branding";
 import { PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES } from "@/lib/proposal-public-layout";
 
 const RICH_PUBLIC =
-  "proposal-rich-text max-w-none text-sm leading-relaxed [&_a]:text-sky-200 [&_a]:underline [&_blockquote]:my-4 [&_blockquote]:border-l-4 [&_blockquote]:border-white/35 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-white/75 [&_h1]:mt-0 [&_h1]:text-3xl [&_h1]:font-semibold [&_h2]:mt-2 [&_h2]:text-2xl [&_h2]:font-semibold [&_h3]:mt-2 [&_h3]:text-xl [&_h3]:font-semibold [&_h4]:mt-2 [&_h4]:text-base [&_h4]:font-semibold [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-3 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5 [&_img]:max-h-32 [&_img]:rounded-lg [&_img]:object-contain";
+  "proposal-rich-text max-w-none text-sm leading-relaxed [&_a]:text-sky-200 [&_a]:underline [&_blockquote]:my-4 [&_blockquote]:border-l-4 [&_blockquote]:border-white/35 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-white/75 [&_h1]:ml-0 [&_h1]:mt-0 [&_h1]:text-3xl [&_h1]:font-semibold [&_h2]:mt-2 [&_h2]:text-2xl [&_h2]:font-semibold [&_h3]:mt-2 [&_h3]:text-xl [&_h3]:font-semibold [&_h4]:mt-2 [&_h4]:text-base [&_h4]:font-semibold [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-3 [&_p]:ml-0 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5 [&_img]:max-h-32 [&_img]:rounded-lg [&_img]:object-contain";
 
 /** `flex-col`: main axis is vertical → `justify-*` controls vertical placement. */
 function columnJustifyFromVertical(v: SplashBlock["alignment"]["vertical"]): string {
@@ -185,41 +183,31 @@ function SplashMediaLayers({
 function SplashCompanyLogoMark({
   logoUrl,
   prefersLight,
-  stacked,
-  logoAlignment,
+  logoHorizontal,
   logoSize,
 }: {
   logoUrl: string;
   prefersLight: boolean;
-  stacked: boolean;
-  logoAlignment: SplashBlockAlignment;
+  logoHorizontal: ReturnType<typeof resolveSplashLogoHorizontal>;
   logoSize?: SplashBlock["logoSize"];
 }) {
-  const img = (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={logoUrl} alt="" className={splashLogoSizeClasses(logoSize)} />
-  );
+  const edgePad =
+    logoHorizontal === "left" ? "pl-0 pr-3" : logoHorizontal === "right" ? "pl-3 pr-0" : "px-3";
 
-  const pill = (
-    <div
-      className={cn(
-        "rounded-lg px-3 py-2",
-        prefersLight && "bg-black/25 backdrop-blur-sm",
-      )}
-    >
-      {img}
+  return (
+    <div className={splashLogoTopThirdBandClasses(logoHorizontal)}>
+      <div
+        className={cn(
+          "shrink-0 rounded-lg py-2",
+          edgePad,
+          prefersLight && "bg-black/25 backdrop-blur-sm",
+        )}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={logoUrl} alt="" className={splashLogoSizeClasses(logoSize)} />
+      </div>
     </div>
   );
-
-  if (stacked) {
-    return (
-      <div className={cn("mb-4 flex w-full shrink-0", splashLogoRowJustifyClasses(logoAlignment.horizontal))}>
-        {pill}
-      </div>
-    );
-  }
-
-  return <div className={splashLogoAbsolutePositionClasses(logoAlignment)}>{pill}</div>;
 }
 
 export interface ProposalSplashBlockCanvasProps {
@@ -249,12 +237,14 @@ export function ProposalSplashBlockCanvas({
   const resolved = resolveSplashBackdrop(mergedBg);
   const prefersLight = resolved.prefersLightForeground;
   const heightStyle = splashHeightMinStyle(block.height);
-  const align = block.alignment ?? { vertical: "center", horizontal: "center" };
-  const logoAlign = resolveSplashLogoAlignment(block);
+  const companyLogoUrl = logoUrl?.trim() || null;
+  const contentBlock = companyLogoUrl
+    ? sanitizeSplashContentAlignmentForLogo(block, companyLogoUrl)
+    : block;
+  const align = contentBlock.alignment ?? { vertical: "center", horizontal: "center" };
+  const logoHorizontal = resolveSplashLogoHorizontal(block);
   const showCard = Boolean(block.showCard);
   const cardOpacity = Math.max(0, Math.min(100, block.cardOpacity ?? 70));
-  const companyLogoUrl = logoUrl?.trim() || null;
-  const stackedLogo = Boolean(companyLogoUrl && splashLogoAlignmentsMatchContent(block));
 
   const editorChrome = mode === "editor";
   const presentation = editorChrome ? "editor" : (presentationProp ?? "publicEdge");
@@ -291,7 +281,7 @@ export function ProposalSplashBlockCanvas({
           backgroundColor: withAlpha("#030712", cardOpacity / 100),
           borderColor: withAlpha("#ffffff", 0.12),
         }
-        : {
+      : {
           backgroundColor: withAlpha("#ffffff", cardOpacity / 100),
           borderColor: withAlpha("#0f172a", 0.08),
         };
@@ -300,8 +290,7 @@ export function ProposalSplashBlockCanvas({
     <SplashCompanyLogoMark
       logoUrl={companyLogoUrl}
       prefersLight={prefersLight}
-      stacked={stackedLogo}
-      logoAlignment={logoAlign}
+      logoHorizontal={logoHorizontal}
       logoSize={block.logoSize}
     />
   ) : null;
@@ -341,8 +330,6 @@ export function ProposalSplashBlockCanvas({
           "relative z-10 flex h-full min-h-[inherit] w-full flex-col",
           editorChrome && "px-5 py-10 sm:px-8 sm:py-12 md:px-12 md:py-14",
           publicEdge && "px-0 py-10 sm:py-14 md:py-16",
-          columnJustifyFromVertical(align.vertical),
-          columnItemsFromHorizontal(align.horizontal),
           prefersLight &&
             cn(
               "[&_.proposal-rich-text]:!text-white/[0.92] [&_.proposal-rich-text_a]:text-sky-200",
@@ -352,15 +339,20 @@ export function ProposalSplashBlockCanvas({
       >
         <div
           className={cn(
-            "relative w-full min-w-0 shrink-0",
+            "relative flex min-h-0 w-full flex-1 flex-col",
             publicEdge && PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES,
             editorChrome && "w-full",
           )}
         >
-          {!stackedLogo ? logoMark : null}
-          <div className="relative z-10 w-full min-w-0">
-            {stackedLogo ? logoMark : null}
-            {textBody}
+          {logoMark}
+          <div
+            className={cn(
+              "relative z-10 flex min-h-0 w-full flex-1 flex-col",
+              columnJustifyFromVertical(align.vertical),
+              columnItemsFromHorizontal(align.horizontal),
+            )}
+          >
+            <div className="w-full min-w-0">{textBody}</div>
           </div>
         </div>
       </div>

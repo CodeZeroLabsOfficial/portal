@@ -7,11 +7,12 @@ import { cn } from "@/lib/utils";
 import type { SplashBlock, SplashBlockBackground } from "@/types/proposal";
 import { mergeSplashBackground, resolveSplashBackdrop, type ResolvedSplashBackdrop } from "@/lib/splash-block";
 import {
-  SPLASH_LOGO_LAYOUT_PRESETS,
   SPLASH_LOGO_SIZE_OPTIONS,
-  applySplashLogoLayoutPreset,
-  matchSplashLogoLayoutPresetId,
-  resolveSplashLogoAlignment,
+  applySplashLogoHorizontal,
+  mapHeadlineLayoutPresetForLogo,
+  resolveSplashLogoHorizontal,
+  sanitizeSplashContentAlignmentForLogo,
+  splashLogoReservesTopBand,
 } from "@/lib/splash-branding";
 import type { ProposalBranding } from "@/types/proposal";
 import {
@@ -240,9 +241,14 @@ function patchBackground(block: SplashBlock, part: Partial<SplashBlockBackground
   };
 }
 
-function applyLayoutPreset(block: SplashBlock, presetId: string): SplashBlock {
+function applyLayoutPreset(
+  block: SplashBlock,
+  presetId: string,
+  logoUrl: string,
+): SplashBlock {
   if (presetId === "custom") return block;
-  const p = LAYOUT_PRESETS.find((x) => x.id === presetId);
+  const mappedId = mapHeadlineLayoutPresetForLogo(presetId, logoUrl, block);
+  const p = LAYOUT_PRESETS.find((x) => x.id === mappedId);
   if (!p) return block;
   return {
     ...block,
@@ -252,6 +258,42 @@ function applyLayoutPreset(block: SplashBlock, presetId: string): SplashBlock {
       focalPoint: { x: p.focal.x, y: p.focal.y },
     },
   };
+}
+
+function SplashHorizontalAlignButtons({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: SplashBlock["alignment"]["horizontal"];
+  onChange: (horizontal: SplashBlock["alignment"]["horizontal"]) => void;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-[11px] font-semibold text-muted-foreground">{label}</Label>
+      <div className="grid grid-cols-3 gap-1.5">
+        {(
+          [
+            { id: "left" as const, label: "Left" },
+            { id: "center" as const, label: "Center" },
+            { id: "right" as const, label: "Right" },
+          ] as const
+        ).map((opt) => (
+          <Button
+            key={opt.id}
+            type="button"
+            size="sm"
+            variant={value === opt.id ? "default" : "outline"}
+            className="h-8 px-2 text-xs"
+            onClick={() => onChange(opt.id)}
+          >
+            {opt.label}
+          </Button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function SplashBackgroundTriggerMedia(model: SplashBlockBackground, resolved: ResolvedSplashBackdrop) {
@@ -325,7 +367,6 @@ function SplashLogoSettingsPanel({
   const logoUrl = brandingCtx?.branding?.logoUrl?.trim() ?? "";
   const onBrandingChange = brandingCtx?.onBrandingChange;
   const canEditLogo = Boolean(onBrandingChange);
-  const logoPresetId = matchSplashLogoLayoutPresetId(block);
   const logoSize = block.logoSize ?? "md";
 
   return (
@@ -416,74 +457,26 @@ function SplashLogoSettingsPanel({
             className="h-3.5 w-3.5 shrink-0 cursor-pointer rounded border-input accent-sky-500"
             checked={block.showLogo !== false}
             disabled={!logoUrl}
-            onChange={(e) => onChange({ ...block, showLogo: e.target.checked })}
+            onChange={(e) => {
+              const next = sanitizeSplashContentAlignmentForLogo(
+                { ...block, showLogo: e.target.checked },
+                logoUrl,
+              );
+              onChange(next);
+            }}
           />
         </label>
 
         {block.showLogo !== false && logoUrl ? (
           <>
-            <div className="space-y-1.5">
-              <Label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Logo position
-              </Label>
-              <select
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
-                value={logoPresetId}
-                aria-label="Logo position in splash"
-                onChange={(e) => onChange(applySplashLogoLayoutPreset(block, e.target.value))}
-              >
-                {SPLASH_LOGO_LAYOUT_PRESETS.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.label}
-                  </option>
-                ))}
-                <option value="custom">Custom…</option>
-              </select>
-              {logoPresetId === "custom" ? (
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  <div className="space-y-1">
-                    <Label className="text-[10px] text-muted-foreground">Vertical</Label>
-                    <select
-                      className="h-9 w-full rounded-md border border-input bg-background px-2 text-xs"
-                      value={resolveSplashLogoAlignment(block).vertical}
-                      onChange={(e) =>
-                        onChange({
-                          ...block,
-                          logoAlignment: {
-                            ...resolveSplashLogoAlignment(block),
-                            vertical: e.target.value as SplashBlock["alignment"]["vertical"],
-                          },
-                        })
-                      }
-                    >
-                      <option value="top">Top</option>
-                      <option value="center">Center</option>
-                      <option value="bottom">Bottom</option>
-                    </select>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-[10px] text-muted-foreground">Horizontal</Label>
-                    <select
-                      className="h-9 w-full rounded-md border border-input bg-background px-2 text-xs"
-                      value={resolveSplashLogoAlignment(block).horizontal}
-                      onChange={(e) =>
-                        onChange({
-                          ...block,
-                          logoAlignment: {
-                            ...resolveSplashLogoAlignment(block),
-                            horizontal: e.target.value as SplashBlock["alignment"]["horizontal"],
-                          },
-                        })
-                      }
-                    >
-                      <option value="left">Left</option>
-                      <option value="center">Center</option>
-                      <option value="right">Right</option>
-                    </select>
-                  </div>
-                </div>
-              ) : null}
-            </div>
+            <SplashHorizontalAlignButtons
+              label="Logo alignment"
+              value={resolveSplashLogoHorizontal(block)}
+              onChange={(horizontal) => onChange(applySplashLogoHorizontal(block, horizontal))}
+            />
+            <p className="text-[10px] leading-snug text-muted-foreground">
+              Logo stays in the top third of the splash. Headline position is set on the Layout tab.
+            </p>
 
             <div className="space-y-2">
               <Label className="text-[11px] font-semibold text-muted-foreground">Logo size</Label>
@@ -532,6 +525,12 @@ export function ProposalSplashBackgroundPicker({
   const showCustomLayout = customLayoutOpen || presetId === "custom";
   const positionSelectValue = customLayoutOpen ? "custom" : presetId;
   const showLogoTab = isFirstRootSplash;
+  const brandingCtx = useProposalBrandingOptional();
+  const templateLogoUrl = brandingCtx?.branding?.logoUrl?.trim() ?? "";
+  const logoReservesTopBand = showLogoTab && splashLogoReservesTopBand(block, templateLogoUrl);
+  const headlineLayoutPresets = logoReservesTopBand
+    ? LAYOUT_PRESETS.filter((p) => p.vertical !== "top")
+    : LAYOUT_PRESETS;
 
   function patchBg(part: Partial<SplashBlockBackground>) {
     onChange(patchBackground(block, part));
@@ -887,16 +886,22 @@ export function ProposalSplashBackgroundPicker({
                       return;
                     }
                     setCustomLayoutOpen(false);
-                    onChange(applyLayoutPreset(block, v));
+                    onChange(applyLayoutPreset(block, v, templateLogoUrl));
                   }}
                 >
-                  {LAYOUT_PRESETS.map((p) => (
+                  {headlineLayoutPresets.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.label}
                     </option>
                   ))}
                   <option value="custom">Custom…</option>
                 </select>
+                {logoReservesTopBand ? (
+                  <p className="text-[10px] leading-snug text-muted-foreground">
+                    Top positions are unavailable while the company logo is shown — it uses the top third of
+                    the splash.
+                  </p>
+                ) : null}
                 {showCustomLayout ? (
                   <div className="flex flex-wrap items-end gap-4 pt-2">
                     <FocalPointGrid value={fp} onChange={(next) => patchBg({ focalPoint: next })} />
@@ -906,17 +911,21 @@ export function ProposalSplashBackgroundPicker({
                         <select
                           className="h-9 w-full rounded-md border border-input bg-background px-2 text-xs"
                           value={block.alignment.vertical}
-                          onChange={(e) =>
+                          onChange={(e) => {
+                            const vertical = e.target.value as SplashBlock["alignment"]["vertical"];
+                            if (logoReservesTopBand && vertical === "top") return;
                             onChange({
                               ...block,
                               alignment: {
                                 ...block.alignment,
-                                vertical: e.target.value as SplashBlock["alignment"]["vertical"],
+                                vertical,
                               },
-                            })
-                          }
+                            });
+                          }}
                         >
-                          <option value="top">Top</option>
+                          <option value="top" disabled={logoReservesTopBand}>
+                            Top
+                          </option>
                           <option value="center">Center</option>
                           <option value="bottom">Bottom</option>
                         </select>
