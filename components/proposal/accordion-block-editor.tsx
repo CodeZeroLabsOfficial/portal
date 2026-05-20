@@ -37,24 +37,16 @@ export function AccordionBlockEditor({
   onChange: (next: AccordionBlock) => void;
 }) {
   const panels = block.panels ?? [];
-  const firstId = panels[0]?.id ?? "";
   const panelIdsKey = panels.map((p) => p.id).join(",");
 
-  const [openIds, setOpenIds] = React.useState<Record<string, boolean>>(() =>
-    firstId ? { [firstId]: true } : {},
-  );
+  const [openIds, setOpenIds] = React.useState<Record<string, boolean>>({});
 
   React.useEffect(() => {
-    const list = block.panels ?? [];
-    const ids = new Set(list.map((p) => p.id));
+    const ids = new Set((block.panels ?? []).map((p) => p.id));
     setOpenIds((prev) => {
       const next: Record<string, boolean> = {};
       for (const id of ids) {
-        if (id in prev) next[id] = prev[id];
-      }
-      if (ids.size && !Object.keys(next).some((k) => next[k])) {
-        const first = list[0]?.id;
-        if (first) next[first] = true;
+        if (id in prev && prev[id]) next[id] = true;
       }
       return next;
     });

@@ -1117,12 +1117,6 @@ function TierCard({
                 </option>
               ))}
             </select>
-            <p
-              className={cn("mt-1 text-[10px] leading-snug", isRecommended ? "" : "text-muted-foreground")}
-              style={isRecommended ? { color: recommendedDimText } : undefined}
-            >
-              Billing uses Admin → Services (activate to sync Stripe prices).
-            </p>
           </div>
         ) : null}
 

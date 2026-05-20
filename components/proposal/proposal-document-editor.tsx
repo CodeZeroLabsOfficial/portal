@@ -2855,7 +2855,7 @@ function AgreementBlockFields({
     );
 
   const settingsFooter = (
-    <div className="border-t border-border/70 bg-muted/10 px-2 py-4 sm:px-3">
+    <div className="w-full px-2 pb-4 pt-4 sm:px-3">
       <AgreementBlockEditor block={block} onChange={(next) => onChange(next)} />
     </div>
   );
