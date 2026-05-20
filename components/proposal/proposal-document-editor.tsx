@@ -137,6 +137,7 @@ import {
   PROPOSAL_EDITOR_BLOCK_CANVAS_INNER_CLASSES,
   PROPOSAL_EDITOR_INSERT_ROW_OVERLAP_CLASSES,
   PROPOSAL_EDITOR_SECTION_INNER_PAD_CLASSES,
+  PROPOSAL_EDITOR_SECTION_STACK_BOTTOM_PAD_CLASSES,
   PROPOSAL_PUBLIC_DOCUMENT_OUTER_CLASSES,
   proposalEditorSectionChildEdgePadClasses,
 } from "@/lib/proposal-public-layout";
@@ -642,15 +643,36 @@ function SortableShell({
   };
   const showToolbar = Boolean(toolbar && (selected || (toolbarShowOnHover && hovered)));
   const sectionChild = layout === "section-child";
+  const showSectionDragGutter = sectionChild && (hovered || isDragging);
+
+  const sectionChildRingClasses = prefersLightSection
+    ? cn(
+        "rounded-sm ring-1 ring-offset-0 transition-[box-shadow] duration-150",
+        selected || isDragging
+          ? "ring-white/45"
+          : hovered
+            ? "ring-white/35"
+            : "ring-transparent",
+      )
+    : cn(
+        "rounded-sm ring-1 ring-offset-0 transition-[box-shadow] duration-150",
+        selected || isDragging
+          ? "ring-sky-500/70"
+          : hovered
+            ? "ring-border/55"
+            : "ring-transparent",
+      );
 
   const ringClasses = seamless
     ? cn(
         "transition-none",
-        selected
-          ? prefersLightSection
-            ? "rounded-sm ring-1 ring-white/40 ring-offset-0"
-            : "rounded-sm ring-1 ring-sky-500/70 ring-offset-0"
-          : "rounded-sm",
+        sectionChild
+          ? sectionChildRingClasses
+          : selected
+            ? prefersLightSection
+              ? "rounded-sm ring-1 ring-white/40 ring-offset-0"
+              : "rounded-sm ring-1 ring-sky-500/70 ring-offset-0"
+            : "rounded-sm",
         "!bg-transparent hover:!bg-transparent focus-within:!bg-transparent active:!bg-transparent",
         "dark:!bg-transparent dark:hover:!bg-transparent dark:focus-within:!bg-transparent dark:active:!bg-transparent",
       )
@@ -659,7 +681,7 @@ function SortableShell({
         selected
           ? "rounded-sm ring-1 ring-primary/45 ring-offset-2 ring-offset-transparent"
           : sectionChild
-            ? "rounded-sm ring-1 ring-transparent hover:ring-border/40"
+            ? sectionChildRingClasses
             : "rounded-[2px] hover:bg-black/[0.03] dark:hover:bg-white/[0.04]",
       );
 
@@ -670,6 +692,8 @@ function SortableShell({
       className={cn(
         "group/sortblock relative scroll-mt-28",
         sectionChild && "flex w-full",
+        sectionChild &&
+          "focus-within:[&_[data-section-drag-gutter]]:pointer-events-auto focus-within:[&_[data-section-drag-gutter]]:visible focus-within:[&_[data-section-drag-gutter]]:opacity-100",
         isDragging && "opacity-55",
         selected && sectionChild && "z-[2]",
       )}
@@ -677,7 +701,15 @@ function SortableShell({
       onMouseLeave={() => setHovered(false)}
     >
       {sectionChild ? (
-        <div className={cn(SECTION_CHILD_DRAG_GUTTER_CLASSES, selected && "opacity-100")}>
+        <div
+          data-section-drag-gutter
+          className={cn(
+            SECTION_CHILD_DRAG_GUTTER_CLASSES,
+            showSectionDragGutter
+              ? "visible pointer-events-auto opacity-100"
+              : "invisible pointer-events-none opacity-0",
+          )}
+        >
           <SectionChildDragHandle
             aria-label="Drag to reorder"
             {...attributes}
@@ -1210,12 +1242,11 @@ function ColumnsBlockFields({
             )}
           >
             {block.stacks.map((stack, i) => {
-              const showInsertHere = !resizeMode && activeColumnIndex === i;
               const showPlansHere =
                 !resizeMode &&
                 selectedCellMeta?.child.type === "packages" &&
                 selectedCellMeta.ci === i;
-              const showColumnLeftRail = showInsertHere || showPlansHere;
+              const mountColumnLeftRail = !resizeMode;
               return (
               <React.Fragment key={`${block.id}-col-${i}`}>
                 <div
@@ -1238,34 +1269,49 @@ function ColumnsBlockFields({
                   )}
                   style={{ flex: `${flexRow[i]} 1 0%` } as React.CSSProperties}
                 >
-                  {showColumnLeftRail ? (
-                    <div className="pointer-events-none absolute right-full top-1/2 z-20 -mr-1 flex -translate-y-1/2 flex-col items-center gap-2 sm:-mr-1.5">
-                      <div className="pointer-events-auto flex flex-col items-center gap-2">
-                        {showInsertHere ? (
-                          <ColumnInsertMenu
-                            onAdd={(insert) => {
-                              const st = block.stacks[i];
-                              if (!st) return;
-                              onChange(
-                                patchColumnStackAtIndex(block, i, [
-                                  ...st,
-                                  insert as ProposalColumnChildBlock,
-                                ]),
-                              );
-                            }}
-                            align="start"
-                            trigger={
-                              <button
-                                type="button"
-                                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border/80 bg-muted/50 text-muted-foreground shadow-sm transition-colors hover:border-sky-500/50 hover:bg-background hover:text-foreground data-[state=open]:border-primary data-[state=open]:bg-primary data-[state=open]:text-primary-foreground"
-                                aria-label="Add content"
-                                title={`Add block to column ${i + 1}`}
-                              >
-                                <Plus className="h-4 w-4" aria-hidden />
-                              </button>
-                            }
-                          />
-                        ) : null}
+                  {mountColumnLeftRail ? (
+                    <div
+                      className={cn(
+                        "pointer-events-none absolute right-full top-1/2 z-20 -mr-1 flex -translate-y-1/2 flex-col items-center gap-2 sm:-mr-1.5",
+                        "invisible opacity-0 transition-opacity duration-150",
+                        "group-hover/colcell:visible group-hover/colcell:opacity-100",
+                        "group-focus-within/colcell:visible group-focus-within/colcell:opacity-100",
+                        "has-[[data-state=open]]:visible has-[[data-state=open]]:opacity-100",
+                        showPlansHere && "visible opacity-100",
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          "pointer-events-none flex flex-col items-center gap-2",
+                          "group-hover/colcell:pointer-events-auto",
+                          "group-focus-within/colcell:pointer-events-auto",
+                          "has-[[data-state=open]]:pointer-events-auto",
+                          showPlansHere && "pointer-events-auto",
+                        )}
+                      >
+                        <ColumnInsertMenu
+                          onAdd={(insert) => {
+                            const st = block.stacks[i];
+                            if (!st) return;
+                            onChange(
+                              patchColumnStackAtIndex(block, i, [
+                                ...st,
+                                insert as ProposalColumnChildBlock,
+                              ]),
+                            );
+                          }}
+                          align="start"
+                          trigger={
+                            <button
+                              type="button"
+                              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border/80 bg-muted/50 text-muted-foreground shadow-sm transition-colors hover:border-sky-500/50 hover:bg-background hover:text-foreground data-[state=open]:border-primary data-[state=open]:bg-primary data-[state=open]:text-primary-foreground"
+                              aria-label="Add content"
+                              title={`Add block to column ${i + 1}`}
+                            >
+                              <Plus className="h-4 w-4" aria-hidden />
+                            </button>
+                          }
+                        />
                         {showPlansHere ? (
                           <div
                             className={cn(
@@ -1450,17 +1496,25 @@ function SectionBlockFields({
     ) : (
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onChildDragEnd}>
         <SortableContext items={sortableChildIds} strategy={verticalListSortingStrategy}>
-          <div className="group/section-stack flex flex-col">
+          <div
+            className={cn(
+              "group/section-stack flex flex-col",
+              children.length > 0 && PROPOSAL_EDITOR_SECTION_STACK_BOTTOM_PAD_CLASSES,
+            )}
+          >
           {children.map((child, idx) => {
             const isSelected = selectedBlockId === child.id;
             const supportsStyle = child.type === "packages";
+            const isLastChild = idx === children.length - 1;
             return (
               <div key={child.id}>
-                <SectionChildInsertSlot
-                  menu={(trigger) => (
-                    <SectionInsertMenu align="start" onAdd={(b) => addChildAt(b, idx)} trigger={trigger} />
-                  )}
-                />
+                {idx === 0 ? (
+                  <SectionChildInsertSlot
+                    menu={(trigger) => (
+                      <SectionInsertMenu align="start" onAdd={(b) => addChildAt(b, 0)} trigger={trigger} />
+                    )}
+                  />
+                ) : null}
                 <div className={proposalEditorSectionChildEdgePadClasses(idx, children.length)}>
                 <SortableShell
                   id={child.id}
@@ -1665,21 +1719,19 @@ function SectionBlockFields({
                   />
                 </SortableShell>
                 </div>
+                <SectionChildInsertSlot
+                  placement={isLastChild ? "trailing" : "between"}
+                  menu={(trigger) => (
+                    <SectionInsertMenu
+                      align="start"
+                      onAdd={(b) => addChildAt(b, idx + 1)}
+                      trigger={trigger}
+                    />
+                  )}
+                />
               </div>
             );
           })}
-          {children.length > 0 ? (
-            <SectionChildInsertSlot
-              className="relative z-[3]"
-              menu={(trigger) => (
-                <SectionInsertMenu
-                  align="start"
-                  onAdd={(b) => addChildAt(b, children.length)}
-                  trigger={trigger}
-                />
-              )}
-            />
-          ) : null}
           </div>
         </SortableContext>
       </DndContext>
@@ -2441,17 +2493,25 @@ function AgreementBlockFields({
     ) : (
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onChildDragEnd}>
         <SortableContext items={sortableChildIds} strategy={verticalListSortingStrategy}>
-          <div className="group/section-stack flex flex-col">
+          <div
+            className={cn(
+              "group/section-stack flex flex-col",
+              children.length > 0 && PROPOSAL_EDITOR_SECTION_STACK_BOTTOM_PAD_CLASSES,
+            )}
+          >
           {children.map((child, idx) => {
             const isSelected = selectedBlockId === child.id;
             const supportsStyle = child.type === "packages";
+            const isLastChild = idx === children.length - 1;
             return (
               <div key={child.id}>
-                <SectionChildInsertSlot
-                  menu={(trigger) => (
-                    <SectionInsertMenu align="start" onAdd={(b) => addChildAt(b, idx)} trigger={trigger} />
-                  )}
-                />
+                {idx === 0 ? (
+                  <SectionChildInsertSlot
+                    menu={(trigger) => (
+                      <SectionInsertMenu align="start" onAdd={(b) => addChildAt(b, 0)} trigger={trigger} />
+                    )}
+                  />
+                ) : null}
                 <div className={proposalEditorSectionChildEdgePadClasses(idx, children.length)}>
                 <SortableShell
                   id={child.id}
@@ -2636,21 +2696,19 @@ function AgreementBlockFields({
                   />
                 </SortableShell>
                 </div>
+                <SectionChildInsertSlot
+                  placement={isLastChild ? "trailing" : "between"}
+                  menu={(trigger) => (
+                    <SectionInsertMenu
+                      align="start"
+                      onAdd={(b) => addChildAt(b, idx + 1)}
+                      trigger={trigger}
+                    />
+                  )}
+                />
               </div>
             );
           })}
-          {children.length > 0 ? (
-            <SectionChildInsertSlot
-              className="relative z-[3]"
-              menu={(trigger) => (
-                <SectionInsertMenu
-                  align="start"
-                  onAdd={(b) => addChildAt(b, children.length)}
-                  trigger={trigger}
-                />
-              )}
-            />
-          ) : null}
           </div>
         </SortableContext>
       </DndContext>

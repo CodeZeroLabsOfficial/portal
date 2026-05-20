@@ -62,13 +62,22 @@ export const PROPOSAL_DOCUMENT_ROOT_STACK_GAP_CLASSES = "flex flex-col gap-0 pb-
 /** Row gap when the two-column layout stacks on narrow viewports — keep flush; section padding carries vertical rhythm. */
 export const PROPOSAL_DOCUMENT_COLUMNS_ROW_GAP_CLASSES = "gap-y-0";
 
-/** Classes for the first/last child inside a stacked section (editor). */
+/**
+ * Top inset on the first child only. Bottom inset lives on the section stack *after* the
+ * trailing insert row so “add below” sits directly under the last block (e.g. a spacer).
+ */
 export function proposalEditorSectionChildEdgePadClasses(index: number, childCount: number): string {
-  if (childCount <= 0) return "";
-  return [
-    index === 0 ? PROPOSAL_EDITOR_SECTION_INNER_PAD_TOP_CLASSES : "",
-    index === childCount - 1 ? PROPOSAL_EDITOR_SECTION_INNER_PAD_BOTTOM_CLASSES : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
+  if (childCount <= 0 || index !== 0) return "";
+  return PROPOSAL_EDITOR_SECTION_INNER_PAD_TOP_CLASSES;
 }
+
+/** Bottom band inset on the section child stack (below trailing insert). */
+export const PROPOSAL_EDITOR_SECTION_STACK_BOTTOM_PAD_CLASSES =
+  PROPOSAL_EDITOR_SECTION_INNER_PAD_BOTTOM_CLASSES;
+
+/**
+ * Zero-height insert seam inside a section stack — pair with an absolutely positioned trigger
+ * so hover chrome floats without shifting siblings (same model as root {@link InsertBlockSlot}).
+ */
+export const PROPOSAL_EDITOR_SECTION_CHILD_INSERT_HOST_CLASSES =
+  `relative h-0 w-full overflow-visible ${PROPOSAL_EDITOR_INSERT_ROW_OVERLAP_CLASSES}`;
