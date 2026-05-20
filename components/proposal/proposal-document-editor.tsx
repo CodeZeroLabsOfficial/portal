@@ -4258,25 +4258,10 @@ export function ProposalDocumentEditor({
         value={editorTab}
         onValueChange={(value) => setEditorTab(value === "preview" ? "preview" : "edit")}
       >
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <TabsList>
-            <TabsTrigger value="edit">Edit blocks</TabsTrigger>
-            <TabsTrigger value="preview">Live preview</TabsTrigger>
-          </TabsList>
-          {proposalEditShellToolbar ? (
-            <div className="flex flex-wrap items-center justify-end gap-2 sm:shrink-0">
-              <ProposalCrmEditActions
-                shareToken={proposalEditShellToolbar.shareToken}
-                saving={saving}
-                sending={sending}
-                saveJustSucceeded={saveJustSucceeded}
-                publishJustSucceeded={publishJustSucceeded}
-                onSave={() => void save()}
-                onPublish={() => void send()}
-              />
-            </div>
-          ) : null}
-        </div>
+        <TabsList>
+          <TabsTrigger value="edit">Edit blocks</TabsTrigger>
+          <TabsTrigger value="preview">Live preview</TabsTrigger>
+        </TabsList>
         <TabsContent
           value="edit"
           className="mt-4 pb-[min(45vh,26rem)] sm:pb-40 md:pb-48"
