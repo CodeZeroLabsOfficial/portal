@@ -931,10 +931,8 @@ export interface ProposalRichTextProps {
   resizableHeight?: boolean;
   /** When true (default), the formatting bubble only appears for a non-empty text selection. */
   bubbleMenuRequiresTextSelection?: boolean;
-  /** When true, also show the bubble while this block is selected (row chrome or editor click). */
+  /** When true, also show the bubble while this block is selected (drag notch / row chrome). */
   showBubbleWhenBlockSelected?: boolean;
-  /** Selects the owning block when the user clicks the editable surface (no text range required). */
-  onActivateBlock?: () => void;
 }
 
 const TEXT_EDITOR_RESIZE_MIN_PX = 52;
@@ -1015,7 +1013,6 @@ export function ProposalRichText({
   resizableHeight = false,
   bubbleMenuRequiresTextSelection = true,
   showBubbleWhenBlockSelected = false,
-  onActivateBlock,
 }: ProposalRichTextProps) {
   const sectionChrome = useProposalSectionEditorChrome();
   const seamless = sectionChrome?.seamless ?? false;
@@ -1089,9 +1086,6 @@ export function ProposalRichText({
     [placeholder],
   );
 
-  const onActivateBlockRef = React.useRef(onActivateBlock);
-  onActivateBlockRef.current = onActivateBlock;
-
   const editor = useEditor({
     immediatelyRender: false,
     extensions,
@@ -1101,20 +1095,19 @@ export function ProposalRichText({
         class: editorRootClass,
         style: editorMinHeightStyle ?? "",
       },
-      handleDOMEvents: onActivateBlock
-        ? {
-            mousedown: (_view, event) => {
-              if (event.button !== 0) return false;
-              onActivateBlockRef.current?.();
-              return false;
-            },
-          }
-        : undefined,
     },
     onUpdate: ({ editor: ed }) => {
       onChange(ed.getHTML());
     },
   });
+
+  React.useEffect(() => {
+    if (!showBubbleWhenBlockSelected || !editor) return;
+    const id = requestAnimationFrame(() => {
+      if (!editor.isDestroyed && !editor.isFocused) editor.commands.focus("end");
+    });
+    return () => cancelAnimationFrame(id);
+  }, [showBubbleWhenBlockSelected, editor]);
 
   React.useEffect(() => {
     if (!editor) return;

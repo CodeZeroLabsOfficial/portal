@@ -764,6 +764,7 @@ function SortableShell({
         >
           <SectionChildDragHandle
             aria-label="Drag to reorder"
+            onPointerDown={() => onSelect()}
             {...attributes}
             {...listeners}
           />
@@ -1042,7 +1043,6 @@ function NestedColumnBlockFields({
           html={headerBlockEditorHtml(hb)}
           placeholder="Heading"
           showBubbleWhenBlockSelected={cellSelection?.selectedId === hb.id}
-          onActivateBlock={() => cellSelection?.onSelect(hb.id)}
           onChange={(html) =>
             patchNested({
               ...hb,
@@ -1062,7 +1062,6 @@ function NestedColumnBlockFields({
           resizableHeight
           placeholder={textPlaceholder}
           showBubbleWhenBlockSelected={cellSelection?.selectedId === block.id}
-          onActivateBlock={() => cellSelection?.onSelect(block.id)}
           onChange={(html) => patchNested({ ...block, html, body: undefined })}
         />
       );
@@ -2845,6 +2844,27 @@ function AgreementBlockFields({
   );
 }
 
+/** Keeps editor clicks from selecting the row — use the drag notch or block chrome instead. */
+function SectionChildEditableSurface({
+  seamless,
+  children,
+}: {
+  seamless: boolean;
+  children: React.ReactNode;
+}) {
+  if (!seamless) return <>{children}</>;
+  return (
+    <div
+      data-proposal-section-child-content
+      className="min-w-0"
+      onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+    >
+      {children}
+    </div>
+  );
+}
+
 function BlockFields({
   block,
   onChange,
@@ -2900,36 +2920,38 @@ function BlockFields({
     case "header": {
       const b = block as HeaderBlock;
       return (
-        <ProposalRichText
-          key={b.id}
-          variant="header"
-          html={headerBlockEditorHtml(b)}
-          placeholder="Heading"
-          showBubbleWhenBlockSelected={selection?.selectedId === b.id}
-          onActivateBlock={() => selection?.onSelect(b.id)}
-          onChange={(html) =>
-            patch({
-              ...b,
-              html,
-              text: proposalRichHtmlToPlainText(html) || b.text,
-            })
-          }
-        />
+        <SectionChildEditableSurface seamless={seamlessSection}>
+          <ProposalRichText
+            key={b.id}
+            variant="header"
+            html={headerBlockEditorHtml(b)}
+            placeholder="Heading"
+            showBubbleWhenBlockSelected={selection?.selectedId === b.id}
+            onChange={(html) =>
+              patch({
+                ...b,
+                html,
+                text: proposalRichHtmlToPlainText(html) || b.text,
+              })
+            }
+          />
+        </SectionChildEditableSurface>
       );
     }
     case "text": {
       const b = block as TextBlock;
       return (
-        <ProposalRichText
-          key={b.id}
-          html={b.html ?? (b.body ? `<p>${escapeHtml(b.body)}</p>` : "<p></p>")}
-          editorMinHeightPx={b.editorMinHeightPx}
-          onEditorMinHeightPxChange={(next) => patch({ ...b, editorMinHeightPx: next })}
-          resizableHeight
-          showBubbleWhenBlockSelected={selection?.selectedId === b.id}
-          onActivateBlock={() => selection?.onSelect(b.id)}
-          onChange={(html) => patch({ ...b, html, body: undefined })}
-        />
+        <SectionChildEditableSurface seamless={seamlessSection}>
+          <ProposalRichText
+            key={b.id}
+            html={b.html ?? (b.body ? `<p>${escapeHtml(b.body)}</p>` : "<p></p>")}
+            editorMinHeightPx={b.editorMinHeightPx}
+            onEditorMinHeightPxChange={(next) => patch({ ...b, editorMinHeightPx: next })}
+            resizableHeight
+            showBubbleWhenBlockSelected={selection?.selectedId === b.id}
+            onChange={(html) => patch({ ...b, html, body: undefined })}
+          />
+        </SectionChildEditableSurface>
       );
     }
     case "image": {
