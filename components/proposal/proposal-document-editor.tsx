@@ -4275,32 +4275,6 @@ export function ProposalDocumentEditor({
                 onPublish={() => void send()}
               />
             </div>
-          ) : isTemplate && templateId ? (
-            <div className="flex flex-wrap items-center justify-end gap-2 sm:shrink-0">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1.5 text-muted-foreground hover:text-foreground"
-                asChild
-              >
-                <Link
-                  href={`/admin/templates/${templateId}/preview`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <ExternalLink className="h-4 w-4" aria-hidden />
-                  Preview
-                </Link>
-              </Button>
-              <SavePublishActions
-                saving={saving}
-                sending={sending}
-                saveJustSucceeded={saveJustSucceeded}
-                publishJustSucceeded={publishJustSucceeded}
-                onSave={() => void save()}
-                onPublish={() => void publishTemplate()}
-              />
-            </div>
           ) : null}
         </div>
         <TabsContent
