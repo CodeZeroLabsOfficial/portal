@@ -1042,6 +1042,7 @@ function NestedColumnBlockFields({
           variant="header"
           html={headerBlockEditorHtml(hb)}
           placeholder="Heading"
+          showBubbleWhenBlockSelected={cellSelection?.selectedId === hb.id}
           onChange={(html) =>
             patchNested({
               ...hb,
@@ -1060,6 +1061,7 @@ function NestedColumnBlockFields({
           onEditorMinHeightPxChange={(next) => patchNested({ ...block, editorMinHeightPx: next })}
           resizableHeight
           placeholder={textPlaceholder}
+          showBubbleWhenBlockSelected={cellSelection?.selectedId === block.id}
           onChange={(html) => patchNested({ ...block, html, body: undefined })}
         />
       );
@@ -2924,6 +2926,7 @@ function BlockFields({
             variant="header"
             html={headerBlockEditorHtml(b)}
             placeholder="Heading"
+            showBubbleWhenBlockSelected={selection?.selectedId === b.id}
             onChange={(html) =>
               patch({
                 ...b,
@@ -2945,6 +2948,7 @@ function BlockFields({
             editorMinHeightPx={b.editorMinHeightPx}
             onEditorMinHeightPxChange={(next) => patch({ ...b, editorMinHeightPx: next })}
             resizableHeight
+            showBubbleWhenBlockSelected={selection?.selectedId === b.id}
             onChange={(html) => patch({ ...b, html, body: undefined })}
           />
         </SectionChildEditableSurface>

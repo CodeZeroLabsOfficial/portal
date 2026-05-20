@@ -931,6 +931,8 @@ export interface ProposalRichTextProps {
   resizableHeight?: boolean;
   /** When true (default), the formatting bubble only appears for a non-empty text selection. */
   bubbleMenuRequiresTextSelection?: boolean;
+  /** When true, also show the bubble while this block is selected via row chrome (border / drag notch). */
+  showBubbleWhenBlockSelected?: boolean;
 }
 
 const TEXT_EDITOR_RESIZE_MIN_PX = 52;
@@ -1010,6 +1012,7 @@ export function ProposalRichText({
   onEditorMinHeightPxChange,
   resizableHeight = false,
   bubbleMenuRequiresTextSelection = true,
+  showBubbleWhenBlockSelected = false,
 }: ProposalRichTextProps) {
   const sectionChrome = useProposalSectionEditorChrome();
   const seamless = sectionChrome?.seamless ?? false;
@@ -1110,6 +1113,14 @@ export function ProposalRichText({
     });
   }, [editor, editorRootClass, editorMinHeightStyle]);
 
+  React.useEffect(() => {
+    if (!showBubbleWhenBlockSelected || !editor) return;
+    const id = requestAnimationFrame(() => {
+      if (!editor.isDestroyed && !editor.isFocused) editor.commands.focus("end");
+    });
+    return () => cancelAnimationFrame(id);
+  }, [showBubbleWhenBlockSelected, editor]);
+
   if (!editor) {
     return (
       <div
@@ -1146,8 +1157,9 @@ export function ProposalRichText({
         }}
         shouldShow={({ editor: ed, from, to }) => {
           if (!ed.isEditable) return false;
-          if (bubbleMenuRequiresTextSelection) return from !== to;
           if (from !== to) return true;
+          if (showBubbleWhenBlockSelected) return true;
+          if (bubbleMenuRequiresTextSelection) return false;
           if (headerVariant && ed.isActive("heading")) return true;
           return ed.isFocused;
         }}
