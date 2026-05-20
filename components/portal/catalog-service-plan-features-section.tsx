@@ -96,10 +96,10 @@ export function CatalogServicePlanFeaturesSection({
               {features.map((feat, idx) => (
                 <li
                   key={`${idx}-${feat}`}
-                  className="group/feat flex items-start gap-3"
+                  className="group/feat flex items-center gap-3"
                 >
                     <span
-                      className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
                       aria-hidden
                     >
                       <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
@@ -130,7 +130,7 @@ export function CatalogServicePlanFeaturesSection({
                       type="button"
                       disabled={saving}
                       aria-label={`Remove feature ${idx + 1}`}
-                      className="mt-0.5 shrink-0 rounded-md p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-hover/feat:opacity-100"
+                      className="shrink-0 rounded-md p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-hover/feat:opacity-100"
                       onClick={() => void persist(features.filter((_, i) => i !== idx))}
                     >
                       <Trash2 className="h-4 w-4" aria-hidden />
