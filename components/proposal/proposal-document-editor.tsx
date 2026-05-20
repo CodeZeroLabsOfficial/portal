@@ -144,7 +144,11 @@ import {
 } from "@/lib/proposal-public-layout";
 import { contractTemplateDocumentToHtml } from "@/lib/contract-template-document";
 import { saveProposalDocumentAction, sendProposalAction } from "@/server/actions/proposal-builder";
-import { saveProposalTemplateAction } from "@/server/actions/proposal-templates";
+import {
+  saveProposalTemplateAction,
+  setProposalTemplateStageAction,
+} from "@/server/actions/proposal-templates";
+import type { ProposalTemplateStage } from "@/types/proposal-template";
 import { saveContractTemplateAction } from "@/server/actions/contract-templates";
 import { DeleteContractTemplateButton } from "@/components/portal/delete-contract-template-button";
 import { ContractTemplateAgreementPreview } from "@/components/portal/contract-template-agreement-preview";
@@ -3507,8 +3511,7 @@ export type ProposalEditShellToolbarProps = {
   shareToken: string | null;
 };
 
-type ProposalCrmEditActionsProps = {
-  shareToken: string | null;
+type SavePublishActionsProps = {
   saving: boolean;
   sending: boolean;
   saveJustSucceeded: boolean;
@@ -3517,35 +3520,17 @@ type ProposalCrmEditActionsProps = {
   onPublish: () => void;
 };
 
-/** Preview, Save, and Publish — shared by the proposal detail toolbar and builder tab row. */
-function ProposalCrmEditActions({
-  shareToken,
+/** Save (ghost) + Publish (primary) — proposal CRM editor and proposal template builder. */
+function SavePublishActions({
   saving,
   sending,
   saveJustSucceeded,
   publishJustSucceeded,
   onSave,
   onPublish,
-}: ProposalCrmEditActionsProps) {
+}: SavePublishActionsProps) {
   return (
     <>
-      {shareToken ? (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="gap-1.5 text-muted-foreground hover:text-foreground"
-          asChild
-        >
-          <Link
-            href={`/p/${encodeURIComponent(shareToken)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <ExternalLink className="h-4 w-4" aria-hidden />
-            Preview
-          </Link>
-        </Button>
-      ) : null}
       <Button
         type="button"
         variant="ghost"
@@ -3585,6 +3570,51 @@ function ProposalCrmEditActions({
   );
 }
 
+type ProposalCrmEditActionsProps = SavePublishActionsProps & {
+  shareToken: string | null;
+};
+
+/** Preview, Save, and Publish — shared by the proposal detail toolbar and builder tab row. */
+function ProposalCrmEditActions({
+  shareToken,
+  saving,
+  sending,
+  saveJustSucceeded,
+  publishJustSucceeded,
+  onSave,
+  onPublish,
+}: ProposalCrmEditActionsProps) {
+  return (
+    <>
+      {shareToken ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="gap-1.5 text-muted-foreground hover:text-foreground"
+          asChild
+        >
+          <Link
+            href={`/p/${encodeURIComponent(shareToken)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <ExternalLink className="h-4 w-4" aria-hidden />
+            Preview
+          </Link>
+        </Button>
+      ) : null}
+      <SavePublishActions
+        saving={saving}
+        sending={sending}
+        saveJustSucceeded={saveJustSucceeded}
+        publishJustSucceeded={publishJustSucceeded}
+        onSave={onSave}
+        onPublish={onPublish}
+      />
+    </>
+  );
+}
+
 export interface ProposalDocumentEditorProps {
   variant?: "proposal" | "template" | "contract-template";
   proposalId?: string;
@@ -3592,6 +3622,8 @@ export interface ProposalDocumentEditorProps {
   contractTemplateId?: string;
   initialTemplateName?: string;
   initialTemplateDescription?: string;
+  /** Proposal templates only — draft vs published (CRM template list). */
+  initialTemplateStage?: ProposalTemplateStage;
   /** Contract templates only — default buyer modal title. */
   initialAgreementTitle?: string;
   initialDocument: ProposalDocument;
@@ -3612,6 +3644,7 @@ export function ProposalDocumentEditor({
   contractTemplateId,
   initialTemplateName = "",
   initialTemplateDescription = "",
+  initialTemplateStage = "draft",
   initialAgreementTitle = "",
   initialDocument,
   initialStatus = "draft",
@@ -3737,7 +3770,14 @@ export function ProposalDocumentEditor({
         document: doc,
       });
       setSaving(false);
-      setMessage(res.ok ? "Template saved." : res.message);
+      setMessage(res.ok ? null : res.message);
+      if (res.ok) {
+        setSaveJustSucceeded(true);
+        saveSuccessResetRef.current = setTimeout(() => {
+          saveSuccessResetRef.current = null;
+          setSaveJustSucceeded(false);
+        }, 1800);
+      }
       return;
     }
     if (!proposalId) {
@@ -3770,6 +3810,41 @@ export function ProposalDocumentEditor({
     if (!isNamedTemplateShell || (!templateId && !contractTemplateId)) return;
     setTemplateNameEditing(false);
     await save();
+  }
+
+  async function publishTemplate() {
+    if (!isTemplate || !templateId) return;
+    if (publishSuccessResetRef.current) {
+      clearTimeout(publishSuccessResetRef.current);
+      publishSuccessResetRef.current = null;
+    }
+    setPublishJustSucceeded(false);
+    setSending(true);
+    setMessage(null);
+    const saved = await saveProposalTemplateAction({
+      templateId,
+      name: templateName.trim() || "Untitled template",
+      description: initialTemplateDescription?.trim() || undefined,
+      title: documentTitle,
+      document: doc,
+    });
+    if (!saved.ok) {
+      setSending(false);
+      setMessage(saved.message);
+      return;
+    }
+    const staged = await setProposalTemplateStageAction(templateId, "published");
+    setSending(false);
+    if (!staged.ok) {
+      setMessage(staged.message);
+      return;
+    }
+    setMessage(null);
+    setPublishJustSucceeded(true);
+    publishSuccessResetRef.current = setTimeout(() => {
+      publishSuccessResetRef.current = null;
+      setPublishJustSucceeded(false);
+    }, 1800);
   }
 
   async function send() {
@@ -4055,10 +4130,21 @@ export function ProposalDocumentEditor({
                   Preview
                 </Link>
               </Button>
-              <Button type="button" size="sm" disabled={saving} onClick={() => void save()} className="gap-2">
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                Save
-              </Button>
+              {isTemplate ? (
+                <SavePublishActions
+                  saving={saving}
+                  sending={sending}
+                  saveJustSucceeded={saveJustSucceeded}
+                  publishJustSucceeded={publishJustSucceeded}
+                  onSave={() => void save()}
+                  onPublish={() => void publishTemplate()}
+                />
+              ) : (
+                <Button type="button" size="sm" disabled={saving} onClick={() => void save()} className="gap-2">
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  Save
+                </Button>
+              )}
             </div>
           </div>
           {isContractTemplate ? (
@@ -4075,6 +4161,11 @@ export function ProposalDocumentEditor({
             </div>
           ) : null}
           {message ? <span className="block text-sm text-muted-foreground">{message}</span> : null}
+          {isTemplate && initialTemplateStage === "draft" ? (
+            <p className="text-xs text-muted-foreground">
+              Publish marks the template as ready to use when creating proposals from CRM.
+            </p>
+          ) : null}
         </>
       ) : proposalEditShellToolbar ? (
         <>
@@ -4182,6 +4273,32 @@ export function ProposalDocumentEditor({
                 publishJustSucceeded={publishJustSucceeded}
                 onSave={() => void save()}
                 onPublish={() => void send()}
+              />
+            </div>
+          ) : isTemplate && templateId ? (
+            <div className="flex flex-wrap items-center justify-end gap-2 sm:shrink-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 text-muted-foreground hover:text-foreground"
+                asChild
+              >
+                <Link
+                  href={`/admin/templates/${templateId}/preview`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <ExternalLink className="h-4 w-4" aria-hidden />
+                  Preview
+                </Link>
+              </Button>
+              <SavePublishActions
+                saving={saving}
+                sending={sending}
+                saveJustSucceeded={saveJustSucceeded}
+                publishJustSucceeded={publishJustSucceeded}
+                onSave={() => void save()}
+                onPublish={() => void publishTemplate()}
               />
             </div>
           ) : null}
