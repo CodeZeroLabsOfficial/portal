@@ -126,7 +126,13 @@ export function ProposalsListPanel({ proposals, localityTimeZone }: ProposalsLis
     if (!q) return sorted;
     return sorted.filter((p) => {
       const stage = proposalHubStageDisplay(p);
-      const hay = [p.accountCompanyName, p.title, stage.label, formatLastEditedInLocality(lastEditedMs(p), localityTimeZone)]
+      const hay = [
+        p.accountCompanyName,
+        p.contactName,
+        p.title,
+        stage.label,
+        formatLastEditedInLocality(lastEditedMs(p), localityTimeZone),
+      ]
         .join(" ")
         .toLowerCase();
       return hay.includes(q);
@@ -179,9 +185,9 @@ export function ProposalsListPanel({ proposals, localityTimeZone }: ProposalsLis
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search account, title, status, or date…"
+              placeholder="Search account, contact, title, status, or date…"
               className="h-9 rounded-full border-border/80 bg-background/60 pl-9 text-[14px] text-foreground placeholder:text-muted-foreground"
-              aria-label="Search proposals by account, title, status, or date"
+              aria-label="Search proposals by account, contact, title, status, or date"
             />
           </div>
           <Button
@@ -199,10 +205,11 @@ export function ProposalsListPanel({ proposals, localityTimeZone }: ProposalsLis
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[800px] text-left text-[13px]">
+        <table className="w-full min-w-[920px] text-left text-[13px]">
           <thead>
             <tr className="border-b border-border text-muted-foreground">
               <th className="px-4 py-2.5 font-medium">Account name</th>
+              <th className="px-4 py-2.5 font-medium">Contact</th>
               <th className="px-4 py-2.5 font-medium">Status</th>
               <th className="min-w-[180px] px-4 py-2.5 font-medium">Last edited</th>
               <th className="w-[168px] px-2 py-2.5 text-center font-medium">Actions</th>
@@ -211,7 +218,7 @@ export function ProposalsListPanel({ proposals, localityTimeZone }: ProposalsLis
           <tbody className="text-foreground">
             {sorted.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-4 py-10 text-center text-sm text-muted-foreground">
+                <td colSpan={5} className="px-4 py-10 text-center text-sm text-muted-foreground">
                   <p className="mx-auto max-w-md leading-relaxed">
                     No proposals yet. Create one from a contact or opportunity in the CRM.
                   </p>
@@ -219,7 +226,7 @@ export function ProposalsListPanel({ proposals, localityTimeZone }: ProposalsLis
               </tr>
             ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-4 py-10 text-center text-sm text-muted-foreground">
+                <td colSpan={5} className="px-4 py-10 text-center text-sm text-muted-foreground">
                   No proposals match your search.
                 </td>
               </tr>
@@ -238,13 +245,29 @@ export function ProposalsListPanel({ proposals, localityTimeZone }: ProposalsLis
                       transition={{ duration: 0.18, delay: index * 0.012 }}
                       className="border-b border-border/60 last:border-0"
                     >
-                      <td className="max-w-[280px] px-4 py-3 align-middle">
+                      <td className="max-w-[220px] px-4 py-3 align-middle">
                         <Link
                           href={editHref(p)}
                           className="line-clamp-2 font-medium text-foreground underline-offset-4 hover:underline"
                         >
                           {p.accountCompanyName}
                         </Link>
+                      </td>
+                      <td className="max-w-[200px] px-4 py-3 align-middle">
+                        {p.contactName.trim() && p.contactName !== "—" ? (
+                          p.customerId ? (
+                            <Link
+                              href={`/admin/customers/${p.customerId}`}
+                              className="line-clamp-2 font-medium text-foreground underline-offset-4 hover:underline"
+                            >
+                              {p.contactName}
+                            </Link>
+                          ) : (
+                            <span className="line-clamp-2 font-medium text-foreground">{p.contactName}</span>
+                          )
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-3 align-middle">
                         <Badge

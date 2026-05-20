@@ -207,6 +207,8 @@ export interface PackagesBlock extends ProposalBlockBase {
   background?: SectionBackground;
   currency: string;
   title?: string;
+  /** Rich section heading (TipTap); public prefers this over {@link title} when set. */
+  titleHtml?: string;
   /** Toggle label for the 12-month term (default in UI: “12 months”). */
   plan12Label?: string;
   /** Toggle label for the 24-month term (default in UI: “24 months”). */
@@ -562,7 +564,8 @@ export interface ProposalRecord {
   updatedAt: number;
 }
 
-/** Staff proposals hub row — account label from linked CRM customer (see pipeline `accountCompanyName`). */
+/** Staff proposals hub row — account/contact labels from linked CRM customer. */
 export type ProposalHubListRow = ProposalRecord & {
   accountCompanyName: string;
+  contactName: string;
 };

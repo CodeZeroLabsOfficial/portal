@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { PointerEvent, ReactNode } from "react";
 import type { IconBlock } from "@/types/proposal";
 import { cn } from "@/lib/utils";
 import { resolveProposalPresetIcon } from "@/lib/proposal-icon-presets";
@@ -16,10 +16,23 @@ export type ProposalIconBlockDisplayProps = {
    * The slot is laid out in the same flex column as the public caption with `min-w-0 flex-1`.
    */
   labelSlot?: ReactNode;
+  /** Floated above the icon glyph in the builder (e.g. icon picker bubble). */
+  iconToolbarSlot?: ReactNode;
+  /** Builder: highlight ring on the glyph when it is the active target. */
+  glyphChromeActive?: boolean;
+  /** Builder: pointer down on the glyph (e.g. show icon picker bubble). */
+  onGlyphPointerDown?: (e: PointerEvent) => void;
 };
 
 /** Public + builder: icon/emoji and caption with hanging-indent multi-line caption layout. */
-export function ProposalIconBlockDisplay({ block, className, labelSlot }: ProposalIconBlockDisplayProps) {
+export function ProposalIconBlockDisplay({
+  block,
+  className,
+  labelSlot,
+  iconToolbarSlot,
+  glyphChromeActive = false,
+  onGlyphPointerDown,
+}: ProposalIconBlockDisplayProps) {
   const IconGlyph = resolveProposalPresetIcon(block.iconName);
   const emoji = block.emoji?.trim();
   const hasGlyph = Boolean(IconGlyph || emoji);
@@ -48,12 +61,27 @@ export function ProposalIconBlockDisplay({ block, className, labelSlot }: Propos
   return (
     <div className={cn("flex items-start gap-3 py-2", className)}>
       {hasGlyph ? (
-        <div className="flex shrink-0 justify-center leading-none" aria-hidden>
-          {IconGlyph ? (
-            <IconGlyph className="h-10 w-10 text-foreground" />
-          ) : (
-            <span className="block translate-y-px text-4xl leading-none">{emoji}</span>
+        <div
+          className={cn(
+            "relative shrink-0 rounded-md",
+            glyphChromeActive &&
+              "ring-1 ring-primary/45 ring-offset-2 ring-offset-background",
+            onGlyphPointerDown && "cursor-pointer",
           )}
+          onPointerDown={onGlyphPointerDown}
+        >
+          {iconToolbarSlot ? (
+            <div className="pointer-events-none absolute bottom-full left-1/2 z-30 mb-1.5 -translate-x-1/2 whitespace-nowrap">
+              <div className="pointer-events-auto">{iconToolbarSlot}</div>
+            </div>
+          ) : null}
+          <div className="flex shrink-0 justify-center leading-none" aria-hidden>
+            {IconGlyph ? (
+              <IconGlyph className="h-10 w-10 text-foreground" />
+            ) : (
+              <span className="block translate-y-px text-4xl leading-none">{emoji}</span>
+            )}
+          </div>
         </div>
       ) : null}
       {captionEl}

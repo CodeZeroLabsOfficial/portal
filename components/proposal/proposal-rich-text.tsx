@@ -929,6 +929,8 @@ export interface ProposalRichTextProps {
   onEditorMinHeightPxChange?: (next: number | undefined) => void;
   /** Show a bottom-right drag handle to change `editorMinHeightPx` (text blocks in the builder). */
   resizableHeight?: boolean;
+  /** Column cells: only show the bubble when a non-empty text range is selected. */
+  bubbleMenuRequiresTextSelection?: boolean;
 }
 
 const TEXT_EDITOR_RESIZE_MIN_PX = 52;
@@ -1007,6 +1009,7 @@ export function ProposalRichText({
   editorMinHeightPx,
   onEditorMinHeightPxChange,
   resizableHeight = false,
+  bubbleMenuRequiresTextSelection = false,
 }: ProposalRichTextProps) {
   const sectionChrome = useProposalSectionEditorChrome();
   const seamless = sectionChrome?.seamless ?? false;
@@ -1137,6 +1140,7 @@ export function ProposalRichText({
         }}
         shouldShow={({ editor: ed, from, to }) => {
           if (!ed.isEditable) return false;
+          if (bubbleMenuRequiresTextSelection) return from !== to;
           if (from !== to) return true;
           if (headerVariant && ed.isActive("heading")) return true;
           return ed.isFocused;

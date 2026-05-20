@@ -46,9 +46,18 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ProposalAccordionExpandSurface } from "@/components/proposal/proposal-accordion-expand-surface";
+import { ProposalRichText } from "@/components/proposal/proposal-rich-text";
+import { escapeHtml } from "@/lib/escape-html";
+import { proposalRichHtmlToPlainText } from "@/lib/proposal-rich-plain-text";
 
 function newId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `b-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function packagesTitleEditorHtml(block: PackagesBlock): string {
+  if (block.titleHtml?.trim()) return block.titleHtml;
+  const t = (block.title ?? "").trim() || "Packages";
+  return `<h1>${escapeHtml(t)}</h1>`;
 }
 
 /* -----------------------------------------------------------------------------
@@ -433,21 +442,24 @@ export function PackagesInlineEditor({ block, onChange }: PackagesInlineEditorPr
     <div className="relative w-full min-w-0 text-foreground">
       {/* Header: title + term toggle. The remove icon now lives in the floating toolbar. */}
       <div className={cn(isVisual ? "text-center" : "text-left")}>
-        <InlineText
-          tone="light"
-          value={block.title ?? ""}
-          placeholder="Section title"
-          onChange={(v) => patch({ title: v })}
-          ariaLabel="Section title"
-          className={cn(
-            "inline-block text-3xl font-semibold tracking-tight text-foreground",
-            isVisual && "text-center",
-          )}
-          inputClassName={cn(
-            "inline-block text-3xl font-semibold tracking-tight text-foreground",
-            isVisual && "text-center",
-          )}
-        />
+        <div className="min-w-0" onPointerDown={(e) => e.stopPropagation()}>
+          <ProposalRichText
+            key={`${block.id}-title`}
+            variant="header"
+            html={packagesTitleEditorHtml(block)}
+            placeholder="Section title"
+            className={cn(
+              "!border-0 !bg-transparent !px-0 !py-0 !shadow-none",
+              isVisual && "[&_.tiptap]:text-center",
+            )}
+            onChange={(html) =>
+              patch({
+                titleHtml: html,
+                title: proposalRichHtmlToPlainText(html) || block.title,
+              })
+            }
+          />
+        </div>
 
         <div
           className={cn(

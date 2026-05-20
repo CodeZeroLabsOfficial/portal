@@ -6,7 +6,6 @@ import { ProposalIconBlockDisplay } from "@/components/proposal/proposal-icon-bl
 import { ProposalRichText } from "@/components/proposal/proposal-rich-text";
 import { escapeHtml } from "@/lib/escape-html";
 import { proposalRichHtmlToPlainText } from "@/lib/proposal-rich-plain-text";
-import { cn } from "@/lib/utils";
 
 function iconBlockLabelEditorHtml(block: IconBlock): string {
   if (block.labelHtml?.trim()) return block.labelHtml;
@@ -23,29 +22,40 @@ export function ProposalIconBlockEditorRow({
   onChange,
   isSelected,
   onSelect,
+  toolbar,
 }: {
   block: IconBlock;
   onChange: (next: IconBlock) => void;
   isSelected: boolean;
   onSelect: () => void;
+  /** Icon picker bubble — anchored above the glyph by {@link ProposalIconBlockDisplay}. */
+  toolbar?: React.ReactNode;
 }) {
+  const [glyphActive, setGlyphActive] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!isSelected) setGlyphActive(false);
+  }, [isSelected]);
+
   return (
-    <div
-      className={cn(
-        "-mx-1 cursor-pointer rounded-md px-1 py-0.5 transition-shadow",
-        isSelected
-          ? "ring-1 ring-primary/45 ring-offset-2 ring-offset-background"
-          : "hover:ring-1 hover:ring-border/60",
-      )}
-      onPointerDown={() => onSelect()}
-    >
+    <div className="-mx-1 rounded-md px-1 py-0.5">
       <ProposalIconBlockDisplay
         block={block}
+        glyphChromeActive={glyphActive}
+        onGlyphPointerDown={(e) => {
+          e.stopPropagation();
+          setGlyphActive(true);
+          onSelect();
+        }}
+        iconToolbarSlot={glyphActive ? toolbar : undefined}
         labelSlot={
           <div
             className="min-w-0 flex-1"
-            onPointerDown={(e) => e.stopPropagation()}
-            onFocusCapture={() => onSelect()}
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              setGlyphActive(false);
+              onSelect();
+            }}
           >
             <ProposalRichText
               key={block.id}
@@ -53,6 +63,7 @@ export function ProposalIconBlockEditorRow({
               html={iconBlockLabelEditorHtml(block)}
               placeholder="Add a description…"
               className="!border-0 !bg-transparent !px-0 !py-0 !shadow-none"
+              bubbleMenuRequiresTextSelection
               onChange={(html) =>
                 onChange({
                   ...block,

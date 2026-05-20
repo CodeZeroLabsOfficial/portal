@@ -145,6 +145,8 @@ function mapContentBlock(block: ProposalContentBlock, ctx: ProposalTokenContext)
         ...block,
         currency: replaceProposalTokens(block.currency, ctx).toLowerCase().slice(0, 3) || block.currency,
         title: block.title !== undefined ? replaceProposalTokens(block.title, ctx) : block.title,
+        titleHtml:
+          block.titleHtml !== undefined ? replaceProposalTokens(block.titleHtml, ctx) : block.titleHtml,
         plan12Label:
           block.plan12Label !== undefined ? replaceProposalTokens(block.plan12Label, ctx) : block.plan12Label,
         plan24Label:

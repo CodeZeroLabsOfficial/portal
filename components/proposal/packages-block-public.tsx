@@ -22,6 +22,8 @@ import { saveProposalPackageSelectionAction } from "@/server/actions/proposal-bu
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ProposalAccordionExpandSurface } from "@/components/proposal/proposal-accordion-expand-surface";
+import { PROPOSAL_INLINE_HEADING_RICH_DISPLAY_CLASS } from "@/lib/proposal-inline-heading-rich-display";
+import { sanitizeProposalHtml } from "@/lib/sanitize-proposal-html";
 
 export interface PackagesBlockPublicProps {
   block: PackagesBlock;
@@ -178,9 +180,25 @@ export function PackagesBlockPublic({
       className={cn("w-full min-w-0 text-foreground", !interactive && "opacity-95")}
     >
       <div className={cn(isVisual ? "text-center" : "text-left")}>
-        <h1 className="scroll-mt-20 text-3xl font-semibold tracking-tight text-foreground">
-          {title}
-        </h1>
+        {(block.titleHtml ?? "").trim() ? (
+          <div
+            className={cn(
+              PROPOSAL_INLINE_HEADING_RICH_DISPLAY_CLASS,
+              "scroll-mt-20",
+              isVisual && "text-center",
+            )}
+            dangerouslySetInnerHTML={{ __html: sanitizeProposalHtml(block.titleHtml!) }}
+          />
+        ) : (
+          <h1
+            className={cn(
+              "scroll-mt-20 text-3xl font-semibold tracking-tight text-foreground",
+              isVisual && "text-center",
+            )}
+          >
+            {title}
+          </h1>
+        )}
 
         <div
           className={cn(

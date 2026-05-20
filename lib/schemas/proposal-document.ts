@@ -308,6 +308,7 @@ const packagesBlockSchema = z.object({
   type: z.literal("packages"),
   currency: z.string().min(1).default("aud"),
   title: z.string().optional(),
+  titleHtml: z.string().optional(),
   plan12Label: z.string().optional(),
   plan24Label: z.string().optional(),
   tiers: z.array(packageTierSchema).default([]),

@@ -195,6 +195,52 @@ function newId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `b-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+/** Suppress columns block toolbar while a nested column cell is being edited. */
+function useColumnsInnerCellChrome() {
+  const [activeByBlockId, setActiveByBlockId] = React.useState<Record<string, string>>({});
+  const clearRef = React.useRef<Record<string, () => void>>({});
+
+  const reportInnerCell = React.useCallback((blockId: string, cellId: string | null) => {
+    setActiveByBlockId((prev) => {
+      if (!cellId) {
+        if (!(blockId in prev)) return prev;
+        const next = { ...prev };
+        delete next[blockId];
+        return next;
+      }
+      return { ...prev, [blockId]: cellId };
+    });
+  }, []);
+
+  const registerClear = React.useCallback((blockId: string, clear: (() => void) | null) => {
+    if (clear) clearRef.current[blockId] = clear;
+    else delete clearRef.current[blockId];
+  }, []);
+
+  const clearBlockShellSelection = React.useCallback(
+    (blockId: string) => {
+      clearRef.current[blockId]?.();
+      reportInnerCell(blockId, null);
+    },
+    [reportInnerCell],
+  );
+
+  const isInnerCellActive = React.useCallback(
+    (blockId: string) => Boolean(activeByBlockId[blockId]),
+    [activeByBlockId],
+  );
+
+  const callbacksFor = React.useCallback(
+    (blockId: string) => ({
+      onInnerCellActiveChange: (cellId: string | null) => reportInnerCell(blockId, cellId),
+      registerClearCellSelection: (clear: (() => void) | null) => registerClear(blockId, clear),
+    }),
+    [reportInnerCell, registerClear],
+  );
+
+  return { isInnerCellActive, clearBlockShellSelection, callbacksFor };
+}
+
 function headerBlockEditorHtml(block: HeaderBlock): string {
   if (block.html?.trim()) return block.html;
   const t = (block.text ?? "").trim() || "Section heading";
@@ -618,6 +664,8 @@ function SortableShell({
   flush = false,
   /** Qwilr-style row inside a section: left drag notch + inline toolbar when selected. */
   layout = "default",
+  /** Hide block toolbar while editing nested content (e.g. column cell rich text). */
+  suppressToolbar = false,
 }: {
   id: string;
   children: React.ReactNode;
@@ -630,6 +678,7 @@ function SortableShell({
   toolbarShowOnHover?: boolean;
   flush?: boolean;
   layout?: "default" | "section-child";
+  suppressToolbar?: boolean;
 }) {
   const [hovered, setHovered] = React.useState(false);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
@@ -641,7 +690,9 @@ function SortableShell({
     transform: CSS.Transform.toString(transform),
     transition,
   };
-  const showToolbar = Boolean(toolbar && (selected || (toolbarShowOnHover && hovered)));
+  const showToolbar = Boolean(
+    toolbar && !suppressToolbar && (selected || (toolbarShowOnHover && hovered)),
+  );
   const sectionChild = layout === "section-child";
   const showSectionDragGutter = sectionChild && (hovered || isDragging);
 
@@ -986,6 +1037,7 @@ function NestedColumnBlockFields({
           variant="header"
           html={headerBlockEditorHtml(hb)}
           placeholder="Heading"
+          bubbleMenuRequiresTextSelection
           onChange={(html) =>
             patchNested({
               ...hb,
@@ -1004,6 +1056,7 @@ function NestedColumnBlockFields({
           onEditorMinHeightPxChange={(next) => patchNested({ ...block, editorMinHeightPx: next })}
           resizableHeight
           placeholder={textPlaceholder}
+          bubbleMenuRequiresTextSelection
           onChange={(html) => patchNested({ ...block, html, body: undefined })}
         />
       );
@@ -1112,6 +1165,8 @@ function ColumnsBlockFields({
   resizeLayoutActive,
   onExitResizeLayout,
   ancestorSelectedBlockId,
+  onInnerCellActiveChange,
+  registerClearCellSelection,
 }: {
   block: ColumnsBlock;
   onChange: (next: ColumnsBlock) => void;
@@ -1119,6 +1174,10 @@ function ColumnsBlockFields({
   onExitResizeLayout?: () => void;
   /** Section/root selected block id — used to clear inner column cell selection when focus leaves this columns block. */
   ancestorSelectedBlockId: string | null;
+  /** Notifies parent when a column cell (text, icon, etc.) is active — suppresses block toolbar. */
+  onInnerCellActiveChange?: (cellId: string | null) => void;
+  /** Parent can clear cell selection when the columns block shell is selected. */
+  registerClearCellSelection?: (clear: (() => void) | null) => void;
 }) {
   const columnCount = block.stacks.length as ColumnLayoutCount;
   const resizeMode = Boolean(resizeLayoutActive);
@@ -1145,6 +1204,15 @@ function ColumnsBlockFields({
   React.useEffect(() => {
     if (ancestorSelectedBlockId !== block.id) setSelectedCellId(null);
   }, [ancestorSelectedBlockId, block.id]);
+
+  React.useEffect(() => {
+    onInnerCellActiveChange?.(selectedCellId);
+  }, [selectedCellId, onInnerCellActiveChange]);
+
+  React.useEffect(() => {
+    registerClearCellSelection?.(() => setSelectedCellId(null));
+    return () => registerClearCellSelection?.(null);
+  }, [registerClearCellSelection]);
 
   React.useEffect(() => {
     const ids = new Set(block.stacks.flatMap((s) => s.map((c) => c.id)));
@@ -1409,6 +1477,7 @@ function SectionBlockFields({
   const children = block.children;
   const sortableChildIds = React.useMemo(() => children.map((c) => c.id), [children]);
   const [columnsLayoutEditingId, setColumnsLayoutEditingId] = React.useState<string | null>(null);
+  const columnsChrome = useColumnsInnerCellChrome();
 
   React.useEffect(() => {
     if (columnsLayoutEditingId && !children.some((c) => c.id === columnsLayoutEditingId)) {
@@ -1522,10 +1591,12 @@ function SectionBlockFields({
                   flush
                   layout="section-child"
                   toolbarShowOnHover={false}
+                  suppressToolbar={child.type === "columns" && columnsChrome.isInnerCellActive(child.id)}
                   onSelect={() => {
                     setColumnsLayoutEditingId((prev) =>
                       prev !== null && prev !== child.id ? null : prev,
                     );
+                    if (child.type === "columns") columnsChrome.clearBlockShellSelection(child.id);
                     onSelectBlock(child.id);
                   }}
                   toolbar={({ dragAttributes, dragListeners }) => {
@@ -1690,12 +1761,6 @@ function SectionBlockFields({
                                 }
                               }}
                             />
-                          ) : child.type === "icon" ? (
-                            <ProposalIconBlockToolbar
-                              variant="toolbar"
-                              block={child as IconBlock}
-                              onChange={(next) => updateChild(child.id, next as ProposalContentBlock)}
-                            />
                           ) : undefined
                         }
                         leadingSlot={undefined}
@@ -1716,6 +1781,9 @@ function SectionBlockFields({
                       activeId: columnsLayoutEditingId,
                       setActiveId: setColumnsLayoutEditingId,
                     }}
+                    columnsInnerCellCallbacks={
+                      child.type === "columns" ? columnsChrome.callbacksFor(child.id) : undefined
+                    }
                   />
                 </SortableShell>
                 </div>
@@ -2405,6 +2473,7 @@ function AgreementBlockFields({
   const children = block.children;
   const sortableChildIds = React.useMemo(() => children.map((c) => c.id), [children]);
   const [columnsLayoutEditingId, setColumnsLayoutEditingId] = React.useState<string | null>(null);
+  const columnsChrome = useColumnsInnerCellChrome();
 
   React.useEffect(() => {
     if (columnsLayoutEditingId && !children.some((c) => c.id === columnsLayoutEditingId)) {
@@ -2519,10 +2588,12 @@ function AgreementBlockFields({
                   flush
                   layout="section-child"
                   toolbarShowOnHover={false}
+                  suppressToolbar={child.type === "columns" && columnsChrome.isInnerCellActive(child.id)}
                   onSelect={() => {
                     setColumnsLayoutEditingId((prev) =>
                       prev !== null && prev !== child.id ? null : prev,
                     );
+                    if (child.type === "columns") columnsChrome.clearBlockShellSelection(child.id);
                     onSelectBlock(child.id);
                   }}
                   toolbar={({ dragAttributes, dragListeners }) => {
@@ -2667,12 +2738,6 @@ function AgreementBlockFields({
                                 }
                               }}
                             />
-                          ) : child.type === "icon" ? (
-                            <ProposalIconBlockToolbar
-                              variant="toolbar"
-                              block={child as IconBlock}
-                              onChange={(next) => updateChild(child.id, next as ProposalAgreementChildBlock)}
-                            />
                           ) : undefined
                         }
                         leadingSlot={undefined}
@@ -2693,6 +2758,9 @@ function AgreementBlockFields({
                       activeId: columnsLayoutEditingId,
                       setActiveId: setColumnsLayoutEditingId,
                     }}
+                    columnsInnerCellCallbacks={
+                      child.type === "columns" ? columnsChrome.callbacksFor(child.id) : undefined
+                    }
                   />
                 </SortableShell>
                 </div>
@@ -2748,6 +2816,7 @@ function BlockFields({
   getBlockStyle,
   applyBlockStyle,
   columnsLayoutEditing,
+  columnsInnerCellCallbacks,
   imageColumnToolbar,
   iconColumnToolbar,
 }: {
@@ -2764,6 +2833,11 @@ function BlockFields({
   imageColumnToolbar?: ProposalImageColumnToolbarActions;
   /** Columns only: icon picker + remove on the floating toolbar when the cell is selected. */
   iconColumnToolbar?: ProposalIconColumnToolbarActions;
+  /** Columns only: parent suppresses block toolbar while a column cell is active. */
+  columnsInnerCellCallbacks?: {
+    onInnerCellActiveChange: (cellId: string | null) => void;
+    registerClearCellSelection: (clear: (() => void) | null) => void;
+  };
 }) {
   const patch = (next: ProposalBlock) => onChange(next);
   const sectionChrome = useProposalSectionEditorChrome();
@@ -3053,6 +3127,8 @@ function BlockFields({
           resizeLayoutActive={columnsLayoutEditing?.activeId === col.id}
           onExitResizeLayout={() => columnsLayoutEditing?.setActiveId(null)}
           ancestorSelectedBlockId={selection?.selectedId ?? null}
+          onInnerCellActiveChange={columnsInnerCellCallbacks?.onInnerCellActiveChange}
+          registerClearCellSelection={columnsInnerCellCallbacks?.registerClearCellSelection}
         />
       );
     }
@@ -3061,29 +3137,22 @@ function BlockFields({
     case "icon": {
       const ic = block as IconBlock;
       const col = iconColumnToolbar;
-      const showEmbeddedColumnToolbar = Boolean(col) && selection?.selectedId === ic.id;
       const isSelected = selection?.selectedId === ic.id;
       return (
-        <div className="relative space-y-3">
-          {showEmbeddedColumnToolbar ? (
-            <div className="pointer-events-none absolute inset-x-0 top-0 z-30 -translate-y-full pb-1.5 pt-2">
-              <div className="pointer-events-auto flex w-full flex-wrap items-start justify-end gap-1.5">
-                <ProposalIconBlockToolbar
-                  variant="embedded"
-                  block={ic}
-                  onChange={(next) => patch(next)}
-                  onRemove={col?.onRemove}
-                />
-              </div>
-            </div>
-          ) : null}
-          <ProposalIconBlockEditorRow
-            block={ic}
-            onChange={(next) => patch(next)}
-            isSelected={isSelected}
-            onSelect={() => selection?.onSelect(ic.id)}
-          />
-        </div>
+        <ProposalIconBlockEditorRow
+          block={ic}
+          onChange={(next) => patch(next)}
+          isSelected={isSelected}
+          onSelect={() => selection?.onSelect(ic.id)}
+          toolbar={
+            <ProposalIconBlockToolbar
+              variant="embedded"
+              block={ic}
+              onChange={(next) => patch(next)}
+              onRemove={col?.onRemove}
+            />
+          }
+        />
       );
     }
     case "divider":
@@ -3385,6 +3454,7 @@ export function ProposalDocumentEditor({
   const [blocks, setBlocks] = React.useState<ProposalBlock[]>(initialDocument.blocks);
   const [selectedBlockId, setSelectedBlockId] = React.useState<string | null>(null);
   const [rootColumnsLayoutEditingId, setRootColumnsLayoutEditingId] = React.useState<string | null>(null);
+  const rootColumnsChrome = useColumnsInnerCellChrome();
   const [saving, setSaving] = React.useState(false);
   const [sending, setSending] = React.useState(false);
   const [message, setMessage] = React.useState<string | null>(null);
@@ -3991,10 +4061,14 @@ export function ProposalDocumentEditor({
                           selected={isSelected}
                           flush={flushBand}
                           toolbarShowOnHover={block.type !== "image" && block.type !== "icon"}
+                          suppressToolbar={
+                            block.type === "columns" && rootColumnsChrome.isInnerCellActive(block.id)
+                          }
                           onSelect={() => {
                             setRootColumnsLayoutEditingId((prev) =>
                               prev !== null && prev !== block.id ? null : prev,
                             );
+                            if (block.type === "columns") rootColumnsChrome.clearBlockShellSelection(block.id);
                             setSelectedBlockId(block.id);
                           }}
                           toolbar={({ dragAttributes, dragListeners }) => {
@@ -4139,12 +4213,6 @@ export function ProposalDocumentEditor({
                                     block={block as SplashBlock}
                                     onChange={(next) => updateBlock(block.id, next)}
                                   />
-                                ) : block.type === "icon" ? (
-                                  <ProposalIconBlockToolbar
-                                    variant="toolbar"
-                                    block={block as IconBlock}
-                                    onChange={(next) => updateBlock(block.id, next)}
-                                  />
                                 ) : undefined
                               }
                               leadingSlot={dragHandle}
@@ -4166,6 +4234,11 @@ export function ProposalDocumentEditor({
                               activeId: rootColumnsLayoutEditingId,
                               setActiveId: setRootColumnsLayoutEditingId,
                             }}
+                            columnsInnerCellCallbacks={
+                              block.type === "columns"
+                                ? rootColumnsChrome.callbacksFor(block.id)
+                                : undefined
+                            }
                           />
                         </SortableShell>
                         <InsertBlockSlot onAdd={(b) => addBlockAt(b, idx + 1)} />

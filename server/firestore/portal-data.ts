@@ -295,6 +295,12 @@ function accountCompanyNameFromCustomer(customer: CustomerRecord | undefined): s
   return company || person || "—";
 }
 
+function contactNameFromCustomer(customer: CustomerRecord | undefined): string {
+  if (!customer) return "—";
+  const name = customer.name?.trim();
+  return name || "—";
+}
+
 /** Same proposals as {@link listProposalsForStaffOrg}, with CRM account label for hub tables. */
 export async function listProposalsHubRowsForStaffOrg(user: PortalUser): Promise<ProposalHubListRow[]> {
   const proposals = await listProposalsForStaffOrg(user);
@@ -302,12 +308,14 @@ export async function listProposalsHubRowsForStaffOrg(user: PortalUser): Promise
     .map((p) => p.customerId)
     .filter((id): id is string => typeof id === "string" && id.trim().length > 0);
   const customers = await batchGetCustomerRecordsForStaff(user, customerIds);
-  return proposals.map((p) => ({
-    ...p,
-    accountCompanyName: p.customerId?.trim()
-      ? accountCompanyNameFromCustomer(customers.get(p.customerId.trim()))
-      : "—",
-  }));
+  return proposals.map((p) => {
+    const customer = p.customerId?.trim() ? customers.get(p.customerId.trim()) : undefined;
+    return {
+      ...p,
+      accountCompanyName: customer ? accountCompanyNameFromCustomer(customer) : "—",
+      contactName: customer ? contactNameFromCustomer(customer) : "—",
+    };
+  });
 }
 
 function parseSupportTicket(id: string, data: Record<string, unknown>): SupportTicketRecord {
