@@ -85,7 +85,4 @@ export const PROPOSAL_EDITOR_SECTION_CHILD_INSERT_HOST_CLASSES =
   "relative h-0 w-full overflow-visible";
 
 /** Vertical rhythm between blocks inside a section band (editor). */
-export const PROPOSAL_EDITOR_SECTION_STACK_GAP_CLASSES = "gap-y-6 sm:gap-y-8";
-
-/** Padding inside each section child sortable row (header, text, columns, etc.). */
-export const PROPOSAL_EDITOR_SECTION_CHILD_ROW_PAD_CLASSES = "py-3 sm:py-4";
+export const PROPOSAL_EDITOR_SECTION_STACK_GAP_CLASSES = "gap-y-5 sm:gap-y-6";

@@ -139,7 +139,6 @@ import {
   PROPOSAL_EDITOR_SECTION_INNER_PAD_CLASSES,
   PROPOSAL_EDITOR_SECTION_STACK_BOTTOM_PAD_CLASSES,
   PROPOSAL_EDITOR_SECTION_STACK_GAP_CLASSES,
-  PROPOSAL_EDITOR_SECTION_CHILD_ROW_PAD_CLASSES,
   PROPOSAL_PUBLIC_DOCUMENT_OUTER_CLASSES,
   proposalEditorSectionChildEdgePadClasses,
 } from "@/lib/proposal-public-layout";
@@ -700,7 +699,7 @@ function SortableShell({
 
   const sectionChildRingClasses = prefersLightSection
     ? cn(
-        "rounded-md ring-1 ring-offset-2 ring-offset-white transition-[box-shadow] duration-150",
+        "rounded-sm ring-1 ring-offset-0 transition-[box-shadow] duration-150",
         selected || isDragging
           ? "ring-white/45"
           : hovered
@@ -708,7 +707,7 @@ function SortableShell({
             : "ring-transparent",
       )
     : cn(
-        "rounded-md ring-1 ring-offset-2 ring-offset-neutral-950 transition-[box-shadow] duration-150",
+        "rounded-sm ring-1 ring-offset-0 transition-[box-shadow] duration-150",
         selected || isDragging
           ? "ring-sky-500/70"
           : hovered
@@ -799,7 +798,7 @@ function SortableShell({
             "relative min-w-0 [-webkit-tap-highlight-color:transparent]",
             !sectionChild && "px-0",
             !sectionChild && (flushEdges ? "py-0" : "py-1.5"),
-            sectionChild && PROPOSAL_EDITOR_SECTION_CHILD_ROW_PAD_CLASSES,
+            sectionChild && "py-0.5",
             ringClasses,
           )}
         >
@@ -3514,6 +3513,7 @@ export function ProposalDocumentEditor({
   const [sending, setSending] = React.useState(false);
   const [message, setMessage] = React.useState<string | null>(null);
   const [publishJustSucceeded, setPublishJustSucceeded] = React.useState(false);
+  const [editorTab, setEditorTab] = React.useState<"edit" | "preview">("edit");
   const publishSuccessResetRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const [saveJustSucceeded, setSaveJustSucceeded] = React.useState(false);
   const saveSuccessResetRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -4083,7 +4083,10 @@ export function ProposalDocumentEditor({
 
       {proposalEditMiddleSlot}
 
-      <Tabs defaultValue="edit">
+      <Tabs
+        value={editorTab}
+        onValueChange={(value) => setEditorTab(value === "preview" ? "preview" : "edit")}
+      >
         <TabsList>
           <TabsTrigger value="edit">Edit blocks</TabsTrigger>
           <TabsTrigger value="preview">Live preview</TabsTrigger>
@@ -4092,6 +4095,7 @@ export function ProposalDocumentEditor({
           value="edit"
           className="mt-4 pb-[min(45vh,26rem)] sm:pb-40 md:pb-48"
         >
+          {editorTab === "edit" ? (
           <TooltipProvider delayDuration={280}>
           {blocks.length === 0 ? (
             <InsertBlockSlot variant="empty" onAdd={(b) => addBlockAt(b, 0)} />
@@ -4305,18 +4309,21 @@ export function ProposalDocumentEditor({
             </div>
           )}
           </TooltipProvider>
+          ) : null}
         </TabsContent>
         <TabsContent
           value="preview"
           className="mt-4 overflow-x-visible rounded-2xl border border-border/70 bg-muted/15 py-6 md:py-10"
         >
-          {isContractTemplate ? (
-            <ContractTemplateAgreementPreview agreementTitle={agreementTitle} document={doc} />
-          ) : (
-            <div className={PROPOSAL_PUBLIC_DOCUMENT_OUTER_CLASSES}>
-              <ProposalDocumentView document={doc} localityTimeZone={localityTimeZone} />
-            </div>
-          )}
+          {editorTab === "preview" ? (
+            isContractTemplate ? (
+              <ContractTemplateAgreementPreview agreementTitle={agreementTitle} document={doc} />
+            ) : (
+              <div className={PROPOSAL_PUBLIC_DOCUMENT_OUTER_CLASSES}>
+                <ProposalDocumentView document={doc} localityTimeZone={localityTimeZone} />
+              </div>
+            )
+          ) : null}
         </TabsContent>
       </Tabs>
     </div>

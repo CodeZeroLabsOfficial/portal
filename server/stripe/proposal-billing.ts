@@ -1,33 +1,60 @@
 import Stripe from "stripe";
 import { DEFAULT_CURRENCY } from "@/lib/constants";
 import { findProposalBlockById, iterateProposalContentBlocks } from "@/lib/proposal-blocks";
+import { effectivePricingLineQuantity } from "@/lib/pricing-line-quantity";
 import { resolveProposalCommerce, type ProposalStripeOneOffItem } from "@/lib/proposal-commerce";
 import { packageCommitmentTotalMinor } from "@/lib/proposal-packages-totals";
 import type { CustomerRecord } from "@/types/customer";
 import type { CatalogServicePickerOption } from "@/types/catalog-service";
-import type { PackagesBlock, PricingBlock, ProposalRecord } from "@/types/proposal";
+import type { PackagesBlock, PricingBlock, ProposalBlock, ProposalRecord } from "@/types/proposal";
 import { loadBillingCatalogForOrganization } from "@/server/catalog/billing-catalog";
 import { chargeProposalOneOffItems } from "@/server/stripe/proposal-one-off-billing";
+
+type ProposalBillingWalk = {
+  pricingLinesTotalMinor: number;
+  currency: string;
+  pricingOneOffItems: ProposalStripeOneOffItem[];
+};
+
+function walkProposalBlocksForBilling(blocks: ProposalBlock[]): ProposalBillingWalk {
+  let pricingLinesTotalMinor = 0;
+  let currency: string = DEFAULT_CURRENCY;
+  let currencyResolved = false;
+  const pricingOneOffItems: ProposalStripeOneOffItem[] = [];
+
+  for (const block of iterateProposalContentBlocks(blocks)) {
+    if (block.type === "pricing" || block.type === "packages") {
+      if (!currencyResolved) {
+        currency = block.currency.toLowerCase();
+        currencyResolved = true;
+      }
+    }
+    if (block.type !== "pricing") continue;
+    const pb = block as PricingBlock;
+    for (const line of pb.lineItems) {
+      const qty = effectivePricingLineQuantity(line);
+      pricingLinesTotalMinor += Math.round(line.unitAmountMinor * qty);
+      if (qty <= 0) continue;
+      pricingOneOffItems.push({
+        amountMinor: line.unitAmountMinor,
+        quantity: qty,
+        currency,
+        description: line.label?.trim() || pb.title?.trim() || "Line item",
+      });
+    }
+  }
+
+  return { pricingLinesTotalMinor, currency, pricingOneOffItems };
+}
 
 /** Sum pricing blocks and accepted package selections (recurring commitment + one-offs). */
 export function computeProposalTotalMinor(
   proposal: ProposalRecord,
   catalogServices?: readonly CatalogServicePickerOption[],
 ): number {
-  let total = 0;
+  const { pricingLinesTotalMinor } = walkProposalBlocksForBilling(proposal.document.blocks);
+  let total = pricingLinesTotalMinor;
   const blocks = proposal.document.blocks;
-
-  for (const block of iterateProposalContentBlocks(blocks)) {
-    if (block.type === "pricing") {
-      const pb = block as PricingBlock;
-      for (const line of pb.lineItems) {
-        const q = line.quantity;
-        const qty =
-          typeof q === "number" && Number.isFinite(q) && q >= 0 ? Math.floor(q) : 1;
-        total += Math.round(line.unitAmountMinor * qty);
-      }
-    }
-  }
 
   if (proposal.publicSelections) {
     for (const [blockId, sel] of Object.entries(proposal.publicSelections)) {
@@ -48,20 +75,8 @@ export function computeProposalOneOffTotalMinor(
   proposal: ProposalRecord,
   catalogServices?: readonly CatalogServicePickerOption[],
 ): number {
-  let total = 0;
-  const blocks = proposal.document.blocks;
-
-  for (const block of iterateProposalContentBlocks(blocks)) {
-    if (block.type === "pricing") {
-      const pb = block as PricingBlock;
-      for (const line of pb.lineItems) {
-        const q = line.quantity;
-        const qty =
-          typeof q === "number" && Number.isFinite(q) && q >= 0 ? Math.floor(q) : 1;
-        total += Math.round(line.unitAmountMinor * qty);
-      }
-    }
-  }
+  const { pricingLinesTotalMinor } = walkProposalBlocksForBilling(proposal.document.blocks);
+  let total = pricingLinesTotalMinor;
 
   const commerce = catalogServices
     ? resolveProposalCommerce(
@@ -78,12 +93,7 @@ export function computeProposalOneOffTotalMinor(
 }
 
 export function resolveProposalCurrency(proposal: ProposalRecord): string {
-  for (const b of iterateProposalContentBlocks(proposal.document.blocks)) {
-    if (b.type === "pricing" || b.type === "packages") {
-      return b.currency.toLowerCase();
-    }
-  }
-  return DEFAULT_CURRENCY;
+  return walkProposalBlocksForBilling(proposal.document.blocks).currency;
 }
 
 /**
@@ -120,26 +130,7 @@ export async function ensureStripeCustomer(
 }
 
 function pricingBlockOneOffItems(proposal: ProposalRecord): ProposalStripeOneOffItem[] {
-  const items: ProposalStripeOneOffItem[] = [];
-  const currency = resolveProposalCurrency(proposal);
-  for (const block of iterateProposalContentBlocks(proposal.document.blocks)) {
-    if (block.type !== "pricing") continue;
-    const pb = block as PricingBlock;
-    for (const line of pb.lineItems) {
-      const qty =
-        typeof line.quantity === "number" && Number.isFinite(line.quantity) && line.quantity >= 0
-          ? Math.floor(line.quantity)
-          : 1;
-      if (qty <= 0) continue;
-      items.push({
-        amountMinor: line.unitAmountMinor,
-        quantity: qty,
-        currency,
-        description: line.label?.trim() || pb.title?.trim() || "Line item",
-      });
-    }
-  }
-  return items;
+  return walkProposalBlocksForBilling(proposal.document.blocks).pricingOneOffItems;
 }
 
 export async function createStripeInvoiceForProposal(

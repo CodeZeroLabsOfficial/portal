@@ -28,6 +28,10 @@ import {
   PROPOSAL_EDITOR_LIBRARY_BACKDROP_CLASS,
   PROPOSAL_EDITOR_LIBRARY_CLOSE_HANDLE_CLASS,
 } from "@/components/proposal/proposal-editor-library-scope";
+import {
+  fetchProposalMediaLibrary,
+  invalidateProposalMediaLibraryCache,
+} from "@/lib/proposal-editor-library-fetch-cache";
 import { cn } from "@/lib/utils";
 
 const noop = () => {};
@@ -195,27 +199,31 @@ function ProposalMediaLibrarySidebar() {
     prevOpen.current = isOpen;
   }, [isOpen, activeParams]);
 
+  const loadLibrary = React.useCallback((force?: boolean) => {
+    setLoading(true);
+    setError(null);
+    return fetchProposalMediaLibrary(force ? { force: true } : undefined)
+      .then((data) => {
+        setAssets(data.assets);
+        setLibraryPrefix(data.libraryPrefix);
+        setLoading(false);
+      })
+      .catch((e: unknown) => {
+        setError(e instanceof Error ? e.message : "Could not load library");
+        setLoading(false);
+      });
+  }, []);
+
   React.useEffect(() => {
     if (!isOpen) return;
     let cancelled = false;
     setLoading(true);
     setError(null);
-    void fetch("/api/proposal-media-library")
-      .then(async (res) => {
-        if (!res.ok) {
-          const body = (await res.json().catch(() => null)) as { error?: string } | null;
-          throw new Error(body?.error ?? res.statusText ?? "Request failed");
-        }
-        return res.json() as Promise<{ assets?: ProposalLibraryAsset[]; libraryPrefix?: string }>;
-      })
+    void fetchProposalMediaLibrary()
       .then((data) => {
         if (cancelled) return;
-        setAssets(Array.isArray(data.assets) ? data.assets : []);
-        if (typeof data.libraryPrefix === "string" && data.libraryPrefix.trim()) {
-          setLibraryPrefix(data.libraryPrefix.trim().replace(/\/?$/, "/"));
-        } else {
-          setLibraryPrefix(PROPOSAL_MEDIA_LIBRARY_DEFAULT_PREFIX);
-        }
+        setAssets(data.assets);
+        setLibraryPrefix(data.libraryPrefix);
         setLoading(false);
       })
       .catch((e: unknown) => {
@@ -285,6 +293,7 @@ function ProposalMediaLibrarySidebar() {
           });
           const asset = proposalLibraryAssetFromBlobListItem(result, normalizedPrefix);
           if (asset) {
+            invalidateProposalMediaLibraryCache();
             setAssets((prev) => [asset, ...prev.filter((a) => a.id !== asset.id)]);
           }
         }
@@ -425,26 +434,7 @@ function ProposalMediaLibrarySidebar() {
                         <button
                           type="button"
                           className="text-sm font-medium text-primary underline-offset-4 hover:underline"
-                          onClick={() => {
-                            setError(null);
-                            setLoading(true);
-                            void fetch("/api/proposal-media-library")
-                              .then(async (res) => {
-                                if (!res.ok) throw new Error(res.statusText);
-                                return res.json() as Promise<{ assets?: ProposalLibraryAsset[]; libraryPrefix?: string }>;
-                              })
-                              .then((data) => {
-                                setAssets(Array.isArray(data.assets) ? data.assets : []);
-                                if (typeof data.libraryPrefix === "string" && data.libraryPrefix.trim()) {
-                                  setLibraryPrefix(data.libraryPrefix.trim().replace(/\/?$/, "/"));
-                                }
-                                setLoading(false);
-                              })
-                              .catch(() => {
-                                setError("Could not load library");
-                                setLoading(false);
-                              });
-                          }}
+                          onClick={() => void loadLibrary(true)}
                         >
                           Try again
                         </button>

@@ -10,6 +10,10 @@ import {
   PROPOSAL_EDITOR_LIBRARY_BACKDROP_CLASS,
   PROPOSAL_EDITOR_LIBRARY_CLOSE_HANDLE_CLASS,
 } from "@/components/proposal/proposal-editor-library-scope";
+import {
+  fetchContractTemplatesLibrary,
+  type ContractTemplateLibraryRow,
+} from "@/lib/proposal-editor-library-fetch-cache";
 
 const noop = () => {};
 
@@ -25,14 +29,7 @@ export type ProposalContractTemplateLibraryOpenParams = {
   onSelect: (pick: ContractTemplatePick) => void;
 };
 
-type ApiRow = {
-  id: string;
-  name: string;
-  agreementTitle: string;
-  introHtml: string;
-  legalHtml: string;
-  previewSnippet: string;
-};
+type ApiRow = ContractTemplateLibraryRow;
 
 type ProposalContractTemplateLibraryContextValue = {
   isOpen: boolean;
@@ -67,19 +64,29 @@ function ContractTemplateLibrarySidebar() {
     prevOpen.current = isOpen;
   }, [isOpen]);
 
+  const loadTemplates = React.useCallback((force?: boolean) => {
+    setLoading(true);
+    setError(null);
+    return fetchContractTemplatesLibrary(force ? { force: true } : undefined)
+      .then((templates) => {
+        setRows(templates);
+        setLoading(false);
+      })
+      .catch(() => {
+        setError("Could not load contract templates");
+        setLoading(false);
+      });
+  }, []);
+
   React.useEffect(() => {
     if (!isOpen) return;
     let cancelled = false;
     setLoading(true);
     setError(null);
-    void fetch("/api/contract-templates")
-      .then(async (res) => {
-        if (!res.ok) throw new Error(res.statusText);
-        return res.json() as Promise<{ templates?: ApiRow[] }>;
-      })
-      .then((data) => {
+    void fetchContractTemplatesLibrary()
+      .then((templates) => {
         if (cancelled) return;
-        setRows(Array.isArray(data.templates) ? data.templates : []);
+        setRows(templates);
         setLoading(false);
       })
       .catch(() => {
@@ -171,23 +178,7 @@ function ContractTemplateLibrarySidebar() {
                     <button
                       type="button"
                       className="text-sm font-medium text-primary underline-offset-4 hover:underline"
-                      onClick={() => {
-                        setError(null);
-                        setLoading(true);
-                        void fetch("/api/contract-templates")
-                          .then(async (res) => {
-                            if (!res.ok) throw new Error(res.statusText);
-                            return res.json() as Promise<{ templates?: ApiRow[] }>;
-                          })
-                          .then((data) => {
-                            setRows(Array.isArray(data.templates) ? data.templates : []);
-                            setLoading(false);
-                          })
-                          .catch(() => {
-                            setError("Could not load contract templates");
-                            setLoading(false);
-                          });
-                      }}
+                      onClick={() => void loadTemplates(true)}
                     >
                       Try again
                     </button>
