@@ -1045,7 +1045,7 @@ export function CustomerDetailView({
             "z-50 grid gap-0 overflow-hidden border-0 bg-white p-0 text-zinc-900 shadow-2xl",
             "h-[100dvh] w-screen max-w-none left-0 top-0 translate-x-0 translate-y-0 rounded-none",
             "sm:left-1/2 sm:top-1/2 sm:h-[min(96dvh,960px)] sm:max-h-[96dvh]",
-            "sm:w-[min(1280px,calc(100vw-2rem))] sm:max-w-[min(1280px,calc(100vw-2rem))]",
+            "sm:w-[min(1536px,calc(100vw-3rem))] sm:max-w-[min(1536px,calc(100vw-3rem))]",
             "sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl",
             "print:static print:inset-auto print:h-auto print:max-h-none print:w-full print:max-w-none",
             "print:translate-x-0 print:translate-y-0 print:rounded-none print:shadow-none print:overflow-visible",
@@ -1091,7 +1091,7 @@ export function CustomerDetailView({
               <div className="min-h-0 overflow-y-auto bg-white print:overflow-visible">
                 <div
                   data-agreement-print-target=""
-                  className="mx-auto w-full max-w-3xl px-5 py-10 sm:px-10 sm:py-14"
+                  className="mx-auto w-full max-w-6xl px-5 py-10 sm:px-10 sm:py-14"
                 >
                   <header data-agreement-print-exclude="" className="text-center print:hidden">
                     <h2 className="font-serif text-3xl font-semibold leading-tight tracking-tight text-zinc-900 sm:text-4xl">

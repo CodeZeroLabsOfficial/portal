@@ -31,7 +31,7 @@ export function ContractTemplateAgreementPreview({
   );
 
   return (
-    <div className="mx-auto w-full max-w-3xl bg-white px-5 py-12 sm:px-10 sm:py-16">
+    <div className="mx-auto w-full max-w-6xl bg-white px-5 py-12 sm:px-10 sm:py-16">
       <header className="text-center">
         <h1 className="font-serif text-4xl font-semibold leading-tight tracking-tight text-zinc-900 sm:text-5xl">
           {agreementTitle.trim() || "Services Agreement"}
