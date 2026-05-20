@@ -5,8 +5,8 @@ import { GripVertical, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
- * Qwilr-style insert affordance inside a section: small “+” and hint on hover,
- * opens the section Content menu (caller supplies `menu`).
+ * Qwilr-style insert affordance inside a section: small “+” and hint appear only
+ * when hovering this slot (not every insert in the section at once).
  */
 export function SectionChildInsertSlot({
   menu,
@@ -20,11 +20,10 @@ export function SectionChildInsertSlot({
       type="button"
       aria-label="Add content"
       className={cn(
-        "group/section-insert flex w-full min-h-8 items-center gap-2.5 rounded-md border-0 bg-transparent py-1 pl-0.5 pr-2 text-left",
-        "opacity-0 transition-opacity duration-150",
-        "hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-        "group-hover/section-stack:opacity-100 group-focus-within/section-stack:opacity-100",
-        "data-[state=open]:opacity-100",
+        "flex w-full min-h-8 items-center gap-2.5 rounded-md border-0 bg-transparent py-1 pl-0.5 pr-2 text-left",
+        "text-muted-foreground/75 transition-colors",
+        "hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        "data-[state=open]:text-foreground",
       )}
     >
       <span
@@ -36,26 +35,33 @@ export function SectionChildInsertSlot({
       >
         <Plus className="h-3.5 w-3.5" aria-hidden />
       </span>
-      <span className="text-sm text-muted-foreground/75">Type / to add content</span>
+      <span className="text-sm">Type / to add content</span>
     </button>
   );
 
   return (
-    <div className={cn("relative z-[1] w-full min-h-8", className)}>
+    <div
+      className={cn(
+        "group/section-insert relative z-[1] w-full",
+        "h-2 overflow-visible opacity-0 transition-[height,opacity] duration-150",
+        "hover:z-[2] hover:h-8 hover:opacity-100",
+        "focus-within:z-[2] focus-within:h-8 focus-within:opacity-100",
+        "has-[[data-state=open]]:z-[2] has-[[data-state=open]]:h-8 has-[[data-state=open]]:opacity-100",
+        className,
+      )}
+    >
       {menu(trigger)}
     </div>
   );
 }
 
 export const SECTION_CHILD_DRAG_GUTTER_CLASSES =
-  "flex w-9 shrink-0 items-start justify-center pt-1.5 sm:w-10";
+  "flex w-9 shrink-0 items-start justify-center pt-1.5 opacity-0 transition-opacity duration-150 group-hover/sortblock:opacity-100 sm:w-10";
 
 export const SECTION_CHILD_DRAG_HANDLE_CLASSES = cn(
   "touch-none flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground",
-  "opacity-0 transition-opacity duration-150",
-  "group-hover/sortblock:opacity-100",
   "hover:bg-muted/70 hover:text-foreground",
-  "focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
 );
 
 export function SectionChildDragHandle({

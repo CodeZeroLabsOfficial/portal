@@ -87,20 +87,6 @@ export function findFirstAgreementBlock(blocks: ProposalBlock[]): AgreementBlock
  * flush to the viewport edge.
  */
 /** Full-bleed backdrop band in the block editor — stacks flush with siblings (no canvas gap). */
-/** Suppress the in-section trailing insert when the root insert row shares the same seam. */
-export function proposalOmitTrailingSectionInsert(
-  block: ProposalBlock,
-  blocks: ProposalBlock[],
-  index: number,
-): boolean {
-  if (block.type !== "section" && block.type !== "agreement") return false;
-  const next = blocks[index + 1];
-  if (!next) return false;
-  return (
-    proposalBlockRendersFlushEditorBand(block) && proposalBlockRendersFlushEditorBand(next)
-  );
-}
-
 export function proposalBlockRendersFlushEditorBand(block: ProposalBlock): boolean {
   switch (block.type) {
     case "section":

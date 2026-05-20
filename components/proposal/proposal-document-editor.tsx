@@ -131,10 +131,7 @@ import {
   normalizeColumnFlexForStorage,
   PROPOSAL_COLUMN_FR_MIN,
 } from "@/lib/proposal-columns";
-import {
-  proposalBlockRendersFlushEditorBand,
-  proposalOmitTrailingSectionInsert,
-} from "@/lib/proposal-blocks";
+import { proposalBlockRendersFlushEditorBand } from "@/lib/proposal-blocks";
 import {
   PROPOSAL_DOCUMENT_COLUMNS_ROW_GAP_CLASSES,
   PROPOSAL_EDITOR_BLOCK_CANVAS_INNER_CLASSES,
@@ -680,10 +677,9 @@ function SortableShell({
       onMouseLeave={() => setHovered(false)}
     >
       {sectionChild ? (
-        <div className={SECTION_CHILD_DRAG_GUTTER_CLASSES}>
+        <div className={cn(SECTION_CHILD_DRAG_GUTTER_CLASSES, selected && "opacity-100")}>
           <SectionChildDragHandle
             aria-label="Drag to reorder"
-            className={cn(selected && "opacity-100")}
             {...attributes}
             {...listeners}
           />
@@ -1349,8 +1345,6 @@ function SectionBlockFields({
   onSelectBlock,
   getBlockStyle,
   applyBlockStyle,
-  /** Hide the trailing in-section insert when the root insert row sits on the same seam (flush bands). */
-  omitTrailingInsert = false,
 }: {
   block: SectionBlock;
   onChange: (next: ProposalBlock) => void;
@@ -1358,7 +1352,6 @@ function SectionBlockFields({
   onSelectBlock: (id: string | null) => void;
   getBlockStyle: (b: ProposalBlock) => BlockStyle | undefined;
   applyBlockStyle: (id: string, style: BlockStyle | undefined) => void;
-  omitTrailingInsert?: boolean;
 }) {
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -1675,8 +1668,9 @@ function SectionBlockFields({
               </div>
             );
           })}
-          {!omitTrailingInsert && children.length > 0 ? (
+          {children.length > 0 ? (
             <SectionChildInsertSlot
+              className="relative z-[3]"
               menu={(trigger) => (
                 <SectionInsertMenu
                   align="start"
@@ -2341,7 +2335,6 @@ function AgreementBlockFields({
   onSelectBlock,
   getBlockStyle,
   applyBlockStyle,
-  omitTrailingInsert = false,
 }: {
   block: AgreementBlock;
   onChange: (next: ProposalBlock) => void;
@@ -2349,7 +2342,6 @@ function AgreementBlockFields({
   onSelectBlock: (id: string | null) => void;
   getBlockStyle: (b: ProposalBlock) => BlockStyle | undefined;
   applyBlockStyle: (id: string, style: BlockStyle | undefined) => void;
-  omitTrailingInsert?: boolean;
 }) {
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -2647,8 +2639,9 @@ function AgreementBlockFields({
               </div>
             );
           })}
-          {!omitTrailingInsert && children.length > 0 ? (
+          {children.length > 0 ? (
             <SectionChildInsertSlot
+              className="relative z-[3]"
               menu={(trigger) => (
                 <SectionInsertMenu
                   align="start"
@@ -2699,7 +2692,6 @@ function BlockFields({
   columnsLayoutEditing,
   imageColumnToolbar,
   iconColumnToolbar,
-  omitTrailingSectionInsert = false,
 }: {
   block: ProposalBlock;
   onChange: (next: ProposalBlock) => void;
@@ -2714,7 +2706,6 @@ function BlockFields({
   imageColumnToolbar?: ProposalImageColumnToolbarActions;
   /** Columns only: icon picker + remove on the floating toolbar when the cell is selected. */
   iconColumnToolbar?: ProposalIconColumnToolbarActions;
-  omitTrailingSectionInsert?: boolean;
 }) {
   const patch = (next: ProposalBlock) => onChange(next);
   const sectionChrome = useProposalSectionEditorChrome();
@@ -2735,7 +2726,6 @@ function BlockFields({
           onSelectBlock={selection?.onSelect ?? (() => {})}
           getBlockStyle={getBlockStyle ?? (() => undefined)}
           applyBlockStyle={applyBlockStyle ?? (() => {})}
-          omitTrailingInsert={omitTrailingSectionInsert}
         />
       );
     }
@@ -2963,7 +2953,6 @@ function BlockFields({
           onSelectBlock={selection?.onSelect ?? (() => {})}
           getBlockStyle={getBlockStyle ?? (() => undefined)}
           applyBlockStyle={applyBlockStyle ?? (() => {})}
-          omitTrailingInsert={omitTrailingSectionInsert}
         />
       );
     }
@@ -4119,11 +4108,6 @@ export function ProposalDocumentEditor({
                               activeId: rootColumnsLayoutEditingId,
                               setActiveId: setRootColumnsLayoutEditingId,
                             }}
-                            omitTrailingSectionInsert={proposalOmitTrailingSectionInsert(
-                              block,
-                              blocks,
-                              idx,
-                            )}
                           />
                         </SortableShell>
                         <InsertBlockSlot onAdd={(b) => addBlockAt(b, idx + 1)} />
