@@ -522,7 +522,7 @@ function ProposalMediaLibrarySidebar() {
                     )}
                   </div>
 
-                  <div className="shrink-0 border-t border-border bg-background pt-3">
+                  <div className="shrink-0 border-t border-border bg-background pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
                     {uploadError ? (
                       <p className="mb-2 text-center text-xs text-destructive">{uploadError}</p>
                     ) : null}
