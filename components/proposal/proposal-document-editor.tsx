@@ -667,11 +667,14 @@ function SortableShell({
   layout = "default",
   /** Hide block toolbar while editing nested content (e.g. column cell rich text). */
   suppressToolbar = false,
+  /** Drag notch: select row without clearing nested column cell focus (columns blocks). */
+  onSelectFromNotch,
 }: {
   id: string;
   children: React.ReactNode;
   selected: boolean;
   onSelect: () => void;
+  onSelectFromNotch?: () => void;
   toolbar?: (ctx: {
     dragAttributes: DraggableAttributes;
     dragListeners: DraggableSyntheticListeners;
@@ -764,7 +767,7 @@ function SortableShell({
         >
           <SectionChildDragHandle
             aria-label="Drag to reorder"
-            onPointerDown={() => onSelect()}
+            onPointerDown={() => (onSelectFromNotch ?? onSelect)()}
             {...attributes}
             {...listeners}
           />
@@ -1036,35 +1039,42 @@ function NestedColumnBlockFields({
   switch (block.type) {
     case "header": {
       const hb = block as HeaderBlock;
+      const cellSelected = cellSelection?.selectedId === hb.id;
       return (
-        <ProposalRichText
-          key={hb.id}
-          variant="header"
-          html={headerBlockEditorHtml(hb)}
-          placeholder="Heading"
-          showBubbleWhenBlockSelected={cellSelection?.selectedId === hb.id}
-          onChange={(html) =>
-            patchNested({
-              ...hb,
-              html,
+        <BlockEditableSurface enabled marker="column-cell">
+          <ProposalRichText
+            key={hb.id}
+            variant="header"
+            html={headerBlockEditorHtml(hb)}
+            placeholder="Heading"
+            showBubbleWhenBlockSelected={cellSelected}
+            onChange={(html) =>
+              patchNested({
+                ...hb,
+                html,
                 text: proposalRichHtmlToPlainText(html) || hb.text,
-            })
-          }
-        />
+              })
+            }
+          />
+        </BlockEditableSurface>
       );
     }
-    case "text":
+    case "text": {
+      const cellSelected = cellSelection?.selectedId === block.id;
       return (
-        <ProposalRichText
-          html={block.html ?? (block.body ? `<p>${escapeHtml(block.body)}</p>` : "<p></p>")}
-          editorMinHeightPx={block.editorMinHeightPx}
-          onEditorMinHeightPxChange={(next) => patchNested({ ...block, editorMinHeightPx: next })}
-          resizableHeight
-          placeholder={textPlaceholder}
-          showBubbleWhenBlockSelected={cellSelection?.selectedId === block.id}
-          onChange={(html) => patchNested({ ...block, html, body: undefined })}
-        />
+        <BlockEditableSurface enabled marker="column-cell">
+          <ProposalRichText
+            html={block.html ?? (block.body ? `<p>${escapeHtml(block.body)}</p>` : "<p></p>")}
+            editorMinHeightPx={block.editorMinHeightPx}
+            onEditorMinHeightPxChange={(next) => patchNested({ ...block, editorMinHeightPx: next })}
+            resizableHeight
+            placeholder={textPlaceholder}
+            showBubbleWhenBlockSelected={cellSelected}
+            onChange={(html) => patchNested({ ...block, html, body: undefined })}
+          />
+        </BlockEditableSurface>
       );
+    }
     case "divider":
       return <p className="text-[11px] text-muted-foreground">Divider — visible when published.</p>;
     default:
@@ -1128,37 +1138,44 @@ function ColumnPane({
             onSeed={(tb) => setStack([tb])}
           />
         ) : (
-          stack.map((child) => (
-            <div
-              key={child.id}
-              className="space-y-2"
-              onPointerDownCapture={() => {
-                setSelectedCellId(child.id);
-                setActiveColumnIndex(columnIndex);
-              }}
-            >
-              <NestedColumnBlockFields
-                block={child}
-                onChange={(n) => updateChild(child.id, n)}
-                textPlaceholder="Type / to add content"
-                cellSelection={cellSelection}
-                imageColumnToolbar={
-                  child.type === "image"
-                    ? {
-                        onRemove: () => removeAt(child.id),
-                      }
-                    : undefined
-                }
-                iconColumnToolbar={
-                  child.type === "icon"
-                    ? {
-                        onRemove: () => removeAt(child.id),
-                      }
-                    : undefined
-                }
-              />
-            </div>
-          ))
+          stack.map((child) => {
+            const cellSelected = selectedCellId === child.id;
+            return (
+              <div
+                key={child.id}
+                className={cn(
+                  "-m-1 space-y-2 rounded-sm p-1 transition-[box-shadow] duration-150",
+                  cellSelected && "ring-1 ring-sky-500/70",
+                )}
+                onPointerDownCapture={(e) => {
+                  if ((e.target as HTMLElement).closest("[data-proposal-column-cell-content]")) return;
+                  setSelectedCellId(child.id);
+                  setActiveColumnIndex(columnIndex);
+                }}
+              >
+                <NestedColumnBlockFields
+                  block={child}
+                  onChange={(n) => updateChild(child.id, n)}
+                  textPlaceholder="Type / to add content"
+                  cellSelection={cellSelection}
+                  imageColumnToolbar={
+                    child.type === "image"
+                      ? {
+                          onRemove: () => removeAt(child.id),
+                        }
+                      : undefined
+                  }
+                  iconColumnToolbar={
+                    child.type === "icon"
+                      ? {
+                          onRemove: () => removeAt(child.id),
+                        }
+                      : undefined
+                  }
+                />
+              </div>
+            );
+          })
         )}
       </div>
     </div>
@@ -1633,6 +1650,16 @@ function SectionBlockFields({
                     if (child.type === "columns") columnsChrome.clearBlockShellSelection(child.id);
                     onSelectBlock(child.id);
                   }}
+                  onSelectFromNotch={
+                    child.type === "columns"
+                      ? () => {
+                          setColumnsLayoutEditingId((prev) =>
+                            prev !== null && prev !== child.id ? null : prev,
+                          );
+                          onSelectBlock(child.id);
+                        }
+                      : undefined
+                  }
                   toolbar={({ dragAttributes, dragListeners }) => {
                     const dragHandle = (
                       <Tooltip delayDuration={320}>
@@ -2631,6 +2658,16 @@ function AgreementBlockFields({
                     if (child.type === "columns") columnsChrome.clearBlockShellSelection(child.id);
                     onSelectBlock(child.id);
                   }}
+                  onSelectFromNotch={
+                    child.type === "columns"
+                      ? () => {
+                          setColumnsLayoutEditingId((prev) =>
+                            prev !== null && prev !== child.id ? null : prev,
+                          );
+                          onSelectBlock(child.id);
+                        }
+                      : undefined
+                  }
                   toolbar={({ dragAttributes, dragListeners }) => {
                     const dragHandle = (
                       <Tooltip delayDuration={320}>
@@ -2844,18 +2881,22 @@ function AgreementBlockFields({
   );
 }
 
-/** Keeps editor clicks from selecting the row — use the drag notch or block chrome instead. */
-function SectionChildEditableSurface({
-  seamless,
+/** Keeps editor clicks from selecting the row/cell — use drag notch or chrome instead. */
+function BlockEditableSurface({
+  enabled,
+  marker,
   children,
 }: {
-  seamless: boolean;
+  enabled: boolean;
+  marker: "section-child" | "column-cell";
   children: React.ReactNode;
 }) {
-  if (!seamless) return <>{children}</>;
+  if (!enabled) return <>{children}</>;
   return (
     <div
-      data-proposal-section-child-content
+      {...(marker === "column-cell"
+        ? { "data-proposal-column-cell-content": true }
+        : { "data-proposal-section-child-content": true })}
       className="min-w-0"
       onClick={(e) => e.stopPropagation()}
       onPointerDown={(e) => e.stopPropagation()}
@@ -2920,7 +2961,7 @@ function BlockFields({
     case "header": {
       const b = block as HeaderBlock;
       return (
-        <SectionChildEditableSurface seamless={seamlessSection}>
+        <BlockEditableSurface enabled={seamlessSection} marker="section-child">
           <ProposalRichText
             key={b.id}
             variant="header"
@@ -2935,13 +2976,13 @@ function BlockFields({
               })
             }
           />
-        </SectionChildEditableSurface>
+        </BlockEditableSurface>
       );
     }
     case "text": {
       const b = block as TextBlock;
       return (
-        <SectionChildEditableSurface seamless={seamlessSection}>
+        <BlockEditableSurface enabled={seamlessSection} marker="section-child">
           <ProposalRichText
             key={b.id}
             html={b.html ?? (b.body ? `<p>${escapeHtml(b.body)}</p>` : "<p></p>")}
@@ -2951,7 +2992,7 @@ function BlockFields({
             showBubbleWhenBlockSelected={selection?.selectedId === b.id}
             onChange={(html) => patch({ ...b, html, body: undefined })}
           />
-        </SectionChildEditableSurface>
+        </BlockEditableSurface>
       );
     }
     case "image": {
@@ -3466,6 +3507,84 @@ export type ProposalEditShellToolbarProps = {
   shareToken: string | null;
 };
 
+type ProposalCrmEditActionsProps = {
+  shareToken: string | null;
+  saving: boolean;
+  sending: boolean;
+  saveJustSucceeded: boolean;
+  publishJustSucceeded: boolean;
+  onSave: () => void;
+  onPublish: () => void;
+};
+
+/** Preview, Save, and Publish — shared by the proposal detail toolbar and builder tab row. */
+function ProposalCrmEditActions({
+  shareToken,
+  saving,
+  sending,
+  saveJustSucceeded,
+  publishJustSucceeded,
+  onSave,
+  onPublish,
+}: ProposalCrmEditActionsProps) {
+  return (
+    <>
+      {shareToken ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="gap-1.5 text-muted-foreground hover:text-foreground"
+          asChild
+        >
+          <Link
+            href={`/p/${encodeURIComponent(shareToken)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <ExternalLink className="h-4 w-4" aria-hidden />
+            Preview
+          </Link>
+        </Button>
+      ) : null}
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        disabled={saving}
+        onClick={onSave}
+        className="min-w-[7rem] gap-1.5 text-muted-foreground transition-colors hover:text-foreground"
+        aria-label={saveJustSucceeded && !saving ? "Saved" : "Save"}
+      >
+        {saving ? (
+          <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+        ) : saveJustSucceeded ? (
+          <Check className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
+        ) : (
+          <Save className="h-4 w-4 shrink-0" aria-hidden />
+        )}
+        {saveJustSucceeded && !saving ? "Saved" : "Save"}
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        disabled={sending}
+        onClick={onPublish}
+        className="min-w-[5.5rem] gap-2 transition-colors"
+        aria-label={publishJustSucceeded && !sending ? "Published" : "Publish"}
+      >
+        {sending ? (
+          <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+        ) : publishJustSucceeded ? (
+          <Check className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
+        ) : (
+          <Send className="h-4 w-4 shrink-0" aria-hidden />
+        )}
+        {publishJustSucceeded && !sending ? "Published" : "Publish"}
+      </Button>
+    </>
+  );
+}
+
 export interface ProposalDocumentEditorProps {
   variant?: "proposal" | "template" | "contract-template";
   proposalId?: string;
@@ -3976,58 +4095,15 @@ export function ProposalDocumentEditor({
               ) : null}
             </div>
             <div className="flex flex-wrap items-center justify-end gap-2">
-              {proposalEditShellToolbar.shareToken ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-1.5 text-muted-foreground hover:text-foreground"
-                  asChild
-                >
-                  <Link
-                    href={`/p/${encodeURIComponent(proposalEditShellToolbar.shareToken)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <ExternalLink className="h-4 w-4" aria-hidden />
-                    Preview
-                  </Link>
-                </Button>
-              ) : null}
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                disabled={sending}
-                onClick={() => void send()}
-                className="min-w-[7rem] gap-1.5 text-muted-foreground transition-colors hover:text-foreground"
-                aria-label={publishJustSucceeded && !sending ? "Published" : "Publish"}
-              >
-                {sending ? (
-                  <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
-                ) : publishJustSucceeded ? (
-                  <Check className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
-                ) : (
-                  <Send className="h-4 w-4 shrink-0" aria-hidden />
-                )}
-                {publishJustSucceeded && !sending ? "Published" : "Publish"}
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                disabled={saving}
-                onClick={() => void save()}
-                className="min-w-[5.5rem] gap-2 transition-colors"
-                aria-label={saveJustSucceeded && !saving ? "Saved" : "Save"}
-              >
-                {saving ? (
-                  <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
-                ) : saveJustSucceeded ? (
-                  <Check className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
-                ) : (
-                  <Save className="h-4 w-4 shrink-0" aria-hidden />
-                )}
-                {saveJustSucceeded && !saving ? "Saved" : "Save"}
-              </Button>
+              <ProposalCrmEditActions
+                shareToken={proposalEditShellToolbar.shareToken}
+                saving={saving}
+                sending={sending}
+                saveJustSucceeded={saveJustSucceeded}
+                publishJustSucceeded={publishJustSucceeded}
+                onSave={() => void save()}
+                onPublish={() => void send()}
+              />
             </div>
           </div>
           {message ? <span className="block text-sm text-muted-foreground">{message}</span> : null}
@@ -4042,9 +4118,10 @@ export function ProposalDocumentEditor({
         <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
+            variant="secondary"
             disabled={saving}
             onClick={() => void save()}
-            className="min-w-[5.5rem] gap-2 transition-colors"
+            className="min-w-[7rem] gap-2 transition-colors"
             aria-label={saveJustSucceeded && !saving ? "Saved" : "Save"}
           >
             {saving ? (
@@ -4059,10 +4136,9 @@ export function ProposalDocumentEditor({
           {!isTemplate ? (
             <Button
               type="button"
-              variant="secondary"
               disabled={sending}
               onClick={() => void send()}
-              className="min-w-[7rem] gap-2 transition-colors"
+              className="min-w-[5.5rem] gap-2 transition-colors"
               aria-label={publishJustSucceeded && !sending ? "Published" : "Publish"}
             >
               {sending ? (
@@ -4091,10 +4167,25 @@ export function ProposalDocumentEditor({
         value={editorTab}
         onValueChange={(value) => setEditorTab(value === "preview" ? "preview" : "edit")}
       >
-        <TabsList>
-          <TabsTrigger value="edit">Edit blocks</TabsTrigger>
-          <TabsTrigger value="preview">Live preview</TabsTrigger>
-        </TabsList>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <TabsList>
+            <TabsTrigger value="edit">Edit blocks</TabsTrigger>
+            <TabsTrigger value="preview">Live preview</TabsTrigger>
+          </TabsList>
+          {proposalEditShellToolbar ? (
+            <div className="flex flex-wrap items-center justify-end gap-2 sm:shrink-0">
+              <ProposalCrmEditActions
+                shareToken={proposalEditShellToolbar.shareToken}
+                saving={saving}
+                sending={sending}
+                saveJustSucceeded={saveJustSucceeded}
+                publishJustSucceeded={publishJustSucceeded}
+                onSave={() => void save()}
+                onPublish={() => void send()}
+              />
+            </div>
+          ) : null}
+        </div>
         <TabsContent
           value="edit"
           className="mt-4 pb-[min(45vh,26rem)] sm:pb-40 md:pb-48"
@@ -4134,6 +4225,16 @@ export function ProposalDocumentEditor({
                             if (block.type === "columns") rootColumnsChrome.clearBlockShellSelection(block.id);
                             setSelectedBlockId(block.id);
                           }}
+                          onSelectFromNotch={
+                            block.type === "columns"
+                              ? () => {
+                                  setRootColumnsLayoutEditingId((prev) =>
+                                    prev !== null && prev !== block.id ? null : prev,
+                                  );
+                                  setSelectedBlockId(block.id);
+                                }
+                              : undefined
+                          }
                           toolbar={({ dragAttributes, dragListeners }) => {
                             const isSection = block.type === "section";
                             const dragHandle = (
