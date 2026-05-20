@@ -109,6 +109,11 @@ import { ProposalImageBlockToolbar } from "@/components/proposal/proposal-image-
 import { ProposalSectionBackgroundPicker } from "@/components/proposal/proposal-section-background-picker";
 import { useProposalSectionEditorChrome } from "@/components/proposal/proposal-section-editor-chrome";
 import {
+  SECTION_CHILD_DRAG_GUTTER_CLASSES,
+  SectionChildDragHandle,
+  SectionChildInsertSlot,
+} from "@/components/proposal/proposal-section-child-chrome";
+import {
   PackagesInlineEditor,
   PricingInlineEditor,
 } from "@/components/proposal/proposal-block-inline-editors";
@@ -613,6 +618,8 @@ function SortableShell({
   toolbarShowOnHover = true,
   /** Full-bleed section bands stack flush — no vertical padding on the sortable wrapper. */
   flush = false,
+  /** Qwilr-style row inside a section: left drag notch + inline toolbar when selected. */
+  layout = "default",
 }: {
   id: string;
   children: React.ReactNode;
@@ -624,6 +631,7 @@ function SortableShell({
   }) => React.ReactNode;
   toolbarShowOnHover?: boolean;
   flush?: boolean;
+  layout?: "default" | "section-child";
 }) {
   const [hovered, setHovered] = React.useState(false);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
@@ -636,52 +644,82 @@ function SortableShell({
     transition,
   };
   const showToolbar = Boolean(toolbar && (selected || (toolbarShowOnHover && hovered)));
+  const sectionChild = layout === "section-child";
+
+  const ringClasses = seamless
+    ? cn(
+        "transition-none",
+        selected
+          ? prefersLightSection
+            ? "rounded-sm ring-1 ring-white/40 ring-offset-0"
+            : "rounded-sm ring-1 ring-sky-500/70 ring-offset-0"
+          : "rounded-sm",
+        "!bg-transparent hover:!bg-transparent focus-within:!bg-transparent active:!bg-transparent",
+        "dark:!bg-transparent dark:hover:!bg-transparent dark:focus-within:!bg-transparent dark:active:!bg-transparent",
+      )
+    : cn(
+        "transition-colors",
+        selected
+          ? "rounded-sm ring-1 ring-primary/45 ring-offset-2 ring-offset-transparent"
+          : sectionChild
+            ? "rounded-sm ring-1 ring-transparent hover:ring-border/40"
+            : "rounded-[2px] hover:bg-black/[0.03] dark:hover:bg-white/[0.04]",
+      );
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={cn("group/sortblock relative scroll-mt-28", isDragging && "opacity-55")}
+      className={cn(
+        "group/sortblock relative scroll-mt-28",
+        sectionChild && "flex w-full",
+        isDragging && "opacity-55",
+        selected && sectionChild && "z-[2]",
+      )}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {showToolbar && toolbar ? (
-        <div className="pointer-events-none absolute left-0 top-0 z-30 -translate-y-full pb-1.5 pt-2 sm:left-2">
-          <div className="pointer-events-auto">
-            {toolbar({ dragAttributes: attributes, dragListeners: listeners })}
-          </div>
+      {sectionChild ? (
+        <div className={SECTION_CHILD_DRAG_GUTTER_CLASSES}>
+          <SectionChildDragHandle
+            aria-label="Drag to reorder"
+            className={cn(selected && "opacity-100")}
+            {...attributes}
+            {...listeners}
+          />
         </div>
       ) : null}
-      <div
-        role="presentation"
-        onClick={(e) => {
-          e.stopPropagation();
-          onSelect();
-        }}
-        className={cn(
-          "relative px-0 [-webkit-tap-highlight-color:transparent]",
-          flushEdges ? "py-0" : "py-1.5",
-          seamless
-            ? cn(
-                "transition-none",
-                selected
-                  ? prefersLightSection
-                    ? "rounded-[2px] ring-1 ring-white/40 ring-offset-0"
-                    : "rounded-[2px] ring-1 ring-primary/50 ring-offset-0"
-                  : "rounded-[2px]",
-                // Flush with section backdrop — no hover/focus tint behind nested editors or inputs.
-                "!bg-transparent hover:!bg-transparent focus-within:!bg-transparent active:!bg-transparent",
-                "dark:!bg-transparent dark:hover:!bg-transparent dark:focus-within:!bg-transparent dark:active:!bg-transparent",
-              )
-            : cn(
-                "transition-colors",
-                selected
-                  ? "rounded-[2px] ring-1 ring-primary/45 ring-offset-2 ring-offset-transparent"
-                  : "rounded-[2px] hover:bg-black/[0.03] dark:hover:bg-white/[0.04]",
-              ),
-        )}
-      >
-        <div className="min-w-0">{children}</div>
+      <div className={cn("relative min-w-0", sectionChild ? "flex-1" : "w-full")}>
+        {showToolbar && toolbar && !sectionChild ? (
+          <div className="pointer-events-none absolute left-0 top-0 z-30 -translate-y-full pb-1.5 pt-2 sm:left-2">
+            <div className="pointer-events-auto">
+              {toolbar({ dragAttributes: attributes, dragListeners: listeners })}
+            </div>
+          </div>
+        ) : null}
+        {showToolbar && toolbar && sectionChild ? (
+          <div className="pointer-events-none absolute right-0 top-0 z-30 pb-1 pt-0.5">
+            <div className="pointer-events-auto">
+              {toolbar({ dragAttributes: attributes, dragListeners: listeners })}
+            </div>
+          </div>
+        ) : null}
+        <div
+          role="presentation"
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelect();
+          }}
+          className={cn(
+            "relative min-w-0 [-webkit-tap-highlight-color:transparent]",
+            !sectionChild && "px-0",
+            !sectionChild && (flushEdges ? "py-0" : "py-1.5"),
+            sectionChild && "py-0.5",
+            ringClasses,
+          )}
+        >
+          <div className="min-w-0">{children}</div>
+        </div>
       </div>
     </div>
   );
@@ -1419,18 +1457,24 @@ function SectionBlockFields({
     ) : (
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onChildDragEnd}>
         <SortableContext items={sortableChildIds} strategy={verticalListSortingStrategy}>
+          <div className="group/section-stack flex flex-col">
           {children.map((child, idx) => {
             const isSelected = selectedBlockId === child.id;
             const supportsStyle = child.type === "packages";
             return (
               <div key={child.id}>
-                <InsertBlockSlot context="section" variant="between" onAdd={(b) => addChildAt(b, idx)} />
+                <SectionChildInsertSlot
+                  menu={(trigger) => (
+                    <SectionInsertMenu align="start" onAdd={(b) => addChildAt(b, idx)} trigger={trigger} />
+                  )}
+                />
                 <div className={proposalEditorSectionChildEdgePadClasses(idx, children.length)}>
                 <SortableShell
                   id={child.id}
                   selected={isSelected}
                   flush
-                  toolbarShowOnHover={child.type !== "image" && child.type !== "icon"}
+                  layout="section-child"
+                  toolbarShowOnHover={false}
                   onSelect={() => {
                     setColumnsLayoutEditingId((prev) =>
                       prev !== null && prev !== child.id ? null : prev,
@@ -1460,15 +1504,12 @@ function SectionBlockFields({
                     if (child.type === "image") {
                       const ib = child as ImageBlock;
                       return (
-                        <div className="flex w-full items-start gap-1.5">
-                          {dragHandle}
-                          <ProposalImageBlockToolbar
-                            variant="shell"
-                            block={ib}
-                            onChange={(next) => updateChild(child.id, next as ProposalContentBlock)}
-                            onDelete={() => removeChild(child.id)}
-                          />
-                        </div>
+                        <ProposalImageBlockToolbar
+                          variant="shell"
+                          block={ib}
+                          onChange={(next) => updateChild(child.id, next as ProposalContentBlock)}
+                          onDelete={() => removeChild(child.id)}
+                        />
                       );
                     }
                     return (
@@ -1610,7 +1651,7 @@ function SectionBlockFields({
                             />
                           ) : undefined
                         }
-                        leadingSlot={dragHandle}
+                        leadingSlot={undefined}
                       />
                     );
                   }}
@@ -1635,12 +1676,17 @@ function SectionBlockFields({
             );
           })}
           {!omitTrailingInsert && children.length > 0 ? (
-            <InsertBlockSlot
-              context="section"
-              variant="between"
-              onAdd={(b) => addChildAt(b, children.length)}
+            <SectionChildInsertSlot
+              menu={(trigger) => (
+                <SectionInsertMenu
+                  align="start"
+                  onAdd={(b) => addChildAt(b, children.length)}
+                  trigger={trigger}
+                />
+              )}
             />
           ) : null}
+          </div>
         </SortableContext>
       </DndContext>
     );
@@ -2403,18 +2449,24 @@ function AgreementBlockFields({
     ) : (
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onChildDragEnd}>
         <SortableContext items={sortableChildIds} strategy={verticalListSortingStrategy}>
+          <div className="group/section-stack flex flex-col">
           {children.map((child, idx) => {
             const isSelected = selectedBlockId === child.id;
             const supportsStyle = child.type === "packages";
             return (
               <div key={child.id}>
-                <InsertBlockSlot context="section" variant="between" onAdd={(b) => addChildAt(b, idx)} />
+                <SectionChildInsertSlot
+                  menu={(trigger) => (
+                    <SectionInsertMenu align="start" onAdd={(b) => addChildAt(b, idx)} trigger={trigger} />
+                  )}
+                />
                 <div className={proposalEditorSectionChildEdgePadClasses(idx, children.length)}>
                 <SortableShell
                   id={child.id}
                   selected={isSelected}
                   flush
-                  toolbarShowOnHover={child.type !== "image" && child.type !== "icon"}
+                  layout="section-child"
+                  toolbarShowOnHover={false}
                   onSelect={() => {
                     setColumnsLayoutEditingId((prev) =>
                       prev !== null && prev !== child.id ? null : prev,
@@ -2444,15 +2496,12 @@ function AgreementBlockFields({
                     if (child.type === "image") {
                       const ib = child as ImageBlock;
                       return (
-                        <div className="flex w-full items-start gap-1.5">
-                          {dragHandle}
-                          <ProposalImageBlockToolbar
-                            variant="shell"
-                            block={ib}
-                            onChange={(next) => updateChild(child.id, next as ProposalAgreementChildBlock)}
-                            onDelete={() => removeChild(child.id)}
-                          />
-                        </div>
+                        <ProposalImageBlockToolbar
+                          variant="shell"
+                          block={ib}
+                          onChange={(next) => updateChild(child.id, next as ProposalAgreementChildBlock)}
+                          onDelete={() => removeChild(child.id)}
+                        />
                       );
                     }
                     return (
@@ -2574,7 +2623,7 @@ function AgreementBlockFields({
                             />
                           ) : undefined
                         }
-                        leadingSlot={dragHandle}
+                        leadingSlot={undefined}
                       />
                     );
                   }}
@@ -2599,12 +2648,17 @@ function AgreementBlockFields({
             );
           })}
           {!omitTrailingInsert && children.length > 0 ? (
-            <InsertBlockSlot
-              context="section"
-              variant="between"
-              onAdd={(b) => addChildAt(b, children.length)}
+            <SectionChildInsertSlot
+              menu={(trigger) => (
+                <SectionInsertMenu
+                  align="start"
+                  onAdd={(b) => addChildAt(b, children.length)}
+                  trigger={trigger}
+                />
+              )}
             />
           ) : null}
+          </div>
         </SortableContext>
       </DndContext>
     );
@@ -3183,11 +3237,7 @@ function InsertBlockSlot({
 
   return (
     <div className={cn("relative z-20 h-0 w-full", PROPOSAL_EDITOR_INSERT_ROW_OVERLAP_CLASSES)}>
-      {context === "section" ? (
-        <SectionInsertMenu align="center" onAdd={onAdd} trigger={insertRowTrigger} />
-      ) : (
-        <AddBlockMenu onAdd={onAdd} trigger={insertRowTrigger} />
-      )}
+      <AddBlockMenu onAdd={onAdd} trigger={insertRowTrigger} />
     </div>
   );
 }
