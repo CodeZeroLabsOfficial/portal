@@ -77,7 +77,15 @@ export const PROPOSAL_EDITOR_SECTION_STACK_BOTTOM_PAD_CLASSES =
 
 /**
  * Zero-height insert seam inside a section stack — pair with an absolutely positioned trigger
- * so hover chrome floats without shifting siblings (same model as root {@link InsertBlockSlot}).
+ * so hover chrome floats without shifting siblings. No negative margin here: section stacks use
+ * {@link PROPOSAL_EDITOR_SECTION_STACK_GAP_CLASSES} so each child (e.g. stacked columns rows) keeps
+ * its own hit target and toolbar slot.
  */
 export const PROPOSAL_EDITOR_SECTION_CHILD_INSERT_HOST_CLASSES =
-  `relative h-0 w-full overflow-visible ${PROPOSAL_EDITOR_INSERT_ROW_OVERLAP_CLASSES}`;
+  "relative h-0 w-full overflow-visible";
+
+/** Vertical rhythm between blocks inside a section band (editor). */
+export const PROPOSAL_EDITOR_SECTION_STACK_GAP_CLASSES = "gap-y-6 sm:gap-y-8";
+
+/** Padding inside each section child sortable row (header, text, columns, etc.). */
+export const PROPOSAL_EDITOR_SECTION_CHILD_ROW_PAD_CLASSES = "py-3 sm:py-4";

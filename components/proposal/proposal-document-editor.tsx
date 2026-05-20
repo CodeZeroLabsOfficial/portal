@@ -138,6 +138,8 @@ import {
   PROPOSAL_EDITOR_INSERT_ROW_OVERLAP_CLASSES,
   PROPOSAL_EDITOR_SECTION_INNER_PAD_CLASSES,
   PROPOSAL_EDITOR_SECTION_STACK_BOTTOM_PAD_CLASSES,
+  PROPOSAL_EDITOR_SECTION_STACK_GAP_CLASSES,
+  PROPOSAL_EDITOR_SECTION_CHILD_ROW_PAD_CLASSES,
   PROPOSAL_PUBLIC_DOCUMENT_OUTER_CLASSES,
   proposalEditorSectionChildEdgePadClasses,
 } from "@/lib/proposal-public-layout";
@@ -698,7 +700,7 @@ function SortableShell({
 
   const sectionChildRingClasses = prefersLightSection
     ? cn(
-        "rounded-sm ring-1 ring-offset-0 transition-[box-shadow] duration-150",
+        "rounded-md ring-1 ring-offset-2 ring-offset-white transition-[box-shadow] duration-150",
         selected || isDragging
           ? "ring-white/45"
           : hovered
@@ -706,7 +708,7 @@ function SortableShell({
             : "ring-transparent",
       )
     : cn(
-        "rounded-sm ring-1 ring-offset-0 transition-[box-shadow] duration-150",
+        "rounded-md ring-1 ring-offset-2 ring-offset-neutral-950 transition-[box-shadow] duration-150",
         selected || isDragging
           ? "ring-sky-500/70"
           : hovered
@@ -746,7 +748,7 @@ function SortableShell({
         sectionChild &&
           "focus-within:[&_[data-section-drag-gutter]]:pointer-events-auto focus-within:[&_[data-section-drag-gutter]]:visible focus-within:[&_[data-section-drag-gutter]]:opacity-100",
         isDragging && "opacity-55",
-        selected && sectionChild && "z-[2]",
+        sectionChild && (selected || hovered) && "z-10",
       )}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -778,7 +780,7 @@ function SortableShell({
           </div>
         ) : null}
         {showToolbar && toolbar && sectionChild ? (
-          <div className="pointer-events-none absolute right-0 top-0 z-30 pb-1 pt-0.5">
+          <div className="pointer-events-none absolute right-0 top-0 z-50 pb-1 pt-0.5">
             <div className="pointer-events-auto">
               {toolbar({ dragAttributes: attributes, dragListeners: listeners })}
             </div>
@@ -787,7 +789,9 @@ function SortableShell({
         <div
           role="presentation"
           onClick={(e) => {
-            if ((e.target as HTMLElement).closest("[data-proposal-columns-content]")) return;
+            const el = e.target as HTMLElement;
+            if (el.closest("[data-proposal-columns-content]")) return;
+            if (el.closest("[data-proposal-section-child-content]")) return;
             e.stopPropagation();
             onSelect();
           }}
@@ -795,7 +799,7 @@ function SortableShell({
             "relative min-w-0 [-webkit-tap-highlight-color:transparent]",
             !sectionChild && "px-0",
             !sectionChild && (flushEdges ? "py-0" : "py-1.5"),
-            sectionChild && "py-0.5",
+            sectionChild && PROPOSAL_EDITOR_SECTION_CHILD_ROW_PAD_CLASSES,
             ringClasses,
           )}
         >
@@ -1596,6 +1600,7 @@ function SectionBlockFields({
           <div
             className={cn(
               "group/section-stack flex flex-col",
+              PROPOSAL_EDITOR_SECTION_STACK_GAP_CLASSES,
               children.length > 0 && PROPOSAL_EDITOR_SECTION_STACK_BOTTOM_PAD_CLASSES,
             )}
           >
@@ -1604,7 +1609,7 @@ function SectionBlockFields({
             const supportsStyle = child.type === "packages";
             const isLastChild = idx === children.length - 1;
             return (
-              <div key={child.id}>
+              <div key={child.id} className="relative isolate min-w-0">
                 {idx === 0 ? (
                   <SectionChildInsertSlot
                     menu={(trigger) => (
@@ -2593,6 +2598,7 @@ function AgreementBlockFields({
           <div
             className={cn(
               "group/section-stack flex flex-col",
+              PROPOSAL_EDITOR_SECTION_STACK_GAP_CLASSES,
               children.length > 0 && PROPOSAL_EDITOR_SECTION_STACK_BOTTOM_PAD_CLASSES,
             )}
           >
@@ -2601,7 +2607,7 @@ function AgreementBlockFields({
             const supportsStyle = child.type === "packages";
             const isLastChild = idx === children.length - 1;
             return (
-              <div key={child.id}>
+              <div key={child.id} className="relative isolate min-w-0">
                 {idx === 0 ? (
                   <SectionChildInsertSlot
                     menu={(trigger) => (
@@ -2837,6 +2843,27 @@ function AgreementBlockFields({
   );
 }
 
+/** Separates the editable body from section-child block chrome (ring, drag notch, block toolbar). */
+function SectionChildEditableSurface({
+  seamless,
+  children,
+}: {
+  seamless: boolean;
+  children: React.ReactNode;
+}) {
+  if (!seamless) return <>{children}</>;
+  return (
+    <div
+      data-proposal-section-child-content
+      className="min-w-0"
+      onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+    >
+      {children}
+    </div>
+  );
+}
+
 function BlockFields({
   block,
   onChange,
@@ -2892,7 +2919,7 @@ function BlockFields({
     case "header": {
       const b = block as HeaderBlock;
       return (
-        <div className="space-y-3">
+        <SectionChildEditableSurface seamless={seamlessSection}>
           <ProposalRichText
             key={b.id}
             variant="header"
@@ -2906,13 +2933,13 @@ function BlockFields({
               })
             }
           />
-        </div>
+        </SectionChildEditableSurface>
       );
     }
     case "text": {
       const b = block as TextBlock;
       return (
-        <div className="space-y-3">
+        <SectionChildEditableSurface seamless={seamlessSection}>
           <ProposalRichText
             key={b.id}
             html={b.html ?? (b.body ? `<p>${escapeHtml(b.body)}</p>` : "<p></p>")}
@@ -2921,7 +2948,7 @@ function BlockFields({
             resizableHeight
             onChange={(html) => patch({ ...b, html, body: undefined })}
           />
-        </div>
+        </SectionChildEditableSurface>
       );
     }
     case "image": {

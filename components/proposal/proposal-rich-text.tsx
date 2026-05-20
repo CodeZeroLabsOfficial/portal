@@ -1023,7 +1023,13 @@ export function ProposalRichText({
       ? Math.min(TEXT_EDITOR_RESIZE_MAX_PX, Math.max(TEXT_EDITOR_RESIZE_MIN_PX, Math.round(editorMinHeightPx)))
       : null;
 
-  const autoMinHeightClass = headerVariant ? "min-h-[3.5rem]" : "min-h-[3.25rem]";
+  const autoMinHeightClass = seamless
+    ? headerVariant
+      ? "min-h-[2rem]"
+      : "min-h-[2.75rem]"
+    : headerVariant
+      ? "min-h-[3.5rem]"
+      : "min-h-[3.25rem]";
   const editorMinHeightStyle =
     resolvedMinHeightPx != null ? (`min-height: ${resolvedMinHeightPx}px` as const) : undefined;
 
