@@ -68,7 +68,8 @@ export function ProposalSectionShell({
     <div
       {...(editorCanvas ? { "data-proposal-section-editor": "" } : {})}
       className={cn(
-        "proposal-section-shell relative isolate min-h-[220px] w-full min-w-0 overflow-hidden",
+        "proposal-section-shell relative isolate w-full min-w-0 overflow-hidden",
+        editorCanvas ? "min-h-0" : "min-h-[220px]",
         surfaceChrome,
         shellRadius,
         !prefersLight && LIGHT_SECTION_SURFACE,

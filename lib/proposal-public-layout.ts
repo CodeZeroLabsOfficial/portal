@@ -15,11 +15,21 @@ export const PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES =
 export const PROPOSAL_EDITOR_BLOCK_CANVAS_INNER_CLASSES =
   "mx-auto w-full min-w-0 max-w-none px-3 sm:px-4 md:px-6";
 
+/** Vertical inset at the top of a section band’s content column (editor + public). */
+export const PROPOSAL_EDITOR_SECTION_INNER_PAD_TOP_CLASSES = "pt-8 sm:pt-10 md:pt-12";
+
+/** Vertical inset at the bottom of a section band’s content column (editor + public). */
+export const PROPOSAL_EDITOR_SECTION_INNER_PAD_BOTTOM_CLASSES = "pb-8 sm:pb-10 md:pb-12";
+
+/** Both edges — use only when the wrapper has no insert rows as siblings. */
+export const PROPOSAL_EDITOR_SECTION_INNER_PAD_CLASSES =
+  `${PROPOSAL_EDITOR_SECTION_INNER_PAD_TOP_CLASSES} ${PROPOSAL_EDITOR_SECTION_INNER_PAD_BOTTOM_CLASSES}`;
+
 /**
- * Vertical inset inside a full-bleed editor section band — applied to content only, not
- * inter-block insert rows, so stacked section blocks stay flush (Qwilr-style).
+ * Negative margin on insert seams so the hover row overlaps adjacent flush bands (Qwilr-style).
+ * Pair with `h-0` insert host + `h-7` absolute hit target.
  */
-export const PROPOSAL_EDITOR_SECTION_INNER_PAD_CLASSES = "py-8 sm:py-10 md:py-12";
+export const PROPOSAL_EDITOR_INSERT_ROW_OVERLAP_CLASSES = "-my-3.5";
 
 export const PROPOSAL_PUBLIC_SHELL_CLASSES =
   "proposal-print-root w-full py-12 sm:py-14 print:py-8";
@@ -40,14 +50,25 @@ export const PROPOSAL_PUBLIC_VIEWPORT_BREAKOUT_CLASSES =
 
 /**
  * Padding inside a section’s inner column (above/below the stacked children — sole vertical “band” inset).
- * Siblings inside the section are **not** spaced with margins; rhythm comes from this padding plus block typography.
+ * Matches editor section rhythm; siblings inside the section are not spaced with margins.
  */
-export const PROPOSAL_DOCUMENT_BLOCK_INNER_PAD_CLASSES = "py-[50px]";
+export const PROPOSAL_DOCUMENT_BLOCK_INNER_PAD_CLASSES = PROPOSAL_EDITOR_SECTION_INNER_PAD_CLASSES;
+
 /**
- * Root stack wrapper in `ProposalDocumentView`: bottom padding only (`pb-[50px]`).
- * Do **not** use `py-[50px]` here — section/column inner wrappers already use `py-[50px]` (`PROPOSAL_DOCUMENT_BLOCK_INNER_PAD_CLASSES`),
- * and stacking both made the **first** section’s heading sit ~100px below the page edge while later sections looked tighter.
+ * Root stack wrapper in `ProposalDocumentView`: bottom padding only when the last block is not a flush band.
  */
-export const PROPOSAL_DOCUMENT_ROOT_STACK_GAP_CLASSES = "flex flex-col gap-0 pb-[50px]";
+export const PROPOSAL_DOCUMENT_ROOT_STACK_GAP_CLASSES = "flex flex-col gap-0 pb-8 sm:pb-10 md:pb-12";
+
 /** Row gap when the two-column layout stacks on narrow viewports — keep flush; section padding carries vertical rhythm. */
 export const PROPOSAL_DOCUMENT_COLUMNS_ROW_GAP_CLASSES = "gap-y-0";
+
+/** Classes for the first/last child inside a stacked section (editor). */
+export function proposalEditorSectionChildEdgePadClasses(index: number, childCount: number): string {
+  if (childCount <= 0) return "";
+  return [
+    index === 0 ? PROPOSAL_EDITOR_SECTION_INNER_PAD_TOP_CLASSES : "",
+    index === childCount - 1 ? PROPOSAL_EDITOR_SECTION_INNER_PAD_BOTTOM_CLASSES : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}

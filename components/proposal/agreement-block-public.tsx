@@ -36,6 +36,7 @@ import {
   packagesSelectionTermLabel,
 } from "@/lib/proposal-packages-totals";
 import { injectAgreementLegalHeadingIds } from "@/lib/agreement-legal-headings";
+import { PROPOSAL_EDITOR_SECTION_INNER_PAD_CLASSES } from "@/lib/proposal-public-layout";
 import { sanitizeProposalHtml } from "@/lib/sanitize-proposal-html";
 import { isDocumentPackageSelectionComplete } from "@/lib/proposal-package-selection";
 import type { ProposalPublicSubscriptionUi } from "@/server/proposal/public-proposal-subscription-ui";
@@ -525,8 +526,13 @@ export function AgreementBlockPublic({
 
   return (
     <div className="w-full">
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-10 py-10 sm:py-14">
-        <div className="flex w-full min-w-0 flex-col gap-6 text-left">
+      <div
+        className={cn(
+          "mx-auto flex w-full max-w-2xl flex-col gap-6",
+          PROPOSAL_EDITOR_SECTION_INNER_PAD_CLASSES,
+        )}
+      >
+        <div className="flex w-full min-w-0 flex-col gap-0 text-left">
           {(block.children ?? []).map((child) => (
             <div key={child.id} className="w-full min-w-0">
               {renderAgreementChild(child)}

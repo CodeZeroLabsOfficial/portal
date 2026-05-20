@@ -126,12 +126,17 @@ import {
   normalizeColumnFlexForStorage,
   PROPOSAL_COLUMN_FR_MIN,
 } from "@/lib/proposal-columns";
-import { proposalBlockRendersFlushEditorBand } from "@/lib/proposal-blocks";
+import {
+  proposalBlockRendersFlushEditorBand,
+  proposalOmitTrailingSectionInsert,
+} from "@/lib/proposal-blocks";
 import {
   PROPOSAL_DOCUMENT_COLUMNS_ROW_GAP_CLASSES,
   PROPOSAL_EDITOR_BLOCK_CANVAS_INNER_CLASSES,
+  PROPOSAL_EDITOR_INSERT_ROW_OVERLAP_CLASSES,
   PROPOSAL_EDITOR_SECTION_INNER_PAD_CLASSES,
   PROPOSAL_PUBLIC_DOCUMENT_OUTER_CLASSES,
+  proposalEditorSectionChildEdgePadClasses,
 } from "@/lib/proposal-public-layout";
 import { contractTemplateDocumentToHtml } from "@/lib/contract-template-document";
 import { saveProposalDocumentAction, sendProposalAction } from "@/server/actions/proposal-builder";
@@ -625,6 +630,7 @@ function SortableShell({
   const sectionChrome = useProposalSectionEditorChrome();
   const seamless = sectionChrome?.seamless ?? false;
   const prefersLightSection = sectionChrome?.prefersLight ?? false;
+  const flushEdges = flush ?? seamless;
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -654,7 +660,7 @@ function SortableShell({
         }}
         className={cn(
           "relative px-0 [-webkit-tap-highlight-color:transparent]",
-          flush ? "py-0" : "py-1.5",
+          flushEdges ? "py-0" : "py-1.5",
           seamless
             ? cn(
                 "transition-none",
@@ -1305,6 +1311,8 @@ function SectionBlockFields({
   onSelectBlock,
   getBlockStyle,
   applyBlockStyle,
+  /** Hide the trailing in-section insert when the root insert row sits on the same seam (flush bands). */
+  omitTrailingInsert = false,
 }: {
   block: SectionBlock;
   onChange: (next: ProposalBlock) => void;
@@ -1312,6 +1320,7 @@ function SectionBlockFields({
   onSelectBlock: (id: string | null) => void;
   getBlockStyle: (b: ProposalBlock) => BlockStyle | undefined;
   applyBlockStyle: (id: string, style: BlockStyle | undefined) => void;
+  omitTrailingInsert?: boolean;
 }) {
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -1410,15 +1419,17 @@ function SectionBlockFields({
     ) : (
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onChildDragEnd}>
         <SortableContext items={sortableChildIds} strategy={verticalListSortingStrategy}>
-          <InsertBlockSlot context="section" variant="between" onAdd={(b) => addChildAt(b, 0)} />
           {children.map((child, idx) => {
             const isSelected = selectedBlockId === child.id;
             const supportsStyle = child.type === "packages";
             return (
               <div key={child.id}>
+                <InsertBlockSlot context="section" variant="between" onAdd={(b) => addChildAt(b, idx)} />
+                <div className={proposalEditorSectionChildEdgePadClasses(idx, children.length)}>
                 <SortableShell
                   id={child.id}
                   selected={isSelected}
+                  flush
                   toolbarShowOnHover={child.type !== "image" && child.type !== "icon"}
                   onSelect={() => {
                     setColumnsLayoutEditingId((prev) =>
@@ -1619,10 +1630,17 @@ function SectionBlockFields({
                     }}
                   />
                 </SortableShell>
-                <InsertBlockSlot context="section" variant="between" onAdd={(b) => addChildAt(b, idx + 1)} />
+                </div>
               </div>
             );
           })}
+          {!omitTrailingInsert && children.length > 0 ? (
+            <InsertBlockSlot
+              context="section"
+              variant="between"
+              onAdd={(b) => addChildAt(b, children.length)}
+            />
+          ) : null}
         </SortableContext>
       </DndContext>
     );
@@ -1630,7 +1648,7 @@ function SectionBlockFields({
   return (
     <ProposalSectionShell background={block.background} variant="editor">
       {backdropOn ? (
-        <div className={PROPOSAL_EDITOR_SECTION_INNER_PAD_CLASSES}>{sectionStack}</div>
+        <div className={PROPOSAL_EDITOR_BLOCK_CANVAS_INNER_CLASSES}>{sectionStack}</div>
       ) : (
         <div className="rounded-xl border border-dashed border-border/65 bg-muted/15 px-1 py-1 sm:bg-muted/[0.35]">
           {sectionStack}
@@ -1668,7 +1686,7 @@ function SpacerBlockHeightEditor({
   const labelHeight = Math.max(0, h - gripPx);
 
   return (
-    <div className="w-full space-y-2">
+    <div className="w-full">
       <label htmlFor={`spacer-h-a11y-${block.id}`} className="sr-only">
         Spacer height in pixels (1–2400)
       </label>
@@ -1754,7 +1772,7 @@ function SpacerBlockHeightEditor({
         </button>
       </div>
 
-      <p className="text-[11px] text-muted-foreground">
+      <p className="mt-1.5 text-[11px] text-muted-foreground">
         Drag the bottom edge to set height. Readers only see vertical space — no line or label.
       </p>
     </div>
@@ -2277,6 +2295,7 @@ function AgreementBlockFields({
   onSelectBlock,
   getBlockStyle,
   applyBlockStyle,
+  omitTrailingInsert = false,
 }: {
   block: AgreementBlock;
   onChange: (next: ProposalBlock) => void;
@@ -2284,6 +2303,7 @@ function AgreementBlockFields({
   onSelectBlock: (id: string | null) => void;
   getBlockStyle: (b: ProposalBlock) => BlockStyle | undefined;
   applyBlockStyle: (id: string, style: BlockStyle | undefined) => void;
+  omitTrailingInsert?: boolean;
 }) {
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -2383,15 +2403,17 @@ function AgreementBlockFields({
     ) : (
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onChildDragEnd}>
         <SortableContext items={sortableChildIds} strategy={verticalListSortingStrategy}>
-          <InsertBlockSlot context="section" variant="between" onAdd={(b) => addChildAt(b, 0)} />
           {children.map((child, idx) => {
             const isSelected = selectedBlockId === child.id;
             const supportsStyle = child.type === "packages";
             return (
               <div key={child.id}>
+                <InsertBlockSlot context="section" variant="between" onAdd={(b) => addChildAt(b, idx)} />
+                <div className={proposalEditorSectionChildEdgePadClasses(idx, children.length)}>
                 <SortableShell
                   id={child.id}
                   selected={isSelected}
+                  flush
                   toolbarShowOnHover={child.type !== "image" && child.type !== "icon"}
                   onSelect={() => {
                     setColumnsLayoutEditingId((prev) =>
@@ -2572,10 +2594,17 @@ function AgreementBlockFields({
                     }}
                   />
                 </SortableShell>
-                <InsertBlockSlot context="section" variant="between" onAdd={(b) => addChildAt(b, idx + 1)} />
+                </div>
               </div>
             );
           })}
+          {!omitTrailingInsert && children.length > 0 ? (
+            <InsertBlockSlot
+              context="section"
+              variant="between"
+              onAdd={(b) => addChildAt(b, children.length)}
+            />
+          ) : null}
         </SortableContext>
       </DndContext>
     );
@@ -2589,9 +2618,11 @@ function AgreementBlockFields({
   return (
     <ProposalSectionShell background={block.background} variant="editor">
       {backdropOn ? (
-        <div className="flex min-w-0 flex-col">
-          <div className={PROPOSAL_EDITOR_SECTION_INNER_PAD_CLASSES}>{acceptStack}</div>
-          {settingsFooter}
+        <div className={PROPOSAL_EDITOR_BLOCK_CANVAS_INNER_CLASSES}>
+          <div className="flex min-w-0 flex-col">
+            {acceptStack}
+            {settingsFooter}
+          </div>
         </div>
       ) : (
         <div className="rounded-xl border border-dashed border-border/65 bg-muted/15 px-1 py-1 sm:bg-muted/[0.35]">
@@ -2614,6 +2645,7 @@ function BlockFields({
   columnsLayoutEditing,
   imageColumnToolbar,
   iconColumnToolbar,
+  omitTrailingSectionInsert = false,
 }: {
   block: ProposalBlock;
   onChange: (next: ProposalBlock) => void;
@@ -2628,6 +2660,7 @@ function BlockFields({
   imageColumnToolbar?: ProposalImageColumnToolbarActions;
   /** Columns only: icon picker + remove on the floating toolbar when the cell is selected. */
   iconColumnToolbar?: ProposalIconColumnToolbarActions;
+  omitTrailingSectionInsert?: boolean;
 }) {
   const patch = (next: ProposalBlock) => onChange(next);
   const sectionChrome = useProposalSectionEditorChrome();
@@ -2648,6 +2681,7 @@ function BlockFields({
           onSelectBlock={selection?.onSelect ?? (() => {})}
           getBlockStyle={getBlockStyle ?? (() => undefined)}
           applyBlockStyle={applyBlockStyle ?? (() => {})}
+          omitTrailingInsert={omitTrailingSectionInsert}
         />
       );
     }
@@ -2728,7 +2762,12 @@ function BlockFields({
       const resolvedBg = resolveSectionBackground(b.background);
       const backdropOn = resolvedBg.active;
       const inner = backdropOn ? (
-        <div className={PROPOSAL_EDITOR_SECTION_INNER_PAD_CLASSES}>
+        <div
+          className={cn(
+            PROPOSAL_EDITOR_BLOCK_CANVAS_INNER_CLASSES,
+            PROPOSAL_EDITOR_SECTION_INNER_PAD_CLASSES,
+          )}
+        >
           <PackagesInlineEditor block={b} onChange={patch} />
         </div>
       ) : (
@@ -2870,6 +2909,7 @@ function BlockFields({
           onSelectBlock={selection?.onSelect ?? (() => {})}
           getBlockStyle={getBlockStyle ?? (() => undefined)}
           applyBlockStyle={applyBlockStyle ?? (() => {})}
+          omitTrailingInsert={omitTrailingSectionInsert}
         />
       );
     }
@@ -3142,7 +3182,7 @@ function InsertBlockSlot({
   );
 
   return (
-    <div className="relative z-20 -my-px h-0 w-full">
+    <div className={cn("relative z-20 h-0 w-full", PROPOSAL_EDITOR_INSERT_ROW_OVERLAP_CLASSES)}>
       {context === "section" ? (
         <SectionInsertMenu align="center" onAdd={onAdd} trigger={insertRowTrigger} />
       ) : (
@@ -4029,6 +4069,11 @@ export function ProposalDocumentEditor({
                               activeId: rootColumnsLayoutEditingId,
                               setActiveId: setRootColumnsLayoutEditingId,
                             }}
+                            omitTrailingSectionInsert={proposalOmitTrailingSectionInsert(
+                              block,
+                              blocks,
+                              idx,
+                            )}
                           />
                         </SortableShell>
                         <InsertBlockSlot onAdd={(b) => addBlockAt(b, idx + 1)} />
