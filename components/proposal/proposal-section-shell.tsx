@@ -48,7 +48,7 @@ export function ProposalSectionShell({
       : cn("rounded-3xl md:rounded-[1.85rem]");
   const gutter =
     editorCanvas
-      ? cn("py-8 sm:py-10 md:py-12")
+      ? "py-0"
       : viewerEdge
         ? /* Vertical rhythm: section inner column padding in `ProposalDocumentView` (no inter-block margins). */
           "px-0 py-0"

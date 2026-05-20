@@ -15,6 +15,12 @@ export const PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES =
 export const PROPOSAL_EDITOR_BLOCK_CANVAS_INNER_CLASSES =
   "mx-auto w-full min-w-0 max-w-none px-3 sm:px-4 md:px-6";
 
+/**
+ * Vertical inset inside a full-bleed editor section band — applied to content only, not
+ * inter-block insert rows, so stacked section blocks stay flush (Qwilr-style).
+ */
+export const PROPOSAL_EDITOR_SECTION_INNER_PAD_CLASSES = "py-8 sm:py-10 md:py-12";
+
 export const PROPOSAL_PUBLIC_SHELL_CLASSES =
   "proposal-print-root w-full py-12 sm:py-14 print:py-8";
 

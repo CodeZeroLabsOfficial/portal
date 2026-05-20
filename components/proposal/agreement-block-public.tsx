@@ -730,14 +730,6 @@ export function AgreementBlockPublic({
                 <h1 className="font-serif text-4xl font-semibold leading-tight tracking-tight text-zinc-900 sm:text-5xl">
                   {agreementTitle}
                 </h1>
-                {proposalTitle ? (
-                  <p
-                    data-agreement-print-exclude=""
-                    className="mt-3 text-sm font-medium text-zinc-500 print:hidden"
-                  >
-                    Re: <span className="text-zinc-900">{proposalTitle}</span>
-                  </p>
-                ) : null}
               </header>
 
               {introWithHeadingIds.html ? (

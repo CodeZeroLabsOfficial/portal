@@ -126,9 +126,11 @@ import {
   normalizeColumnFlexForStorage,
   PROPOSAL_COLUMN_FR_MIN,
 } from "@/lib/proposal-columns";
+import { proposalBlockRendersFlushEditorBand } from "@/lib/proposal-blocks";
 import {
   PROPOSAL_DOCUMENT_COLUMNS_ROW_GAP_CLASSES,
   PROPOSAL_EDITOR_BLOCK_CANVAS_INNER_CLASSES,
+  PROPOSAL_EDITOR_SECTION_INNER_PAD_CLASSES,
   PROPOSAL_PUBLIC_DOCUMENT_OUTER_CLASSES,
 } from "@/lib/proposal-public-layout";
 import { contractTemplateDocumentToHtml } from "@/lib/contract-template-document";
@@ -604,6 +606,8 @@ function SortableShell({
   toolbar,
   /** When false, the floating toolbar shows only while the block is selected (not on hover). Used for image blocks. */
   toolbarShowOnHover = true,
+  /** Full-bleed section bands stack flush — no vertical padding on the sortable wrapper. */
+  flush = false,
 }: {
   id: string;
   children: React.ReactNode;
@@ -614,6 +618,7 @@ function SortableShell({
     dragListeners: DraggableSyntheticListeners;
   }) => React.ReactNode;
   toolbarShowOnHover?: boolean;
+  flush?: boolean;
 }) {
   const [hovered, setHovered] = React.useState(false);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
@@ -648,7 +653,8 @@ function SortableShell({
           onSelect();
         }}
         className={cn(
-          "relative px-0 py-1.5 [-webkit-tap-highlight-color:transparent]",
+          "relative px-0 [-webkit-tap-highlight-color:transparent]",
+          flush ? "py-0" : "py-1.5",
           seamless
             ? cn(
                 "transition-none",
@@ -1624,7 +1630,7 @@ function SectionBlockFields({
   return (
     <ProposalSectionShell background={block.background} variant="editor">
       {backdropOn ? (
-        sectionStack
+        <div className={PROPOSAL_EDITOR_SECTION_INNER_PAD_CLASSES}>{sectionStack}</div>
       ) : (
         <div className="rounded-xl border border-dashed border-border/65 bg-muted/15 px-1 py-1 sm:bg-muted/[0.35]">
           {sectionStack}
@@ -2584,7 +2590,7 @@ function AgreementBlockFields({
     <ProposalSectionShell background={block.background} variant="editor">
       {backdropOn ? (
         <div className="flex min-w-0 flex-col">
-          {acceptStack}
+          <div className={PROPOSAL_EDITOR_SECTION_INNER_PAD_CLASSES}>{acceptStack}</div>
           {settingsFooter}
         </div>
       ) : (
@@ -2721,7 +2727,11 @@ function BlockFields({
       const b = block as PackagesBlock;
       const resolvedBg = resolveSectionBackground(b.background);
       const backdropOn = resolvedBg.active;
-      const inner = (
+      const inner = backdropOn ? (
+        <div className={PROPOSAL_EDITOR_SECTION_INNER_PAD_CLASSES}>
+          <PackagesInlineEditor block={b} onChange={patch} />
+        </div>
+      ) : (
         <div className={cn(!seamlessSection && PROPOSAL_EDITOR_BLOCK_CANVAS_INNER_CLASSES)}>
           <PackagesInlineEditor block={b} onChange={patch} />
         </div>
@@ -3068,9 +3078,8 @@ function LibraryRow({ option, onSelect }: { option: BlockOption; onSelect: () =>
 }
 
 /**
- * Hairline + circular "+" affordance rendered between (and around) blocks.
- * Hovering the slot highlights the line and reveals the trigger; clicking
- * opens the AddBlockMenu, which inserts at this exact position.
+ * Full-width insert seam between blocks (Qwilr-style): zero layout gap between
+ * stacked section bands; hovering the row highlights it and reveals the "+" control.
  */
 function InsertBlockSlot({
   onAdd,
@@ -3109,22 +3118,35 @@ function InsertBlockSlot({
       </div>
     );
   }
-  const sharedTriggerClasses =
-    "relative z-10 flex h-7 w-7 items-center justify-center rounded-full border border-border text-muted-foreground opacity-0 shadow-sm transition-opacity hover:border-primary hover:bg-primary hover:text-primary-foreground hover:opacity-100 focus:outline-none focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:border-primary data-[state=open]:bg-primary data-[state=open]:text-primary-foreground data-[state=open]:opacity-100 group-hover/insert:opacity-100 bg-background";
+  const plusIconClasses =
+    "relative z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-background text-muted-foreground opacity-0 shadow-sm transition-opacity group-hover/insert:opacity-100 group-focus-visible/insert:opacity-100 hover:border-primary hover:bg-primary hover:text-primary-foreground hover:opacity-100 focus:outline-none focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:border-primary data-[state=open]:bg-primary data-[state=open]:text-primary-foreground data-[state=open]:opacity-100";
 
-  const trigger = (
-    <button type="button" aria-label={context === "section" ? "Insert content row" : "Add block here"} className={sharedTriggerClasses}>
-      <Plus className="h-3.5 w-3.5" />
+  const insertRowTrigger = (
+    <button
+      type="button"
+      aria-label={context === "section" ? "Insert content row" : "Add block here"}
+      className={cn(
+        "group/insert absolute inset-x-0 top-1/2 z-20 flex h-7 -translate-y-1/2 items-center justify-center border-0 p-0",
+        "bg-transparent transition-colors hover:bg-primary/10 focus-visible:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
+        "data-[state=open]:bg-primary/10",
+      )}
+    >
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-primary/50 opacity-0 transition-opacity group-hover/insert:opacity-100 group-focus-visible/insert:opacity-100 group-data-[state=open]/insert:opacity-100"
+      />
+      <span className={plusIconClasses}>
+        <Plus className="h-3.5 w-3.5" aria-hidden />
+      </span>
     </button>
   );
 
   return (
-    <div className="group/insert relative flex items-center justify-center py-1.5">
-      <div className="pointer-events-none absolute inset-x-6 top-1/2 h-px -translate-y-1/2 bg-primary/40 opacity-0 transition-opacity group-hover/insert:opacity-70 group-focus-within/insert:opacity-70" />
+    <div className="relative z-20 -my-px h-0 w-full">
       {context === "section" ? (
-        <SectionInsertMenu align="center" onAdd={onAdd} trigger={trigger} />
+        <SectionInsertMenu align="center" onAdd={onAdd} trigger={insertRowTrigger} />
       ) : (
-        <AddBlockMenu onAdd={onAdd} trigger={trigger} />
+        <AddBlockMenu onAdd={onAdd} trigger={insertRowTrigger} />
       )}
     </div>
   );
@@ -3824,11 +3846,13 @@ export function ProposalDocumentEditor({
                   {blocks.map((block, idx) => {
                     const isSelected = selectedBlockId === block.id;
                     const supportsStyle = block.type === "packages";
+                    const flushBand = proposalBlockRendersFlushEditorBand(block);
                     return (
                       <div key={block.id}>
                         <SortableShell
                           id={block.id}
                           selected={isSelected}
+                          flush={flushBand}
                           toolbarShowOnHover={block.type !== "image" && block.type !== "icon"}
                           onSelect={() => {
                             setRootColumnsLayoutEditingId((prev) =>

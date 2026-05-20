@@ -4,6 +4,7 @@ import type {
   ProposalBlock,
   ProposalColumnChildBlock,
   ProposalContentBlock,
+  SectionBlock,
 } from "@/types/proposal";
 import { isSectionBackgroundActive } from "@/lib/section-background";
 
@@ -85,6 +86,22 @@ export function findFirstAgreementBlock(blocks: ProposalBlock[]): AgreementBlock
  * the public viewer to drop redundant bottom padding when the band already runs
  * flush to the viewport edge.
  */
+/** Full-bleed backdrop band in the block editor — stacks flush with siblings (no canvas gap). */
+export function proposalBlockRendersFlushEditorBand(block: ProposalBlock): boolean {
+  switch (block.type) {
+    case "section":
+      return isSectionBackgroundActive((block as SectionBlock).background);
+    case "packages":
+      return isSectionBackgroundActive((block as PackagesBlock).background);
+    case "agreement":
+      return isSectionBackgroundActive((block as AgreementBlock).background);
+    case "splash":
+      return true;
+    default:
+      return false;
+  }
+}
+
 export function proposalEndsInFullBleedBand(blocks: ProposalBlock[]): boolean {
   const last = blocks[blocks.length - 1];
   if (!last) return false;
