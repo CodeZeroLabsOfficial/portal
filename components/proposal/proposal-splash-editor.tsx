@@ -6,6 +6,16 @@ import { STYLE_PRESET_COLORS } from "@/lib/block-style";
 import { cn } from "@/lib/utils";
 import type { SplashBlock, SplashBlockBackground } from "@/types/proposal";
 import { mergeSplashBackground, resolveSplashBackdrop, type ResolvedSplashBackdrop } from "@/lib/splash-block";
+import {
+  SPLASH_LOGO_LAYOUT_PRESETS,
+  applySplashLogoLayoutPreset,
+  matchSplashLogoLayoutPresetId,
+  resolveSplashLogoAlignment,
+} from "@/lib/splash-branding";
+import {
+  useSplashBackgroundPickerBranding,
+  useSplashCompanyLogoUrl,
+} from "@/components/proposal/proposal-branding-context";
 import { ProposalRichText } from "@/components/proposal/proposal-rich-text";
 import { ProposalSplashBlockCanvas } from "@/components/proposal/proposal-splash-block";
 import { escapeHtml } from "@/lib/escape-html";
@@ -283,9 +293,15 @@ function SplashBackgroundTriggerMedia(model: SplashBlockBackground, resolved: Re
 export function ProposalSplashBackgroundPicker({
   block,
   onChange,
+  hasCompanyLogo = false,
+  isFirstRootSplash = false,
 }: {
   block: SplashBlock;
   onChange: (next: SplashBlock) => void;
+  /** Template branding includes a logo URL. */
+  hasCompanyLogo?: boolean;
+  /** This splash is the first top-level block (logo target). */
+  isFirstRootSplash?: boolean;
 }) {
   const mediaLibrary = useProposalMediaLibraryOptional();
   const [open, setOpen] = React.useState(false);
@@ -299,6 +315,8 @@ export function ProposalSplashBackgroundPicker({
   const presetId = matchLayoutPresetId(block);
   const showCustomLayout = customLayoutOpen || presetId === "custom";
   const positionSelectValue = customLayoutOpen ? "custom" : presetId;
+  const logoPresetId = matchSplashLogoLayoutPresetId(block);
+  const showLogoControls = hasCompanyLogo && isFirstRootSplash;
 
   function patchBg(part: Partial<SplashBlockBackground>) {
     onChange(patchBackground(block, part));
@@ -698,6 +716,90 @@ export function ProposalSplashBackgroundPicker({
                 ) : null}
               </div>
 
+              {showLogoControls ? (
+                <>
+                  <Separator className="my-4" />
+                  <div className="space-y-3">
+                    <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg px-2 py-1.5 ring-1 ring-border/50 hover:bg-muted/25">
+                      <span className="text-xs font-semibold text-foreground">Show company logo</span>
+                      <input
+                        type="checkbox"
+                        className="h-3.5 w-3.5 shrink-0 cursor-pointer rounded border-input accent-sky-500"
+                        checked={block.showLogo !== false}
+                        onChange={(e) => onChange({ ...block, showLogo: e.target.checked })}
+                      />
+                    </label>
+                    {block.showLogo !== false ? (
+                      <div className="space-y-1.5">
+                        <Label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          Logo position
+                        </Label>
+                        <select
+                          className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+                          value={logoPresetId}
+                          aria-label="Logo position in splash"
+                          onChange={(e) => onChange(applySplashLogoLayoutPreset(block, e.target.value))}
+                        >
+                          {SPLASH_LOGO_LAYOUT_PRESETS.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.label}
+                            </option>
+                          ))}
+                          <option value="custom">Custom…</option>
+                        </select>
+                        {logoPresetId === "custom" ? (
+                          <div className="grid grid-cols-2 gap-2 pt-1">
+                            <div className="space-y-1">
+                              <Label className="text-[10px] text-muted-foreground">Logo vertical</Label>
+                              <select
+                                className="h-9 w-full rounded-md border border-input bg-background px-2 text-xs"
+                                value={resolveSplashLogoAlignment(block).vertical}
+                                onChange={(e) =>
+                                  onChange({
+                                    ...block,
+                                    logoAlignment: {
+                                      ...resolveSplashLogoAlignment(block),
+                                      vertical: e.target.value as SplashBlock["alignment"]["vertical"],
+                                    },
+                                  })
+                                }
+                              >
+                                <option value="top">Top</option>
+                                <option value="center">Center</option>
+                                <option value="bottom">Bottom</option>
+                              </select>
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-[10px] text-muted-foreground">Logo horizontal</Label>
+                              <select
+                                className="h-9 w-full rounded-md border border-input bg-background px-2 text-xs"
+                                value={resolveSplashLogoAlignment(block).horizontal}
+                                onChange={(e) =>
+                                  onChange({
+                                    ...block,
+                                    logoAlignment: {
+                                      ...resolveSplashLogoAlignment(block),
+                                      horizontal: e.target.value as SplashBlock["alignment"]["horizontal"],
+                                    },
+                                  })
+                                }
+                              >
+                                <option value="left">Left</option>
+                                <option value="center">Center</option>
+                                <option value="right">Right</option>
+                              </select>
+                            </div>
+                          </div>
+                        ) : null}
+                        <p className="text-[10px] leading-snug text-muted-foreground">
+                          Logo is placed independently; headline position is set under Content position above.
+                        </p>
+                      </div>
+                    ) : null}
+                  </div>
+                </>
+              ) : null}
+
               <Separator className="my-4" />
 
               <div className="space-y-2">
@@ -761,11 +863,33 @@ export function ProposalSplashBackgroundPicker({
   );
 }
 
+/** Splash background control with template branding props from context. */
+export function ProposalSplashBackgroundPickerWithBranding({
+  block,
+  onChange,
+}: {
+  block: SplashBlock;
+  onChange: (next: SplashBlock) => void;
+}) {
+  const branding = useSplashBackgroundPickerBranding(block.id);
+  return (
+    <ProposalSplashBackgroundPicker
+      block={block}
+      onChange={onChange}
+      hasCompanyLogo={branding.hasCompanyLogo}
+      isFirstRootSplash={branding.isFirstRootSplash}
+    />
+  );
+}
+
 export function SplashBlockInspector({ block, onChange }: { block: SplashBlock; onChange: (next: SplashBlock) => void }) {
   const html = block.html ?? (block.body ? `<p>${escapeHtml(block.body)}</p>` : "<p></p>");
+  const companyLogoUrl = useSplashCompanyLogoUrl(block.id);
+  const splashLogo =
+    companyLogoUrl && block.showLogo !== false ? companyLogoUrl : null;
 
   return (
-    <ProposalSplashBlockCanvas block={block} mode="editor">
+    <ProposalSplashBlockCanvas block={block} mode="editor" logoUrl={splashLogo}>
       <ProposalRichText
         key={block.id}
         html={html}

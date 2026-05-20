@@ -15,12 +15,21 @@ import { COLLECTIONS } from "@/server/firestore/collections";
 import { getProposalTemplateForStaff } from "@/server/firestore/proposal-templates";
 import { hydrateAgreementBlocksInDocument } from "@/server/proposal/hydrate-agreement-contract-templates";
 
+const proposalBrandingSchema = z
+  .object({
+    logoUrl: z.string().max(8192).optional(),
+    primaryColor: z.string().max(32).optional(),
+    fontFamily: z.string().max(200).optional(),
+  })
+  .optional();
+
 const saveTemplateSchema = z.object({
   templateId: z.string().min(1),
   name: z.string().trim().min(1).max(200),
   description: z.string().max(2000).optional(),
   title: z.string().trim().min(1).max(500),
   document: z.unknown(),
+  branding: proposalBrandingSchema,
 });
 
 export async function createProposalTemplateAction(): Promise<
@@ -141,6 +150,14 @@ export async function saveProposalTemplateAction(
   const db = getFirebaseAdminFirestore();
   if (!db) return { ok: false, message: "Database unavailable." };
 
+  const brandingPayload = (() => {
+    const raw = parsed.data.branding;
+    if (!raw) return FieldValue.delete();
+    const b = omitUndefinedDeep(raw) as Record<string, unknown>;
+    if (Object.keys(b).length === 0) return FieldValue.delete();
+    return b;
+  })();
+
   const write = await runAdminWrite(
     "proposal_template_save_failed",
     { templateId: parsed.data.templateId },
@@ -157,6 +174,7 @@ export async function saveProposalTemplateAction(
           document: omitUndefinedDeep(
             encodeProposalDocumentForFirestore(syncedDocument),
           ) as Record<string, unknown>,
+          branding: brandingPayload,
           updatedAt: FieldValue.serverTimestamp(),
         }),
   );

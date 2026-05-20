@@ -102,6 +102,12 @@ export function proposalBlockRendersFlushEditorBand(block: ProposalBlock): boole
   }
 }
 
+/** First top-level splash block id — used for template company logo on the public hero. */
+export function firstRootSplashBlockId(blocks: ProposalBlock[]): string | null {
+  const first = blocks[0];
+  return first?.type === "splash" ? first.id : null;
+}
+
 export function proposalEndsInFullBleedBand(blocks: ProposalBlock[]): boolean {
   const last = blocks[blocks.length - 1];
   if (!last) return false;

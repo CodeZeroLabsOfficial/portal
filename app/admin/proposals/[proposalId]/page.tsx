@@ -238,6 +238,7 @@ export default async function AdminProposalDetailPage({ params, searchParams }: 
       <ProposalDocumentEditorLazy
         proposalId={proposal.id}
         initialDocument={proposal.document}
+        initialBranding={proposal.branding}
         initialStatus={proposal.status}
         localityTimeZone={user.timeZone?.trim() || undefined}
         catalogServiceOptions={catalogServiceOptions}

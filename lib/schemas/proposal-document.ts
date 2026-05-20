@@ -102,15 +102,19 @@ const splashHeightSchema = z.union([
   }),
 ]);
 
+const splashAlignmentSchema = z.object({
+  vertical: z.enum(["top", "center", "bottom"]),
+  horizontal: z.enum(["left", "center", "right"]),
+});
+
 const splashBlockSchema = z.object({
   id: idSchema,
   type: z.literal("splash"),
   background: splashBackgroundSchema,
   height: splashHeightSchema,
-  alignment: z.object({
-    vertical: z.enum(["top", "center", "bottom"]),
-    horizontal: z.enum(["left", "center", "right"]),
-  }),
+  alignment: splashAlignmentSchema,
+  logoAlignment: splashAlignmentSchema.optional(),
+  showLogo: z.boolean().optional(),
   html: z.string().optional(),
   body: z.string().optional(),
   showCard: z.boolean().optional(),

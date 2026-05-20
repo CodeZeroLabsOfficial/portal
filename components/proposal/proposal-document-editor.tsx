@@ -131,7 +131,7 @@ import {
   normalizeColumnFlexForStorage,
   PROPOSAL_COLUMN_FR_MIN,
 } from "@/lib/proposal-columns";
-import { proposalBlockRendersFlushEditorBand } from "@/lib/proposal-blocks";
+import { firstRootSplashBlockId, proposalBlockRendersFlushEditorBand } from "@/lib/proposal-blocks";
 import {
   PROPOSAL_DOCUMENT_COLUMNS_ROW_GAP_CLASSES,
   PROPOSAL_EDITOR_BLOCK_CANVAS_INNER_CLASSES,
@@ -189,9 +189,14 @@ import { packagesAddonsSectionActive } from "@/lib/proposal-packages-totals";
 import { resolveSectionBackground } from "@/lib/section-background";
 import { defaultSplashBlock } from "@/lib/splash-block";
 import {
-  ProposalSplashBackgroundPicker,
+  ProposalSplashBackgroundPickerWithBranding,
   SplashBlockInspector,
 } from "@/components/proposal/proposal-splash-editor";
+import {
+  ProposalBrandingProvider,
+} from "@/components/proposal/proposal-branding-context";
+import { ProposalTemplateBrandingPanel } from "@/components/proposal/proposal-template-branding-panel";
+import type { ProposalBranding } from "@/types/proposal";
 import { AccordionBlockEditor } from "@/components/proposal/accordion-block-editor";
 import { EditorCatalogServicesContext } from "@/components/proposal/editor-catalog-services-context";
 import { proposalRichHtmlToPlainText } from "@/lib/proposal-rich-plain-text";
@@ -1806,7 +1811,7 @@ function SectionBlockFields({
                         }
                         backdropPickerSlot={
                           child.type === "splash" ? (
-                            <ProposalSplashBackgroundPicker
+                            <ProposalSplashBackgroundPickerWithBranding
                               block={child as SplashBlock}
                               onChange={(next) =>
                                 updateChild(child.id, next as ProposalContentBlock)
@@ -2794,7 +2799,7 @@ function AgreementBlockFields({
                         }
                         backdropPickerSlot={
                           child.type === "splash" ? (
-                            <ProposalSplashBackgroundPicker
+                            <ProposalSplashBackgroundPickerWithBranding
                               block={child as SplashBlock}
                               onChange={(next) =>
                                 updateChild(child.id, next as ProposalAgreementChildBlock)
@@ -3635,6 +3640,8 @@ export interface ProposalDocumentEditorProps {
   localityTimeZone?: string;
   /** Active catalogue services — link plan tiers via `serviceId`. */
   catalogServiceOptions?: CatalogServicePickerOption[];
+  /** Proposal templates — logo and colours copied to new CRM proposals. */
+  initialBranding?: ProposalBranding;
 }
 
 export function ProposalDocumentEditor({
@@ -3652,6 +3659,7 @@ export function ProposalDocumentEditor({
   proposalEditMiddleSlot,
   localityTimeZone,
   catalogServiceOptions = [],
+  initialBranding,
 }: ProposalDocumentEditorProps) {
   const isTemplate = variant === "template";
   const isContractTemplate = variant === "contract-template";
@@ -3662,6 +3670,7 @@ export function ProposalDocumentEditor({
   const [templateNameEditing, setTemplateNameEditing] = React.useState(false);
   const skipNextTemplateNameBlurSaveRef = React.useRef(false);
   const [blocks, setBlocks] = React.useState<ProposalBlock[]>(initialDocument.blocks);
+  const [branding, setBranding] = React.useState<ProposalBranding | undefined>(initialBranding);
   const [selectedBlockId, setSelectedBlockId] = React.useState<string | null>(null);
   const [rootColumnsLayoutEditingId, setRootColumnsLayoutEditingId] = React.useState<string | null>(null);
   const rootColumnsChrome = useColumnsInnerCellChrome();
@@ -3722,6 +3731,14 @@ export function ProposalDocumentEditor({
     [documentTitle, blocks],
   );
 
+  const brandingContextValue = React.useMemo(
+    () => ({
+      branding,
+      firstRootSplashBlockId: firstRootSplashBlockId(blocks),
+    }),
+    [branding, blocks],
+  );
+
   function onDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
@@ -3768,6 +3785,7 @@ export function ProposalDocumentEditor({
         description: initialTemplateDescription?.trim() || undefined,
         title: documentTitle,
         document: doc,
+        branding,
       });
       setSaving(false);
       setMessage(res.ok ? null : res.message);
@@ -3827,6 +3845,7 @@ export function ProposalDocumentEditor({
       description: initialTemplateDescription?.trim() || undefined,
       title: documentTitle,
       document: doc,
+      branding,
     });
     if (!saved.ok) {
       setSending(false);
@@ -4043,6 +4062,7 @@ export function ProposalDocumentEditor({
     <EditorCatalogServicesContext.Provider value={catalogServiceOptions}>
     <ProposalEditorLibraryScope>
     <ProposalMediaLibraryProvider>
+    <ProposalBrandingProvider value={brandingContextValue}>
     <ProposalContractTemplateLibraryProvider>
     <BlockMenuProfileContext.Provider value={blockMenuProfile}>
     <div className="space-y-8">
@@ -4165,6 +4185,13 @@ export function ProposalDocumentEditor({
             <p className="text-xs text-muted-foreground">
               Publish marks the template as ready to use when creating proposals from CRM.
             </p>
+          ) : null}
+          {isTemplate ? (
+            <ProposalTemplateBrandingPanel
+              branding={branding}
+              onChange={setBranding}
+              disabled={saving}
+            />
           ) : null}
         </>
       ) : proposalEditShellToolbar ? (
@@ -4449,7 +4476,7 @@ export function ProposalDocumentEditor({
                                     onChange={(next) => patchAgreementBackdrop(block.id, next)}
                                   />
                                 ) : block.type === "splash" ? (
-                                  <ProposalSplashBackgroundPicker
+                                  <ProposalSplashBackgroundPickerWithBranding
                                     block={block as SplashBlock}
                                     onChange={(next) => updateBlock(block.id, next)}
                                   />
@@ -4501,7 +4528,11 @@ export function ProposalDocumentEditor({
               <ContractTemplateAgreementPreview agreementTitle={agreementTitle} document={doc} />
             ) : (
               <div className={PROPOSAL_PUBLIC_DOCUMENT_OUTER_CLASSES}>
-                <ProposalDocumentView document={doc} localityTimeZone={localityTimeZone} />
+                <ProposalDocumentView
+                  document={doc}
+                  branding={branding}
+                  localityTimeZone={localityTimeZone}
+                />
               </div>
             )
           ) : null}
@@ -4510,6 +4541,7 @@ export function ProposalDocumentEditor({
     </div>
     </BlockMenuProfileContext.Provider>
     </ProposalContractTemplateLibraryProvider>
+    </ProposalBrandingProvider>
     </ProposalMediaLibraryProvider>
     </ProposalEditorLibraryScope>
     </EditorCatalogServicesContext.Provider>

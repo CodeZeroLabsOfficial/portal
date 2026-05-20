@@ -48,7 +48,8 @@ import { ProposalSectionShell } from "@/components/proposal/proposal-section-she
 import { ProposalSplashBlockCanvas } from "@/components/proposal/proposal-splash-block";
 import { isProposalImagePlaceholderUrl } from "@/components/proposal/proposal-image-block-editor";
 import { isSectionBackgroundActive } from "@/lib/section-background";
-import { proposalEndsInFullBleedBand } from "@/lib/proposal-blocks";
+import { firstRootSplashBlockId, proposalEndsInFullBleedBand } from "@/lib/proposal-blocks";
+import { splashShowsCompanyLogo } from "@/lib/splash-branding";
 import { PROPOSAL_CAPTION_PLAIN_CLASS, PROPOSAL_CAPTION_RICH_DISPLAY_CLASS } from "@/lib/proposal-inline-caption-rich-display";
 import { PROPOSAL_INLINE_HEADING_RICH_DISPLAY_CLASS } from "@/lib/proposal-inline-heading-rich-display";
 import { ProposalIconBlockDisplay } from "@/components/proposal/proposal-icon-block-display";
@@ -149,6 +150,8 @@ function AccordionPublicView({ block }: { block: AccordionBlock }) {
 interface ProposalRenderContext {
   /** Full top-level block list — used by the agreement modal to summarise selections. */
   allBlocks: ProposalBlock[];
+  brandingLogoUrl?: string;
+  firstRootSplashBlockId?: string | null;
   proposalTitle?: string;
   proposalStatus?: ProposalStatus;
   acceptedByName?: string;
@@ -212,7 +215,24 @@ function BlockView({
       const s = block as SplashBlock;
       const pub = s.html?.trim() ? s.html : s.body ? `<p>${escapeHtml(s.body)}</p>` : "<p></p>";
       const pres = splashPublicPresentation ?? "nestedColumn";
-      const canvas = <ProposalSplashBlockCanvas block={s} mode="public" publicHtml={pub} presentation="publicEdge" />;
+      const splashLogo =
+        proposalContext?.brandingLogoUrl &&
+        splashShowsCompanyLogo(
+          s,
+          proposalContext.brandingLogoUrl,
+          proposalContext.firstRootSplashBlockId ?? null,
+        )
+          ? proposalContext.brandingLogoUrl
+          : null;
+      const canvas = (
+        <ProposalSplashBlockCanvas
+          block={s}
+          mode="public"
+          publicHtml={pub}
+          presentation="publicEdge"
+          logoUrl={splashLogo}
+        />
+      );
       if (pres === "nestedColumn") {
         return <div className={PROPOSAL_PUBLIC_VIEWPORT_BREAKOUT_CLASSES}>{canvas}</div>;
       }
@@ -593,9 +613,18 @@ export function ProposalDocumentView({
     } as React.CSSProperties;
   }, [branding]);
 
+  const splashLogoBlockId = React.useMemo(
+    () => (branding?.logoUrl?.trim() && viewportSectionBleed ? firstRootSplashBlockId(document.blocks) : null),
+    [branding?.logoUrl, document.blocks, viewportSectionBleed],
+  );
+
+  const showDocumentLevelLogo = Boolean(branding?.logoUrl?.trim() && !splashLogoBlockId);
+
   const proposalContext = React.useMemo<ProposalRenderContext>(
     () => ({
       allBlocks: document.blocks,
+      brandingLogoUrl: branding?.logoUrl?.trim() || undefined,
+      firstRootSplashBlockId: splashLogoBlockId,
       proposalTitle: document.title,
       proposalStatus,
       acceptedByName,
@@ -608,6 +637,8 @@ export function ProposalDocumentView({
     }),
     [
       document.blocks,
+      branding?.logoUrl,
+      splashLogoBlockId,
       document.title,
       proposalStatus,
       acceptedByName,
@@ -635,11 +666,11 @@ export function ProposalDocumentView({
       style={style}
       className={cn("w-full space-y-0", className)}
     >
-      {branding?.logoUrl ? (
+      {showDocumentLevelLogo ? (
         <div className={PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES}>
-          <div className="flex justify-center">
+          <div className="flex justify-center pb-4">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={branding.logoUrl} alt="" className="h-10 max-w-[200px] object-contain" />
+            <img src={branding!.logoUrl} alt="" className="h-10 max-w-[200px] object-contain" />
           </div>
         </div>
       ) : null}

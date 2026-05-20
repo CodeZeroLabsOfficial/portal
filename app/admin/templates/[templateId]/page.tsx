@@ -42,6 +42,7 @@ export default async function EditProposalTemplatePage({ params }: PageProps) {
         initialTemplateDescription={template.description ?? ""}
         initialTemplateStage={template.stage}
         initialDocument={template.document}
+        initialBranding={template.branding}
         localityTimeZone={user.timeZone?.trim() || undefined}
         catalogServiceOptions={catalogServiceOptions}
       />

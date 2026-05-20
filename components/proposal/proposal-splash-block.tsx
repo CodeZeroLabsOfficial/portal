@@ -10,7 +10,16 @@ import {
   resolveSplashBackdrop,
   splashHeightMinStyle,
 } from "@/lib/splash-block";
+import type { SplashBlockAlignment } from "@/lib/splash-branding";
+import {
+  resolveSplashLogoAlignment,
+  splashLogoAbsolutePositionClasses,
+  splashLogoAlignmentsMatchContent,
+  splashLogoRowJustifyClasses,
+} from "@/lib/splash-branding";
 import { PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES } from "@/lib/proposal-public-layout";
+
+const SPLASH_LOGO_IMG_CLASS = "h-9 max-w-[200px] object-contain sm:h-10";
 
 const RICH_PUBLIC =
   "proposal-rich-text max-w-none text-sm leading-relaxed [&_a]:text-sky-200 [&_a]:underline [&_blockquote]:my-4 [&_blockquote]:border-l-4 [&_blockquote]:border-white/35 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-white/75 [&_h1]:mt-0 [&_h1]:text-3xl [&_h1]:font-semibold [&_h2]:mt-2 [&_h2]:text-2xl [&_h2]:font-semibold [&_h3]:mt-2 [&_h3]:text-xl [&_h3]:font-semibold [&_h4]:mt-2 [&_h4]:text-base [&_h4]:font-semibold [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-3 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5 [&_img]:max-h-32 [&_img]:rounded-lg [&_img]:object-contain";
@@ -174,9 +183,49 @@ function SplashMediaLayers({
   );
 }
 
+function SplashCompanyLogoMark({
+  logoUrl,
+  prefersLight,
+  stacked,
+  logoAlignment,
+}: {
+  logoUrl: string;
+  prefersLight: boolean;
+  stacked: boolean;
+  logoAlignment: SplashBlockAlignment;
+}) {
+  const img = (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={logoUrl} alt="" className={SPLASH_LOGO_IMG_CLASS} />
+  );
+
+  const pill = (
+    <div
+      className={cn(
+        "rounded-lg px-3 py-2",
+        prefersLight && "bg-black/25 backdrop-blur-sm",
+      )}
+    >
+      {img}
+    </div>
+  );
+
+  if (stacked) {
+    return (
+      <div className={cn("mb-4 flex w-full shrink-0", splashLogoRowJustifyClasses(logoAlignment.horizontal))}>
+        {pill}
+      </div>
+    );
+  }
+
+  return <div className={splashLogoAbsolutePositionClasses(logoAlignment)}>{pill}</div>;
+}
+
 export interface ProposalSplashBlockCanvasProps {
   block: SplashBlock;
   mode: "editor" | "public";
+  /** Template / proposal company logo (first root splash only). */
+  logoUrl?: string | null;
   /** Live TipTap surface — takes precedence over `publicHtml`. */
   children?: React.ReactNode;
   /** Published / preview HTML when `children` is not used. */
@@ -189,6 +238,7 @@ export interface ProposalSplashBlockCanvasProps {
 export function ProposalSplashBlockCanvas({
   block,
   mode,
+  logoUrl,
   children,
   publicHtml,
   className,
@@ -199,8 +249,11 @@ export function ProposalSplashBlockCanvas({
   const prefersLight = resolved.prefersLightForeground;
   const heightStyle = splashHeightMinStyle(block.height);
   const align = block.alignment ?? { vertical: "center", horizontal: "center" };
+  const logoAlign = resolveSplashLogoAlignment(block);
   const showCard = Boolean(block.showCard);
   const cardOpacity = Math.max(0, Math.min(100, block.cardOpacity ?? 70));
+  const companyLogoUrl = logoUrl?.trim() || null;
+  const stackedLogo = Boolean(companyLogoUrl && splashLogoAlignmentsMatchContent(block));
 
   const editorChrome = mode === "editor";
   const presentation = editorChrome ? "editor" : (presentationProp ?? "publicEdge");
@@ -237,10 +290,34 @@ export function ProposalSplashBlockCanvas({
           backgroundColor: withAlpha("#030712", cardOpacity / 100),
           borderColor: withAlpha("#ffffff", 0.12),
         }
-      : {
+        : {
           backgroundColor: withAlpha("#ffffff", cardOpacity / 100),
           borderColor: withAlpha("#0f172a", 0.08),
         };
+
+  const logoMark = companyLogoUrl ? (
+    <SplashCompanyLogoMark
+      logoUrl={companyLogoUrl}
+      prefersLight={prefersLight}
+      stacked={stackedLogo}
+      logoAlignment={logoAlign}
+    />
+  ) : null;
+
+  const textBody =
+    showCard && inner ? (
+      <div
+        className={cn(
+          "max-w-full rounded-2xl border px-5 py-6 shadow-inner backdrop-blur-md sm:px-8 sm:py-8",
+          prefersLight ? "text-white" : "text-foreground",
+        )}
+        style={cardStyle}
+      >
+        {inner}
+      </div>
+    ) : (
+      inner
+    );
 
   return (
     <div
@@ -273,24 +350,16 @@ export function ProposalSplashBlockCanvas({
       >
         <div
           className={cn(
-            "w-full min-w-0 shrink-0",
+            "relative w-full min-w-0 shrink-0",
             publicEdge && PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES,
             editorChrome && "w-full",
           )}
         >
-          {showCard && inner ? (
-            <div
-              className={cn(
-                "max-w-full rounded-2xl border px-5 py-6 shadow-inner backdrop-blur-md sm:px-8 sm:py-8",
-                prefersLight ? "text-white" : "text-foreground",
-              )}
-              style={cardStyle}
-            >
-              {inner}
-            </div>
-          ) : (
-            inner
-          )}
+          {!stackedLogo ? logoMark : null}
+          <div className="relative z-10 w-full min-w-0">
+            {stackedLogo ? logoMark : null}
+            {textBody}
+          </div>
         </div>
       </div>
     </div>
