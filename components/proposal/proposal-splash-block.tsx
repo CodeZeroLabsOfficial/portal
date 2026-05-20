@@ -16,10 +16,9 @@ import {
   splashLogoAbsolutePositionClasses,
   splashLogoAlignmentsMatchContent,
   splashLogoRowJustifyClasses,
+  splashLogoSizeClasses,
 } from "@/lib/splash-branding";
 import { PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES } from "@/lib/proposal-public-layout";
-
-const SPLASH_LOGO_IMG_CLASS = "h-9 max-w-[200px] object-contain sm:h-10";
 
 const RICH_PUBLIC =
   "proposal-rich-text max-w-none text-sm leading-relaxed [&_a]:text-sky-200 [&_a]:underline [&_blockquote]:my-4 [&_blockquote]:border-l-4 [&_blockquote]:border-white/35 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-white/75 [&_h1]:mt-0 [&_h1]:text-3xl [&_h1]:font-semibold [&_h2]:mt-2 [&_h2]:text-2xl [&_h2]:font-semibold [&_h3]:mt-2 [&_h3]:text-xl [&_h3]:font-semibold [&_h4]:mt-2 [&_h4]:text-base [&_h4]:font-semibold [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-3 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-5 [&_img]:max-h-32 [&_img]:rounded-lg [&_img]:object-contain";
@@ -188,15 +187,17 @@ function SplashCompanyLogoMark({
   prefersLight,
   stacked,
   logoAlignment,
+  logoSize,
 }: {
   logoUrl: string;
   prefersLight: boolean;
   stacked: boolean;
   logoAlignment: SplashBlockAlignment;
+  logoSize?: SplashBlock["logoSize"];
 }) {
   const img = (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={logoUrl} alt="" className={SPLASH_LOGO_IMG_CLASS} />
+    <img src={logoUrl} alt="" className={splashLogoSizeClasses(logoSize)} />
   );
 
   const pill = (
@@ -301,6 +302,7 @@ export function ProposalSplashBlockCanvas({
       prefersLight={prefersLight}
       stacked={stackedLogo}
       logoAlignment={logoAlign}
+      logoSize={block.logoSize}
     />
   ) : null;
 

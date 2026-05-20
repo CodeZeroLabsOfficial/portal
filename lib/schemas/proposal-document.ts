@@ -115,6 +115,7 @@ const splashBlockSchema = z.object({
   alignment: splashAlignmentSchema,
   logoAlignment: splashAlignmentSchema.optional(),
   showLogo: z.boolean().optional(),
+  logoSize: z.enum(["sm", "md", "lg", "xl"]).optional(),
   html: z.string().optional(),
   body: z.string().optional(),
   showCard: z.boolean().optional(),

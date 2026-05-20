@@ -58,7 +58,7 @@ export function splashLogoAlignmentsMatchContent(block: SplashBlock): boolean {
 export function splashLogoAbsolutePositionClasses(alignment: SplashBlockAlignment): string {
   const { vertical, horizontal } = alignment;
   return [
-    "pointer-events-none absolute z-20 flex max-w-[min(100%,14rem)] sm:max-w-[min(100%,16rem)]",
+    "pointer-events-none absolute z-20 flex w-auto max-w-[min(100%,22.5rem)]",
     vertical === "top" && "top-5 sm:top-6",
     vertical === "center" && "top-1/2 -translate-y-1/2",
     vertical === "bottom" && "bottom-5 sm:bottom-6",
@@ -74,4 +74,28 @@ export function splashLogoRowJustifyClasses(horizontal: SplashBlockAlignment["ho
   if (horizontal === "left") return "justify-start";
   if (horizontal === "right") return "justify-end";
   return "justify-center";
+}
+
+export const SPLASH_LOGO_SIZE_OPTIONS = [
+  { id: "sm" as const, label: "Small" },
+  { id: "md" as const, label: "Medium" },
+  { id: "lg" as const, label: "Large" },
+  { id: "xl" as const, label: "Extra large" },
+];
+
+export function splashLogoSizeClasses(size: SplashBlock["logoSize"] | undefined): string {
+  switch (size) {
+    case "sm":
+      return "h-6 w-auto max-w-[7.5rem] object-contain sm:h-7 sm:max-w-[8.5rem]";
+    case "lg":
+      return "h-11 w-auto max-w-[15rem] object-contain sm:h-12 sm:max-w-[17.5rem]";
+    case "xl":
+      return "h-14 w-auto max-w-[20rem] object-contain sm:h-16 sm:max-w-[22.5rem]";
+    default:
+      return "h-9 w-auto max-w-[12.5rem] object-contain sm:h-10 sm:max-w-[200px]";
+  }
+}
+
+export function splashLogoSizeLabel(size: SplashBlock["logoSize"] | undefined): string {
+  return SPLASH_LOGO_SIZE_OPTIONS.find((o) => o.id === (size ?? "md"))?.label ?? "Medium";
 }

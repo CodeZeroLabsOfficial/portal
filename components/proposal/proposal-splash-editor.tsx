@@ -8,11 +8,14 @@ import type { SplashBlock, SplashBlockBackground } from "@/types/proposal";
 import { mergeSplashBackground, resolveSplashBackdrop, type ResolvedSplashBackdrop } from "@/lib/splash-block";
 import {
   SPLASH_LOGO_LAYOUT_PRESETS,
+  SPLASH_LOGO_SIZE_OPTIONS,
   applySplashLogoLayoutPreset,
   matchSplashLogoLayoutPresetId,
   resolveSplashLogoAlignment,
 } from "@/lib/splash-branding";
+import type { ProposalBranding } from "@/types/proposal";
 import {
+  useProposalBrandingOptional,
   useSplashBackgroundPickerBranding,
   useSplashCompanyLogoUrl,
 } from "@/components/proposal/proposal-branding-context";
@@ -290,17 +293,230 @@ function SplashBackgroundTriggerMedia(model: SplashBlockBackground, resolved: Re
   return null;
 }
 
+function setBrandingLogoUrl(
+  branding: ProposalBranding | undefined,
+  url: string,
+  onBrandingChange: (next: ProposalBranding | undefined) => void,
+) {
+  const trimmed = url.trim();
+  if (!trimmed) {
+    const next = { ...branding };
+    delete next.logoUrl;
+    const keys = Object.keys(next).filter(
+      (k) => (next as ProposalBranding)[k as keyof ProposalBranding] != null,
+    );
+    onBrandingChange(keys.length > 0 ? next : undefined);
+    return;
+  }
+  onBrandingChange({ ...branding, logoUrl: trimmed });
+}
+
+function SplashLogoSettingsPanel({
+  block,
+  onChange,
+  onCloseMenu,
+}: {
+  block: SplashBlock;
+  onChange: (next: SplashBlock) => void;
+  onCloseMenu: () => void;
+}) {
+  const mediaLibrary = useProposalMediaLibraryOptional();
+  const brandingCtx = useProposalBrandingOptional();
+  const logoUrl = brandingCtx?.branding?.logoUrl?.trim() ?? "";
+  const onBrandingChange = brandingCtx?.onBrandingChange;
+  const canEditLogo = Boolean(onBrandingChange);
+  const logoPresetId = matchSplashLogoLayoutPresetId(block);
+  const logoSize = block.logoSize ?? "md";
+
+  return (
+    <div className="max-h-[min(58vh,460px)] overflow-y-auto overflow-x-hidden px-4 py-4">
+      <p className="mb-3 text-[10px] leading-snug text-muted-foreground">
+        Company logo appears on this splash when it is the first block in the document. Save the template to persist
+        changes.
+      </p>
+
+      <div className="space-y-1.5">
+        <button
+          type="button"
+          disabled={!canEditLogo && !logoUrl}
+          className={cn(
+            "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left ring-1 ring-border/50 transition-colors",
+            canEditLogo && mediaLibrary && "cursor-pointer hover:bg-muted/35 hover:ring-border/70",
+            !canEditLogo && "cursor-default bg-muted/10",
+            !canEditLogo && !logoUrl && "opacity-60",
+          )}
+          onClick={() => {
+            if (!canEditLogo || !mediaLibrary || !onBrandingChange) return;
+            onCloseMenu();
+            window.setTimeout(() => {
+              mediaLibrary.openSelection({
+                allowedKinds: ["image"],
+                onSelect: (asset) => {
+                  if (asset.kind !== "image") return;
+                  setBrandingLogoUrl(brandingCtx?.branding, asset.downloadUrl, onBrandingChange);
+                },
+              });
+            }, 0);
+          }}
+        >
+          <div className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/60 bg-muted/20">
+            {logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={logoUrl} alt="" className="relative z-[1] h-full w-full object-contain p-0.5" draggable={false} />
+            ) : (
+              <span
+                className="absolute inset-0 opacity-50"
+                style={{
+                  backgroundImage:
+                    "linear-gradient(45deg, #d1d5db 25%, transparent 25%), linear-gradient(-45deg, #d1d5db 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e5e7eb 75%), linear-gradient(-45deg, transparent 75%, #e5e7eb 75%)",
+                  backgroundSize: "5px 5px",
+                  backgroundPosition: "0 0, 0 2.5px, 2.5px -2.5px, -2.5px 0px",
+                }}
+                aria-hidden
+              />
+            )}
+          </div>
+          <div className="min-w-0 flex-1 text-left">
+            <p className="text-xs font-semibold leading-tight text-foreground">Company logo</p>
+            <p className="mt-0.5 truncate text-[10px] leading-snug text-muted-foreground">
+              {logoUrl
+                ? logoUrl
+                : canEditLogo && mediaLibrary
+                  ? "Library or paste a URL below"
+                  : "Set on the proposal template"}
+            </p>
+          </div>
+        </button>
+        {canEditLogo ? (
+          <div className="space-y-1 pt-0.5">
+            <Label className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              Logo URL
+            </Label>
+            <Input
+              value={logoUrl}
+              onChange={(e) => {
+                if (!onBrandingChange) return;
+                setBrandingLogoUrl(brandingCtx?.branding, e.target.value, onBrandingChange);
+              }}
+              placeholder="https://…"
+              spellCheck={false}
+              className="h-8 rounded-md border-border/80 text-xs"
+            />
+          </div>
+        ) : null}
+      </div>
+
+      <Separator className="my-4" />
+
+      <div className="space-y-3">
+        <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg px-2 py-1.5 ring-1 ring-border/50 hover:bg-muted/25">
+          <span className="text-xs font-semibold text-foreground">Show company logo</span>
+          <input
+            type="checkbox"
+            className="h-3.5 w-3.5 shrink-0 cursor-pointer rounded border-input accent-sky-500"
+            checked={block.showLogo !== false}
+            disabled={!logoUrl}
+            onChange={(e) => onChange({ ...block, showLogo: e.target.checked })}
+          />
+        </label>
+
+        {block.showLogo !== false && logoUrl ? (
+          <>
+            <div className="space-y-1.5">
+              <Label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Logo position
+              </Label>
+              <select
+                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+                value={logoPresetId}
+                aria-label="Logo position in splash"
+                onChange={(e) => onChange(applySplashLogoLayoutPreset(block, e.target.value))}
+              >
+                {SPLASH_LOGO_LAYOUT_PRESETS.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.label}
+                  </option>
+                ))}
+                <option value="custom">Custom…</option>
+              </select>
+              {logoPresetId === "custom" ? (
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <div className="space-y-1">
+                    <Label className="text-[10px] text-muted-foreground">Vertical</Label>
+                    <select
+                      className="h-9 w-full rounded-md border border-input bg-background px-2 text-xs"
+                      value={resolveSplashLogoAlignment(block).vertical}
+                      onChange={(e) =>
+                        onChange({
+                          ...block,
+                          logoAlignment: {
+                            ...resolveSplashLogoAlignment(block),
+                            vertical: e.target.value as SplashBlock["alignment"]["vertical"],
+                          },
+                        })
+                      }
+                    >
+                      <option value="top">Top</option>
+                      <option value="center">Center</option>
+                      <option value="bottom">Bottom</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px] text-muted-foreground">Horizontal</Label>
+                    <select
+                      className="h-9 w-full rounded-md border border-input bg-background px-2 text-xs"
+                      value={resolveSplashLogoAlignment(block).horizontal}
+                      onChange={(e) =>
+                        onChange({
+                          ...block,
+                          logoAlignment: {
+                            ...resolveSplashLogoAlignment(block),
+                            horizontal: e.target.value as SplashBlock["alignment"]["horizontal"],
+                          },
+                        })
+                      }
+                    >
+                      <option value="left">Left</option>
+                      <option value="center">Center</option>
+                      <option value="right">Right</option>
+                    </select>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-[11px] font-semibold text-muted-foreground">Logo size</Label>
+              <div className="grid grid-cols-2 gap-1.5">
+                {SPLASH_LOGO_SIZE_OPTIONS.map((opt) => (
+                  <Button
+                    key={opt.id}
+                    type="button"
+                    size="sm"
+                    variant={logoSize === opt.id ? "default" : "outline"}
+                    className="h-8 px-2 text-xs"
+                    onClick={() => onChange({ ...block, logoSize: opt.id })}
+                  >
+                    {opt.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export function ProposalSplashBackgroundPicker({
   block,
   onChange,
-  hasCompanyLogo = false,
   isFirstRootSplash = false,
 }: {
   block: SplashBlock;
   onChange: (next: SplashBlock) => void;
-  /** Template branding includes a logo URL. */
-  hasCompanyLogo?: boolean;
-  /** This splash is the first top-level block (logo target). */
+  /** This splash is the first top-level block (logo tab + company logo target). */
   isFirstRootSplash?: boolean;
 }) {
   const mediaLibrary = useProposalMediaLibraryOptional();
@@ -315,8 +531,7 @@ export function ProposalSplashBackgroundPicker({
   const presetId = matchLayoutPresetId(block);
   const showCustomLayout = customLayoutOpen || presetId === "custom";
   const positionSelectValue = customLayoutOpen ? "custom" : presetId;
-  const logoPresetId = matchSplashLogoLayoutPresetId(block);
-  const showLogoControls = hasCompanyLogo && isFirstRootSplash;
+  const showLogoTab = isFirstRootSplash;
 
   function patchBg(part: Partial<SplashBlockBackground>) {
     onChange(patchBackground(block, part));
@@ -367,19 +582,32 @@ export function ProposalSplashBackgroundPicker({
         }}
       >
         <Tabs defaultValue="background" className="w-full">
-          <TabsList className="mx-2 mt-1.5 grid h-8 w-[calc(100%-1rem)] grid-cols-2 items-stretch gap-0 rounded-md bg-muted/60 p-0.5">
+          <TabsList
+            className={cn(
+              "mx-2 mt-1.5 grid h-8 w-[calc(100%-1rem)] items-stretch gap-0 rounded-md bg-muted/60 p-0.5",
+              showLogoTab ? "grid-cols-3" : "grid-cols-2",
+            )}
+          >
             <TabsTrigger
               value="background"
-              className="h-full min-h-0 w-full rounded-[6px] px-2 py-0 text-[11px] font-semibold data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none"
+              className="h-full min-h-0 w-full rounded-[6px] px-1.5 py-0 text-[11px] font-semibold data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none"
             >
               Background
             </TabsTrigger>
             <TabsTrigger
               value="layout"
-              className="h-full min-h-0 w-full rounded-[6px] px-2 py-0 text-[11px] font-semibold data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none"
+              className="h-full min-h-0 w-full rounded-[6px] px-1.5 py-0 text-[11px] font-semibold data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none"
             >
               Layout
             </TabsTrigger>
+            {showLogoTab ? (
+              <TabsTrigger
+                value="logo"
+                className="h-full min-h-0 w-full rounded-[6px] px-1.5 py-0 text-[11px] font-semibold data-[state=inactive]:text-muted-foreground data-[state=inactive]:shadow-none"
+              >
+                Logo
+              </TabsTrigger>
+            ) : null}
           </TabsList>
           <TabsContent value="background" className="mt-0 outline-none">
             <div className="max-h-[min(58vh,460px)] overflow-y-auto overflow-x-hidden">
@@ -645,11 +873,13 @@ export function ProposalSplashBackgroundPicker({
           <TabsContent value="layout" className="mt-0 outline-none">
             <div className="max-h-[min(58vh,460px)] overflow-y-auto overflow-x-hidden px-4 py-4">
               <div className="space-y-1.5">
-                <Label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Position</Label>
+                <Label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Content position
+                </Label>
                 <select
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
                   value={positionSelectValue}
-                  aria-label="Background and content position"
+                  aria-label="Headline and body position"
                   onChange={(e) => {
                     const v = e.target.value;
                     if (v === "custom") {
@@ -716,92 +946,6 @@ export function ProposalSplashBackgroundPicker({
                 ) : null}
               </div>
 
-              {showLogoControls ? (
-                <>
-                  <Separator className="my-4" />
-                  <div className="space-y-3">
-                    <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg px-2 py-1.5 ring-1 ring-border/50 hover:bg-muted/25">
-                      <span className="text-xs font-semibold text-foreground">Show company logo</span>
-                      <input
-                        type="checkbox"
-                        className="h-3.5 w-3.5 shrink-0 cursor-pointer rounded border-input accent-sky-500"
-                        checked={block.showLogo !== false}
-                        onChange={(e) => onChange({ ...block, showLogo: e.target.checked })}
-                      />
-                    </label>
-                    {block.showLogo !== false ? (
-                      <div className="space-y-1.5">
-                        <Label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                          Logo position
-                        </Label>
-                        <select
-                          className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
-                          value={logoPresetId}
-                          aria-label="Logo position in splash"
-                          onChange={(e) => onChange(applySplashLogoLayoutPreset(block, e.target.value))}
-                        >
-                          {SPLASH_LOGO_LAYOUT_PRESETS.map((p) => (
-                            <option key={p.id} value={p.id}>
-                              {p.label}
-                            </option>
-                          ))}
-                          <option value="custom">Custom…</option>
-                        </select>
-                        {logoPresetId === "custom" ? (
-                          <div className="grid grid-cols-2 gap-2 pt-1">
-                            <div className="space-y-1">
-                              <Label className="text-[10px] text-muted-foreground">Logo vertical</Label>
-                              <select
-                                className="h-9 w-full rounded-md border border-input bg-background px-2 text-xs"
-                                value={resolveSplashLogoAlignment(block).vertical}
-                                onChange={(e) =>
-                                  onChange({
-                                    ...block,
-                                    logoAlignment: {
-                                      ...resolveSplashLogoAlignment(block),
-                                      vertical: e.target.value as SplashBlock["alignment"]["vertical"],
-                                    },
-                                  })
-                                }
-                              >
-                                <option value="top">Top</option>
-                                <option value="center">Center</option>
-                                <option value="bottom">Bottom</option>
-                              </select>
-                            </div>
-                            <div className="space-y-1">
-                              <Label className="text-[10px] text-muted-foreground">Logo horizontal</Label>
-                              <select
-                                className="h-9 w-full rounded-md border border-input bg-background px-2 text-xs"
-                                value={resolveSplashLogoAlignment(block).horizontal}
-                                onChange={(e) =>
-                                  onChange({
-                                    ...block,
-                                    logoAlignment: {
-                                      ...resolveSplashLogoAlignment(block),
-                                      horizontal: e.target.value as SplashBlock["alignment"]["horizontal"],
-                                    },
-                                  })
-                                }
-                              >
-                                <option value="left">Left</option>
-                                <option value="center">Center</option>
-                                <option value="right">Right</option>
-                              </select>
-                            </div>
-                          </div>
-                        ) : null}
-                        <p className="text-[10px] leading-snug text-muted-foreground">
-                          Logo is placed independently; headline position is set under Content position above.
-                        </p>
-                      </div>
-                    ) : null}
-                  </div>
-                </>
-              ) : null}
-
-              <Separator className="my-4" />
-
               <div className="space-y-2">
                 <Label className="text-[11px] font-semibold text-muted-foreground">Height</Label>
                 <div className="flex flex-wrap gap-1.5">
@@ -857,6 +1001,12 @@ export function ProposalSplashBackgroundPicker({
               </div>
             </div>
           </TabsContent>
+
+          {showLogoTab ? (
+            <TabsContent value="logo" className="mt-0 outline-none data-[state=inactive]:hidden">
+              <SplashLogoSettingsPanel block={block} onChange={onChange} onCloseMenu={() => setOpen(false)} />
+            </TabsContent>
+          ) : null}
         </Tabs>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -876,7 +1026,6 @@ export function ProposalSplashBackgroundPickerWithBranding({
     <ProposalSplashBackgroundPicker
       block={block}
       onChange={onChange}
-      hasCompanyLogo={branding.hasCompanyLogo}
       isFirstRootSplash={branding.isFirstRootSplash}
     />
   );

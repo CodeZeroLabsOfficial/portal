@@ -119,6 +119,8 @@ export interface SplashBlock extends ProposalBlockBase {
   logoAlignment?: { vertical: "top" | "center" | "bottom"; horizontal: "left" | "center" | "right" };
   /** When false, hides template logo on this splash (first root splash only). Default: show when branding exists. */
   showLogo?: boolean;
+  /** Logo scale on the first root splash. Default: `md`. */
+  logoSize?: "sm" | "md" | "lg" | "xl";
   /** Rich HTML (same pipeline as `TextBlock`). */
   html?: string;
   body?: string;

@@ -7,6 +7,8 @@ export type ProposalBrandingContextValue = {
   branding: ProposalBranding | undefined;
   /** First top-level splash id — company logo renders there when set. */
   firstRootSplashBlockId: string | null;
+  /** Template editor — persist logo URL on save. Omitted on CRM proposals (snapshot only). */
+  onBrandingChange?: (next: ProposalBranding | undefined) => void;
 };
 
 const ProposalBrandingContext = React.createContext<ProposalBrandingContextValue | null>(null);

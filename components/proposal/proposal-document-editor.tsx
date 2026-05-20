@@ -195,7 +195,6 @@ import {
 import {
   ProposalBrandingProvider,
 } from "@/components/proposal/proposal-branding-context";
-import { ProposalTemplateBrandingPanel } from "@/components/proposal/proposal-template-branding-panel";
 import type { ProposalBranding } from "@/types/proposal";
 import { AccordionBlockEditor } from "@/components/proposal/accordion-block-editor";
 import { EditorCatalogServicesContext } from "@/components/proposal/editor-catalog-services-context";
@@ -3735,8 +3734,9 @@ export function ProposalDocumentEditor({
     () => ({
       branding,
       firstRootSplashBlockId: firstRootSplashBlockId(blocks),
+      onBrandingChange: isTemplate ? setBranding : undefined,
     }),
-    [branding, blocks],
+    [branding, blocks, isTemplate],
   );
 
   function onDragEnd(event: DragEndEvent) {
@@ -4185,13 +4185,6 @@ export function ProposalDocumentEditor({
             <p className="text-xs text-muted-foreground">
               Publish marks the template as ready to use when creating proposals from CRM.
             </p>
-          ) : null}
-          {isTemplate ? (
-            <ProposalTemplateBrandingPanel
-              branding={branding}
-              onChange={setBranding}
-              disabled={saving}
-            />
           ) : null}
         </>
       ) : proposalEditShellToolbar ? (
