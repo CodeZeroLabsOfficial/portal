@@ -1053,7 +1053,7 @@ export function SplashBlockInspector({ block, onChange }: { block: SplashBlock; 
         html={html}
         onChange={(nextHtml) => onChange({ ...block, html: nextHtml, body: undefined })}
         placeholder="Start typing…"
-        className="min-h-[120px] border-white/25 bg-black/30 text-white [&_p]:text-white/90"
+        className="min-h-[120px] !px-0 !py-0 border-white/25 bg-black/30 text-white [&_p]:text-white/90"
       />
     </ProposalSplashBlockCanvas>
   );

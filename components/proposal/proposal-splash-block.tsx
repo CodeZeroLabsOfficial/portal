@@ -13,8 +13,10 @@ import {
 import {
   resolveSplashLogoHorizontal,
   sanitizeSplashContentAlignmentForLogo,
+  splashLogoHeaderBandClasses,
   splashLogoSizeClasses,
-  splashLogoTopThirdBandClasses,
+  splashRailTextAlignClasses,
+  splashSharedRailCrossAxisClasses,
 } from "@/lib/splash-branding";
 import { PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES } from "@/lib/proposal-public-layout";
 
@@ -28,11 +30,9 @@ function columnJustifyFromVertical(v: SplashBlock["alignment"]["vertical"]): str
   return "justify-center";
 }
 
-/** `flex-col`: cross axis is horizontal → `items-*` controls horizontal placement. */
+/** `flex-col` without logo: cross axis is horizontal → `items-*` controls horizontal placement. */
 function columnItemsFromHorizontal(h: SplashBlock["alignment"]["horizontal"]): string {
-  if (h === "left") return "items-start";
-  if (h === "right") return "items-end";
-  return "items-center";
+  return splashSharedRailCrossAxisClasses(h);
 }
 
 function SplashTintLayer({
@@ -195,7 +195,7 @@ function SplashCompanyLogoMark({
     logoHorizontal === "left" ? "pl-0 pr-3" : logoHorizontal === "right" ? "pl-3 pr-0" : "px-3";
 
   return (
-    <div className={splashLogoTopThirdBandClasses(logoHorizontal)}>
+    <div className={splashLogoHeaderBandClasses(logoHorizontal)}>
       <div
         className={cn(
           "shrink-0 rounded-lg py-2",
@@ -250,26 +250,20 @@ export function ProposalSplashBlockCanvas({
   const presentation = editorChrome ? "editor" : (presentationProp ?? "publicEdge");
   const publicEdge = presentation === "publicEdge";
 
+  const railTextClasses = splashRailTextAlignClasses(align.horizontal);
+
   const inner = children ? (
-    <div
-      className={cn(
-        "w-full",
-        !publicEdge && "max-w-[40rem]",
-        align.horizontal === "center" && "mx-auto text-center",
-        align.horizontal === "right" && "ml-auto text-right",
-      )}
-    >
+    <div className={cn("w-full min-w-0", !publicEdge && "max-w-[40rem]", railTextClasses)}>
       {children}
     </div>
   ) : publicHtml?.trim() ? (
     <div
       className={cn(
         RICH_PUBLIC,
-        "w-full",
+        "w-full min-w-0",
         !publicEdge && "max-w-[40rem]",
         prefersLight && "text-white/[0.92]",
-        align.horizontal === "center" && "mx-auto text-center",
-        align.horizontal === "right" && "ml-auto text-right",
+        railTextClasses,
       )}
       dangerouslySetInnerHTML={{ __html: sanitizeProposalHtml(publicHtml) }}
     />
@@ -299,7 +293,8 @@ export function ProposalSplashBlockCanvas({
     showCard && inner ? (
       <div
         className={cn(
-          "max-w-full rounded-2xl border px-5 py-6 shadow-inner backdrop-blur-md sm:px-8 sm:py-8",
+          "w-full max-w-full rounded-2xl border py-6 shadow-inner backdrop-blur-md sm:py-8",
+          companyLogoUrl ? "px-0" : "px-5 sm:px-8",
           prefersLight ? "text-white" : "text-foreground",
         )}
         style={cardStyle}
@@ -327,9 +322,7 @@ export function ProposalSplashBlockCanvas({
 
       <div
         className={cn(
-          "relative z-10 flex h-full min-h-[inherit] w-full flex-col",
-          editorChrome && "px-5 py-10 sm:px-8 sm:py-12 md:px-12 md:py-14",
-          publicEdge && "px-0 py-10 sm:py-14 md:py-16",
+          "relative z-10 flex h-full min-h-[inherit] w-full flex-col py-10 sm:py-14 md:py-16",
           prefersLight &&
             cn(
               "[&_.proposal-rich-text]:!text-white/[0.92] [&_.proposal-rich-text_a]:text-sky-200",
@@ -340,20 +333,37 @@ export function ProposalSplashBlockCanvas({
         <div
           className={cn(
             "relative flex min-h-0 w-full flex-1 flex-col",
-            publicEdge && PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES,
-            editorChrome && "w-full",
+            PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES,
           )}
         >
-          {logoMark}
-          <div
-            className={cn(
-              "relative z-10 flex min-h-0 w-full flex-1 flex-col",
-              columnJustifyFromVertical(align.vertical),
-              columnItemsFromHorizontal(align.horizontal),
-            )}
-          >
-            <div className="w-full min-w-0">{textBody}</div>
-          </div>
+          {companyLogoUrl ? (
+            <div
+              className={cn(
+                "flex min-h-0 w-full flex-1 flex-col",
+                splashSharedRailCrossAxisClasses(align.horizontal),
+              )}
+            >
+              {logoMark}
+              <div
+                className={cn(
+                  "flex min-h-0 w-full flex-1 flex-col",
+                  columnJustifyFromVertical(align.vertical),
+                )}
+              >
+                <div className="w-full min-w-0 self-stretch">{textBody}</div>
+              </div>
+            </div>
+          ) : (
+            <div
+              className={cn(
+                "flex min-h-0 w-full flex-1 flex-col",
+                columnJustifyFromVertical(align.vertical),
+                columnItemsFromHorizontal(align.horizontal),
+              )}
+            >
+              <div className="w-full min-w-0 self-stretch">{textBody}</div>
+            </div>
+          )}
         </div>
       </div>
     </div>

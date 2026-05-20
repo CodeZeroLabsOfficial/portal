@@ -75,16 +75,34 @@ export function splashShowsCompanyLogo(
   return block.showLogo !== false;
 }
 
-/** Overlay band: top third of the splash; headline centers in the full area beneath. */
-export function splashLogoTopThirdBandClasses(horizontal: SplashHorizontalAlign): string {
+/** Logo header band inside the shared content rail (in-flow top third). */
+export function splashLogoHeaderBandClasses(horizontal: SplashHorizontalAlign): string {
   return [
-    "pointer-events-none absolute inset-x-0 top-0 z-20 flex h-1/3 min-h-[4.5rem] max-h-[12rem] items-center px-0",
+    "flex h-1/3 min-h-[4.5rem] max-h-[12rem] w-full shrink-0 items-center",
     horizontal === "left" && "justify-start",
     horizontal === "center" && "justify-center",
     horizontal === "right" && "justify-end",
   ]
     .filter(Boolean)
     .join(" ");
+}
+
+/** Cross-axis alignment for logo + headline in one column (shared inset). */
+export function splashSharedRailCrossAxisClasses(horizontal: SplashHorizontalAlign): string {
+  if (horizontal === "left") return "items-start";
+  if (horizontal === "right") return "items-end";
+  return "items-center";
+}
+
+/** Text alignment inside the rail; overrides conflicting inline HTML in public preview. */
+export function splashRailTextAlignClasses(horizontal: SplashHorizontalAlign): string {
+  if (horizontal === "left") {
+    return "text-left [&_h1]:!text-left [&_h2]:!text-left [&_h3]:!text-left [&_h4]:!text-left [&_p]:!text-left";
+  }
+  if (horizontal === "right") {
+    return "text-right [&_h1]:!text-right [&_h2]:!text-right [&_h3]:!text-right [&_h4]:!text-right [&_p]:!text-right";
+  }
+  return "text-center [&_h1]:!text-center [&_h2]:!text-center [&_h3]:!text-center [&_h4]:!text-center [&_p]:!text-center";
 }
 
 export const SPLASH_LOGO_SIZE_OPTIONS = [
