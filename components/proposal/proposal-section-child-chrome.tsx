@@ -5,12 +5,11 @@ import { GripVertical, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PROPOSAL_EDITOR_SECTION_CHILD_INSERT_HOST_CLASSES } from "@/lib/proposal-public-layout";
 
-/** Align floating insert row with section child content (past the drag gutter). */
-const SECTION_CHILD_INSERT_INSET_CLASSES = "left-9 right-0 sm:left-10";
+/** Past the drag gutter — matches {@link SECTION_CHILD_DRAG_GUTTER_CLASSES} width. */
+const SECTION_CHILD_INSERT_LEFT_CLASSES = "left-9 sm:left-10";
 
 /**
- * Qwilr-style insert affordance inside a section: “+ Add content” floats on the
- * seam and does not expand the layout when hovered.
+ * Qwilr-style insert inside a section: a single floating “+” on the seam (no full-width row or label).
  */
 export function SectionChildInsertSlot({
   menu,
@@ -29,30 +28,18 @@ export function SectionChildInsertSlot({
       type="button"
       aria-label="Add content"
       className={cn(
-        "pointer-events-auto absolute top-1/2 z-20 flex min-h-7 -translate-y-1/2 items-center gap-2.5",
-        SECTION_CHILD_INSERT_INSET_CLASSES,
-        "border-0 bg-transparent py-0 pl-0.5 pr-2 text-left",
-        "text-muted-foreground/75 opacity-0 transition-[opacity,background-color,box-shadow] duration-150",
+        "pointer-events-auto absolute top-1/2 z-20 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full p-0",
+        SECTION_CHILD_INSERT_LEFT_CLASSES,
+        "border border-border/80 bg-background text-muted-foreground shadow-sm",
+        "opacity-0 transition-[opacity,border-color,color,background-color] duration-150",
         "group-hover/section-insert:opacity-100",
-        "group-hover/section-insert:rounded-md group-hover/section-insert:bg-background/95 group-hover/section-insert:py-1 group-hover/section-insert:shadow-sm",
         "group-focus-within/section-insert:opacity-100",
-        "group-focus-within/section-insert:rounded-md group-focus-within/section-insert:bg-background/95 group-focus-within/section-insert:py-1 group-focus-within/section-insert:shadow-sm",
-        "data-[state=open]:opacity-100 data-[state=open]:rounded-md data-[state=open]:bg-background data-[state=open]:py-1 data-[state=open]:shadow-md",
-        "hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-        "data-[state=open]:text-foreground",
+        "hover:border-primary/50 hover:text-primary",
+        "focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        "data-[state=open]:border-primary data-[state=open]:bg-primary data-[state=open]:text-primary-foreground data-[state=open]:opacity-100",
       )}
     >
-      <span
-        className={cn(
-          "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border/80 bg-background text-muted-foreground shadow-sm",
-          "transition-colors group-hover/section-insert:border-primary/50 group-hover/section-insert:text-primary",
-          "group-focus-within/section-insert:border-primary/50 group-focus-within/section-insert:text-primary",
-          "data-[state=open]:border-primary data-[state=open]:bg-primary data-[state=open]:text-primary-foreground",
-        )}
-      >
-        <Plus className="h-3.5 w-3.5" aria-hidden />
-      </span>
-      <span className="whitespace-nowrap text-sm">Add content</span>
+      <Plus className="h-3.5 w-3.5" aria-hidden />
     </button>
   );
 
