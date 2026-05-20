@@ -84,5 +84,5 @@ export const PROPOSAL_EDITOR_SECTION_STACK_BOTTOM_PAD_CLASSES =
 export const PROPOSAL_EDITOR_SECTION_CHILD_INSERT_HOST_CLASSES =
   "relative h-0 w-full overflow-visible";
 
-/** Vertical rhythm between blocks inside a section band (editor). */
-export const PROPOSAL_EDITOR_SECTION_STACK_GAP_CLASSES = "gap-y-5 sm:gap-y-6";
+/** Vertical rhythm between blocks inside a section band (editor) — tight but non-overlapping. */
+export const PROPOSAL_EDITOR_SECTION_STACK_GAP_CLASSES = "gap-y-3 sm:gap-y-3.5";
