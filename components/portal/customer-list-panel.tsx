@@ -286,8 +286,8 @@ export function CustomerListPanel({ rows }: CustomerListPanelProps) {
                   />
                 </th>
                 <th className="px-4 py-2.5 font-medium">Name</th>
-                <th className="px-4 py-2.5 font-medium">Email</th>
                 <th className="px-4 py-2.5 font-medium">Company</th>
+                <th className="px-4 py-2.5 font-medium">Email</th>
                 <th className="px-4 py-2.5 font-medium">Subscriptions</th>
                 <th className="px-4 py-2.5 font-medium">Tags</th>
                 <th className="px-4 py-2.5 font-medium">Type</th>
@@ -340,11 +340,20 @@ export function CustomerListPanel({ rows }: CustomerListPanelProps) {
                           {row.name}
                         </Link>
                       </td>
+                      <td className="max-w-[160px] truncate px-4 py-3 align-middle text-muted-foreground">
+                        {row.company && row.accountKey ? (
+                          <Link
+                            href={`/admin/accounts/${row.accountKey}`}
+                            className="font-medium text-foreground underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring ring-offset-background"
+                          >
+                            {row.company}
+                          </Link>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
                       <td className="max-w-[200px] truncate px-4 py-3 align-middle text-muted-foreground">
                         {row.email}
-                      </td>
-                      <td className="max-w-[160px] truncate px-4 py-3 align-middle text-muted-foreground">
-                        {row.company?.trim() || "—"}
                       </td>
                       <td className="px-4 py-3 align-middle">
                         <Badge variant={subscriptionBadgeVariant(row.subscriptionRollup)} className="font-normal capitalize">

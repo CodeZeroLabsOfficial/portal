@@ -108,7 +108,7 @@ const PROPOSAL_PHASE_BADGE_CLASS: Record<ProposalLifecyclePhase, string> = {
   published:
     "border-sky-500/45 bg-sky-500/10 text-sky-900 dark:border-sky-500/35 dark:bg-sky-500/15 dark:text-sky-200",
   viewed:
-    "border-emerald-500/45 bg-emerald-500/10 text-emerald-900 dark:border-emerald-500/35 dark:bg-emerald-500/15 dark:text-emerald-200",
+    "border-violet-500/45 bg-violet-500/10 text-violet-900 dark:border-violet-500/35 dark:bg-violet-500/15 dark:text-violet-200",
 };
 
 const PROPOSAL_PHASE_TITLE: Record<ProposalLifecyclePhase, string> = {

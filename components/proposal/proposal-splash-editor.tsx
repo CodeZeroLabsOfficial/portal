@@ -28,6 +28,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,6 +37,10 @@ import {
 import { useProposalMediaLibraryOptional } from "@/components/proposal/proposal-media-library";
 import { SplashBackgroundTintPopover } from "@/components/proposal/proposal-background-tint-popover";
 import { youtubeThumbnailFromPageUrl } from "@/components/proposal/embed-video";
+
+/** Section headings in the splash background / logo / layout toolbar. */
+const SPLASH_TOOLBAR_SECTION_LABEL_CLASS =
+  "text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground";
 
 function normalizeHex(raw: unknown): string | undefined {
   if (typeof raw !== "string") return undefined;
@@ -102,7 +107,7 @@ function RangeRow({
   return (
     <div>
       <div className="mb-1 flex items-end justify-between gap-3">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">{label}</p>
+        <p className={SPLASH_TOOLBAR_SECTION_LABEL_CLASS}>{label}</p>
         <span className="font-mono text-[11px] font-semibold tabular-nums text-foreground underline decoration-muted-foreground/45 underline-offset-[3px]">
           {format(value)}
           {suffix}
@@ -145,7 +150,7 @@ function TintSwatchPicker({
   return (
     <div>
       {label ? (
-        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
+        <p className={cn("mb-1.5", SPLASH_TOOLBAR_SECTION_LABEL_CLASS)}>{label}</p>
       ) : null}
       <div className="grid grid-cols-6 gap-1.5">
         {STYLE_PRESET_COLORS.map((c) => {
@@ -271,7 +276,7 @@ function SplashHorizontalAlignButtons({
 }) {
   return (
     <div className="space-y-1.5">
-      <Label className="text-[11px] font-semibold text-muted-foreground">{label}</Label>
+      <Label className={SPLASH_TOOLBAR_SECTION_LABEL_CLASS}>{label}</Label>
       <div className="grid grid-cols-3 gap-1.5">
         {(
           [
@@ -413,7 +418,7 @@ function SplashLogoSettingsPanel({
             )}
           </div>
           <div className="min-w-0 flex-1 text-left">
-            <p className="text-xs font-semibold leading-tight text-foreground">Company logo</p>
+            <p className={SPLASH_TOOLBAR_SECTION_LABEL_CLASS}>Company logo</p>
           </div>
         </button>
       </div>
@@ -421,22 +426,23 @@ function SplashLogoSettingsPanel({
       <Separator className="my-4" />
 
       <div className="space-y-3">
-        <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg px-2 py-1.5 ring-1 ring-border/50 hover:bg-muted/25">
-          <span className="text-xs font-semibold text-foreground">Show company logo</span>
-          <input
-            type="checkbox"
-            className="h-3.5 w-3.5 shrink-0 cursor-pointer rounded border-input accent-sky-500"
+        <div className="flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 ring-1 ring-border/50 hover:bg-muted/25">
+          <Label
+            htmlFor={`splash-show-logo-${block.id}`}
+            className={cn("cursor-pointer", SPLASH_TOOLBAR_SECTION_LABEL_CLASS)}
+          >
+            Show company logo
+          </Label>
+          <Switch
+            id={`splash-show-logo-${block.id}`}
             checked={block.showLogo !== false}
             disabled={!logoUrl}
-            onChange={(e) => {
-              const next = sanitizeSplashContentAlignmentForLogo(
-                { ...block, showLogo: e.target.checked },
-                logoUrl,
-              );
+            onCheckedChange={(checked) => {
+              const next = sanitizeSplashContentAlignmentForLogo({ ...block, showLogo: checked }, logoUrl);
               onChange(next);
             }}
           />
-        </label>
+        </div>
 
         {block.showLogo !== false && logoUrl ? (
           <>
@@ -447,7 +453,7 @@ function SplashLogoSettingsPanel({
             />
 
             <div className="space-y-2">
-              <Label className="text-[11px] font-semibold text-muted-foreground">Logo size</Label>
+              <Label className={SPLASH_TOOLBAR_SECTION_LABEL_CLASS}>Logo size</Label>
               <div className="grid grid-cols-2 gap-1.5">
                 {SPLASH_LOGO_SIZE_OPTIONS.map((opt) => (
                   <Button
@@ -579,7 +585,7 @@ export function ProposalSplashBackgroundPicker({
           <TabsContent value="background" className="mt-0 outline-none">
             <div className="max-h-[min(58vh,460px)] overflow-y-auto overflow-x-hidden">
           <div className="border-b border-border/60 px-3 py-2.5">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Background type</p>
+            <p className={SPLASH_TOOLBAR_SECTION_LABEL_CLASS}>Background type</p>
             <Tabs
               value={model.type}
               onValueChange={(v) => {
@@ -669,14 +675,14 @@ export function ProposalSplashBackgroundPicker({
                     )}
                   </div>
                   <div className="min-w-0 flex-1 text-left">
-                    <p className="text-xs font-semibold leading-tight text-foreground">Background image</p>
+                    <p className={SPLASH_TOOLBAR_SECTION_LABEL_CLASS}>Background image</p>
                     <p className="mt-0.5 truncate text-[10px] leading-snug text-muted-foreground">
                       {model.url?.trim() || (mediaLibrary ? "Library or paste a HTTPS URL" : "Paste a HTTPS URL")}
                     </p>
                   </div>
                 </button>
                 <div className="space-y-1 pt-0.5">
-                  <Label className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Image URL</Label>
+                  <Label className={SPLASH_TOOLBAR_SECTION_LABEL_CLASS}>Image URL</Label>
                   <Input
                     id={`splash-img-url-${block.id}`}
                     value={model.url ?? ""}
@@ -746,7 +752,7 @@ export function ProposalSplashBackgroundPicker({
                     )}
                   </div>
                   <div className="min-w-0 flex-1 text-left">
-                    <p className="text-xs font-semibold leading-tight text-foreground">Background video</p>
+                    <p className={SPLASH_TOOLBAR_SECTION_LABEL_CLASS}>Background video</p>
                   </div>
                 </button>
                 <SplashBackgroundTintPopover
@@ -799,7 +805,7 @@ export function ProposalSplashBackgroundPicker({
                     )}
                   </div>
                   <div className="min-w-0 flex-1 text-left">
-                    <p className="text-xs font-semibold leading-tight text-foreground">Mobile image fallback</p>
+                    <p className={SPLASH_TOOLBAR_SECTION_LABEL_CLASS}>Mobile image fallback</p>
                   </div>
                 </button>
               </TabsContent>
@@ -807,15 +813,19 @@ export function ProposalSplashBackgroundPicker({
           </div>
 
           <div className="space-y-3 border-t border-border/60 px-3 py-3">
-            <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg px-2 py-1.5 ring-1 ring-border/50 hover:bg-muted/25">
-              <span className="text-xs font-semibold text-foreground">Background card</span>
-              <input
-                type="checkbox"
-                className="h-3.5 w-3.5 shrink-0 cursor-pointer rounded border-input accent-sky-500"
+            <div className="flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 ring-1 ring-border/50 hover:bg-muted/25">
+              <Label
+                htmlFor={`splash-background-card-${block.id}`}
+                className={cn("cursor-pointer", SPLASH_TOOLBAR_SECTION_LABEL_CLASS)}
+              >
+                Background card
+              </Label>
+              <Switch
+                id={`splash-background-card-${block.id}`}
                 checked={Boolean(block.showCard)}
-                onChange={(e) => onChange({ ...block, showCard: e.target.checked })}
+                onCheckedChange={(checked) => onChange({ ...block, showCard: checked })}
               />
-            </label>
+            </div>
             {block.showCard ? (
               <RangeRow
                 label="Card opacity"
@@ -834,9 +844,7 @@ export function ProposalSplashBackgroundPicker({
           <TabsContent value="layout" className="mt-0 outline-none">
             <div className="max-h-[min(58vh,460px)] overflow-y-auto overflow-x-hidden px-4 py-4">
               <div className="space-y-1.5">
-                <Label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  Content position
-                </Label>
+                <Label className={SPLASH_TOOLBAR_SECTION_LABEL_CLASS}>Content position</Label>
                 <select
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
                   value={positionSelectValue}
@@ -863,7 +871,7 @@ export function ProposalSplashBackgroundPicker({
                     <FocalPointGrid value={fp} onChange={(next) => patchBg({ focalPoint: next })} />
                     <div className="grid flex-1 grid-cols-2 gap-2">
                       <div className="space-y-1">
-                        <Label className="text-[10px] text-muted-foreground">Vertical</Label>
+                        <Label className={SPLASH_TOOLBAR_SECTION_LABEL_CLASS}>Vertical</Label>
                         <select
                           className="h-9 w-full rounded-md border border-input bg-background px-2 text-xs"
                           value={block.alignment.vertical}
@@ -887,7 +895,7 @@ export function ProposalSplashBackgroundPicker({
                         </select>
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-[10px] text-muted-foreground">Horizontal</Label>
+                        <Label className={SPLASH_TOOLBAR_SECTION_LABEL_CLASS}>Horizontal</Label>
                         <select
                           className="h-9 w-full rounded-md border border-input bg-background px-2 text-xs"
                           value={block.alignment.horizontal}
@@ -912,7 +920,7 @@ export function ProposalSplashBackgroundPicker({
               </div>
 
               <div className="space-y-2">
-                <Label className="text-[11px] font-semibold text-muted-foreground">Height</Label>
+                <Label className={SPLASH_TOOLBAR_SECTION_LABEL_CLASS}>Height</Label>
                 <div className="flex flex-wrap gap-1.5">
                   {(["full", "half", "third"] as const).map((h) => (
                     <Button
@@ -929,7 +937,7 @@ export function ProposalSplashBackgroundPicker({
                 </div>
                 <div className="flex flex-wrap items-end gap-2 pt-1">
                   <div className="space-y-1">
-                    <Label className="text-[10px] text-muted-foreground">Custom</Label>
+                    <Label className={SPLASH_TOOLBAR_SECTION_LABEL_CLASS}>Custom</Label>
                     <Input
                       type="number"
                       min={120}

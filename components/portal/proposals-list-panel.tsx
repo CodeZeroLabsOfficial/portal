@@ -40,7 +40,7 @@ const HUB_BADGE: Record<string, string> = {
   published:
     "border-sky-500/45 bg-sky-500/10 text-sky-900 dark:border-sky-500/35 dark:bg-sky-500/15 dark:text-sky-200",
   viewed:
-    "border-emerald-500/45 bg-emerald-500/10 text-emerald-900 dark:border-emerald-500/35 dark:bg-emerald-500/15 dark:text-emerald-200",
+    "border-violet-500/45 bg-violet-500/10 text-violet-900 dark:border-violet-500/35 dark:bg-violet-500/15 dark:text-violet-200",
   accepted:
     "border-emerald-600/50 bg-emerald-600/12 text-emerald-950 dark:border-emerald-500/40 dark:bg-emerald-600/18 dark:text-emerald-100",
   declined: "border-destructive/40 bg-destructive/10 text-destructive dark:text-destructive",

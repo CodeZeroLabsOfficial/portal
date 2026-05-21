@@ -176,6 +176,8 @@ function customerToListRow(
   subscriptions: SubscriptionRecord[],
 ): CustomerListRow {
   const location = formatLocation(customer);
+  const company = customer.company?.trim() || undefined;
+  const accountKey = company ? companyNameToAccountKey(company) || undefined : undefined;
   return {
     id: customer.id,
     name: customer.name.trim() || customer.email.trim() || customer.id,
@@ -183,7 +185,8 @@ function customerToListRow(
     phone: customer.phone?.trim() || "—",
     location: location.trim() || "—",
     avatarUrl: customer.avatarUrl,
-    company: customer.company,
+    company,
+    accountKey,
     tags: customer.tags,
     status: customer.status,
     subscriptionRollup: rollupForStripeCustomer(customer.stripeCustomerId, subscriptions),

@@ -11,6 +11,8 @@ export interface CustomerListRow {
   location: string;
   avatarUrl?: string;
   company?: string;
+  /** URL segment for `/admin/accounts/[accountKey]` when `company` is set. */
+  accountKey?: string;
   tags: string[];
   crmType: CustomerCrmType;
   status: "active" | "archived";
