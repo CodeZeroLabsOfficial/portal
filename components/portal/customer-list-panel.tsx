@@ -279,12 +279,12 @@ export function CustomerListPanel({ rows }: CustomerListPanelProps) {
                   />
                 </th>
                 <th className="px-4 py-2.5 font-medium">Name</th>
+                <th className="px-4 py-2.5 font-medium">Status</th>
                 <th className="px-4 py-2.5 font-medium">Company</th>
                 <th className="px-4 py-2.5 font-medium">Email</th>
                 <th className="px-4 py-2.5 font-medium">Subscriptions</th>
                 <th className="px-4 py-2.5 font-medium">Tags</th>
                 <th className="px-4 py-2.5 font-medium">Type</th>
-                <th className="px-4 py-2.5 font-medium">Status</th>
                 <th className="w-14 px-2 py-2.5 text-center font-medium">Action</th>
               </tr>
             </thead>
@@ -334,6 +334,19 @@ export function CustomerListPanel({ rows }: CustomerListPanelProps) {
                         >
                           {row.name}
                         </Link>
+                      </td>
+                      <td className="px-4 py-3 align-middle">
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "border-transparent font-medium capitalize",
+                            row.status === "archived"
+                              ? "bg-muted text-muted-foreground"
+                              : "bg-emerald-500/15 text-emerald-400",
+                          )}
+                        >
+                          {row.status}
+                        </Badge>
                       </td>
                       <td className="max-w-[160px] truncate px-4 py-3 align-middle text-muted-foreground">
                         {row.company && row.accountKey ? (
@@ -389,19 +402,6 @@ export function CustomerListPanel({ rows }: CustomerListPanelProps) {
                           )}
                         >
                           {row.crmType}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3 align-middle">
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "border-transparent font-medium capitalize",
-                            row.status === "archived"
-                              ? "bg-muted text-muted-foreground"
-                              : "bg-emerald-500/15 text-emerald-400",
-                          )}
-                        >
-                          {row.status}
                         </Badge>
                       </td>
                       <td className="px-2 py-3 text-center align-middle">
