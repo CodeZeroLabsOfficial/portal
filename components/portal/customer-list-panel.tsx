@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Filter, ListChecks, MoreHorizontal, Plus, Search } from "lucide-react";
+import { Filter, ListChecks, MoreHorizontal, Plus, Search, Users } from "lucide-react";
 import type { CustomerListRow } from "@/lib/customer-list";
 import type { CustomerSubscriptionRollup } from "@/types/customer";
 import { archiveCustomerAction, deleteCustomerAction } from "@/server/actions/customers-crm";
@@ -221,37 +221,45 @@ export function CustomerListPanel({ rows }: CustomerListPanelProps) {
               />
             </div>
             <div className="flex shrink-0 flex-wrap items-center gap-2">
-              <div className="relative">
-                <Filter
-                  className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
-                  aria-hidden
-                />
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
-                  className={cn(
-                    "h-9 appearance-none rounded-full border border-border/80 bg-background/60 py-0 pl-8 pr-8 text-[13px] font-medium text-foreground",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  )}
-                  aria-label="Filter by status"
-                >
-                  <option value="active">Active</option>
-                  <option value="archived">Archived</option>
-                  <option value="all">All statuses</option>
-                </select>
-                <select
-                  value={crmFilter}
-                  onChange={(e) => setCrmFilter(e.target.value as typeof crmFilter)}
-                  className={cn(
-                    "h-9 appearance-none rounded-full border border-border/80 bg-background/60 py-0 pr-8 text-[13px] font-medium text-foreground sm:pl-3",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  )}
-                  aria-label="Filter by type"
-                >
-                  <option value="all">All types</option>
-                  <option value="leads">Leads only</option>
-                  <option value="contacts">Contacts only</option>
-                </select>
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <Filter
+                    className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
+                    aria-hidden
+                  />
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
+                    className={cn(
+                      "h-9 appearance-none rounded-full border border-border/80 bg-background/60 py-0 pl-8 pr-8 text-[13px] font-medium text-foreground",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    )}
+                    aria-label="Filter by status"
+                  >
+                    <option value="active">Active</option>
+                    <option value="archived">Archived</option>
+                    <option value="all">All statuses</option>
+                  </select>
+                </div>
+                <div className="relative">
+                  <Users
+                    className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
+                    aria-hidden
+                  />
+                  <select
+                    value={crmFilter}
+                    onChange={(e) => setCrmFilter(e.target.value as typeof crmFilter)}
+                    className={cn(
+                      "h-9 appearance-none rounded-full border border-border/80 bg-background/60 py-0 pl-8 pr-8 text-[13px] font-medium text-foreground",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    )}
+                    aria-label="Filter by type"
+                  >
+                    <option value="all">All types</option>
+                    <option value="leads">Leads only</option>
+                    <option value="contacts">Contacts only</option>
+                  </select>
+                </div>
               </div>
               <Input
                 value={tagFilter}
