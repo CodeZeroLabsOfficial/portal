@@ -9,7 +9,6 @@ import { resolveStripePriceIdForSubscription } from "@/lib/catalog-service-resol
 import { createSubscriptionSchema } from "@/lib/schemas/subscription";
 import { listCatalogServicePickerOptionsForOrg } from "@/server/firestore/catalog-services";
 import { zodErrorToMessage } from "@/lib/zod-error";
-import { COLLECTIONS } from "@/server/firestore/collections";
 import { getCustomerRecordForOrg, syncStripeCustomerBasics } from "@/server/firestore/crm-customers";
 import { ensureStripeCustomer } from "@/server/stripe/proposal-billing";
 import { cancelSubscriptionAtPeriodEnd } from "@/server/stripe/subscription-cancel-at-period-end";
@@ -17,7 +16,7 @@ import {
   pauseSubscriptionPaymentCollection,
   resumeSubscriptionPaymentCollection,
 } from "@/server/stripe/subscription-payment-collection";
-import { upsertSubscriptionMirror } from "@/server/stripe/stripe-sync";
+import { deleteSubscriptionMirrorFromFirestore } from "@/server/stripe/stripe-sync";
 import {
   createSubscriptionScheduleForCustomer,
   parseStartDateToUtcMs,
@@ -203,14 +202,15 @@ export async function deleteSubscriptionAction(
   try {
     if (subId.startsWith("sub_sched_")) {
       await stripe.subscriptionSchedules.cancel(subId);
-      await db.collection(COLLECTIONS.subscriptions).doc(subId).delete().catch(() => {});
+      await deleteSubscriptionMirrorFromFirestore(db, subId);
       revalidateSubscriptionPaths();
       return { ok: true };
     }
 
     const canceled = await stripe.subscriptions.cancel(subId);
-    await upsertSubscriptionMirror(db, canceled);
-    await db.collection(COLLECTIONS.subscriptions).doc(subId).delete().catch(() => {});
+    const customerId =
+      typeof canceled.customer === "string" ? canceled.customer : canceled.customer?.id ?? "";
+    await deleteSubscriptionMirrorFromFirestore(db, subId, customerId);
     revalidateSubscriptionPaths();
     return { ok: true };
   } catch (error) {

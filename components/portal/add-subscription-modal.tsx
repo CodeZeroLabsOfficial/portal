@@ -19,6 +19,7 @@ import { FormServerError } from "@/components/ui/form-server-error";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatCurrencyAmount } from "@/lib/format";
+import { isCatalogServicePlanPickerOption } from "@/lib/catalog-service-tier";
 import type { CatalogServicePickerOption } from "@/types/catalog-service";
 import { getFirebasePublicConfig } from "@/lib/env/client-public";
 import { cn } from "@/lib/utils";
@@ -100,6 +101,11 @@ export function AddSubscriptionModal({
     defaultValues,
   });
 
+  const planServiceOptions = React.useMemo(
+    () => catalogServiceOptions.filter(isCatalogServicePlanPickerOption),
+    [catalogServiceOptions],
+  );
+
   const orderedServices = React.useMemo(() => {
     const rank = (name: string): number => {
       const n = name.trim().toLowerCase();
@@ -109,19 +115,19 @@ export function AddSubscriptionModal({
       if (n === "enterprise") return 3;
       return 100;
     };
-    return [...catalogServiceOptions].sort((a, b) => {
+    return [...planServiceOptions].sort((a, b) => {
       const ra = rank(a.serviceName);
       const rb = rank(b.serviceName);
       if (ra !== rb) return ra - rb;
       return a.serviceName.localeCompare(b.serviceName, undefined, { sensitivity: "base" });
     });
-  }, [catalogServiceOptions]);
+  }, [planServiceOptions]);
 
   const collectionMethod = form.watch("collectionMethod");
   const selectedServiceId = form.watch("serviceId");
   const selectedService = React.useMemo(
-    () => catalogServiceOptions.find((s) => s.serviceId === selectedServiceId),
-    [catalogServiceOptions, selectedServiceId],
+    () => planServiceOptions.find((s) => s.serviceId === selectedServiceId),
+    [planServiceOptions, selectedServiceId],
   );
   const durationOptions = selectedService?.durations ?? [];
   const selectedCustomerId = form.watch("customerId");
@@ -418,7 +424,7 @@ export function AddSubscriptionModal({
                 onChange={(e) => form.setValue("serviceId", e.target.value, { shouldValidate: true })}
               >
                 {orderedServices.length === 0 ? (
-                  <option value="">No active services — add one under Services</option>
+                  <option value="">No active plan services — add one under Services</option>
                 ) : null}
                 {orderedServices.map((opt) => (
                   <option key={opt.serviceId} value={opt.serviceId}>

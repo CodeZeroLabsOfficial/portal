@@ -134,6 +134,38 @@ export async function mirrorSubscriptionRowToLinkedPortalUser(
   await db.collection(COLLECTIONS.users).doc(uid).collection("subscriptions").doc(docId).set(data, { merge: true });
 }
 
+/** Removes a subscription mirror from the org collection and linked portal user subcollection. */
+export async function deleteSubscriptionMirrorFromFirestore(
+  db: Firestore,
+  subscriptionId: string,
+  stripeCustomerId?: string,
+): Promise<void> {
+  const subId = subscriptionId.trim();
+  if (!subId) return;
+
+  let customerId = stripeCustomerId?.trim() ?? "";
+  if (!customerId) {
+    const snap = await db.collection(COLLECTIONS.subscriptions).doc(subId).get();
+    if (snap.exists) {
+      const data = snap.data();
+      customerId = typeof data?.customerId === "string" ? data.customerId.trim() : "";
+    }
+  }
+
+  await db.collection(COLLECTIONS.subscriptions).doc(subId).delete().catch(() => {});
+
+  if (!customerId) return;
+  const uid = await resolvePortalUserIdForStripeCustomer(db, customerId);
+  if (!uid) return;
+  await db
+    .collection(COLLECTIONS.users)
+    .doc(uid)
+    .collection("subscriptions")
+    .doc(subId)
+    .delete()
+    .catch(() => {});
+}
+
 function productLabelFromSubscription(sub: Stripe.Subscription): string | undefined {
   const item = sub.items?.data?.[0];
   const price = item?.price;
