@@ -290,18 +290,19 @@ export function AddCatalogServiceModal({ open, onOpenChange }: AddCatalogService
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          "max-h-[min(90vh,860px)] w-[min(100vw-2rem,880px)] max-w-[880px] overflow-y-auto p-0 sm:max-w-[880px]",
+          "flex max-h-[min(90vh,860px)] w-[min(100vw-2rem,880px)] max-w-[880px] flex-col gap-0 overflow-hidden p-0 sm:max-w-[880px]",
           WORKSPACE_GLASS_DIALOG_SURFACE_CLASSES,
         )}
       >
-        <div className="border-b border-white/[0.06] bg-gradient-to-br from-primary/15 via-transparent to-transparent px-6 pb-5 pt-6">
+        <div className="shrink-0 border-b border-white/[0.06] bg-gradient-to-br from-primary/15 via-transparent to-transparent px-6 pb-5 pt-6">
           <DialogHeader className="text-left">
             <DialogTitle className="text-xl font-semibold tracking-tight text-white">Add a new service</DialogTitle>
           </DialogHeader>
         </div>
 
-        <form onSubmit={handleFormSubmit} className="space-y-4 px-8 py-6" noValidate>
-          <FormServerError message={serverError} rounded="xl" />
+        <form onSubmit={handleFormSubmit} className="flex min-h-0 flex-1 flex-col" noValidate>
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-8 py-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <FormServerError message={serverError} rounded="xl" />
 
           <div className="space-y-1.5">
             <Label htmlFor="catalog-service-name" className={labelClass}>
@@ -512,8 +513,9 @@ export function AddCatalogServiceModal({ open, onOpenChange }: AddCatalogService
               </div>
             ) : null}
           </div>
+          </div>
 
-          <DialogFooter className="gap-2 border-t border-white/[0.06] pt-4 sm:justify-end">
+          <DialogFooter className="shrink-0 gap-2 border-t border-white/[0.06] px-8 pb-6 pt-4 sm:justify-end">
             <Button
               type="button"
               variant="ghost"

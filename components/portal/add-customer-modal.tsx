@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
+import { ChevronDown, Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { createCustomerSchema, type CreateCustomerInput } from "@/lib/schemas/customer";
 import { createCustomerAction } from "@/server/actions/customers-crm";
@@ -131,11 +131,11 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          "max-h-[min(92vh,900px)] w-[min(100vw-2rem,72rem)] !max-w-[min(100vw-2rem,72rem)] overflow-x-hidden overflow-y-auto p-0 sm:!max-w-[min(100vw-2rem,72rem)]",
+          "flex max-h-[min(92vh,900px)] w-[min(100vw-2rem,72rem)] !max-w-[min(100vw-2rem,72rem)] flex-col gap-0 overflow-hidden p-0 sm:!max-w-[min(100vw-2rem,72rem)]",
           WORKSPACE_GLASS_DIALOG_SURFACE_CLASSES,
         )}
       >
-        <div className="border-b border-white/[0.06] bg-gradient-to-br from-primary/15 via-transparent to-transparent px-6 pb-5 pt-6">
+        <div className="shrink-0 border-b border-white/[0.06] bg-gradient-to-br from-primary/15 via-transparent to-transparent px-6 pb-5 pt-6">
           <DialogHeader className="text-left">
             <DialogTitle className="text-xl font-semibold tracking-tight text-white">New customer</DialogTitle>
           </DialogHeader>
@@ -143,45 +143,49 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
 
         <form
           onSubmit={form.handleSubmit(onSubmit)}
-          className="min-w-0 space-y-3 px-6 py-5"
+          className="flex min-h-0 min-w-0 flex-1 flex-col"
           noValidate
         >
-          <FormServerError message={serverError} rounded="xl" />
-
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="crm-record-type" className="text-zinc-300">
-              Record type
-            </Label>
-            <select
-              id="crm-record-type"
-              value={form.watch("saveAsLead") ? "lead" : "contact"}
-              onChange={(e) =>
-                form.setValue("saveAsLead", e.target.value === "lead", {
-                  shouldDirty: true,
-                })
-              }
-              disabled={busy}
-              className="flex h-9 w-full rounded-md border border-white/[0.08] bg-white/[0.04] px-3 py-1 text-sm text-white shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#141414]"
-            >
-              <option value="lead">Lead</option>
-              <option value="contact">Contact</option>
-            </select>
-          </div>
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-8 py-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <FormServerError message={serverError} rounded="xl" />
 
           <input type="hidden" {...form.register("name")} />
-          <div className="grid min-w-0 gap-x-6 gap-y-1.5 sm:grid-cols-2">
+          <div className="grid min-w-0 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="crm-first-name" className="text-zinc-300">
                 First name
               </Label>
-              <Input
-                id="crm-first-name"
-                autoComplete="given-name"
-                className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
-                placeholder="John"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-              />
+              <div className="flex overflow-hidden rounded-md border border-white/[0.08] bg-white/[0.04] focus-within:ring-2 focus-within:ring-ring">
+                <div className="relative shrink-0 border-r border-white/[0.08]">
+                  <select
+                    id="crm-record-type"
+                    className="h-9 appearance-none bg-transparent py-1 pl-3 pr-7 text-sm text-white focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#141414]"
+                    value={form.watch("saveAsLead") ? "lead" : "contact"}
+                    disabled={busy}
+                    aria-label="Record type"
+                    onChange={(e) =>
+                      form.setValue("saveAsLead", e.target.value === "lead", {
+                        shouldDirty: true,
+                      })
+                    }
+                  >
+                    <option value="contact">Contact</option>
+                    <option value="lead">Lead</option>
+                  </select>
+                  <ChevronDown
+                    className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-500"
+                    aria-hidden
+                  />
+                </div>
+                <Input
+                  id="crm-first-name"
+                  autoComplete="given-name"
+                  className="h-9 flex-1 rounded-none border-0 bg-transparent text-white shadow-none placeholder:text-zinc-500 focus-visible:ring-0"
+                  placeholder="John"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                />
+              </div>
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="crm-last-name" className="text-zinc-300">
@@ -314,7 +318,7 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
             </div>
           </div>
 
-          <div className="grid min-w-0 gap-x-8 gap-y-1.5 md:grid-cols-2">
+          <div className="grid min-w-0 gap-4 md:grid-cols-2">
             <Label className="hidden h-8 content-center text-zinc-300 md:block">Company address</Label>
             <div className="hidden h-8 items-center justify-between gap-2 md:flex">
               <Label className="text-zinc-300">Contact address</Label>
@@ -433,8 +437,9 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
               placeholder="vip, priority — comma separated"
             />
           </div>
+          </div>
 
-          <DialogFooter className="gap-2 pt-2 sm:gap-0">
+          <DialogFooter className="shrink-0 gap-2 border-t border-white/[0.06] px-8 pb-6 pt-4 sm:justify-end">
             <Button
               type="button"
               variant="ghost"
