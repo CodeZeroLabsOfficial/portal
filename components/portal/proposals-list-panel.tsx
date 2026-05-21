@@ -4,16 +4,21 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Copy, ExternalLink, Loader2, Pencil, Search, SquareArrowOutUpRight, Trash2 } from "lucide-react";
+import { ListChecks, Loader2, MoreHorizontal, Search } from "lucide-react";
 import type { ProposalHubListRow, ProposalRecord } from "@/types/proposal";
 import { cloneProposalAction, deleteProposalAction } from "@/server/actions/proposal-builder";
 import { formatLastEditedInLocality } from "@/lib/proposal-locality-dates";
 import { ProposalStageBadge } from "@/components/portal/proposal-stage-badge";
 import { Button } from "@/components/ui/button";
-import { listRowIconActionClassName } from "@/components/ui/list-row-icon-action";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { getProposalStageBadgeDisplay } from "@/lib/proposal-status-badge";
-import { cn } from "@/lib/utils";
 
 export interface ProposalsListPanelProps {
   proposals: ProposalHubListRow[];
@@ -39,8 +44,10 @@ export function ProposalsListPanel({ proposals, localityTimeZone }: ProposalsLis
   }, [router]);
 
   const [query, setQuery] = React.useState("");
+  const [selected, setSelected] = React.useState<Set<string>>(() => new Set());
   const [deletingId, setDeletingId] = React.useState<string | null>(null);
   const [cloningId, setCloningId] = React.useState<string | null>(null);
+  const [bulkBusy, setBulkBusy] = React.useState(false);
 
   const sorted = React.useMemo(
     () => [...proposals].sort((a, b) => lastEditedMs(b) - lastEditedMs(a)),
@@ -64,6 +71,39 @@ export function ProposalsListPanel({ proposals, localityTimeZone }: ProposalsLis
       return hay.includes(q);
     });
   }, [sorted, query, localityTimeZone]);
+
+  const filteredIds = React.useMemo(() => filtered.map((p) => p.id), [filtered]);
+  const allFilteredSelected =
+    filteredIds.length > 0 && filteredIds.every((id) => selected.has(id));
+  const someFilteredSelected = filteredIds.some((id) => selected.has(id));
+  const selectAllRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    const el = selectAllRef.current;
+    if (!el) return;
+    el.indeterminate = someFilteredSelected && !allFilteredSelected;
+  }, [someFilteredSelected, allFilteredSelected]);
+
+  function toggleAllFiltered() {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allFilteredSelected) {
+        for (const id of filteredIds) next.delete(id);
+      } else {
+        for (const id of filteredIds) next.add(id);
+      }
+      return next;
+    });
+  }
+
+  function toggleOne(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   async function onDelete(p: ProposalHubListRow) {
     if (!window.confirm(`Delete proposal “${p.title}”? This cannot be undone.`)) return;
@@ -98,6 +138,31 @@ export function ProposalsListPanel({ proposals, localityTimeZone }: ProposalsLis
     }
   }
 
+  async function handleBulkDelete() {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    if (
+      !window.confirm(
+        `Delete ${ids.length} selected proposal${ids.length === 1 ? "" : "s"}? This cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+    setBulkBusy(true);
+    const failed: string[] = [];
+    for (const id of ids) {
+      const res = await deleteProposalAction(id);
+      if (!res.ok) failed.push(id);
+    }
+    setBulkBusy(false);
+    if (failed.length > 0) {
+      window.alert(`Deleted ${ids.length - failed.length} of ${ids.length}. ${failed.length} failed.`);
+    } else {
+      setSelected(new Set());
+    }
+    router.refresh();
+  }
+
   return (
     <section className="overflow-hidden rounded-xl border border-border/80 bg-card/80 shadow-sm backdrop-blur-sm">
       <div className="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
@@ -116,17 +181,33 @@ export function ProposalsListPanel({ proposals, localityTimeZone }: ProposalsLis
               aria-label="Search proposals by account, contact, title, status, or date"
             />
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            className="h-9 w-9 shrink-0 border-border/80 bg-card/80 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-            aria-label="Export (soon)"
-            disabled
-            title="Export coming soon"
-          >
-            <SquareArrowOutUpRight className="h-4 w-4" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-9 w-9 shrink-0 border-border/80 bg-card/80 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                aria-label="Bulk actions"
+                title={selected.size > 0 ? `${selected.size} selected` : "Bulk actions"}
+                disabled={bulkBusy}
+              >
+                <ListChecks className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              className="min-w-[11rem] border-border/80 bg-popover text-popover-foreground shadow-lg"
+            >
+              <DropdownMenuItem
+                disabled={selected.size === 0 || bulkBusy}
+                className="text-destructive focus:text-destructive"
+                onClick={() => void handleBulkDelete()}
+              >
+                Delete selected ({selected.size})
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -134,17 +215,27 @@ export function ProposalsListPanel({ proposals, localityTimeZone }: ProposalsLis
         <table className="w-full min-w-[920px] text-left text-[13px]">
           <thead>
             <tr className="border-b border-border text-muted-foreground">
+              <th className="w-12 px-4 py-2.5">
+                <input
+                  ref={selectAllRef}
+                  type="checkbox"
+                  checked={allFilteredSelected}
+                  onChange={toggleAllFiltered}
+                  className="h-4 w-4 cursor-pointer rounded border-border text-primary focus:ring-primary"
+                  aria-label="Select all visible proposals"
+                />
+              </th>
               <th className="px-4 py-2.5 font-medium">Account name</th>
               <th className="px-4 py-2.5 font-medium">Contact</th>
               <th className="px-4 py-2.5 font-medium">Status</th>
               <th className="min-w-[180px] px-4 py-2.5 font-medium">Last edited</th>
-              <th className="w-[168px] px-2 py-2.5 text-center font-medium">Actions</th>
+              <th className="w-14 px-2 py-2.5 text-center font-medium">Action</th>
             </tr>
           </thead>
           <tbody className="text-foreground">
             {sorted.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-10 text-center text-sm text-muted-foreground">
+                <td colSpan={6} className="px-4 py-10 text-center text-sm text-muted-foreground">
                   <p className="mx-auto max-w-md leading-relaxed">
                     No proposals yet. Create one from a contact or opportunity in the CRM.
                   </p>
@@ -152,7 +243,7 @@ export function ProposalsListPanel({ proposals, localityTimeZone }: ProposalsLis
               </tr>
             ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-10 text-center text-sm text-muted-foreground">
+                <td colSpan={6} className="px-4 py-10 text-center text-sm text-muted-foreground">
                   No proposals match your search.
                 </td>
               </tr>
@@ -160,6 +251,7 @@ export function ProposalsListPanel({ proposals, localityTimeZone }: ProposalsLis
               <AnimatePresence initial={false}>
                 {filtered.map((p, index) => {
                   const edited = lastEditedMs(p);
+                  const rowBusy = deletingId === p.id || cloningId === p.id || bulkBusy;
                   return (
                     <motion.tr
                       key={p.id}
@@ -170,6 +262,15 @@ export function ProposalsListPanel({ proposals, localityTimeZone }: ProposalsLis
                       transition={{ duration: 0.18, delay: index * 0.012 }}
                       className="border-b border-border/60 last:border-0"
                     >
+                      <td className="px-4 py-3 align-middle">
+                        <input
+                          type="checkbox"
+                          checked={selected.has(p.id)}
+                          onChange={() => toggleOne(p.id)}
+                          className="h-4 w-4 cursor-pointer rounded border-border text-primary focus:ring-primary"
+                          aria-label={`Select ${p.accountCompanyName}`}
+                        />
+                      </td>
                       <td className="max-w-[220px] px-4 py-3 align-middle">
                         <Link
                           href={editHref(p)}
@@ -202,59 +303,51 @@ export function ProposalsListPanel({ proposals, localityTimeZone }: ProposalsLis
                           {formatLastEditedInLocality(edited, localityTimeZone)}
                         </time>
                       </td>
-                      <td className="px-2 py-3 align-middle">
-                        <div className="flex items-center justify-center gap-1">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className={cn(
-                              listRowIconActionClassName,
-                              "hover:bg-destructive/10 hover:text-destructive",
-                            )}
-                            disabled={deletingId === p.id}
-                            aria-label={`Delete proposal “${p.title}”`}
-                            onClick={() => void onDelete(p)}
-                          >
-                            {deletingId === p.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                            ) : (
-                              <Trash2 className="h-4 w-4" aria-hidden />
-                            )}
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className={listRowIconActionClassName}
-                            disabled={cloningId === p.id}
-                            aria-label={`Clone proposal “${p.title}”`}
-                            onClick={() => void onClone(p)}
-                          >
-                            {cloningId === p.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                            ) : (
-                              <Copy className="h-4 w-4" aria-hidden />
-                            )}
-                          </Button>
-                          <Button variant="ghost" size="icon" className={listRowIconActionClassName} asChild>
-                            <Link href={editHref(p)} aria-label={`Edit proposal “${p.title}”`}>
-                              <Pencil className="h-4 w-4" aria-hidden />
-                            </Link>
-                          </Button>
-                          {p.shareToken ? (
-                            <Button variant="ghost" size="icon" className={listRowIconActionClassName} asChild>
-                              <Link
-                                href={`/p/${p.shareToken}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                aria-label={`Open public preview for “${p.title}”`}
-                              >
-                                <ExternalLink className="h-4 w-4" aria-hidden />
-                              </Link>
+                      <td className="px-2 py-3 text-center align-middle">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              disabled={rowBusy}
+                              className="h-8 w-8 text-muted-foreground hover:bg-muted hover:text-foreground"
+                              aria-label={`Actions for ${p.title}`}
+                            >
+                              {rowBusy ? (
+                                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                              ) : (
+                                <MoreHorizontal className="h-4 w-4" aria-hidden />
+                              )}
                             </Button>
-                          ) : null}
-                        </div>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            align="end"
+                            className="min-w-[11rem] border-border/80 bg-popover text-popover-foreground shadow-lg"
+                          >
+                            <DropdownMenuItem asChild>
+                              <Link href={editHref(p)}>Edit</Link>
+                            </DropdownMenuItem>
+                            {p.shareToken ? (
+                              <DropdownMenuItem asChild>
+                                <Link href={`/p/${p.shareToken}`} target="_blank" rel="noopener noreferrer">
+                                  Preview
+                                </Link>
+                              </DropdownMenuItem>
+                            ) : null}
+                            <DropdownMenuItem disabled={cloningId === p.id} onClick={() => void onClone(p)}>
+                              Duplicate
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              disabled={deletingId === p.id}
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => void onDelete(p)}
+                            >
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </td>
                     </motion.tr>
                   );

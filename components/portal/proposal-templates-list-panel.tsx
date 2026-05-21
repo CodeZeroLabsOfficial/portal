@@ -4,18 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  CheckCircle2,
-  Copy,
-  ExternalLink,
-  Filter,
-  Loader2,
-  Pencil,
-  RotateCcw,
-  Search,
-  SquareArrowOutUpRight,
-  Trash2,
-} from "lucide-react";
+import { Filter, ListChecks, Loader2, MoreHorizontal, Search } from "lucide-react";
 import type { ContractTemplateRecord } from "@/types/contract-template";
 import type {
   ProposalTemplateRecord,
@@ -27,12 +16,21 @@ import {
   deleteContractTemplateAction,
   setContractTemplateStageAction,
 } from "@/server/actions/contract-templates";
-import { deleteProposalTemplateAction, setProposalTemplateStageAction } from "@/server/actions/proposal-templates";
+import {
+  cloneProposalTemplateAction,
+  deleteProposalTemplateAction,
+  setProposalTemplateStageAction,
+} from "@/server/actions/proposal-templates";
 import { formatLastEditedInLocality } from "@/lib/proposal-locality-dates";
-import { CloneProposalTemplateButton } from "@/components/proposal/clone-proposal-template-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { listRowIconActionClassName } from "@/components/ui/list-row-icon-action";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
@@ -149,9 +147,11 @@ export function ProposalTemplatesListPanel({
   const [query, setQuery] = React.useState("");
   const [typeFilter, setTypeFilter] = React.useState<TemplateTypeFilter>("all");
   const [stageFilter, setStageFilter] = React.useState<TemplateStageFilter>("all");
+  const [selected, setSelected] = React.useState<Set<string>>(() => new Set());
   const [deletingKey, setDeletingKey] = React.useState<string | null>(null);
   const [stageUpdatingKey, setStageUpdatingKey] = React.useState<string | null>(null);
-  const [cloningContractId, setCloningContractId] = React.useState<string | null>(null);
+  const [cloningKey, setCloningKey] = React.useState<string | null>(null);
+  const [bulkBusy, setBulkBusy] = React.useState(false);
 
   const entries = React.useMemo((): TemplatesListEntry[] => {
     const proposalRows: TemplatesListEntry[] = proposalTemplates.map((row) => ({
@@ -221,18 +221,28 @@ export function ProposalTemplatesListPanel({
     }
   }
 
-  async function cloneContract(id: string) {
-    setCloningContractId(id);
+  async function cloneEntry(entry: TemplatesListEntry) {
+    const key = listEntryKey(entry);
+    setCloningKey(key);
     try {
-      const res = await cloneContractTemplateAction(id);
-      if (!res.ok) {
-        window.alert(res.message);
-        return;
+      if (entry.kind === "proposal") {
+        const res = await cloneProposalTemplateAction(entry.row.id);
+        if (!res.ok) {
+          window.alert(res.message);
+          return;
+        }
+        router.push(`/admin/templates/${res.templateId}`);
+      } else {
+        const res = await cloneContractTemplateAction(entry.row.id);
+        if (!res.ok) {
+          window.alert(res.message);
+          return;
+        }
+        router.push(`/admin/templates/contracts/${res.contractTemplateId}`);
       }
-      router.push(`/admin/templates/contracts/${res.contractTemplateId}`);
       router.refresh();
     } finally {
-      setCloningContractId(null);
+      setCloningKey(null);
     }
   }
 
@@ -259,6 +269,69 @@ export function ProposalTemplatesListPanel({
       return hay.includes(q);
     });
   }, [entries, query, typeFilter, stageFilter, localityTimeZone]);
+
+  const filteredKeys = React.useMemo(() => filtered.map((entry) => listEntryKey(entry)), [filtered]);
+  const allFilteredSelected =
+    filteredKeys.length > 0 && filteredKeys.every((key) => selected.has(key));
+  const someFilteredSelected = filteredKeys.some((key) => selected.has(key));
+  const selectAllRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    const el = selectAllRef.current;
+    if (!el) return;
+    el.indeterminate = someFilteredSelected && !allFilteredSelected;
+  }, [someFilteredSelected, allFilteredSelected]);
+
+  function toggleAllFiltered() {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allFilteredSelected) {
+        for (const key of filteredKeys) next.delete(key);
+      } else {
+        for (const key of filteredKeys) next.add(key);
+      }
+      return next;
+    });
+  }
+
+  function toggleOne(key: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  async function handleBulkDelete() {
+    const keys = Array.from(selected);
+    if (keys.length === 0) return;
+    if (
+      !window.confirm(
+        `Delete ${keys.length} selected template${keys.length === 1 ? "" : "s"}? This cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+    setBulkBusy(true);
+    const failed: string[] = [];
+    for (const key of keys) {
+      const entry = entries.find((e) => listEntryKey(e) === key);
+      if (!entry) continue;
+      const res =
+        entry.kind === "proposal"
+          ? await deleteProposalTemplateAction(entry.row.id)
+          : await deleteContractTemplateAction(entry.row.id);
+      if (!res.ok) failed.push(key);
+    }
+    setBulkBusy(false);
+    if (failed.length > 0) {
+      window.alert(`Deleted ${keys.length - failed.length} of ${keys.length}. ${failed.length} failed.`);
+    } else {
+      setSelected(new Set());
+    }
+    router.refresh();
+  }
 
   return (
     <section className="overflow-hidden rounded-xl border border-border/80 bg-card/80 shadow-sm backdrop-blur-sm">
@@ -311,18 +384,34 @@ export function ProposalTemplatesListPanel({
                 <option value="published">Published</option>
               </select>
             </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9 shrink-0 border-border/80 bg-card/80 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                  aria-label="Bulk actions"
+                  title={selected.size > 0 ? `${selected.size} selected` : "Bulk actions"}
+                  disabled={bulkBusy}
+                >
+                  <ListChecks className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="min-w-[11rem] border-border/80 bg-popover text-popover-foreground shadow-lg"
+              >
+                <DropdownMenuItem
+                  disabled={selected.size === 0 || bulkBusy}
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => void handleBulkDelete()}
+                >
+                  Delete selected ({selected.size})
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            className="h-9 w-9 shrink-0 border-border/80 bg-card/80 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-            aria-label="Export (soon)"
-            disabled
-            title="Export coming soon"
-          >
-            <SquareArrowOutUpRight className="h-4 w-4" />
-          </Button>
         </div>
       </div>
 
@@ -330,17 +419,27 @@ export function ProposalTemplatesListPanel({
         <table className="w-full min-w-[640px] text-left text-[13px]">
           <thead>
             <tr className="border-b border-border text-muted-foreground">
+              <th className="w-12 px-4 py-2.5">
+                <input
+                  ref={selectAllRef}
+                  type="checkbox"
+                  checked={allFilteredSelected}
+                  onChange={toggleAllFiltered}
+                  className="h-4 w-4 cursor-pointer rounded border-border text-primary focus:ring-primary"
+                  aria-label="Select all visible templates"
+                />
+              </th>
               <th className="px-4 py-2.5 font-medium">Template name</th>
               <th className="min-w-[100px] px-4 py-2.5 font-medium">Type</th>
               <th className="min-w-[120px] px-4 py-2.5 font-medium">Stage</th>
               <th className="min-w-[180px] px-4 py-2.5 font-medium">Last edited date</th>
-              <th className="min-w-[220px] px-2 py-2.5 text-center font-medium">Action buttons</th>
+              <th className="w-14 px-2 py-2.5 text-center font-medium">Action</th>
             </tr>
           </thead>
           <tbody className="text-foreground">
             {entries.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-10 text-center text-sm text-muted-foreground">
+                <td colSpan={6} className="px-4 py-10 text-center text-sm text-muted-foreground">
                   <p className="mx-auto max-w-md leading-relaxed">
                     No templates yet. Use <span className="font-medium text-foreground">New template</span> or{" "}
                     <span className="font-medium text-foreground">New contract template</span> to create reusable
@@ -350,8 +449,8 @@ export function ProposalTemplatesListPanel({
               </tr>
             ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-10 text-center text-sm text-muted-foreground">
-                  No templates match your search.
+                <td colSpan={6} className="px-4 py-10 text-center text-sm text-muted-foreground">
+                  No templates match your filters.
                 </td>
               </tr>
             ) : (
@@ -364,6 +463,8 @@ export function ProposalTemplatesListPanel({
                   const stageInfo = templateStageDisplay(stage);
                   const stageBusy = stageUpdatingKey === key;
                   const deleting = deletingKey === key;
+                  const cloning = cloningKey === key;
+                  const rowBusy = deleting || stageBusy || cloning || bulkBusy;
                   return (
                     <motion.tr
                       key={key}
@@ -374,6 +475,15 @@ export function ProposalTemplatesListPanel({
                       transition={{ duration: 0.18, delay: index * 0.012 }}
                       className="border-b border-border/60 last:border-0"
                     >
+                      <td className="px-4 py-3 align-middle">
+                        <input
+                          type="checkbox"
+                          checked={selected.has(key)}
+                          onChange={() => toggleOne(key)}
+                          className="h-4 w-4 cursor-pointer rounded border-border text-primary focus:ring-primary"
+                          aria-label={`Select ${name}`}
+                        />
+                      </td>
                       <td className="max-w-[280px] px-4 py-3 align-middle">
                         <Link
                           href={editHref(entry)}
@@ -399,97 +509,61 @@ export function ProposalTemplatesListPanel({
                           {formatLastEditedInLocality(edited, localityTimeZone)}
                         </time>
                       </td>
-                      <td className="px-2 py-3 align-middle">
-                        <div className="flex flex-wrap items-center justify-center gap-1">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className={cn(
-                              listRowIconActionClassName,
-                              "hover:bg-destructive/10 hover:text-destructive",
-                            )}
-                            disabled={deleting || stageBusy}
-                            aria-label={`Delete template “${name}”`}
-                            onClick={() => void deleteEntry(entry)}
+                      <td className="px-2 py-3 text-center align-middle">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              disabled={rowBusy}
+                              className="h-8 w-8 text-muted-foreground hover:bg-muted hover:text-foreground"
+                              aria-label={`Actions for ${name}`}
+                            >
+                              {rowBusy ? (
+                                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                              ) : (
+                                <MoreHorizontal className="h-4 w-4" aria-hidden />
+                              )}
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            align="end"
+                            className="min-w-[11rem] border-border/80 bg-popover text-popover-foreground shadow-lg"
                           >
-                            {deleting ? (
-                              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                            <DropdownMenuItem asChild>
+                              <Link href={editHref(entry)}>Edit</Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                              <Link href={previewHref(entry)} target="_blank" rel="noopener noreferrer">
+                                Preview
+                              </Link>
+                            </DropdownMenuItem>
+                            {stage === "draft" ? (
+                              <DropdownMenuItem
+                                disabled={stageBusy}
+                                onClick={() => void updateStage(entry, "published")}
+                              >
+                                Publish
+                              </DropdownMenuItem>
                             ) : (
-                              <Trash2 className="h-4 w-4" aria-hidden />
+                              <DropdownMenuItem disabled={stageBusy} onClick={() => void updateStage(entry, "draft")}>
+                                Mark as draft
+                              </DropdownMenuItem>
                             )}
-                          </Button>
-                          {stage === "draft" ? (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className={listRowIconActionClassName}
-                              disabled={stageBusy || deleting}
-                              aria-label={`Publish template “${name}”`}
-                              title="Publish"
-                              onClick={() => void updateStage(entry, "published")}
+                            <DropdownMenuItem disabled={cloning} onClick={() => void cloneEntry(entry)}>
+                              Duplicate
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              disabled={deleting}
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => void deleteEntry(entry)}
                             >
-                              {stageBusy ? (
-                                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                              ) : (
-                                <CheckCircle2 className="h-4 w-4" aria-hidden />
-                              )}
-                            </Button>
-                          ) : (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className={listRowIconActionClassName}
-                              disabled={stageBusy || deleting}
-                              aria-label={`Mark template “${name}” as draft`}
-                              title="Mark as draft"
-                              onClick={() => void updateStage(entry, "draft")}
-                            >
-                              {stageBusy ? (
-                                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                              ) : (
-                                <RotateCcw className="h-4 w-4" aria-hidden />
-                              )}
-                            </Button>
-                          )}
-                          {entry.kind === "proposal" ? (
-                            <CloneProposalTemplateButton templateId={entry.row.id} iconOnly />
-                          ) : (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className={listRowIconActionClassName}
-                              disabled={cloningContractId === entry.row.id || deleting || stageBusy}
-                              aria-label={`Clone “${name}”`}
-                              title="Duplicate"
-                              onClick={() => void cloneContract(entry.row.id)}
-                            >
-                              {cloningContractId === entry.row.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                              ) : (
-                                <Copy className="h-4 w-4" aria-hidden />
-                              )}
-                            </Button>
-                          )}
-                          <Button variant="ghost" size="icon" className={listRowIconActionClassName} asChild>
-                            <Link href={editHref(entry)} aria-label={`Edit template “${name}”`}>
-                              <Pencil className="h-4 w-4" aria-hidden />
-                            </Link>
-                          </Button>
-                          <Button variant="ghost" size="icon" className={listRowIconActionClassName} asChild>
-                            <Link
-                              href={previewHref(entry)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              aria-label={`Open public preview for template “${name}”`}
-                            >
-                              <ExternalLink className="h-4 w-4" aria-hidden />
-                            </Link>
-                          </Button>
-                        </div>
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </td>
                     </motion.tr>
                   );

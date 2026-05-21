@@ -115,6 +115,35 @@ function isCustomerDetailTab(v: string | undefined): v is CustomerDetailTab {
   return Boolean(v && (CUSTOMER_DETAIL_TAB_VALUES as readonly string[]).includes(v));
 }
 
+const CUSTOMER_DETAIL_TAB_MIN_HEIGHT_CLASS = "min-h-[32rem]";
+
+function CustomerTabEmptyState({
+  icon: Icon,
+  children,
+  embedded = false,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  children: React.ReactNode;
+  embedded?: boolean;
+}) {
+  const body = (
+    <>
+      <Icon className="h-10 w-10 text-muted-foreground/50" aria-hidden />
+      <div className="max-w-sm space-y-2 text-sm text-muted-foreground">{children}</div>
+    </>
+  );
+
+  if (embedded) {
+    return <div className="flex flex-col items-center gap-2 py-12 text-center">{body}</div>;
+  }
+
+  return (
+    <Card className="border-dashed border-border/80 bg-muted/15">
+      <CardContent className="flex flex-col items-center gap-2 py-16 text-center">{body}</CardContent>
+    </Card>
+  );
+}
+
 const workspaceGhostButtonClassName =
   "gap-1.5 text-[14px] font-medium text-muted-foreground hover:text-foreground";
 
@@ -610,7 +639,7 @@ export function CustomerDetailView({
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-6">
+        <TabsContent value="overview" className={cn(CUSTOMER_DETAIL_TAB_MIN_HEIGHT_CLASS, "space-y-6")}>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Card className="border-border/80 bg-card/60 shadow-sm">
               <CardHeader className="pb-2">
@@ -646,7 +675,10 @@ export function CustomerDetailView({
             </CardHeader>
             <CardContent>
               {timeline.length === 0 ? (
-                <p className="py-8 text-center text-sm text-muted-foreground">No activity yet.</p>
+                <CustomerTabEmptyState icon={Sparkles} embedded>
+                  <p>No activity yet.</p>
+                  <p>Notes, calls, emails, and Stripe syncs will show up here as they happen.</p>
+                </CustomerTabEmptyState>
               ) : (
                 <ul className="relative space-y-8 border-l border-border/80 pl-6">
                   {timeline.map((item) => (
@@ -668,7 +700,7 @@ export function CustomerDetailView({
           </Card>
         </TabsContent>
 
-        <TabsContent value="billing" className="space-y-6">
+        <TabsContent value="billing" className={cn(CUSTOMER_DETAIL_TAB_MIN_HEIGHT_CLASS, "space-y-6")}>
           {!customer.stripeCustomerId ? (
             <p className="text-sm text-muted-foreground">
               Link a Stripe customer id under Integrations to hydrate subscriptions and invoices from your webhook
@@ -681,7 +713,10 @@ export function CustomerDetailView({
             </CardHeader>
             <CardContent className="overflow-x-auto">
               {subscriptions.length === 0 ? (
-                <p className="py-6 text-center text-sm text-muted-foreground">No subscription rows for this customer.</p>
+                <CustomerTabEmptyState icon={CreditCard} embedded>
+                  <p>No subscriptions for this customer yet.</p>
+                  <p>Link a Stripe customer id under Integrations to sync subscription rows from your webhook mirrors.</p>
+                </CustomerTabEmptyState>
               ) : (
                 <table className="w-full min-w-[520px] text-left text-sm">
                   <thead className="text-muted-foreground">
@@ -714,7 +749,10 @@ export function CustomerDetailView({
             </CardHeader>
             <CardContent className="overflow-x-auto">
               {invoices.length === 0 ? (
-                <p className="py-6 text-center text-sm text-muted-foreground">No invoices for this customer.</p>
+                <CustomerTabEmptyState icon={FileText} embedded>
+                  <p>No invoices for this customer yet.</p>
+                  <p>Invoice rows appear here once Stripe billing activity is linked and synced.</p>
+                </CustomerTabEmptyState>
               ) : (
                 <table className="w-full min-w-[600px] text-left text-sm">
                   <thead className="text-muted-foreground">
@@ -771,7 +809,7 @@ export function CustomerDetailView({
           </Card>
         </TabsContent>
 
-        <TabsContent value="proposals" className="space-y-4">
+        <TabsContent value="proposals" className={cn(CUSTOMER_DETAIL_TAB_MIN_HEIGHT_CLASS, "space-y-4")}>
           <Card className="border-border/80 bg-card/60">
             <CardHeader className="pb-2">
               <CardTitle className="text-base">Add proposal</CardTitle>
@@ -787,15 +825,13 @@ export function CustomerDetailView({
             </CardContent>
           </Card>
           {proposalsMatched.length === 0 ? (
-            <Card className="border-dashed border-border/80 bg-muted/20">
-              <CardContent className="space-y-2 py-12 text-center text-sm text-muted-foreground">
-                <p>No linked proposals yet.</p>
-                <p>
-                  Use <strong className="text-foreground/90">Add proposal</strong> above, or attach one when creating
-                  from an opportunity.
-                </p>
-              </CardContent>
-            </Card>
+            <CustomerTabEmptyState icon={FileText}>
+              <p>No linked proposals yet.</p>
+              <p>
+                Use <strong className="text-foreground/90">Add proposal</strong> above, or attach one when creating from
+                an opportunity.
+              </p>
+            </CustomerTabEmptyState>
           ) : (
             <ul className="space-y-2">
               {proposalsMatched.map((p) => (
@@ -887,7 +923,7 @@ export function CustomerDetailView({
           )}
         </TabsContent>
 
-        <TabsContent value="notes" className="space-y-6">
+        <TabsContent value="notes" className={cn(CUSTOMER_DETAIL_TAB_MIN_HEIGHT_CLASS, "space-y-6")}>
           <Card className="border-border/80 bg-card/60">
             <CardHeader>
               <CardTitle className="text-base">Add entry</CardTitle>
@@ -932,7 +968,10 @@ export function CustomerDetailView({
             </CardHeader>
             <CardContent>
               {notes.length === 0 && activities.length === 0 ? (
-                <p className="py-8 text-center text-sm text-muted-foreground">Nothing logged yet.</p>
+                <CustomerTabEmptyState icon={MessageSquare} embedded>
+                  <p>Nothing logged yet.</p>
+                  <p>Saved entries appear in this timeline below the add form.</p>
+                </CustomerTabEmptyState>
               ) : (
                 <ul className="space-y-4">
                   {[...notes]
@@ -954,16 +993,11 @@ export function CustomerDetailView({
           </Card>
         </TabsContent>
 
-        <TabsContent value="documents" className="space-y-4">
+        <TabsContent value="documents" className={cn(CUSTOMER_DETAIL_TAB_MIN_HEIGHT_CLASS, "space-y-4")}>
           {signedAgreements.length === 0 ? (
-            <Card className="border-dashed border-border/80 bg-muted/15">
-              <CardContent className="flex flex-col items-center gap-2 py-16 text-center">
-                <FolderOpen className="h-10 w-10 text-muted-foreground/50" aria-hidden />
-                <p className="max-w-sm text-sm text-muted-foreground">
-                  Signed Services Agreements will appear here when a customer completes signing on a linked proposal.
-                </p>
-              </CardContent>
-            </Card>
+            <CustomerTabEmptyState icon={FolderOpen}>
+              <p>Signed Services Agreements will appear here when a customer completes signing on a linked proposal.</p>
+            </CustomerTabEmptyState>
           ) : (
             <ul className="space-y-2">
               {signedAgreements.map((doc) => {
@@ -1028,14 +1062,15 @@ export function CustomerDetailView({
           )}
         </TabsContent>
 
-        <TabsContent value="tasks">
+        <TabsContent value="tasks" className={CUSTOMER_DETAIL_TAB_MIN_HEIGHT_CLASS}>
           {tasks.length === 0 ? (
-            <Card className="border-dashed border-border/80 bg-muted/15">
-              <CardContent className="py-14 text-center text-sm text-muted-foreground">
-                No tasks with <span className="font-mono">customerId</span> set. Add tasks from your operational board
-                with this customer linked.
-              </CardContent>
-            </Card>
+            <CustomerTabEmptyState icon={ListChecks}>
+              <p>No tasks linked to this customer yet.</p>
+              <p>
+                Add tasks from your operational board with <span className="font-mono">customerId</span> set to this
+                customer.
+              </p>
+            </CustomerTabEmptyState>
           ) : (
             <ul className="space-y-2">
               {tasks.map((t) => (
@@ -1051,16 +1086,13 @@ export function CustomerDetailView({
           )}
         </TabsContent>
 
-        <TabsContent value="vault">
-          <Card className="border-dashed border-border/80 bg-muted/15">
-            <CardContent className="flex flex-col items-center gap-2 py-16 text-center">
-              <KeyRound className="h-10 w-10 text-muted-foreground/50" aria-hidden />
-              <p className="max-w-sm text-sm text-muted-foreground">
-                Customer credentials for app development, integrations, hosting, and related access details will be
-                stored here.
-              </p>
-            </CardContent>
-          </Card>
+        <TabsContent value="vault" className={CUSTOMER_DETAIL_TAB_MIN_HEIGHT_CLASS}>
+          <CustomerTabEmptyState icon={KeyRound}>
+            <p>
+              Customer credentials for app development, integrations, hosting, and related access details will be stored
+              here.
+            </p>
+          </CustomerTabEmptyState>
         </TabsContent>
       </Tabs>
       </div>
