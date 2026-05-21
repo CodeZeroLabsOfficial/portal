@@ -2136,7 +2136,7 @@ function AgreementEsignatureSettingsPopover({
               <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground">
                 E-signatures
               </p>
-              <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+              <p className="mt-1.5 text-[10px] leading-snug text-muted-foreground">
                 When enabled, signers can add a drawn or typed signature. When off, they accept with name and email
                 only.
               </p>
@@ -2156,7 +2156,7 @@ function AgreementEsignatureSettingsPopover({
 
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground">Payment</p>
-              <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+              <p className="mt-1.5 text-[10px] leading-snug text-muted-foreground">
                 Show or hide the Add payment details step before signing. Turn off to hide that step (acceptance is
                 still recorded; the in-modal subscription setup is skipped).
               </p>
@@ -2165,7 +2165,7 @@ function AgreementEsignatureSettingsPopover({
                   htmlFor={`agreement-payment-details-${bid}`}
                   className="cursor-pointer text-sm font-medium"
                 >
-                  Add payment details in modal
+                  Add payment details
                 </Label>
                 <Switch
                   id={`agreement-payment-details-${bid}`}
@@ -2181,7 +2181,7 @@ function AgreementEsignatureSettingsPopover({
               <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground">
                 Subscription start date
               </p>
-              <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+              <p className="mt-1.5 text-[10px] leading-snug text-muted-foreground">
                 When a subscription is created after acceptance (payment details in modal or staff follow-up),
                 this sets the Stripe schedule start date — same options as Add subscription on the Subscriptions
                 page.
@@ -2240,9 +2240,9 @@ function AgreementEsignatureSettingsPopover({
 
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground">
-                Prefilled names
+                Prefilled fields
               </p>
-              <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+              <p className="mt-1.5 text-[10px] leading-snug text-muted-foreground">
                 When enabled and the proposal is linked to a CRM customer, the buyer&apos;s name, email, and
                 organisation from that customer record are pre-filled in the accept flow.
               </p>
@@ -2289,7 +2289,7 @@ function AgreementEsignatureSettingsPopover({
 
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground">Disclaimer</p>
-              <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+              <p className="mt-1.5 text-[10px] leading-snug text-muted-foreground">
                 Optional acknowledgements shown in the accept flow before signing.
               </p>
               <div className="mt-3 space-y-3">
