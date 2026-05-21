@@ -447,12 +447,14 @@ export function CustomerDetailView({
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 p-6">
-              <div className="space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <Label>User Access</Label>
                 {customer.portalUserId?.trim() ? (
-                  <p className="text-xs text-muted-foreground">Portal login is linked.</p>
+                  <Badge variant="outline" className="border-emerald-500/40 text-emerald-600 dark:text-emerald-400">
+                    Linked
+                  </Badge>
                 ) : (
-                  <p className="text-xs text-muted-foreground">No portal login linked yet.</p>
+                  <Badge variant="secondary">Not linked</Badge>
                 )}
               </div>
               <div className="flex flex-wrap gap-2">
