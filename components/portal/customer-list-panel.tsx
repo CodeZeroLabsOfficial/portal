@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Filter, ListChecks, MoreHorizontal, Plus, Search, Users } from "lucide-react";
 import type { CustomerListRow } from "@/lib/customer-list";
-import type { CustomerSubscriptionRollup } from "@/types/customer";
+import { getSubscriptionStatusBadgeDisplay } from "@/lib/subscription-status-badge";
 import { archiveCustomerAction, deleteCustomerAction } from "@/server/actions/customers-crm";
 import { AddCustomerModal } from "@/components/portal/add-customer-modal";
 import { Badge } from "@/components/ui/badge";
@@ -24,42 +24,6 @@ import {
   WORKSPACE_PAGE_DESCRIPTION_CLASS,
 } from "@/lib/workspace-page-typography";
 import { cn } from "@/lib/utils";
-
-function subscriptionBadge(
-  rollup: CustomerSubscriptionRollup,
-): { label: string; className: string } {
-  if (rollup === "none") {
-    return { label: "No subscription", className: "bg-muted text-muted-foreground" };
-  }
-  if (rollup === "active" || rollup === "trialing") {
-    return {
-      label: rollup === "trialing" ? "Trialing" : "Active",
-      className: "bg-emerald-500/15 text-emerald-400",
-    };
-  }
-  if (rollup === "scheduled") {
-    return {
-      label: "Scheduled",
-      className: "bg-sky-500/10 text-sky-700 dark:text-sky-300",
-    };
-  }
-  if (rollup === "past_due" || rollup === "unpaid") {
-    return {
-      label: rollup === "past_due" ? "Past due" : "Unpaid",
-      className: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
-    };
-  }
-  if (rollup === "canceled") {
-    return { label: "Canceled", className: "bg-muted text-muted-foreground" };
-  }
-  if (rollup === "paused") {
-    return { label: "Paused", className: "bg-muted text-muted-foreground" };
-  }
-  return {
-    label: rollup.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
-    className: "bg-muted text-muted-foreground",
-  };
-}
 
 export interface CustomerListPanelProps {
   rows: CustomerListRow[];
@@ -343,7 +307,7 @@ export function CustomerListPanel({ rows }: CustomerListPanelProps) {
               ) : (
                 <AnimatePresence initial={false}>
                   {filtered.map((row, index) => {
-                    const sub = subscriptionBadge(row.subscriptionRollup);
+                    const sub = getSubscriptionStatusBadgeDisplay(row.subscriptionRollup);
                     return (
                     <motion.tr
                       key={row.id}
@@ -431,7 +395,7 @@ export function CustomerListPanel({ rows }: CustomerListPanelProps) {
                         <Badge
                           variant="outline"
                           className={cn(
-                            "border-transparent font-medium",
+                            "border-transparent font-medium capitalize",
                             row.status === "archived"
                               ? "bg-muted text-muted-foreground"
                               : "bg-emerald-500/15 text-emerald-400",

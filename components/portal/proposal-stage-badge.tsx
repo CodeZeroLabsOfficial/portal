@@ -15,7 +15,7 @@ export function ProposalStageBadge({
     <Badge
       variant="outline"
       title={stage.title}
-      className={cn("text-xs font-medium capitalize", stage.className, className)}
+      className={cn("border-transparent font-medium capitalize", stage.className, className)}
     >
       {stage.label}
     </Badge>
