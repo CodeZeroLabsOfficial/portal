@@ -452,6 +452,13 @@ const agreementBlockSchema: z.ZodTypeAny = z.object({
   termsReadDisclaimerEnabled: z.boolean().optional(),
   requireAcceptTerms: z.boolean().optional(),
   paymentDetailsSectionEnabled: z.boolean().optional(),
+  subscriptionStartDateMode: z
+    .enum(["on_acceptance", "delay_1_day", "delay_1_week", "delay_1_month", "custom"])
+    .optional(),
+  subscriptionStartCustomDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
   style: blockStyleSchema.optional(),
   background: sectionBackgroundSchema.optional(),
   /** Lazy so this object exists in unions before `agreementNestedBlockSchema` is defined. */

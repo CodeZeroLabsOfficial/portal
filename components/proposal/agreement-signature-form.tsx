@@ -698,7 +698,7 @@ export function AgreementSignatureForm({
             <p className="mt-3 text-sm font-semibold text-zinc-800">Signing agreement…</p>
             <p className="mt-1 max-w-[14rem] text-center text-xs text-zinc-500">
               Please wait while we record your acceptance
-              {subscriptionBillingInModal ? " and start your subscription." : "."}
+              {subscriptionBillingInModal ? " and set up your account." : "."}
             </p>
           </div>
         ) : null}

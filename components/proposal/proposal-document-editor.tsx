@@ -63,6 +63,7 @@ import {
 import type {
   AccordionBlock,
   AgreementBlock,
+  AgreementSubscriptionStartDateMode,
   BlockStyle,
   ColumnsBlock,
   FormBlock,
@@ -120,6 +121,10 @@ import {
 import { BlockToolbar } from "@/components/proposal/proposal-block-toolbar";
 import { DeleteProposalTemplateButton } from "@/components/proposal/delete-proposal-template-button";
 import { ColumnsBlockLayoutControls } from "@/components/proposal/columns-block-layout-controls";
+import {
+  AGREEMENT_SUBSCRIPTION_START_DATE_MODE_OPTIONS,
+  defaultAgreementSubscriptionStartCustomDate,
+} from "@/lib/agreement-subscription-start-date";
 import { syncProposalBlocksPackageTiersFromCatalog } from "@/lib/proposal-package-catalog-sync";
 import {
   clampFr,
@@ -2085,6 +2090,9 @@ function AgreementEsignatureSettingsPopover({
 }) {
   const esignOn = block.eSignaturesEnabled !== false;
   const paymentDetailsOn = block.paymentDetailsSectionEnabled !== false;
+  const subscriptionStartMode = block.subscriptionStartDateMode ?? "on_acceptance";
+  const subscriptionStartCustom =
+    block.subscriptionStartCustomDate?.trim() || defaultAgreementSubscriptionStartCustomDate();
   const electronicOn = block.electronicSignatureDisclaimerEnabled !== false;
   const termsDisclaimerOn = block.termsReadDisclaimerEnabled !== false;
   const requireTermsAck = block.requireAcceptTerms !== false;
@@ -2164,6 +2172,67 @@ function AgreementEsignatureSettingsPopover({
                   checked={paymentDetailsOn}
                   onCheckedChange={(checked) => onChange({ ...block, paymentDetailsSectionEnabled: checked })}
                 />
+              </div>
+            </div>
+
+            <Separator />
+
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground">
+                Subscription start date
+              </p>
+              <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+                When a subscription is created after acceptance (payment details in modal or staff follow-up),
+                this sets the Stripe schedule start date — same options as Add subscription on the Subscriptions
+                page.
+              </p>
+              <div className="mt-3 space-y-3">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor={`agreement-sub-start-mode-${bid}`} className="text-sm font-medium">
+                    Start date
+                  </Label>
+                  <select
+                    id={`agreement-sub-start-mode-${bid}`}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    value={subscriptionStartMode}
+                    onChange={(e) => {
+                      const mode = e.target.value as AgreementSubscriptionStartDateMode;
+                      onChange({
+                        ...block,
+                        subscriptionStartDateMode: mode,
+                        ...(mode === "custom" && !block.subscriptionStartCustomDate
+                          ? { subscriptionStartCustomDate: defaultAgreementSubscriptionStartCustomDate() }
+                          : {}),
+                      });
+                    }}
+                  >
+                    {AGREEMENT_SUBSCRIPTION_START_DATE_MODE_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {subscriptionStartMode === "custom" ? (
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor={`agreement-sub-start-custom-${bid}`} className="text-sm font-medium">
+                      Custom date
+                    </Label>
+                    <Input
+                      id={`agreement-sub-start-custom-${bid}`}
+                      type="date"
+                      className="h-9"
+                      value={subscriptionStartCustom}
+                      onChange={(e) =>
+                        onChange({
+                          ...block,
+                          subscriptionStartCustomDate: e.target.value,
+                          subscriptionStartDateMode: "custom",
+                        })
+                      }
+                    />
+                  </div>
+                ) : null}
               </div>
             </div>
 

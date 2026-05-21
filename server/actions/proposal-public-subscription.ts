@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { utcDateIsoFromMillis } from "@/lib/date-utc-iso";
+import { resolveAgreementSubscriptionStartDateIso } from "@/lib/agreement-subscription-start-date";
+import { findFirstAgreementBlock } from "@/lib/proposal-blocks";
 import { resolveProposalCommerce } from "@/lib/proposal-commerce";
 import { zodErrorToMessage } from "@/lib/zod-error";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
@@ -15,7 +16,10 @@ import { getProposalRecordByShareToken } from "@/server/firestore/parse-proposal
 import { ensureStripeCustomer } from "@/server/stripe/proposal-billing";
 import { loadBillingCatalogForOrganization } from "@/server/catalog/billing-catalog";
 import { chargeProposalOneOffItems } from "@/server/stripe/proposal-one-off-billing";
-import { createSubscriptionScheduleForCustomer } from "@/server/stripe/subscription-schedule-create";
+import {
+  createSubscriptionScheduleForCustomer,
+  parseStartDateToUtcMs,
+} from "@/server/stripe/subscription-schedule-create";
 
 const bodySchema = z
   .object({
@@ -114,7 +118,26 @@ export async function createProposalPublicSubscriptionAction(
     return { ok: false, message: commerce.billingErrors[0]! };
   }
 
-  const startDateIso = utcDateIsoFromMillis(proposal.acceptedAt);
+  const agreementBlock = findFirstAgreementBlock(proposal.document.blocks);
+  const startResolved = resolveAgreementSubscriptionStartDateIso({
+    mode: agreementBlock?.subscriptionStartDateMode,
+    customDateIso: agreementBlock?.subscriptionStartCustomDate,
+    acceptedAtMs: proposal.acceptedAt,
+  });
+  if (!startResolved.ok) return startResolved;
+
+  const startAt = parseStartDateToUtcMs(startResolved.startDateIso);
+  if (!startAt) {
+    return { ok: false, message: "Invalid subscription start date." };
+  }
+  const todayStartMs = Date.UTC(
+    new Date().getUTCFullYear(),
+    new Date().getUTCMonth(),
+    new Date().getUTCDate(),
+  );
+  if (startAt < todayStartMs) {
+    return { ok: false, message: "Subscription start date cannot be in the past." };
+  }
 
   const { stripeCustomerId, created } = await ensureStripeCustomer(stripe, crm, proposal.organizationId);
   if (created || crm.stripeCustomerId !== stripeCustomerId) {
@@ -133,7 +156,7 @@ export async function createProposalPublicSubscriptionAction(
     organizationId: proposal.organizationId,
     stripePriceId: commerce.pick.priceId,
     additionalSubscriptionItems,
-    startDateIso,
+    startDateIso: startResolved.startDateIso,
     durationMonths: commerce.pick.durationMonths,
     collectionMethod: billing.collectionMethod,
     daysUntilDue: billing.collectionMethod === "send_invoice" ? billing.daysUntilDue ?? 14 : undefined,

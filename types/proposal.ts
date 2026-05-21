@@ -281,6 +281,14 @@ export interface SignatureBlock extends ProposalBlockBase {
   termsSummary?: string;
 }
 
+/** How the Stripe subscription start date is derived when billing runs from an Accept block. */
+export type AgreementSubscriptionStartDateMode =
+  | "on_acceptance"
+  | "delay_1_day"
+  | "delay_1_week"
+  | "delay_1_month"
+  | "custom";
+
 /**
  * Accept block: composable surface (like a section) plus a CTA that opens the
  * full-screen agreement modal. The modal aggregates plan + add-on selections and
@@ -349,6 +357,13 @@ export interface AgreementBlock extends ProposalBlockBase {
    * from this flow is skipped. Default true.
    */
   paymentDetailsSectionEnabled?: boolean;
+  /**
+   * When a subscription is created from proposal acceptance, controls the Stripe schedule start date
+   * relative to the acceptance date (or a fixed date when `custom`). Default `on_acceptance`.
+   */
+  subscriptionStartDateMode?: AgreementSubscriptionStartDateMode;
+  /** `YYYY-MM-DD` (UTC) used when {@link subscriptionStartDateMode} is `custom`. */
+  subscriptionStartCustomDate?: string;
   /**
    * Visual overrides — only `primaryColor` is honoured today and drives the
    * CTA button background (and matching modal sign button). Defaults to the
