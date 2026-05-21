@@ -18,6 +18,7 @@ import { FormServerError } from "@/components/ui/form-server-error";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
+import { normalizeAddressFields } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { WORKSPACE_GLASS_DIALOG_SURFACE_CLASSES } from "@/lib/workspace-glass";
 
@@ -99,7 +100,20 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
       .filter((r) => r.key.trim().length > 0)
       .map((r) => ({ key: r.key.trim(), value: r.value }))
       .slice(0, 15);
-    const payload = { ...values, tags, customFields };
+    const contactAddress = normalizeAddressFields({
+      addressLine1: values.addressLine1,
+      addressLine2: values.addressLine2,
+      city: values.city,
+      region: values.region,
+      postalCode: values.postalCode,
+      country: values.country,
+    });
+    const payload = {
+      ...values,
+      ...contactAddress,
+      tags,
+      customFields,
+    };
     const result = await createCustomerAction(payload);
     if (!result.ok) {
       setServerError(result.message);
@@ -379,32 +393,38 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
               <Input
                 className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
                 placeholder="Line 1"
+                autoComplete="address-line1"
                 {...form.register("addressLine1")}
               />
               <Input
                 className="border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
                 placeholder="Line 2"
+                autoComplete="address-line2"
                 {...form.register("addressLine2")}
               />
               <div className="grid min-w-0 grid-cols-2 gap-1.5">
                 <Input
                   className="min-w-0 border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
                   placeholder="City"
+                  autoComplete="address-level2"
                   {...form.register("city")}
                 />
                 <Input
                   className="min-w-0 border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
                   placeholder="State / region"
+                  autoComplete="address-level1"
                   {...form.register("region")}
                 />
                 <Input
                   className="min-w-0 border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
                   placeholder="Postal code"
+                  autoComplete="postal-code"
                   {...form.register("postalCode")}
                 />
                 <Input
                   className="min-w-0 border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
                   placeholder="Country"
+                  autoComplete="country-name"
                   {...form.register("country")}
                 />
               </div>

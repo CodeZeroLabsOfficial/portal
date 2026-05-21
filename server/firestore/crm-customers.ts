@@ -8,6 +8,7 @@ import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
 import { resolveOrCreateFirebaseUserByEmail } from "@/server/auth/resolve-or-create-firebase-user";
 import { getStripe } from "@/lib/stripe/server";
 import { accountKeyToNormalizedCompany, companyNameToAccountKey } from "@/lib/account-key";
+import { normalizeAddressFields } from "@/lib/format";
 import type { AccountListRow } from "@/lib/account-list";
 import type { CustomerListRow } from "@/lib/customer-list";
 import type { CreateAccountFormInput, UpdateAccountFormInput } from "@/lib/schemas/account";
@@ -112,6 +113,14 @@ function parseCustomerRecord(id: string, data: Record<string, unknown>): Custome
   const status = data.status === "archived" ? "archived" : "active";
   const crmType: CustomerCrmType = data.crmType === "lead" ? "lead" : "contact";
   const accountOnly = data.accountOnly === true;
+  const contactAddress = normalizeAddressFields({
+    addressLine1: asString(data.addressLine1),
+    addressLine2: asString(data.addressLine2),
+    city: asString(data.city),
+    region: asString(data.region),
+    postalCode: asString(data.postalCode),
+    country: asString(data.country),
+  });
   return {
     id,
     ...(organizationId ? { organizationId } : {}),
@@ -131,12 +140,12 @@ function parseCustomerRecord(id: string, data: Record<string, unknown>): Custome
     companyPostalCode: asString(data.companyPostalCode),
     companyCountry: asString(data.companyCountry),
     phone: asString(data.phone),
-    addressLine1: asString(data.addressLine1),
-    addressLine2: asString(data.addressLine2),
-    city: asString(data.city),
-    region: asString(data.region),
-    postalCode: asString(data.postalCode),
-    country: asString(data.country),
+    addressLine1: contactAddress.addressLine1 || undefined,
+    addressLine2: contactAddress.addressLine2 || undefined,
+    city: contactAddress.city || undefined,
+    region: contactAddress.region || undefined,
+    postalCode: contactAddress.postalCode || undefined,
+    country: contactAddress.country || undefined,
     tags,
     customFields,
     portalUserId: asString(data.portalUserId),
@@ -936,6 +945,39 @@ export interface CreateCustomerError {
   message: string;
 }
 
+function contactAddressPayloadFromInput(input: {
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  region?: string;
+  postalCode?: string;
+  country?: string;
+}): {
+  addressLine1: string | null;
+  addressLine2: string | null;
+  city: string | null;
+  region: string | null;
+  postalCode: string | null;
+  country: string | null;
+} {
+  const n = normalizeAddressFields({
+    addressLine1: input.addressLine1,
+    addressLine2: input.addressLine2,
+    city: input.city,
+    region: input.region,
+    postalCode: input.postalCode,
+    country: input.country,
+  });
+  return {
+    addressLine1: n.addressLine1?.trim() || null,
+    addressLine2: n.addressLine2?.trim() || null,
+    city: n.city?.trim() || null,
+    region: n.region?.trim() || null,
+    postalCode: n.postalCode?.trim() || null,
+    country: n.country?.trim() || null,
+  };
+}
+
 export async function createCustomerDocument(
   user: PortalUser,
   input: CreateCustomerInput,
@@ -984,12 +1026,7 @@ export async function createCustomerDocument(
     companyPostalCode: input.companyPostalCode?.trim() || null,
     companyCountry: input.companyCountry?.trim() || null,
     phone: input.phone?.trim() || null,
-    addressLine1: input.addressLine1?.trim() || null,
-    addressLine2: input.addressLine2?.trim() || null,
-    city: input.city?.trim() || null,
-    region: input.region?.trim() || null,
-    postalCode: input.postalCode?.trim() || null,
-    country: input.country?.trim() || null,
+    ...contactAddressPayloadFromInput(input),
     tags: input.tags ?? [],
     customFields,
     portalUserId: portalUserId ?? null,
@@ -1155,12 +1192,7 @@ export async function updateCustomerDocument(
     companyPostalCode: rest.companyPostalCode?.trim() || null,
     companyCountry: rest.companyCountry?.trim() || null,
     phone: rest.phone?.trim() || null,
-    addressLine1: rest.addressLine1?.trim() || null,
-    addressLine2: rest.addressLine2?.trim() || null,
-    city: rest.city?.trim() || null,
-    region: rest.region?.trim() || null,
-    postalCode: rest.postalCode?.trim() || null,
-    country: rest.country?.trim() || null,
+    ...contactAddressPayloadFromInput(rest),
     tags: rest.tags ?? [],
     customFields,
     updatedAt: FieldValue.serverTimestamp(),

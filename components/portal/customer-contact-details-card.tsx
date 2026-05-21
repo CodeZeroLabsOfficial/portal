@@ -9,9 +9,10 @@ import {
   buildCustomerUpdatePayload,
   type CustomerInlineFieldOverrides,
 } from "@/lib/customer-form-defaults";
-import { addressBlockFromFields, addressFieldsFromBlock } from "@/lib/format";
+import { normalizeAddressFields, type AddressFields } from "@/lib/format";
 import type { CustomerRecord } from "@/types/customer";
 import { InlineEditableField } from "@/components/portal/inline-editable-field";
+import { InlineEditableAddressFields } from "@/components/portal/inline-editable-address-fields";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -34,7 +35,7 @@ export function CustomerContactDetailsCard({
   const router = useRouter();
   const [activeFieldId, setActiveFieldId] = React.useState<string | null>(null);
   const fieldsDisabled = customer.status === "archived";
-  const addressBlock = addressBlockFromFields({
+  const contactAddress: AddressFields = normalizeAddressFields({
     addressLine1: customer.addressLine1,
     addressLine2: customer.addressLine2,
     city: customer.city,
@@ -217,24 +218,22 @@ export function CustomerContactDetailsCard({
               Address
             </dt>
             <dd>
-              <InlineEditableField
+              <InlineEditableAddressFields
                 fieldId="address"
                 activeFieldId={activeFieldId}
                 onActiveFieldIdChange={setActiveFieldId}
-                value={addressBlock}
+                value={contactAddress}
                 editLabel="address"
-                placeholder="Street, city, state, postcode, country"
-                multiline
                 disabled={fieldsDisabled}
                 onSave={async (next) => {
-                  const parsed = addressFieldsFromBlock(next);
+                  const normalized = normalizeAddressFields(next);
                   return persistField({
-                    addressLine1: parsed.addressLine1 ?? "",
-                    addressLine2: parsed.addressLine2 ?? "",
-                    city: parsed.city ?? "",
-                    region: parsed.region ?? "",
-                    postalCode: parsed.postalCode ?? "",
-                    country: parsed.country ?? "",
+                    addressLine1: normalized.addressLine1 ?? "",
+                    addressLine2: normalized.addressLine2 ?? "",
+                    city: normalized.city ?? "",
+                    region: normalized.region ?? "",
+                    postalCode: normalized.postalCode ?? "",
+                    country: normalized.country ?? "",
                   });
                 }}
               />

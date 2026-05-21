@@ -96,7 +96,7 @@ function collectionMethodDisplay(s: SubscriptionRecord): string {
 function subscriptionStatusDisplay(s: SubscriptionRecord): { label: string; className: string } {
   if (s.paymentCollectionPaused && s.status !== "canceled" && s.status !== "scheduled") {
     return {
-      label: "Payment paused",
+      label: "Paused",
       className: "border-violet-500/35 bg-violet-500/10 text-violet-700 dark:text-violet-300",
     };
   }
@@ -416,14 +416,10 @@ export function SubscriptionListPanel({ rows, customerOptions, catalogServiceOpt
                               Update
                             </DropdownMenuItem>
                             {pauseAllowed ? (
-                              <DropdownMenuItem onSelect={() => void handlePause()}>
-                                Pause payments
-                              </DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => void handlePause()}>Pause</DropdownMenuItem>
                             ) : null}
                             {resumeAllowed ? (
-                              <DropdownMenuItem onSelect={() => void handleResume()}>
-                                Resume payments
-                              </DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => void handleResume()}>Resume</DropdownMenuItem>
                             ) : null}
                             <DropdownMenuItem onSelect={() => void handleCancel()}>
                               Cancel
