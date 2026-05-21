@@ -4,8 +4,8 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { MoreHorizontal, Plus, Search } from "lucide-react";
-import type { SubscriptionRecord } from "@/types/subscription";
+import { Filter, ListChecks, Loader2, MoreHorizontal, Plus, Search } from "lucide-react";
+import type { SubscriptionRecord, SubscriptionStatus } from "@/types/subscription";
 import { formatCurrencyAmount } from "@/lib/format";
 import { AddSubscriptionModal } from "@/components/portal/add-subscription-modal";
 import { Badge } from "@/components/ui/badge";
@@ -118,7 +118,49 @@ function canResumeSubscription(s: SubscriptionRecord): boolean {
   return Boolean(s.paymentCollectionPaused);
 }
 
-function statusBadge(status: SubscriptionRecord["status"]): { label: string; className: string } {
+type SubscriptionStatusFilter =
+  | "all"
+  | "active"
+  | "trialing"
+  | "scheduled"
+  | "past_due"
+  | "unpaid"
+  | "canceled"
+  | "paused";
+
+type SubscriptionProductFilter = "all" | string;
+
+function subscriptionFilterStatus(s: SubscriptionRecord): Exclude<SubscriptionStatusFilter, "all"> | null {
+  if (s.paymentCollectionPaused && s.status !== "canceled" && s.status !== "scheduled") {
+    return "paused";
+  }
+  if (
+    s.status === "active" ||
+    s.status === "trialing" ||
+    s.status === "scheduled" ||
+    s.status === "past_due" ||
+    s.status === "unpaid" ||
+    s.status === "canceled" ||
+    s.status === "paused"
+  ) {
+    return s.status;
+  }
+  return null;
+}
+
+function matchesStatusFilter(s: SubscriptionRecord, statusFilter: SubscriptionStatusFilter): boolean {
+  if (statusFilter === "all") return true;
+  return subscriptionFilterStatus(s) === statusFilter;
+}
+
+function matchesProductFilter(s: SubscriptionRecord, productFilter: SubscriptionProductFilter): boolean {
+  if (productFilter === "all") return true;
+  const name = s.productName?.trim();
+  if (!name) return false;
+  return name === productFilter;
+}
+
+function statusBadge(status: SubscriptionStatus): { label: string; className: string } {
   if (status === "active" || status === "trialing") {
     return {
       label: status === "trialing" ? "Trialing" : "Active",
@@ -160,7 +202,12 @@ export function SubscriptionListPanel({ rows, customerOptions, catalogServiceOpt
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [addOpen, setAddOpen] = React.useState(false);
+  const [query, setQuery] = React.useState("");
+  const [statusFilter, setStatusFilter] = React.useState<SubscriptionStatusFilter>("all");
+  const [productFilter, setProductFilter] = React.useState<SubscriptionProductFilter>("all");
+  const [selected, setSelected] = React.useState<Set<string>>(() => new Set());
   const [pendingId, setPendingId] = React.useState<string | null>(null);
+  const [bulkBusy, setBulkBusy] = React.useState(false);
 
   React.useEffect(() => {
     router.refresh();
@@ -175,18 +222,28 @@ export function SubscriptionListPanel({ rows, customerOptions, catalogServiceOpt
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
   }, [pathname, router, searchParams]);
 
-  const [query, setQuery] = React.useState("");
+  const productOptions = React.useMemo(() => {
+    const names = new Set<string>();
+    for (const row of rows) {
+      const name = row.subscription.productName?.trim();
+      if (name) names.add(name);
+    }
+    return [...names].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+  }, [rows]);
 
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return rows;
     return rows.filter((r) => {
       const s = r.subscription;
+      if (!matchesStatusFilter(s, statusFilter)) return false;
+      if (!matchesProductFilter(s, productFilter)) return false;
+      if (!q) return true;
       const hay = [
         r.accountName,
         s.productName,
         s.priceId,
         s.status,
+        subscriptionStatusDisplay(s).label,
         collectionMethodDisplay(s),
         s.customerId,
       ]
@@ -195,7 +252,65 @@ export function SubscriptionListPanel({ rows, customerOptions, catalogServiceOpt
         .toLowerCase();
       return hay.includes(q);
     });
-  }, [rows, query]);
+  }, [rows, query, statusFilter, productFilter]);
+
+  const filteredIds = React.useMemo(() => filtered.map((r) => r.subscription.id), [filtered]);
+  const allFilteredSelected =
+    filteredIds.length > 0 && filteredIds.every((id) => selected.has(id));
+  const someFilteredSelected = filteredIds.some((id) => selected.has(id));
+  const selectAllRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    const el = selectAllRef.current;
+    if (!el) return;
+    el.indeterminate = someFilteredSelected && !allFilteredSelected;
+  }, [someFilteredSelected, allFilteredSelected]);
+
+  function toggleAllFiltered() {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allFilteredSelected) {
+        for (const id of filteredIds) next.delete(id);
+      } else {
+        for (const id of filteredIds) next.add(id);
+      }
+      return next;
+    });
+  }
+
+  function toggleOne(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function handleBulkDelete() {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    if (
+      !window.confirm(
+        `Delete ${ids.length} selected subscription${ids.length === 1 ? "" : "s"} now? This immediately cancels them in Stripe.`,
+      )
+    ) {
+      return;
+    }
+    setBulkBusy(true);
+    const failed: string[] = [];
+    for (const id of ids) {
+      const res = await deleteSubscriptionAction(id);
+      if (!res.ok) failed.push(id);
+    }
+    setBulkBusy(false);
+    if (failed.length > 0) {
+      window.alert(`Deleted ${ids.length - failed.length} of ${ids.length}. ${failed.length} failed.`);
+    } else {
+      setSelected(new Set());
+    }
+    router.refresh();
+  }
 
   return (
     <div className="space-y-8">
@@ -230,26 +345,108 @@ export function SubscriptionListPanel({ rows, customerOptions, catalogServiceOpt
       <section className="overflow-hidden rounded-xl border border-border/80 bg-card/80 shadow-sm backdrop-blur-sm">
         <div className="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <h2 className="shrink-0 text-sm font-semibold text-foreground">Directory</h2>
-          <div className="relative min-w-0 flex-1 sm:max-w-md">
-            <Search
-              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-              aria-hidden
-            />
-            <Input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search status, customer, product, collection method..."
-              className="h-9 rounded-full border-border/80 bg-background/60 pl-9 text-[14px] text-foreground placeholder:text-muted-foreground"
-              aria-label="Search subscriptions"
-            />
+          <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-2">
+            <div className="relative min-w-0 flex-1 sm:max-w-xs md:max-w-md">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden
+              />
+              <Input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search status, customer, product, collection method..."
+                className="h-9 rounded-full border-border/80 bg-background/60 pl-9 text-[14px] text-foreground placeholder:text-muted-foreground"
+                aria-label="Search subscriptions"
+              />
+            </div>
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
+              <div className="relative">
+                <Filter
+                  className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
+                  aria-hidden
+                />
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value as SubscriptionStatusFilter)}
+                  className={cn(
+                    "h-9 appearance-none rounded-full border border-border/80 bg-background/60 py-0 pl-8 pr-8 text-[13px] font-medium text-foreground",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  )}
+                  aria-label="Filter by status"
+                >
+                  <option value="all">All statuses</option>
+                  <option value="active">Active</option>
+                  <option value="trialing">Trialing</option>
+                  <option value="scheduled">Scheduled</option>
+                  <option value="paused">Paused</option>
+                  <option value="past_due">Past due</option>
+                  <option value="unpaid">Unpaid</option>
+                  <option value="canceled">Canceled</option>
+                </select>
+                <select
+                  value={productFilter}
+                  onChange={(e) => setProductFilter(e.target.value)}
+                  className={cn(
+                    "h-9 appearance-none rounded-full border border-border/80 bg-background/60 py-0 sm:pl-3 pr-8 text-[13px] font-medium text-foreground",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    productOptions.length === 0 ? "max-w-[10rem]" : "max-w-[14rem]",
+                  )}
+                  aria-label="Filter by product"
+                >
+                  <option value="all">All products</option>
+                  {productOptions.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9 shrink-0 border-border/80 bg-card/80 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                    aria-label="Bulk actions"
+                    title={selected.size > 0 ? `${selected.size} selected` : "Bulk actions"}
+                    disabled={bulkBusy}
+                  >
+                    <ListChecks className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  className="min-w-[11rem] border-border/80 bg-popover text-popover-foreground shadow-lg"
+                >
+                  <DropdownMenuItem
+                    disabled={selected.size === 0 || bulkBusy}
+                    className="text-destructive focus:text-destructive"
+                    onClick={() => void handleBulkDelete()}
+                  >
+                    Delete selected ({selected.size})
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1080px] text-left text-[13px]">
             <thead>
-              <tr className="border-b border-border text-muted-foreground">
-                <th className="px-4 py-2.5 font-medium">Account name</th>
+            <tr className="border-b border-border text-muted-foreground">
+              <th className="w-12 px-4 py-2.5">
+                <input
+                  ref={selectAllRef}
+                  type="checkbox"
+                  checked={allFilteredSelected}
+                  onChange={toggleAllFiltered}
+                  className="h-4 w-4 cursor-pointer rounded border-border text-primary focus:ring-primary"
+                  aria-label="Select all visible subscriptions"
+                />
+              </th>
+              <th className="px-4 py-2.5 font-medium">Account name</th>
                 <th className="px-4 py-2.5 font-medium">Status</th>
                 <th className="px-4 py-2.5 font-medium">Product</th>
                 <th className="px-4 py-2.5 font-medium">Monthly amount</th>
@@ -262,14 +459,14 @@ export function SubscriptionListPanel({ rows, customerOptions, catalogServiceOpt
             <tbody className="text-foreground">
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-sm text-muted-foreground">
+                  <td colSpan={9} className="px-4 py-10 text-center text-sm text-muted-foreground">
                     <p className="mx-auto max-w-md leading-relaxed">No subscriptions yet.</p>
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-sm text-muted-foreground">
-                    No subscriptions match your search.
+                  <td colSpan={9} className="px-4 py-10 text-center text-sm text-muted-foreground">
+                    No subscriptions match your filters.
                   </td>
                 </tr>
               ) : (
@@ -280,6 +477,7 @@ export function SubscriptionListPanel({ rows, customerOptions, catalogServiceOpt
                   const monthlyMinor = resolvedMonthlyMinor(s);
                   const pauseAllowed = canPauseSubscription(s);
                   const resumeAllowed = canResumeSubscription(s);
+                  const rowBusy = pendingId === s.id || bulkBusy;
                   const accountCell =
                     row.crmCustomerId && row.accountName !== "—" ? (
                       <Link
@@ -367,6 +565,15 @@ export function SubscriptionListPanel({ rows, customerOptions, catalogServiceOpt
                       transition={{ duration: 0.18, delay: index * 0.012 }}
                       className="border-b border-border/60 last:border-0"
                     >
+                      <td className="px-4 py-3 align-middle">
+                        <input
+                          type="checkbox"
+                          checked={selected.has(s.id)}
+                          onChange={() => toggleOne(s.id)}
+                          className="h-4 w-4 cursor-pointer rounded border-border text-primary focus:ring-primary"
+                          aria-label={`Select subscription for ${row.accountName}`}
+                        />
+                      </td>
                       <td className="max-w-[260px] px-4 py-3 align-middle">{accountCell}</td>
                       <td className="px-4 py-3 align-middle">
                         <Badge variant="outline" className={cn("font-normal capitalize", st.className)}>
@@ -397,11 +604,15 @@ export function SubscriptionListPanel({ rows, customerOptions, catalogServiceOpt
                               type="button"
                               variant="ghost"
                               size="icon"
-                              disabled={pendingId === s.id}
+                              disabled={rowBusy}
                               className="h-8 w-8 text-muted-foreground hover:bg-muted hover:text-foreground"
                               aria-label={`Actions for subscription ${s.id}`}
                             >
-                              <MoreHorizontal className="h-4 w-4" aria-hidden />
+                              {rowBusy ? (
+                                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                              ) : (
+                                <MoreHorizontal className="h-4 w-4" aria-hidden />
+                              )}
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent
@@ -413,7 +624,7 @@ export function SubscriptionListPanel({ rows, customerOptions, catalogServiceOpt
                                 window.open(`https://dashboard.stripe.com/subscriptions/${s.id}`, "_blank")
                               }
                             >
-                              Update
+                              Open in Stripe
                             </DropdownMenuItem>
                             {pauseAllowed ? (
                               <DropdownMenuItem onSelect={() => void handlePause()}>Pause</DropdownMenuItem>

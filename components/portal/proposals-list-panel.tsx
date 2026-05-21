@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { ListChecks, Loader2, MoreHorizontal, Search } from "lucide-react";
+import { Filter, ListChecks, Loader2, MoreHorizontal, Search } from "lucide-react";
 import type { ProposalHubListRow, ProposalRecord } from "@/types/proposal";
 import { cloneProposalAction, deleteProposalAction } from "@/server/actions/proposal-builder";
 import { formatLastEditedInLocality } from "@/lib/proposal-locality-dates";
@@ -18,7 +18,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { getProposalStageBadgeDisplay } from "@/lib/proposal-status-badge";
+import { getProposalStageBadgeDisplay, type ProposalStageBadgeKey } from "@/lib/proposal-status-badge";
+import { cn } from "@/lib/utils";
+
+type ProposalStatusFilter = "all" | ProposalStageBadgeKey;
+
+function matchesStatusFilter(p: ProposalHubListRow, statusFilter: ProposalStatusFilter): boolean {
+  if (statusFilter === "all") return true;
+  return getProposalStageBadgeDisplay(p).badgeKey === statusFilter;
+}
 
 export interface ProposalsListPanelProps {
   proposals: ProposalHubListRow[];
@@ -44,6 +52,7 @@ export function ProposalsListPanel({ proposals, localityTimeZone }: ProposalsLis
   }, [router]);
 
   const [query, setQuery] = React.useState("");
+  const [statusFilter, setStatusFilter] = React.useState<ProposalStatusFilter>("all");
   const [selected, setSelected] = React.useState<Set<string>>(() => new Set());
   const [deletingId, setDeletingId] = React.useState<string | null>(null);
   const [cloningId, setCloningId] = React.useState<string | null>(null);
@@ -56,8 +65,9 @@ export function ProposalsListPanel({ proposals, localityTimeZone }: ProposalsLis
 
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return sorted;
     return sorted.filter((p) => {
+      if (!matchesStatusFilter(p, statusFilter)) return false;
+      if (!q) return true;
       const stage = getProposalStageBadgeDisplay(p);
       const hay = [
         p.accountCompanyName,
@@ -70,7 +80,7 @@ export function ProposalsListPanel({ proposals, localityTimeZone }: ProposalsLis
         .toLowerCase();
       return hay.includes(q);
     });
-  }, [sorted, query, localityTimeZone]);
+  }, [sorted, query, statusFilter, localityTimeZone]);
 
   const filteredIds = React.useMemo(() => filtered.map((p) => p.id), [filtered]);
   const allFilteredSelected =
@@ -181,33 +191,58 @@ export function ProposalsListPanel({ proposals, localityTimeZone }: ProposalsLis
               aria-label="Search proposals by account, contact, title, status, or date"
             />
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="h-9 w-9 shrink-0 border-border/80 bg-card/80 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-                aria-label="Bulk actions"
-                title={selected.size > 0 ? `${selected.size} selected` : "Bulk actions"}
-                disabled={bulkBusy}
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <div className="relative">
+              <Filter
+                className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
+                aria-hidden
+              />
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as ProposalStatusFilter)}
+                className={cn(
+                  "h-9 appearance-none rounded-full border border-border/80 bg-background/60 py-0 pl-8 pr-8 text-[13px] font-medium text-foreground",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                )}
+                aria-label="Filter by status"
               >
-                <ListChecks className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              className="min-w-[11rem] border-border/80 bg-popover text-popover-foreground shadow-lg"
-            >
-              <DropdownMenuItem
-                disabled={selected.size === 0 || bulkBusy}
-                className="text-destructive focus:text-destructive"
-                onClick={() => void handleBulkDelete()}
+                <option value="all">All statuses</option>
+                <option value="draft">Draft</option>
+                <option value="published">Published</option>
+                <option value="viewed">Viewed</option>
+                <option value="accepted">Accepted</option>
+                <option value="declined">Declined</option>
+                <option value="expired">Expired</option>
+              </select>
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9 shrink-0 border-border/80 bg-card/80 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                  aria-label="Bulk actions"
+                  title={selected.size > 0 ? `${selected.size} selected` : "Bulk actions"}
+                  disabled={bulkBusy}
+                >
+                  <ListChecks className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="min-w-[11rem] border-border/80 bg-popover text-popover-foreground shadow-lg"
               >
-                Delete selected ({selected.size})
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <DropdownMenuItem
+                  disabled={selected.size === 0 || bulkBusy}
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => void handleBulkDelete()}
+                >
+                  Delete selected ({selected.size})
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
 
@@ -244,7 +279,7 @@ export function ProposalsListPanel({ proposals, localityTimeZone }: ProposalsLis
             ) : filtered.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-4 py-10 text-center text-sm text-muted-foreground">
-                  No proposals match your search.
+                  No proposals match your filters.
                 </td>
               </tr>
             ) : (

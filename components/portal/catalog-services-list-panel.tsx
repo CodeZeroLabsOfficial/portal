@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Filter, MoreHorizontal, Plus, Search } from "lucide-react";
+import { Filter, ListChecks, Loader2, MoreHorizontal, Plus, Search } from "lucide-react";
 import {
   activateCatalogServiceAction,
   archiveCatalogServiceAction,
@@ -111,8 +111,10 @@ export function CatalogServicesListPanel({ services }: CatalogServicesListPanelP
   const [query, setQuery] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<ServiceStatusFilter>("all");
   const [typeFilter, setTypeFilter] = React.useState<ServiceTypeFilter>("all");
+  const [selected, setSelected] = React.useState<Set<string>>(() => new Set());
   const [addOpen, setAddOpen] = React.useState(false);
   const [pendingId, setPendingId] = React.useState<string | null>(null);
+  const [bulkBusy, setBulkBusy] = React.useState(false);
 
   React.useEffect(() => {
     router.refresh();
@@ -140,6 +142,64 @@ export function CatalogServicesListPanel({ services }: CatalogServicesListPanelP
       return hay.includes(q);
     });
   }, [services, query, statusFilter, typeFilter]);
+
+  const filteredIds = React.useMemo(() => filtered.map((s) => s.id), [filtered]);
+  const allFilteredSelected =
+    filteredIds.length > 0 && filteredIds.every((id) => selected.has(id));
+  const someFilteredSelected = filteredIds.some((id) => selected.has(id));
+  const selectAllRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    const el = selectAllRef.current;
+    if (!el) return;
+    el.indeterminate = someFilteredSelected && !allFilteredSelected;
+  }, [someFilteredSelected, allFilteredSelected]);
+
+  function toggleAllFiltered() {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allFilteredSelected) {
+        for (const id of filteredIds) next.delete(id);
+      } else {
+        for (const id of filteredIds) next.add(id);
+      }
+      return next;
+    });
+  }
+
+  function toggleOne(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function handleBulkDelete() {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    if (
+      !window.confirm(
+        `Delete ${ids.length} selected service${ids.length === 1 ? "" : "s"} permanently? Linked Stripe products will be deactivated if present.`,
+      )
+    ) {
+      return;
+    }
+    setBulkBusy(true);
+    const failed: string[] = [];
+    for (const id of ids) {
+      const res = await deleteCatalogServiceAction(id);
+      if (!res.ok) failed.push(id);
+    }
+    setBulkBusy(false);
+    if (failed.length > 0) {
+      window.alert(`Deleted ${ids.length - failed.length} of ${ids.length}. ${failed.length} failed.`);
+    } else {
+      setSelected(new Set());
+    }
+    router.refresh();
+  }
 
   return (
     <div className="space-y-8">
@@ -218,6 +278,33 @@ export function CatalogServicesListPanel({ services }: CatalogServicesListPanelP
                   <option value="addon">Add-on</option>
                 </select>
               </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9 shrink-0 border-border/80 bg-card/80 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                    aria-label="Bulk actions"
+                    title={selected.size > 0 ? `${selected.size} selected` : "Bulk actions"}
+                    disabled={bulkBusy}
+                  >
+                    <ListChecks className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  className="min-w-[11rem] border-border/80 bg-popover text-popover-foreground shadow-lg"
+                >
+                  <DropdownMenuItem
+                    disabled={selected.size === 0 || bulkBusy}
+                    className="text-destructive focus:text-destructive"
+                    onClick={() => void handleBulkDelete()}
+                  >
+                    Delete selected ({selected.size})
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>
@@ -225,8 +312,18 @@ export function CatalogServicesListPanel({ services }: CatalogServicesListPanelP
         <div className="overflow-x-auto">
           <table className="w-full min-w-[880px] text-left text-[13px]">
             <thead>
-              <tr className="border-b border-border text-muted-foreground">
-                <th className="px-4 py-2.5 font-medium">Service name</th>
+            <tr className="border-b border-border text-muted-foreground">
+              <th className="w-12 px-4 py-2.5">
+                <input
+                  ref={selectAllRef}
+                  type="checkbox"
+                  checked={allFilteredSelected}
+                  onChange={toggleAllFiltered}
+                  className="h-4 w-4 cursor-pointer rounded border-border text-primary focus:ring-primary"
+                  aria-label="Select all visible services"
+                />
+              </th>
+              <th className="px-4 py-2.5 font-medium">Service name</th>
                 <th className="px-4 py-2.5 font-medium">Status</th>
                 <th className="px-4 py-2.5 font-medium">Type</th>
                 <th className="px-4 py-2.5 font-medium">Pricing</th>
@@ -238,20 +335,21 @@ export function CatalogServicesListPanel({ services }: CatalogServicesListPanelP
             <tbody className="text-foreground">
               {services.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-sm text-muted-foreground">
+                  <td colSpan={8} className="px-4 py-10 text-center text-sm text-muted-foreground">
                     <p className="mx-auto max-w-md leading-relaxed">No services yet.</p>
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-sm text-muted-foreground">
-                    No services match your search.
+                  <td colSpan={8} className="px-4 py-10 text-center text-sm text-muted-foreground">
+                    No services match your filters.
                   </td>
                 </tr>
               ) : (
                 <AnimatePresence initial={false}>
                   {filtered.map((service, index) => {
                     const st = statusBadge(service.status);
+                    const rowBusy = pendingId === service.id || bulkBusy;
 
                     async function runRowAction(
                       fn: () => Promise<{ ok: boolean; message?: string }>,
@@ -276,6 +374,15 @@ export function CatalogServicesListPanel({ services }: CatalogServicesListPanelP
                         transition={{ duration: 0.18, delay: index * 0.012 }}
                         className="border-b border-border/60 last:border-0"
                       >
+                        <td className="px-4 py-3 align-middle">
+                          <input
+                            type="checkbox"
+                            checked={selected.has(service.id)}
+                            onChange={() => toggleOne(service.id)}
+                            className="h-4 w-4 cursor-pointer rounded border-border text-primary focus:ring-primary"
+                            aria-label={`Select ${service.name}`}
+                          />
+                        </td>
                         <td className="max-w-[280px] px-4 py-3 align-middle">
                           <Link
                             href={`/admin/services/${service.id}`}
@@ -308,19 +415,23 @@ export function CatalogServicesListPanel({ services }: CatalogServicesListPanelP
                                 type="button"
                                 variant="ghost"
                                 size="icon"
-                                disabled={pendingId === service.id}
+                                disabled={rowBusy}
                                 className="h-8 w-8 text-muted-foreground hover:bg-muted hover:text-foreground"
                                 aria-label={`Actions for ${service.name}`}
                               >
-                                <MoreHorizontal className="h-4 w-4" aria-hidden />
+                                {rowBusy ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                                ) : (
+                                  <MoreHorizontal className="h-4 w-4" aria-hidden />
+                                )}
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent
                               align="end"
                               className="min-w-[11rem] border-border/80 bg-popover text-popover-foreground shadow-lg"
                             >
-                              <DropdownMenuItem onSelect={() => router.push(`/admin/services/${service.id}`)}>
-                                Edit
+                              <DropdownMenuItem asChild>
+                                <Link href={`/admin/services/${service.id}`}>Edit</Link>
                               </DropdownMenuItem>
                               {service.stripeProductId ? (
                                 <DropdownMenuItem
