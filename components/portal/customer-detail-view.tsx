@@ -426,41 +426,11 @@ export function CustomerDetailView({
           </Card>
 
           <Card className="border-border/80 bg-card/80 shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0 border-b border-border/60 bg-muted/20">
+            <CardHeader className="border-b border-border/60 bg-muted/20">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <LogIn className="h-5 w-5 text-muted-foreground" aria-hidden />
                 Portal access
               </CardTitle>
-              {!customer.portalUserId?.trim() ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="shrink-0 gap-1.5 text-muted-foreground hover:text-foreground"
-                  disabled={!customer.email?.trim() || enableAccessBusy}
-                  title={!customer.email?.trim() ? "Add an email to this customer first." : undefined}
-                  onClick={() => void enablePortalAccess()}
-                >
-                  {enableAccessBusy ? (
-                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                  ) : (
-                    <LogIn className="h-4 w-4" aria-hidden />
-                  )}
-                  Link user
-                </Button>
-              ) : (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="shrink-0 gap-1.5 text-muted-foreground hover:text-foreground"
-                  disabled={portalSetupBusy}
-                  onClick={() => void generatePortalPasswordSetupLink()}
-                >
-                  {portalSetupBusy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
-                  Generate password link
-                </Button>
-              )}
             </CardHeader>
             <CardContent className="space-y-4 p-4 text-sm">
               <div className="rounded-xl border border-border/60 bg-background/40 p-3">
@@ -474,6 +444,36 @@ export function CustomerDetailView({
                     <Badge variant="secondary">Not linked</Badge>
                   )}
                 </div>
+                {customer.portalUserId?.trim() ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    className="mt-3 gap-1.5"
+                    disabled={portalSetupBusy}
+                    onClick={() => void generatePortalPasswordSetupLink()}
+                  >
+                    {portalSetupBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : null}
+                    Generate password link
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    className="mt-3 gap-1.5"
+                    disabled={!customer.email?.trim() || enableAccessBusy}
+                    title={!customer.email?.trim() ? "Add an email to this customer first." : undefined}
+                    onClick={() => void enablePortalAccess()}
+                  >
+                    {enableAccessBusy ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                    ) : (
+                      <LogIn className="h-3.5 w-3.5" aria-hidden />
+                    )}
+                    Link user
+                  </Button>
+                )}
               </div>
 
               {portalSetupError ? <p className="text-xs text-destructive">{portalSetupError}</p> : null}
