@@ -72,7 +72,7 @@ function paymentStatusLabel(status: string): { label: string; className: string 
   if (s === "succeeded") {
     return {
       label: "Succeeded",
-      className: "bg-emerald-500/15 text-emerald-200",
+      className: "border-emerald-500/35 bg-emerald-500/15 text-emerald-200",
     };
   }
   if (
@@ -84,19 +84,19 @@ function paymentStatusLabel(status: string): { label: string; className: string 
   ) {
     return {
       label: "Pending",
-      className: "bg-amber-500/10 text-amber-100",
+      className: "border-amber-500/35 bg-amber-500/10 text-amber-100",
     };
   }
   if (s === "canceled" || s === "payment_failed") {
     return {
       label: s === "canceled" ? "Canceled" : "Failed",
-      className: "bg-destructive/15 text-destructive",
+      className: "border-destructive/35 bg-destructive/15 text-destructive",
     };
   }
   const label = s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   return {
     label,
-    className: "bg-muted/40 text-muted-foreground",
+    className: "border-border bg-muted/40 text-muted-foreground",
   };
 }
 
@@ -293,12 +293,17 @@ export function AdminHomeRightAside({ data }: { data: AdminPortalData }) {
                       {formatCurrencyAmount(payment.amount, payment.currency || DEFAULT_CURRENCY)}
                     </td>
                     <td className="px-2 py-3">
-                      <Badge variant="soft" className={cn("gap-1", st.className)}>
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium",
+                          st.className,
+                        )}
+                      >
                         {payment.status === "succeeded" ? (
                           <Check className="h-3 w-3 shrink-0" aria-hidden />
                         ) : null}
                         {st.label}
-                      </Badge>
+                      </span>
                     </td>
                   </tr>
                 );

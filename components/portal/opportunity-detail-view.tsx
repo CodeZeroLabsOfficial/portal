@@ -126,7 +126,7 @@ function OpportunityStageProgress({ opportunity, customer }: OpportunityStagePro
           <div className="min-w-0 space-y-3">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className={WORKSPACE_DETAIL_PAGE_TITLE_CLASS}>{opportunity.name}</h1>
-              <Badge variant="soft" className="font-normal bg-muted/50 text-muted-foreground">
+              <Badge variant="outline" className="font-normal">
                 {opportunityStageLabel(opportunity.stage)}
               </Badge>
             </div>

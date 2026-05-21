@@ -6,7 +6,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Filter, ListChecks, Loader2, MoreHorizontal, Plus, Search } from "lucide-react";
 import type { SubscriptionRecord, SubscriptionStatus } from "@/types/subscription";
-import { getSubscriptionStatusBadgeDisplay } from "@/lib/subscription-status-badge";
 import { formatCurrencyAmount } from "@/lib/format";
 import { AddSubscriptionModal } from "@/components/portal/add-subscription-modal";
 import { Badge } from "@/components/ui/badge";
@@ -98,10 +97,10 @@ function subscriptionStatusDisplay(s: SubscriptionRecord): { label: string; clas
   if (s.paymentCollectionPaused && s.status !== "canceled" && s.status !== "scheduled") {
     return {
       label: "Paused",
-      className: "bg-violet-500/10 text-violet-700 dark:text-violet-300",
+      className: "border-violet-500/35 bg-violet-500/10 text-violet-700 dark:text-violet-300",
     };
   }
-  return getSubscriptionStatusBadgeDisplay(s.status);
+  return statusBadge(s.status);
 }
 
 function canPauseSubscription(s: SubscriptionRecord): boolean {
@@ -159,6 +158,43 @@ function matchesProductFilter(s: SubscriptionRecord, productFilter: Subscription
   const name = s.productName?.trim();
   if (!name) return false;
   return name === productFilter;
+}
+
+function statusBadge(status: SubscriptionStatus): { label: string; className: string } {
+  if (status === "active" || status === "trialing") {
+    return {
+      label: status === "trialing" ? "Trialing" : "Active",
+      className: "border-emerald-500/35 bg-emerald-500/12 text-emerald-600 dark:text-emerald-300",
+    };
+  }
+  if (status === "scheduled") {
+    return {
+      label: "Scheduled",
+      className: "border-sky-500/35 bg-sky-500/10 text-sky-700 dark:text-sky-300",
+    };
+  }
+  if (status === "past_due" || status === "unpaid") {
+    return {
+      label: status === "past_due" ? "Past due" : "Unpaid",
+      className: "border-amber-500/40 bg-amber-500/12 text-amber-700 dark:text-amber-300",
+    };
+  }
+  if (status === "canceled") {
+    return {
+      label: "Canceled",
+      className: "border-border bg-muted/50 text-muted-foreground",
+    };
+  }
+  if (status === "paused") {
+    return {
+      label: "Paused",
+      className: "border-border bg-muted/40 text-muted-foreground",
+    };
+  }
+  return {
+    label: status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+    className: "border-border bg-muted/40 text-muted-foreground",
+  };
 }
 
 export function SubscriptionListPanel({ rows, customerOptions, catalogServiceOptions }: SubscriptionListPanelProps) {
@@ -540,7 +576,7 @@ export function SubscriptionListPanel({ rows, customerOptions, catalogServiceOpt
                       </td>
                       <td className="max-w-[260px] px-4 py-3 align-middle">{accountCell}</td>
                       <td className="px-4 py-3 align-middle">
-                        <Badge variant="soft" className={cn("font-normal capitalize", st.className)}>
+                        <Badge variant="outline" className={cn("font-normal capitalize", st.className)}>
                           {st.label}
                         </Badge>
                       </td>

@@ -62,18 +62,18 @@ function statusBadge(status: CatalogServiceStatus): { label: string; className: 
   if (status === "active") {
     return {
       label: "Active",
-      className: "bg-emerald-500/12 text-emerald-600 dark:text-emerald-300",
+      className: "border-emerald-500/35 bg-emerald-500/12 text-emerald-600 dark:text-emerald-300",
     };
   }
   if (status === "draft") {
     return {
       label: "Draft",
-      className: "bg-amber-500/12 text-amber-700 dark:text-amber-300",
+      className: "border-amber-500/40 bg-amber-500/12 text-amber-700 dark:text-amber-300",
     };
   }
   return {
     label: "Archived",
-    className: "bg-muted/50 text-muted-foreground",
+    className: "border-border bg-muted/50 text-muted-foreground",
   };
 }
 
@@ -392,7 +392,7 @@ export function CatalogServicesListPanel({ services }: CatalogServicesListPanelP
                           </Link>
                         </td>
                         <td className="px-4 py-3 align-middle">
-                          <Badge variant="soft" className={cn("font-normal", st.className)}>
+                          <Badge variant="outline" className={cn("font-normal", st.className)}>
                             {st.label}
                           </Badge>
                         </td>
