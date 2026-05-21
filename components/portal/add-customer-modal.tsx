@@ -50,9 +50,6 @@ const defaultValues: CreateCustomerInput = {
   postalCode: "",
   country: "",
   tags: [],
-  customFields: [],
-  linkAuthByEmail: false,
-  createAuthUserIfMissing: false,
   saveAsLead: false,
 };
 
@@ -62,7 +59,6 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
   const [firstName, setFirstName] = React.useState("");
   const [lastName, setLastName] = React.useState("");
   const [tagInput, setTagInput] = React.useState("");
-  const [customRows, setCustomRows] = React.useState<{ key: string; value: string }[]>([]);
 
   const form = useForm<CreateCustomerInput>({
     resolver: zodResolver(createCustomerSchema),
@@ -75,7 +71,6 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
       setFirstName("");
       setLastName("");
       setTagInput("");
-      setCustomRows([]);
       setServerError(null);
     }
   }, [open, form]);
@@ -96,10 +91,6 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
       .map((t) => t.trim())
       .filter(Boolean)
       .slice(0, 20);
-    const customFields = customRows
-      .filter((r) => r.key.trim().length > 0)
-      .map((r) => ({ key: r.key.trim(), value: r.value }))
-      .slice(0, 15);
     const contactAddress = normalizeAddressFields({
       addressLine1: values.addressLine1,
       addressLine2: values.addressLine2,
@@ -112,7 +103,6 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
       ...values,
       ...contactAddress,
       tags,
-      customFields,
     };
     const result = await createCustomerAction(payload);
     if (!result.ok) {
@@ -443,79 +433,6 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
               placeholder="vip, priority — comma separated"
             />
           </div>
-
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between gap-2">
-              <Label className="text-zinc-300">Custom fields</Label>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-8 text-xs text-primary"
-                onClick={() => setCustomRows((r) => [...r, { key: "", value: "" }].slice(0, 15))}
-              >
-                Add field
-              </Button>
-            </div>
-            <div className="space-y-1.5">
-              {customRows.map((row, i) => (
-                <div key={i} className="flex min-w-0 gap-2">
-                  <Input
-                    className="min-w-0 flex-1 border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
-                    placeholder="Key"
-                    value={row.key}
-                    onChange={(e) =>
-                      setCustomRows((rows) =>
-                        rows.map((x, j) => (j === i ? { ...x, key: e.target.value } : x)),
-                      )
-                    }
-                  />
-                  <Input
-                    className="min-w-0 flex-1 border-white/[0.08] bg-white/[0.04] text-white placeholder:text-zinc-500"
-                    placeholder="Value"
-                    value={row.value}
-                    onChange={(e) =>
-                      setCustomRows((rows) =>
-                        rows.map((x, j) => (j === i ? { ...x, value: e.target.value } : x)),
-                      )
-                    }
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] p-3 transition-colors hover:bg-white/[0.05]">
-            <input
-              type="checkbox"
-              className="mt-1 h-4 w-4 rounded border-border"
-              checked={Boolean(form.watch("linkAuthByEmail"))}
-              onChange={(e) => form.setValue("linkAuthByEmail", e.target.checked, { shouldDirty: true })}
-            />
-            <span className="text-sm leading-snug text-zinc-300">
-              <span className="font-medium text-white">Link existing Firebase login</span>
-              <span className="mt-0.5 block text-xs text-zinc-500">
-                If an Auth user already exists for this email, attach them to this CRM profile.
-              </span>
-            </span>
-          </label>
-
-          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] p-3 transition-colors hover:bg-white/[0.05]">
-            <input
-              type="checkbox"
-              className="mt-1 h-4 w-4 rounded border-border"
-              checked={Boolean(form.watch("createAuthUserIfMissing"))}
-              onChange={(e) => form.setValue("createAuthUserIfMissing", e.target.checked, { shouldDirty: true })}
-            />
-            <span className="text-sm leading-snug text-zinc-300">
-              <span className="font-medium text-white">Create Firebase login if none exists</span>
-              <span className="mt-0.5 block text-xs text-zinc-500">
-                Creates an email/password account when missing. Open the customer profile →{" "}
-                <span className="font-medium text-zinc-400">Portal access</span> to generate a password setup link for
-                them.
-              </span>
-            </span>
-          </label>
 
           <DialogFooter className="gap-2 pt-2 sm:gap-0">
             <Button
