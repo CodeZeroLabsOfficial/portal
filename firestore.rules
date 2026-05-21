@@ -34,6 +34,11 @@ service cloud.firestore {
       return userDocExists() && (userRole() == 'admin' || userRole() == 'team');
     }
 
+    /// Billing mirrors under `users/{uid}` are written by Cloud Functions / Portal webhooks only.
+    function isServerMirrorCollection(collection) {
+      return collection in ['subscriptions', 'invoices', 'payments', 'paymentMethods'];
+    }
+
     // MARK: User-scoped portal data (customer app + profile)
 
     match /users/{userId} {
@@ -41,7 +46,10 @@ service cloud.firestore {
       allow write: if signedIn() && request.auth.uid == userId;
 
       match /{collection}/{docId} {
-        allow read, write: if signedIn() && request.auth.uid == userId;
+        allow read: if signedIn() && request.auth.uid == userId;
+        allow write: if signedIn()
+          && request.auth.uid == userId
+          && !isServerMirrorCollection(collection);
       }
     }
 

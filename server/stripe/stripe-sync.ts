@@ -102,6 +102,18 @@ function mapCollectionMethod(
   return undefined;
 }
 
+/** Stripe subscription id (`sub_…`) when the invoice belongs to a subscription billing cycle. */
+function subscriptionIdFromInvoice(invoice: Stripe.Invoice): string | undefined {
+  const sub = invoice.subscription;
+  if (typeof sub === "string" && sub.startsWith("sub_")) {
+    return sub;
+  }
+  if (sub && typeof sub === "object" && typeof sub.id === "string" && sub.id.startsWith("sub_")) {
+    return sub.id;
+  }
+  return undefined;
+}
+
 async function resolvePortalUserIdForStripeCustomer(db: Firestore, stripeCustomerId: string): Promise<string | null> {
   const trimmed = stripeCustomerId.trim();
   if (!trimmed) return null;
@@ -239,10 +251,13 @@ export async function upsertInvoiceMirror(db: Firestore, invoice: Stripe.Invoice
       ? invoice.status_transitions.paid_at * 1000
       : undefined;
 
+  const subscriptionId = subscriptionIdFromInvoice(invoice);
+
   const invoiceRecord = {
     id: invoice.id,
     stripeInvoiceId: invoice.id,
     customerId,
+    ...(subscriptionId ? { subscriptionId } : {}),
     organizationId: metadataOrganizationId(invoice),
     status: mapInvoiceStatus(invoice.status),
     currency: (invoice.currency ?? "aud").toLowerCase(),

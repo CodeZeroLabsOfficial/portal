@@ -127,6 +127,7 @@ function parseInvoice(id: string, data: Record<string, unknown>): InvoiceRecord 
     id,
     stripeInvoiceId: asString(data.stripeInvoiceId) ?? id,
     customerId: asString(data.customerId) ?? "",
+    subscriptionId: asString(data.subscriptionId),
     organizationId: asString(data.organizationId),
     status:
       data.status === "draft" ||

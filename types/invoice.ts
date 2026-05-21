@@ -4,6 +4,8 @@ export interface InvoiceRecord {
   id: string;
   stripeInvoiceId: string;
   customerId: string;
+  /** Stripe subscription id (`sub_…`) when invoice is tied to a subscription. */
+  subscriptionId?: string;
   organizationId?: string;
   status: InvoiceStatus;
   currency: string;
