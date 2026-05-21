@@ -46,6 +46,7 @@ import { createDraftProposalFromCustomerAction } from "@/server/actions/proposal
 import { convertLeadToContactAction } from "@/server/actions/opportunities-crm";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { listRowIconActionClassName } from "@/components/ui/list-row-icon-action";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -445,51 +446,42 @@ export function CustomerDetailView({
                 Portal access
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4 p-4 text-sm">
-              <div className="rounded-xl border border-border/60 bg-background/40 p-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-muted-foreground">User Access</span>
-                  {customer.portalUserId?.trim() ? (
-                    <Badge variant="outline" className="border-emerald-500/40 text-emerald-600 dark:text-emerald-400">
-                      Linked
-                    </Badge>
-                  ) : (
-                    <Badge variant="secondary">Not linked</Badge>
-                  )}
-                </div>
+            <CardContent className="space-y-4 p-6">
+              <div className="space-y-2">
+                <Label>User Access</Label>
+                {customer.portalUserId?.trim() ? (
+                  <p className="text-xs text-muted-foreground">Portal login is linked.</p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">No portal login linked yet.</p>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
                 {customer.portalUserId?.trim() ? (
                   <Button
                     type="button"
-                    size="sm"
                     variant="secondary"
-                    className="mt-3 gap-1.5"
+                    className="gap-2"
                     disabled={portalSetupBusy}
                     onClick={() => void generatePortalPasswordSetupLink()}
                   >
-                    {portalSetupBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : null}
+                    {portalSetupBusy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
                     Generate password link
                   </Button>
                 ) : (
                   <Button
                     type="button"
-                    size="sm"
                     variant="secondary"
-                    className="mt-3 gap-1.5"
+                    className="gap-2"
                     disabled={!customer.email?.trim() || enableAccessBusy}
                     title={!customer.email?.trim() ? "Add an email to this customer first." : undefined}
                     onClick={() => void enablePortalAccess()}
                   >
-                    {enableAccessBusy ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
-                    ) : (
-                      <LogIn className="h-3.5 w-3.5" aria-hidden />
-                    )}
+                    {enableAccessBusy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
                     Link user
                   </Button>
                 )}
               </div>
-
-              {portalSetupError ? <p className="text-xs text-destructive">{portalSetupError}</p> : null}
+              {portalSetupError ? <p className="text-sm text-destructive">{portalSetupError}</p> : null}
             </CardContent>
           </Card>
         </div>
