@@ -231,7 +231,7 @@ function AgreementAccordionPanel({
         className,
       )}
     >
-      <div className="min-h-0 overflow-hidden" inert={!open ? true : undefined}>
+      <div className="min-h-0 overflow-hidden pb-1" inert={!open ? true : undefined}>
         {children}
       </div>
     </div>
@@ -934,7 +934,7 @@ export function AgreementSignatureForm({
                             </div>
                           </div>
                         ) : adoptTab === "type" ? (
-                          <div className="mt-5 space-y-3">
+                          <div className="mt-5 space-y-4">
                             <div className="flex items-center justify-between gap-3">
                               <Label htmlFor="agreement-typed-signature" className="text-sm font-medium text-zinc-900">
                                 Enter your signature
@@ -948,18 +948,26 @@ export function AgreementSignatureForm({
                                 Clear
                               </button>
                             </div>
-                            <Input
-                              id="agreement-typed-signature"
-                              autoComplete="off"
-                              placeholder="Type your signature"
-                              value={typedSignatureText}
-                              onChange={(e) => {
-                                onDismissError?.();
-                                setTypedSignatureText(e.target.value);
-                              }}
-                              disabled={disabled || formLocked}
-                              className="h-12 border-zinc-200 bg-white text-base text-zinc-900 placeholder:text-zinc-400"
-                            />
+                            <div
+                              className={cn(
+                                "rounded-lg border border-zinc-200 bg-white transition-colors",
+                                "focus-within:ring-2 focus-within:ring-zinc-400/60 focus-within:ring-offset-0",
+                                (disabled || formLocked) && "opacity-60",
+                              )}
+                            >
+                              <Input
+                                id="agreement-typed-signature"
+                                autoComplete="off"
+                                placeholder="Type your signature"
+                                value={typedSignatureText}
+                                onChange={(e) => {
+                                  onDismissError?.();
+                                  setTypedSignatureText(e.target.value);
+                                }}
+                                disabled={disabled || formLocked}
+                                className="h-12 border-0 bg-transparent text-base text-zinc-900 shadow-none placeholder:text-zinc-400 focus-visible:ring-0 focus-visible:ring-offset-0"
+                              />
+                            </div>
                             <div className="rounded-xl border border-zinc-200 bg-white px-4 py-6 sm:px-6 sm:py-8">
                               <p className="text-[11px] font-medium uppercase tracking-wider text-zinc-400">Preview</p>
                               <p

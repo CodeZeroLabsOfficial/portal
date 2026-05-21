@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
+import { ChevronDown, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useForm, type FieldErrors } from "react-hook-form";
 import {
@@ -57,6 +57,15 @@ const fieldClass =
 const labelClass = "text-zinc-300";
 const selectClass =
   "flex h-9 w-full rounded-md border border-white/[0.08] bg-white/[0.04] px-3 py-1 text-sm text-white shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#141414]";
+const sectionHeaderClass = "px-3 py-2 text-xs font-medium text-zinc-400";
+const sectionRowClass =
+  "flex items-center justify-between gap-3 border-t border-white/[0.06] px-3 py-2.5";
+const sectionShellClass =
+  "overflow-hidden rounded-lg border border-white/[0.08] bg-white/[0.02]";
+const priceInputClass = cn(
+  fieldClass,
+  "h-9 w-[8.5rem] shrink-0 border-0 bg-white/[0.04] text-right text-sm shadow-none focus-visible:ring-2 focus-visible:ring-ring",
+);
 
 function majorInputToMinor(raw: string): number {
   const n = Number.parseFloat(raw.replace(/,/g, ""));
@@ -71,12 +80,85 @@ function lookupKeyBaseFromName(name: string): string {
   return slugifyCatalogServiceName(trimmed);
 }
 
+function PricingRow({
+  id,
+  label,
+  value,
+  onChange,
+  disabled,
+  required,
+  error,
+  placeholder = "0.00",
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  required?: boolean;
+  error?: string;
+  placeholder?: string;
+}) {
+  return (
+    <li className={sectionRowClass}>
+      <Label htmlFor={id} className={cn(labelClass, "font-normal")}>
+        {label}
+        {required ? <span className="text-destructive"> *</span> : null}
+      </Label>
+      <div className="flex flex-col items-end gap-1">
+        <Input
+          id={id}
+          inputMode="decimal"
+          placeholder={placeholder}
+          value={value}
+          disabled={disabled}
+          className={priceInputClass}
+          onChange={(e) => onChange(e.target.value)}
+        />
+        {error ? <p className="text-xs leading-tight text-destructive">{error}</p> : null}
+      </div>
+    </li>
+  );
+}
+
+function EntitlementRow({
+  id,
+  label,
+  value,
+  onChange,
+  disabled,
+}: {
+  id: string;
+  label: string;
+  value: number;
+  onChange: (next: number) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <li className={sectionRowClass}>
+      <Label htmlFor={id} className={cn(labelClass, "font-normal")}>
+        {label}
+      </Label>
+      <NumericStepper
+        id={id}
+        variant="glass"
+        value={value}
+        max={1_000_000}
+        disabled={disabled}
+        aria-label={label}
+        onChange={onChange}
+      />
+    </li>
+  );
+}
+
 export function AddCatalogServiceModal({ open, onOpenChange }: AddCatalogServiceModalProps) {
   const router = useRouter();
   const [serverError, setServerError] = React.useState<string | null>(null);
   const [lookupKeyBase, setLookupKeyBase] = React.useState("");
   const [lookupTouched, setLookupTouched] = React.useState(false);
   const [flatPrice, setFlatPrice] = React.useState("");
+  const [upfrontPrice, setUpfrontPrice] = React.useState("");
   const [monthly12, setMonthly12] = React.useState("");
   const [monthly24, setMonthly24] = React.useState("");
 
@@ -97,6 +179,7 @@ export function AddCatalogServiceModal({ open, onOpenChange }: AddCatalogService
   const isOneOff = billingType === "one_off";
   const isFlat = isOneOff || pricingModel === "flat";
   const isByTerm = !isOneOff && pricingModel === "by_term";
+  const showUpfront = isPlan && isByTerm;
 
   const resolvedLookupBase =
     normalizeLookupKeyBase(lookupKeyBase) || lookupKeyBaseFromName(name);
@@ -117,6 +200,7 @@ export function AddCatalogServiceModal({ open, onOpenChange }: AddCatalogService
       setLookupKeyBase("");
       setLookupTouched(false);
       setFlatPrice("");
+      setUpfrontPrice("");
       setMonthly12("");
       setMonthly24("");
       setServerError(null);
@@ -139,9 +223,16 @@ export function AddCatalogServiceModal({ open, onOpenChange }: AddCatalogService
     form.setValue("lookupKeyBase", resolvedLookupBase, { shouldValidate: false });
     if (isFlat) {
       form.setValue("flatAmountMinor", majorInputToMinor(flatPrice), { shouldValidate: false });
+      form.setValue("upfrontCost12Minor", undefined, { shouldValidate: false });
     } else {
       form.setValue("monthlyCost12Minor", majorInputToMinor(monthly12), { shouldValidate: false });
       form.setValue("monthlyCost24Minor", majorInputToMinor(monthly24), { shouldValidate: false });
+      const upfrontMinor = majorInputToMinor(upfrontPrice);
+      form.setValue(
+        "upfrontCost12Minor",
+        showUpfront && upfrontMinor > 0 ? upfrontMinor : undefined,
+        { shouldValidate: false },
+      );
     }
   }
 
@@ -160,6 +251,7 @@ export function AddCatalogServiceModal({ open, onOpenChange }: AddCatalogService
   async function onSubmit(values: CreateCatalogServiceInput) {
     setServerError(null);
     const effectivePricing = values.billingType === "one_off" ? "flat" : values.pricingModel;
+    const upfrontMinor = showUpfront ? majorInputToMinor(upfrontPrice) : 0;
     const payload: CreateCatalogServiceInput = {
       ...values,
       name: values.name.trim(),
@@ -169,6 +261,7 @@ export function AddCatalogServiceModal({ open, onOpenChange }: AddCatalogService
       flatAmountMinor: isFlat ? majorInputToMinor(flatPrice) : undefined,
       monthlyCost12Minor: isByTerm ? majorInputToMinor(monthly12) : undefined,
       monthlyCost24Minor: isByTerm ? majorInputToMinor(monthly24) : undefined,
+      upfrontCost12Minor: showUpfront && upfrontMinor > 0 ? upfrontMinor : undefined,
       includedUsers: isPlan ? Math.max(0, Math.floor(Number(values.includedUsers) || 0)) : 0,
       includedLocations: isPlan ? Math.max(0, Math.floor(Number(values.includedLocations) || 0)) : 0,
       includedAdmins: isPlan ? Math.max(0, Math.floor(Number(values.includedAdmins) || 0)) : 0,
@@ -210,58 +303,42 @@ export function AddCatalogServiceModal({ open, onOpenChange }: AddCatalogService
         <form onSubmit={handleFormSubmit} className="space-y-4 px-8 py-6" noValidate>
           <FormServerError message={serverError} rounded="xl" />
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="catalog-service-type" className={labelClass}>
-                Service type <span className="text-destructive">*</span>
-              </Label>
-              <select
-                id="catalog-service-type"
-                className={selectClass}
-                disabled={busy}
-                value={serviceType}
-                onChange={(e) =>
-                  form.setValue("serviceType", e.target.value as CatalogServiceKind, { shouldDirty: true })
-                }
-              >
-                <option value="plan">Plan</option>
-                <option value="addon">Add-on</option>
-              </select>
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="catalog-service-name" className={labelClass}>
-                Name <span className="text-destructive">*</span>
-              </Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="catalog-service-name" className={labelClass}>
+              Service or product name <span className="text-destructive">*</span>
+            </Label>
+            <div className="flex overflow-hidden rounded-md border border-white/[0.08] bg-white/[0.04] focus-within:ring-2 focus-within:ring-ring">
+              <div className="relative shrink-0 border-r border-white/[0.08]">
+                <select
+                  id="catalog-service-type"
+                  className="h-9 appearance-none bg-transparent py-1 pl-3 pr-7 text-sm text-white focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 [&>option]:bg-[#141414]"
+                  disabled={busy}
+                  value={serviceType}
+                  aria-label="Service type"
+                  onChange={(e) =>
+                    form.setValue("serviceType", e.target.value as CatalogServiceKind, { shouldDirty: true })
+                  }
+                >
+                  <option value="plan">Plan</option>
+                  <option value="addon">Add-on</option>
+                </select>
+                <ChevronDown
+                  className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-500"
+                  aria-hidden
+                />
+              </div>
               <Input
                 id="catalog-service-name"
                 autoComplete="off"
-                className={fieldClass}
+                className="h-9 flex-1 rounded-none border-0 bg-transparent text-white shadow-none placeholder:text-zinc-500 focus-visible:ring-0"
                 placeholder="Service or product name"
                 disabled={busy}
-              {...form.register("name")}
-            />
-            {form.formState.errors.name ? (
-                <p className="text-xs leading-tight text-destructive">{form.formState.errors.name.message}</p>
-              ) : null}
+                {...form.register("name")}
+              />
             </div>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="catalog-service-description" className={labelClass}>
-              Description
-            </Label>
-            <textarea
-              id="catalog-service-description"
-              rows={2}
-              disabled={busy}
-              className={cn(
-                "min-h-[3.25rem] w-full resize-none rounded-md border px-3 py-2 text-sm",
-                fieldClass,
-              )}
-              placeholder="Provide a brief description of the product or service"
-              {...form.register("description")}
-            />
+            {errors.name ? (
+              <p className="text-xs leading-tight text-destructive">{errors.name.message}</p>
+            ) : null}
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -307,153 +384,134 @@ export function AddCatalogServiceModal({ open, onOpenChange }: AddCatalogService
             </div>
           </div>
 
-          <div
-            className={cn(
-              "grid gap-4",
-              isFlat ? "md:grid-cols-[1fr_minmax(10rem,14rem)]" : "md:grid-cols-3",
-            )}
-          >
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="catalog-lookup-key" className={labelClass}>
-                Lookup key <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="catalog-lookup-key"
-                autoComplete="off"
-                className={cn(fieldClass, "font-mono")}
-                placeholder="Enter unique lookup key (e.g. premium_monthly)"
-                value={lookupKeyBase}
-                disabled={busy}
-                onChange={(e) => {
-                  setLookupTouched(true);
-                  setLookupKeyBase(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_"));
-                }}
-              />
-              {errors.lookupKeyBase ? (
-                <p className="text-xs leading-tight text-destructive">{errors.lookupKeyBase.message}</p>
-              ) : null}
-              {resolvedLookupBase ? (
-                <p className="text-xs leading-snug text-zinc-500">
-                  Stripe lookup key{lookupPreview.length > 1 ? "s" : ""}:{" "}
-                  <span className="font-mono text-zinc-400">{lookupPreview.join(" · ")}</span>
-                </p>
-              ) : null}
-            </div>
-
-            {isFlat ? (
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="catalog-flat-price" className={labelClass}>
-                  {isOneOff ? "One-off price (AUD)" : "Monthly price (AUD)"}{" "}
-                  <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="catalog-flat-price"
-                  inputMode="decimal"
-                  placeholder="0.00"
-                  value={flatPrice}
-                  disabled={busy}
-                  className={fieldClass}
-                  onChange={(e) => setFlatPrice(e.target.value)}
-                />
-                {errors.flatAmountMinor ? (
-                  <p className="text-xs leading-tight text-destructive">{errors.flatAmountMinor.message}</p>
-                ) : null}
-              </div>
-            ) : (
-              <>
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="catalog-m12" className={labelClass}>
-                    12-month monthly (AUD) <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="catalog-m12"
-                    inputMode="decimal"
-                    placeholder="0.00"
-                    value={monthly12}
-                    disabled={busy}
-                    className={fieldClass}
-                    onChange={(e) => setMonthly12(e.target.value)}
-                  />
-                  {errors.monthlyCost12Minor ? (
-                    <p className="text-xs leading-tight text-destructive">{errors.monthlyCost12Minor.message}</p>
-                  ) : null}
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="catalog-m24" className={labelClass}>
-                    24-month monthly (AUD) <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="catalog-m24"
-                    inputMode="decimal"
-                    placeholder="0.00"
-                    value={monthly24}
-                    disabled={busy}
-                    className={fieldClass}
-                    onChange={(e) => setMonthly24(e.target.value)}
-                  />
-                  {errors.monthlyCost24Minor ? (
-                    <p className="text-xs leading-tight text-destructive">{errors.monthlyCost24Minor.message}</p>
-                  ) : null}
-                </div>
-              </>
-            )}
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="catalog-service-description" className={labelClass}>
+              Description
+            </Label>
+            <textarea
+              id="catalog-service-description"
+              rows={2}
+              disabled={busy}
+              className={cn(
+                "min-h-[3.25rem] w-full resize-none rounded-md border px-3 py-2 text-sm",
+                fieldClass,
+              )}
+              placeholder="Provide a brief description of the product or service"
+              {...form.register("description")}
+            />
           </div>
 
-          {isPlan ? (
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-zinc-400">Package entitlements</p>
-              <ul className="space-y-2 rounded-lg border border-white/[0.08] bg-white/[0.02] px-3 py-2">
-                <li className="flex items-center justify-between gap-3 py-1">
-                  <Label htmlFor="catalog-included-users" className={cn(labelClass, "font-normal")}>
-                    Included users
-                  </Label>
-                  <NumericStepper
-                    id="catalog-included-users"
-                    variant="glass"
-                    value={includedUsers}
-                    max={1_000_000}
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="catalog-lookup-key" className={labelClass}>
+              Lookup key <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="catalog-lookup-key"
+              autoComplete="off"
+              className={cn(fieldClass, "font-mono")}
+              placeholder="Enter unique lookup key (e.g. premium_monthly)"
+              value={lookupKeyBase}
+              disabled={busy}
+              onChange={(e) => {
+                setLookupTouched(true);
+                setLookupKeyBase(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_"));
+              }}
+            />
+            {errors.lookupKeyBase ? (
+              <p className="text-xs leading-tight text-destructive">{errors.lookupKeyBase.message}</p>
+            ) : null}
+            {resolvedLookupBase ? (
+              <p className="text-xs leading-snug text-zinc-500">
+                Stripe lookup key{lookupPreview.length > 1 ? "s" : ""}:{" "}
+                <span className="font-mono text-zinc-400">{lookupPreview.join(" · ")}</span>
+              </p>
+            ) : null}
+          </div>
+
+          <div className={cn("grid gap-4", isPlan ? "md:grid-cols-2" : "md:grid-cols-1")}>
+            <div className={sectionShellClass}>
+              <p className={cn(sectionHeaderClass, "border-b border-white/[0.06]")}>Pricing</p>
+              <ul>
+                {isFlat ? (
+                  <PricingRow
+                    id="catalog-flat-price"
+                    label={isOneOff ? "One-off price (AUD)" : "Monthly price (AUD)"}
+                    value={flatPrice}
                     disabled={busy}
-                    aria-label="Included users"
+                    required
+                    error={errors.flatAmountMinor?.message}
+                    onChange={setFlatPrice}
+                  />
+                ) : (
+                  <>
+                    {showUpfront ? (
+                      <PricingRow
+                        id="catalog-upfront-price"
+                        label="Upfront price (AUD)"
+                        value={upfrontPrice}
+                        disabled={busy}
+                        placeholder="0.00"
+                        onChange={setUpfrontPrice}
+                      />
+                    ) : null}
+                    <PricingRow
+                      id="catalog-m12"
+                      label="12-month price (AUD)"
+                      value={monthly12}
+                      disabled={busy}
+                      required
+                      error={errors.monthlyCost12Minor?.message}
+                      onChange={setMonthly12}
+                    />
+                    <PricingRow
+                      id="catalog-m24"
+                      label="24-month price (AUD)"
+                      value={monthly24}
+                      disabled={busy}
+                      required
+                      error={errors.monthlyCost24Minor?.message}
+                      onChange={setMonthly24}
+                    />
+                  </>
+                )}
+              </ul>
+            </div>
+
+            {isPlan ? (
+              <div className={sectionShellClass}>
+                <p className={cn(sectionHeaderClass, "border-b border-white/[0.06]")}>Entitlements</p>
+                <ul>
+                  <EntitlementRow
+                    id="catalog-included-users"
+                    label="Included users"
+                    value={includedUsers}
+                    disabled={busy}
                     onChange={(next) =>
                       form.setValue("includedUsers", next, { shouldDirty: true, shouldValidate: true })
                     }
                   />
-                </li>
-                <li className="flex items-center justify-between gap-3 py-1">
-                  <Label htmlFor="catalog-included-locations" className={cn(labelClass, "font-normal")}>
-                    Included locations
-                  </Label>
-                  <NumericStepper
+                  <EntitlementRow
                     id="catalog-included-locations"
-                    variant="glass"
+                    label="Included locations"
                     value={includedLocations}
-                    max={1_000_000}
                     disabled={busy}
-                    aria-label="Included locations"
                     onChange={(next) =>
                       form.setValue("includedLocations", next, { shouldDirty: true, shouldValidate: true })
                     }
                   />
-                </li>
-                <li className="flex items-center justify-between gap-3 py-1">
-                  <Label htmlFor="catalog-included-admins" className={cn(labelClass, "font-normal")}>
-                    Included admins
-                  </Label>
-                  <NumericStepper
+                  <EntitlementRow
                     id="catalog-included-admins"
-                    variant="glass"
+                    label="Included admins"
                     value={includedAdmins}
-                    max={1_000_000}
                     disabled={busy}
-                    aria-label="Included admins"
                     onChange={(next) =>
                       form.setValue("includedAdmins", next, { shouldDirty: true, shouldValidate: true })
                     }
                   />
-                </li>
-              </ul>
-            </div>
-          ) : null}
+                </ul>
+              </div>
+            ) : null}
+          </div>
 
           <DialogFooter className="gap-2 border-t border-white/[0.06] pt-4 sm:justify-end">
             <Button

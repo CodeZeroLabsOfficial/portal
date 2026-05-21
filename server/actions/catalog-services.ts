@@ -100,6 +100,11 @@ export async function createCatalogServiceAction(
           includedAdmins: parsed.data.includedAdmins ?? 0,
           features: [],
         }),
+        ...(parsed.data.serviceType === "plan" &&
+        typeof parsed.data.upfrontCost12Minor === "number" &&
+        parsed.data.upfrontCost12Minor > 0
+          ? { upfrontCost12Minor: Math.round(parsed.data.upfrontCost12Minor) }
+          : {}),
         terms,
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
