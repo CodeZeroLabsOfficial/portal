@@ -46,7 +46,7 @@ export function AccountDetailView({ account }: AccountDetailViewProps) {
           <div className="min-w-0 space-y-2">
             <h1 className={WORKSPACE_DETAIL_PAGE_TITLE_CLASS}>{account.displayName}</h1>
             <div className={cn(WORKSPACE_PAGE_DESCRIPTION_STACK_CLASS, "flex flex-wrap items-center gap-2")}>
-              <Badge variant="outline" className="border-emerald-500/40 text-emerald-600 dark:text-emerald-400">
+              <Badge variant="soft" className="bg-emerald-500/12 text-emerald-600 dark:text-emerald-300">
                 Active
               </Badge>
               {account.contacts.length === 1 ? (

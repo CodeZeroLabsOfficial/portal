@@ -13,9 +13,9 @@ export function ProposalStageBadge({
   const stage = getProposalStageBadgeDisplay(proposal);
   return (
     <Badge
-      variant="outline"
+      variant="soft"
       title={stage.title}
-      className={cn("text-xs font-medium capitalize", stage.className, className)}
+      className={cn("capitalize", stage.className, className)}
     >
       {stage.label}
     </Badge>

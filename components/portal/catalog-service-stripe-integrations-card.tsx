@@ -54,7 +54,7 @@ export function CatalogServiceStripeIntegrationsCard({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <Label>Stripe</Label>
             {linked ? (
-              <Badge variant="outline" className="border-emerald-500/40 text-emerald-600 dark:text-emerald-400">
+              <Badge variant="soft" className="bg-emerald-500/12 text-emerald-600 dark:text-emerald-300">
                 {stripeStatusLabel(service)}
               </Badge>
             ) : (

@@ -39,18 +39,18 @@ function statusBadge(status: CatalogServiceStatus): { label: string; className: 
   if (status === "active") {
     return {
       label: "Active",
-      className: "border-emerald-500/35 bg-emerald-500/12 text-emerald-600 dark:text-emerald-300",
+      className: "bg-emerald-500/12 text-emerald-600 dark:text-emerald-300",
     };
   }
   if (status === "draft") {
     return {
       label: "Draft",
-      className: "border-amber-500/40 bg-amber-500/12 text-amber-700 dark:text-amber-300",
+      className: "bg-amber-500/12 text-amber-700 dark:text-amber-300",
     };
   }
   return {
     label: "Archived",
-    className: "border-border bg-muted/50 text-muted-foreground",
+    className: "bg-muted/50 text-muted-foreground",
   };
 }
 
@@ -285,7 +285,7 @@ export function CatalogServiceEditForm({ service }: CatalogServiceEditFormProps)
                   Status
                 </dt>
                 <dd>
-                  <Badge variant="outline" className={cn("font-normal", st.className)}>
+                  <Badge variant="soft" className={cn("font-normal", st.className)}>
                     {st.label}
                   </Badge>
                 </dd>

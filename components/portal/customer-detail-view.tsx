@@ -453,16 +453,16 @@ export function CustomerDetailView({
               {customer.status === "archived" ? (
                 <Badge variant="secondary">Archived</Badge>
               ) : (
-                <Badge variant="outline" className="border-emerald-500/40 text-emerald-600 dark:text-emerald-400">
+                <Badge variant="soft" className="bg-emerald-500/12 text-emerald-600 dark:text-emerald-300">
                   Active
                 </Badge>
               )}
               {customer.crmType === "lead" ? (
-                <Badge variant="outline" className="border-amber-500/50 text-amber-700 dark:text-amber-400">
+                <Badge variant="soft" className="bg-amber-500/12 text-amber-700 dark:text-amber-300">
                   Lead
                 </Badge>
               ) : (
-                <Badge variant="outline" className="border-sky-500/40 text-sky-700 dark:text-sky-300">
+                <Badge variant="soft" className="bg-sky-500/10 text-sky-700 dark:text-sky-300">
                   Contact
                 </Badge>
               )}
@@ -491,7 +491,7 @@ export function CustomerDetailView({
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <Label>Stripe</Label>
                   {customer.stripeCustomerId?.trim() ? (
-                    <Badge variant="outline" className="border-emerald-500/40 text-emerald-600 dark:text-emerald-400">
+                    <Badge variant="soft" className="bg-emerald-500/12 text-emerald-600 dark:text-emerald-300">
                       Linked
                     </Badge>
                   ) : (
@@ -562,7 +562,7 @@ export function CustomerDetailView({
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <Label>User Access</Label>
                 {customer.portalUserId?.trim() ? (
-                  <Badge variant="outline" className="border-emerald-500/40 text-emerald-600 dark:text-emerald-400">
+                  <Badge variant="soft" className="bg-emerald-500/12 text-emerald-600 dark:text-emerald-300">
                     Linked
                   </Badge>
                 ) : (
@@ -1029,8 +1029,8 @@ export function CustomerDetailView({
                     <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
                       <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-2">
                         <Badge
-                          variant="outline"
-                          className="border-emerald-500/45 bg-emerald-500/10 text-xs font-medium text-emerald-900 dark:border-emerald-500/35 dark:bg-emerald-500/15 dark:text-emerald-200"
+                          variant="soft"
+                          className="bg-emerald-500/10 text-emerald-900 dark:bg-emerald-500/15 dark:text-emerald-200"
                         >
                           Signed
                         </Badge>

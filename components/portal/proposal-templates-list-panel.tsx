@@ -61,10 +61,8 @@ function lastEditedMs(entry: TemplatesListEntry): number {
 }
 
 const TEMPLATE_STAGE_BADGE: Record<ProposalTemplateStage, string> = {
-  draft:
-    "border-slate-500/45 bg-slate-500/10 text-slate-800 dark:border-slate-500/35 dark:bg-slate-500/15 dark:text-slate-200",
-  published:
-    "border-sky-500/45 bg-sky-500/10 text-sky-900 dark:border-sky-500/35 dark:bg-sky-500/15 dark:text-sky-200",
+  draft: "bg-slate-500/10 text-slate-800 dark:bg-slate-500/15 dark:text-slate-200",
+  published: "bg-sky-500/10 text-sky-900 dark:bg-sky-500/15 dark:text-sky-200",
 };
 
 function proposalTemplateTypeLabel(templateType: ProposalTemplateType): string {
@@ -497,9 +495,9 @@ export function ProposalTemplatesListPanel({
                       </td>
                       <td className="px-4 py-3 align-middle">
                         <Badge
-                          variant="outline"
+                          variant="soft"
                           title={stageInfo.title}
-                          className={cn("text-xs font-medium capitalize", stageInfo.badgeClass)}
+                          className={cn("capitalize", stageInfo.badgeClass)}
                         >
                           {stageInfo.label}
                         </Badge>

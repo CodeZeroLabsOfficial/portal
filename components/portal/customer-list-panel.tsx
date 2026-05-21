@@ -6,9 +6,10 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Filter, ListChecks, MoreHorizontal, Plus, Search, Users } from "lucide-react";
 import type { CustomerListRow } from "@/lib/customer-list";
-import type { CustomerSubscriptionRollup } from "@/types/customer";
+import { getSubscriptionStatusBadgeDisplay } from "@/lib/subscription-status-badge";
 import { archiveCustomerAction, deleteCustomerAction } from "@/server/actions/customers-crm";
 import { AddCustomerModal } from "@/components/portal/add-customer-modal";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -23,42 +24,6 @@ import {
   WORKSPACE_PAGE_DESCRIPTION_CLASS,
 } from "@/lib/workspace-page-typography";
 import { cn } from "@/lib/utils";
-
-function subscriptionBadge(
-  rollup: CustomerSubscriptionRollup,
-): { label: string; className: string } {
-  if (rollup === "none") {
-    return { label: "No subscription", className: "bg-muted text-muted-foreground" };
-  }
-  if (rollup === "active" || rollup === "trialing") {
-    return {
-      label: rollup === "trialing" ? "Trialing" : "Active",
-      className: "bg-emerald-500/15 text-emerald-400",
-    };
-  }
-  if (rollup === "scheduled") {
-    return {
-      label: "Scheduled",
-      className: "bg-sky-500/10 text-sky-700 dark:text-sky-300",
-    };
-  }
-  if (rollup === "past_due" || rollup === "unpaid") {
-    return {
-      label: rollup === "past_due" ? "Past due" : "Unpaid",
-      className: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
-    };
-  }
-  if (rollup === "canceled") {
-    return { label: "Canceled", className: "bg-muted text-muted-foreground" };
-  }
-  if (rollup === "paused") {
-    return { label: "Paused", className: "bg-muted text-muted-foreground" };
-  }
-  return {
-    label: rollup.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
-    className: "bg-muted text-muted-foreground",
-  };
-}
 
 export interface CustomerListPanelProps {
   rows: CustomerListRow[];
@@ -342,7 +307,7 @@ export function CustomerListPanel({ rows }: CustomerListPanelProps) {
               ) : (
                 <AnimatePresence initial={false}>
                   {filtered.map((row, index) => {
-                    const sub = subscriptionBadge(row.subscriptionRollup);
+                    const sub = getSubscriptionStatusBadgeDisplay(row.subscriptionRollup);
                     return (
                     <motion.tr
                       key={row.id}
@@ -386,14 +351,9 @@ export function CustomerListPanel({ rows }: CustomerListPanelProps) {
                         {row.email}
                       </td>
                       <td className="px-4 py-3 align-middle">
-                        <span
-                          className={cn(
-                            "rounded-full px-2 py-0.5 text-[11px] font-medium",
-                            sub.className,
-                          )}
-                        >
+                        <Badge variant="soft" className={sub.className}>
                           {sub.label}
-                        </span>
+                        </Badge>
                       </td>
                       <td className="max-w-[180px] px-4 py-3 align-middle">
                         <div className="flex flex-wrap gap-1">
@@ -401,12 +361,9 @@ export function CustomerListPanel({ rows }: CustomerListPanelProps) {
                             <span className="text-muted-foreground">—</span>
                           ) : (
                             row.tags.slice(0, 4).map((t) => (
-                              <span
-                                key={t}
-                                className="rounded-md border border-border/60 bg-muted/40 px-1.5 py-0.5 text-[11px] text-muted-foreground"
-                              >
+                              <Badge key={t} variant="soft" className="bg-muted/40 text-muted-foreground">
                                 {t}
-                              </span>
+                              </Badge>
                             ))
                           )}
                           {row.tags.length > 4 ? (
@@ -415,28 +372,29 @@ export function CustomerListPanel({ rows }: CustomerListPanelProps) {
                         </div>
                       </td>
                       <td className="px-4 py-3 align-middle">
-                        <span
+                        <Badge
+                          variant="soft"
                           className={cn(
-                            "rounded-full px-2 py-0.5 text-[11px] font-medium capitalize",
+                            "capitalize",
                             row.crmType === "lead"
-                              ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                              ? "bg-amber-500/12 text-amber-700 dark:text-amber-300"
                               : "bg-sky-500/10 text-sky-700 dark:text-sky-300",
                           )}
                         >
                           {row.crmType}
-                        </span>
+                        </Badge>
                       </td>
                       <td className="px-4 py-3 align-middle">
-                        <span
-                          className={cn(
-                            "rounded-full px-2 py-0.5 text-[11px] font-medium",
+                        <Badge
+                          variant="soft"
+                          className={
                             row.status === "archived"
-                              ? "bg-muted text-muted-foreground"
-                              : "bg-emerald-500/15 text-emerald-400",
-                          )}
+                              ? "bg-muted/50 text-muted-foreground"
+                              : "bg-emerald-500/12 text-emerald-600 dark:text-emerald-300"
+                          }
                         >
                           {row.status}
-                        </span>
+                        </Badge>
                       </td>
                       <td className="px-2 py-3 text-center align-middle">
                         <DropdownMenu>
