@@ -7,7 +7,7 @@ import { getCustomerRecordForOrg } from "@/server/firestore/crm-customers";
 import { getAdminProposalRecord } from "@/server/firestore/portal-data";
 import { getProposalTemplateNameForOrganization } from "@/server/firestore/proposal-templates";
 import { listCatalogServicePickerOptionsForOrg } from "@/server/firestore/catalog-services";
-import { Badge } from "@/components/ui/badge";
+import { ProposalStageBadge } from "@/components/portal/proposal-stage-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WorkspaceShell } from "@/components/portal/workspace-shell";
 import { ProposalDocumentEditorLazy } from "@/components/proposal/proposal-document-editor-lazy";
@@ -18,37 +18,6 @@ import {
   isDocumentPackageSelectionComplete,
   listPackagesBlocksInDocument,
 } from "@/lib/proposal-package-selection";
-import { cn } from "@/lib/utils";
-import type { ProposalStatus } from "@/types/proposal";
-
-const PROPOSAL_STATUS_BADGE_CLASS: Partial<Record<ProposalStatus, string>> = {
-  draft: "border-amber-500/40 text-amber-600 dark:text-amber-400",
-  published: "border-sky-500/40 text-sky-600 dark:text-sky-400",
-  viewed: "border-violet-500/40 text-violet-600 dark:text-violet-400",
-  accepted: "border-emerald-500/40 text-emerald-600 dark:text-emerald-400",
-  declined: "border-red-500/40 text-red-600 dark:text-red-400",
-  expired: "border-red-500/40 text-red-600 dark:text-red-400",
-};
-
-/** CRM-facing labels — aligned with customer profile proposal rows (`customer-detail-view`). */
-function proposalDetailsStatusLabel(status: ProposalStatus): string {
-  switch (status) {
-    case "draft":
-      return "Draft";
-    case "published":
-      return "Published";
-    case "viewed":
-      return "Viewed";
-    case "accepted":
-      return "Accepted";
-    case "declined":
-      return "Declined";
-    case "expired":
-      return "Expired";
-    default:
-      return status;
-  }
-}
 
 interface PageProps {
   params: Promise<{ proposalId: string }>;
@@ -141,21 +110,7 @@ export default async function AdminProposalDetailPage({ params, searchParams }: 
                 Status
               </dt>
               <dd>
-                <Badge
-                  variant="outline"
-                  title={
-                    proposal.status === "published"
-                      ? "Published — public proposal is ready to view; no recorded opens yet."
-                      : proposal.status === "draft"
-                        ? "Draft — not published to a public link yet."
-                        : proposal.status === "viewed"
-                          ? "Viewed — recipient has viewed or acted on the public proposal."
-                          : undefined
-                  }
-                  className={cn(PROPOSAL_STATUS_BADGE_CLASS[proposal.status])}
-                >
-                  {proposalDetailsStatusLabel(proposal.status)}
-                </Badge>
+                <ProposalStageBadge proposal={proposal} />
               </dd>
             </div>
             <div className="space-y-1">

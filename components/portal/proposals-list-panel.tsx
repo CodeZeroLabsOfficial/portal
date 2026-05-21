@@ -8,91 +8,17 @@ import { Copy, ExternalLink, Loader2, Pencil, Search, SquareArrowOutUpRight, Tra
 import type { ProposalHubListRow, ProposalRecord } from "@/types/proposal";
 import { cloneProposalAction, deleteProposalAction } from "@/server/actions/proposal-builder";
 import { formatLastEditedInLocality } from "@/lib/proposal-locality-dates";
-import { Badge } from "@/components/ui/badge";
+import { ProposalStageBadge } from "@/components/portal/proposal-stage-badge";
 import { Button } from "@/components/ui/button";
 import { listRowIconActionClassName } from "@/components/ui/list-row-icon-action";
 import { Input } from "@/components/ui/input";
+import { getProposalStageBadgeDisplay } from "@/lib/proposal-status-badge";
 import { cn } from "@/lib/utils";
 
 export interface ProposalsListPanelProps {
   proposals: ProposalHubListRow[];
   /** Settings → Locality IANA zone for “Last edited” timestamps. */
   localityTimeZone?: string;
-}
-
-type ProposalLifecyclePhase = "draft" | "published" | "viewed";
-
-function proposalLifecyclePhase(p: ProposalRecord): ProposalLifecyclePhase {
-  const viewed =
-    p.status === "viewed" ||
-    p.status === "accepted" ||
-    p.status === "declined" ||
-    (typeof p.viewCount === "number" && p.viewCount > 0) ||
-    (typeof p.lastViewedAt === "number" && p.lastViewedAt > 0);
-  if (viewed) return "viewed";
-  if (p.status !== "draft") return "published";
-  return "draft";
-}
-
-const HUB_BADGE: Record<string, string> = {
-  draft:
-    "border-slate-500/45 bg-slate-500/10 text-slate-800 dark:border-slate-500/35 dark:bg-slate-500/15 dark:text-slate-200",
-  published:
-    "border-sky-500/45 bg-sky-500/10 text-sky-900 dark:border-sky-500/35 dark:bg-sky-500/15 dark:text-sky-200",
-  viewed:
-    "border-violet-500/45 bg-violet-500/10 text-violet-900 dark:border-violet-500/35 dark:bg-violet-500/15 dark:text-violet-200",
-  accepted:
-    "border-emerald-600/50 bg-emerald-600/12 text-emerald-950 dark:border-emerald-500/40 dark:bg-emerald-600/18 dark:text-emerald-100",
-  declined: "border-destructive/40 bg-destructive/10 text-destructive dark:text-destructive",
-  expired: "border-border bg-muted/50 text-muted-foreground",
-};
-
-function proposalHubStageDisplay(p: ProposalRecord): {
-  label: string;
-  title: string;
-  badgeKey: keyof typeof HUB_BADGE;
-} {
-  if (p.status === "accepted") {
-    return {
-      label: "Accepted",
-      title: "The client accepted this proposal on the public page.",
-      badgeKey: "accepted",
-    };
-  }
-  if (p.status === "declined") {
-    return {
-      label: "Declined",
-      title: "The client declined this proposal.",
-      badgeKey: "declined",
-    };
-  }
-  if (p.status === "expired") {
-    return {
-      label: "Expired",
-      title: "This proposal is no longer active.",
-      badgeKey: "expired",
-    };
-  }
-  const phase = proposalLifecyclePhase(p);
-  if (phase === "draft") {
-    return {
-      label: "Draft",
-      title: "Draft — not published to a public link yet.",
-      badgeKey: "draft",
-    };
-  }
-  if (phase === "published") {
-    return {
-      label: "Published",
-      title: "Published — public link is active; no recorded opens yet.",
-      badgeKey: "published",
-    };
-  }
-  return {
-    label: "Viewed",
-    title: "Viewed — recipient has opened or interacted with the public proposal.",
-    badgeKey: "viewed",
-  };
 }
 
 function lastEditedMs(p: ProposalRecord): number {
@@ -125,7 +51,7 @@ export function ProposalsListPanel({ proposals, localityTimeZone }: ProposalsLis
     const q = query.trim().toLowerCase();
     if (!q) return sorted;
     return sorted.filter((p) => {
-      const stage = proposalHubStageDisplay(p);
+      const stage = getProposalStageBadgeDisplay(p);
       const hay = [
         p.accountCompanyName,
         p.contactName,
@@ -233,7 +159,6 @@ export function ProposalsListPanel({ proposals, localityTimeZone }: ProposalsLis
             ) : (
               <AnimatePresence initial={false}>
                 {filtered.map((p, index) => {
-                  const stage = proposalHubStageDisplay(p);
                   const edited = lastEditedMs(p);
                   return (
                     <motion.tr
@@ -270,13 +195,7 @@ export function ProposalsListPanel({ proposals, localityTimeZone }: ProposalsLis
                         )}
                       </td>
                       <td className="px-4 py-3 align-middle">
-                        <Badge
-                          variant="outline"
-                          title={stage.title}
-                          className={cn("text-xs font-medium capitalize", HUB_BADGE[stage.badgeKey])}
-                        >
-                          {stage.label}
-                        </Badge>
+                        <ProposalStageBadge proposal={p} />
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 align-middle text-muted-foreground tabular-nums">
                         <time dateTime={edited > 0 ? new Date(edited).toISOString() : undefined}>

@@ -57,6 +57,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { initialsFromName } from "@/lib/format";
+import { ProposalStageBadge } from "@/components/portal/proposal-stage-badge";
 import { CustomerContactDetailsCard } from "@/components/portal/customer-contact-details-card";
 import { sanitizeProposalHtml } from "@/lib/sanitize-proposal-html";
 import { WORKSPACE_DETAIL_PAGE_TITLE_CLASS } from "@/lib/workspace-page-typography";
@@ -86,36 +87,6 @@ function rollupFromSubscriptions(subs: SubscriptionRecord[]): string {
   if (statuses.length === 1) return `Subscription · ${statuses[0]}`;
   return `Subscriptions · ${statuses.join(", ")}`;
 }
-
-type ProposalLifecyclePhase = "draft" | "published" | "viewed";
-
-/** Single phase for CRM proposal rows: viewed wins over published over draft. */
-function proposalLifecyclePhase(p: ProposalRecord): ProposalLifecyclePhase {
-  const viewed =
-    p.status === "viewed" ||
-    p.status === "accepted" ||
-    p.status === "declined" ||
-    (typeof p.viewCount === "number" && p.viewCount > 0) ||
-    (typeof p.lastViewedAt === "number" && p.lastViewedAt > 0);
-  if (viewed) return "viewed";
-  if (p.status !== "draft") return "published";
-  return "draft";
-}
-
-const PROPOSAL_PHASE_BADGE_CLASS: Record<ProposalLifecyclePhase, string> = {
-  draft:
-    "border-slate-500/45 bg-slate-500/10 text-slate-800 dark:border-slate-500/35 dark:bg-slate-500/15 dark:text-slate-200",
-  published:
-    "border-sky-500/45 bg-sky-500/10 text-sky-900 dark:border-sky-500/35 dark:bg-sky-500/15 dark:text-sky-200",
-  viewed:
-    "border-violet-500/45 bg-violet-500/10 text-violet-900 dark:border-violet-500/35 dark:bg-violet-500/15 dark:text-violet-200",
-};
-
-const PROPOSAL_PHASE_TITLE: Record<ProposalLifecyclePhase, string> = {
-  draft: "Draft — not published to a public link yet. Use Publish in the editor when ready.",
-  published: "Published — public proposal is ready to view; no recorded opens yet.",
-  viewed: "Viewed — recipient has viewed or acted on the public proposal.",
-};
 
 const CUSTOMER_DETAIL_TAB_VALUES = [
   "overview",
@@ -763,9 +734,7 @@ export function CustomerDetailView({
             </Card>
           ) : (
             <ul className="space-y-2">
-              {proposalsMatched.map((p) => {
-                const phase = proposalLifecyclePhase(p);
-                return (
+              {proposalsMatched.map((p) => (
                 <li
                   key={p.id}
                   className="flex flex-col gap-3 rounded-xl border border-border/60 bg-card/50 px-4 py-3"
@@ -805,13 +774,7 @@ export function CustomerDetailView({
                   </div>
                   <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
                     <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-2">
-                      <Badge
-                        variant="outline"
-                        title={PROPOSAL_PHASE_TITLE[phase]}
-                        className={cn("text-xs font-medium capitalize", PROPOSAL_PHASE_BADGE_CLASS[phase])}
-                      >
-                        {phase === "draft" ? "Draft" : phase === "published" ? "Published" : "Viewed"}
-                      </Badge>
+                      <ProposalStageBadge proposal={p} />
                     </div>
                     <div className="flex shrink-0 items-center gap-1.5 sm:ml-auto">
                       <Button
@@ -855,8 +818,7 @@ export function CustomerDetailView({
                     </div>
                   </div>
                 </li>
-                );
-              })}
+              ))}
             </ul>
           )}
         </TabsContent>
