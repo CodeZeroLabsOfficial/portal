@@ -7,6 +7,7 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { accountToFormDefaults } from "@/lib/account-form-defaults";
 import { updateAccountFormSchema, type UpdateAccountFormInput } from "@/lib/schemas/account";
 import { updateAccountAction } from "@/server/actions/accounts-crm";
 import type { AccountDetailAggregate } from "@/server/firestore/crm-customers";
@@ -15,22 +16,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { FormServerError } from "@/components/ui/form-server-error";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
-function accountToFormDefaults(account: AccountDetailAggregate, accountKey: string): UpdateAccountFormInput {
-  return {
-    accountKey,
-    company: account.displayName,
-    companyPhone: account.companyPhone ?? "",
-    companyEmail: account.companyEmail ?? "",
-    companyWebsite: account.companyWebsite ?? "",
-    companyAddressLine1: account.companyAddressLine1 ?? "",
-    companyAddressLine2: account.companyAddressLine2 ?? "",
-    companyCity: account.companyCity ?? "",
-    companyRegion: account.companyRegion ?? "",
-    companyPostalCode: account.companyPostalCode ?? "",
-    companyCountry: account.companyCountry ?? "",
-  };
-}
 
 export interface EditAccountFormProps {
   account: AccountDetailAggregate;

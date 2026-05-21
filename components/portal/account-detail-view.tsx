@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { ArrowLeft, Building2, Globe, Mail, MapPin, Pencil, Phone, Users } from "lucide-react";
+import { ArrowLeft, Building2, Pencil, Users } from "lucide-react";
 import type { AccountDetailAggregate } from "@/server/firestore/crm-customers";
-import { formatAddressLines, websiteHref } from "@/lib/format";
+import { AccountCompanyDetailsCard } from "@/components/portal/account-company-details-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,16 +16,6 @@ export interface AccountDetailViewProps {
 }
 
 export function AccountDetailView({ account }: AccountDetailViewProps) {
-  const addressLines = formatAddressLines({
-    addressLine1: account.companyAddressLine1,
-    addressLine2: account.companyAddressLine2,
-    city: account.companyCity,
-    region: account.companyRegion,
-    postalCode: account.companyPostalCode,
-    country: account.companyCountry,
-  });
-  const hasAddress = addressLines.length > 0;
-
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -79,84 +69,7 @@ export function AccountDetailView({ account }: AccountDetailViewProps) {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="border-border/80 bg-card/80 shadow-sm lg:col-span-2">
-          <CardHeader className="border-b border-border/60 bg-muted/20">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Building2 className="h-5 w-5 text-muted-foreground" aria-hidden />
-              Company details
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-5 p-6">
-            <dl className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1">
-                <dt className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  <Phone className="h-3.5 w-3.5" aria-hidden />
-                  Company phone
-                </dt>
-                <dd className="text-sm text-foreground">
-                  {account.companyPhone.trim() ? (
-                    <a className="text-primary hover:underline" href={`tel:${account.companyPhone.trim()}`}>
-                      {account.companyPhone.trim()}
-                    </a>
-                  ) : (
-                    <span className="text-muted-foreground">—</span>
-                  )}
-                </dd>
-              </div>
-              <div className="space-y-1">
-                <dt className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  <Mail className="h-3.5 w-3.5" aria-hidden />
-                  Company email
-                </dt>
-                <dd className="text-sm text-foreground">
-                  {account.companyEmail.trim() ? (
-                    <a
-                      className="text-primary hover:underline"
-                      href={`mailto:${account.companyEmail.trim()}`}
-                    >
-                      {account.companyEmail.trim()}
-                    </a>
-                  ) : (
-                    <span className="text-muted-foreground">—</span>
-                  )}
-                </dd>
-              </div>
-              <div className="space-y-1 sm:col-span-2">
-                <dt className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  <Globe className="h-3.5 w-3.5" aria-hidden />
-                  Website
-                </dt>
-                <dd className="text-sm text-foreground">
-                  {account.companyWebsite.trim() ? (
-                    <a
-                      href={websiteHref(account.companyWebsite)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary hover:underline"
-                    >
-                      {account.companyWebsite.trim()}
-                    </a>
-                  ) : (
-                    <span className="text-muted-foreground">—</span>
-                  )}
-                </dd>
-              </div>
-              <div className="space-y-1 sm:col-span-2">
-                <dt className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  <MapPin className="h-3.5 w-3.5" aria-hidden />
-                  Company address
-                </dt>
-                <dd className="text-sm leading-relaxed text-foreground">
-                  {hasAddress ? (
-                    <span className="whitespace-pre-line">{addressLines.join("\n")}</span>
-                  ) : (
-                    <span className="text-muted-foreground">—</span>
-                  )}
-                </dd>
-              </div>
-            </dl>
-          </CardContent>
-        </Card>
+        <AccountCompanyDetailsCard account={account} accountKey={account.key} />
 
         <Card className="border-border/80 bg-card/80 shadow-sm">
           <CardHeader className="border-b border-border/60 bg-muted/20">
