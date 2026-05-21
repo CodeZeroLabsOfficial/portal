@@ -5,7 +5,11 @@ import type { CatalogServiceRecord, CatalogServiceStatus } from "@/types/catalog
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+
+const workspaceGhostButtonClassName =
+  "gap-1.5 text-[14px] font-medium text-muted-foreground hover:text-foreground";
 
 function stripeLinked(service: CatalogServiceRecord): boolean {
   return Boolean(service.stripeProductId?.trim());
@@ -45,44 +49,40 @@ export function CatalogServiceStripeIntegrationsCard({
           Integrations
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4 p-4 text-sm">
-        <div className="rounded-xl border border-border/60 bg-background/40 p-3">
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0 space-y-1">
-              <span className="text-muted-foreground">Stripe</span>
-              {service.stripeSyncedAt ? (
-                <p className="text-xs text-muted-foreground">
-                  Last synced{" "}
-                  {new Date(service.stripeSyncedAt).toLocaleString(undefined, {
-                    dateStyle: "medium",
-                    timeStyle: "short",
-                  })}
-                </p>
-              ) : !linked ? (
-                <p className="text-xs text-muted-foreground">
-                  Activate or re-sync to create the product and prices in Stripe.
-                </p>
-              ) : null}
-            </div>
+      <CardContent className="space-y-4 p-6">
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Label>Stripe</Label>
             {linked ? (
-              <Badge variant="outline" className="shrink-0 border-emerald-500/40 text-emerald-600 dark:text-emerald-400">
+              <Badge variant="outline" className="border-emerald-500/40 text-emerald-600 dark:text-emerald-400">
                 {stripeStatusLabel(service)}
               </Badge>
             ) : (
-              <Badge variant="secondary" className="shrink-0">
-                Not synced
-              </Badge>
+              <Badge variant="secondary">Not synced</Badge>
             )}
           </div>
+          {service.stripeSyncedAt ? (
+            <p className="text-xs text-muted-foreground">
+              Last synced{" "}
+              {new Date(service.stripeSyncedAt).toLocaleString(undefined, {
+                dateStyle: "medium",
+                timeStyle: "short",
+              })}
+            </p>
+          ) : !linked ? (
+            <p className="text-xs text-muted-foreground">
+              Activate or re-sync to create the product and prices in Stripe.
+            </p>
+          ) : null}
         </div>
 
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap gap-2">
           {service.stripeProductId?.trim() ? (
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
               size="sm"
-              className="w-full justify-center gap-1.5"
+              className={workspaceGhostButtonClassName}
               disabled={busy}
               onClick={() =>
                 window.open(`https://dashboard.stripe.com/products/${service.stripeProductId}`, "_blank")
@@ -95,8 +95,9 @@ export function CatalogServiceStripeIntegrationsCard({
           {status === "draft" && onActivateSync ? (
             <Button
               type="button"
+              variant="ghost"
               size="sm"
-              className="w-full justify-center gap-1.5"
+              className={workspaceGhostButtonClassName}
               disabled={busy || readOnly}
               onClick={onActivateSync}
             >
@@ -107,9 +108,9 @@ export function CatalogServiceStripeIntegrationsCard({
           {status === "active" && onResync ? (
             <Button
               type="button"
-              variant="secondary"
+              variant="ghost"
               size="sm"
-              className="w-full justify-center gap-1.5"
+              className={workspaceGhostButtonClassName}
               disabled={busy || readOnly}
               onClick={onResync}
             >
@@ -118,7 +119,7 @@ export function CatalogServiceStripeIntegrationsCard({
               ) : (
                 <RefreshCw className="h-4 w-4 shrink-0" aria-hidden />
               )}
-              Re-sync Stripe
+              Resync Stripe
             </Button>
           ) : null}
         </div>

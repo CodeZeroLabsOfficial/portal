@@ -109,6 +109,9 @@ function isCustomerDetailTab(v: string | undefined): v is CustomerDetailTab {
   return Boolean(v && (CUSTOMER_DETAIL_TAB_VALUES as readonly string[]).includes(v));
 }
 
+const workspaceGhostButtonClassName =
+  "gap-1.5 text-[14px] font-medium text-muted-foreground hover:text-foreground";
+
 function ProposalCreateControls({
   templates,
   proposalTemplateId,
@@ -461,8 +464,9 @@ export function CustomerDetailView({
                 <div className="flex flex-wrap gap-2">
                   <Button
                     type="button"
-                    variant="outline"
-                    className="gap-2"
+                    variant="ghost"
+                    size="sm"
+                    className={workspaceGhostButtonClassName}
                     disabled={stripeIntegrationsBusy}
                     onClick={() =>
                       window.open(
@@ -476,8 +480,9 @@ export function CustomerDetailView({
                   </Button>
                   <Button
                     type="button"
-                    variant="secondary"
-                    className="gap-2"
+                    variant="ghost"
+                    size="sm"
+                    className={workspaceGhostButtonClassName}
                     disabled={stripeIntegrationsBusy}
                     onClick={() => void resyncStripeCustomer()}
                   >
@@ -516,24 +521,26 @@ export function CustomerDetailView({
                 {customer.portalUserId?.trim() ? (
                   <Button
                     type="button"
-                    variant="secondary"
-                    className="gap-2"
+                    variant="ghost"
+                    size="sm"
+                    className={workspaceGhostButtonClassName}
                     disabled={portalSetupBusy}
                     onClick={() => void generatePortalPasswordSetupLink()}
                   >
-                    {portalSetupBusy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
+                    {portalSetupBusy ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden /> : null}
                     Generate password link
                   </Button>
                 ) : (
                   <Button
                     type="button"
-                    variant="secondary"
-                    className="gap-2"
+                    variant="ghost"
+                    size="sm"
+                    className={workspaceGhostButtonClassName}
                     disabled={!customer.email?.trim() || enableAccessBusy}
                     title={!customer.email?.trim() ? "Add an email to this customer first." : undefined}
                     onClick={() => void enablePortalAccess()}
                   >
-                    {enableAccessBusy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
+                    {enableAccessBusy ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden /> : null}
                     Link user
                   </Button>
                 )}
