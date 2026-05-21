@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { MoreHorizontal, Plus, Search } from "lucide-react";
+import { Filter, MoreHorizontal, Plus, Search } from "lucide-react";
 import {
   activateCatalogServiceAction,
   archiveCatalogServiceAction,
@@ -89,6 +89,19 @@ function stripeSyncLabel(service: CatalogServiceRecord): string {
   return "Linked";
 }
 
+type ServiceStatusFilter = "all" | CatalogServiceStatus;
+type ServiceTypeFilter = "all" | CatalogServiceKind;
+
+function matchesStatusFilter(service: CatalogServiceRecord, statusFilter: ServiceStatusFilter): boolean {
+  if (statusFilter === "all") return true;
+  return service.status === statusFilter;
+}
+
+function matchesTypeFilter(service: CatalogServiceRecord, typeFilter: ServiceTypeFilter): boolean {
+  if (typeFilter === "all") return true;
+  return service.serviceType === typeFilter;
+}
+
 export interface CatalogServicesListPanelProps {
   services: CatalogServiceRecord[];
 }
@@ -96,6 +109,8 @@ export interface CatalogServicesListPanelProps {
 export function CatalogServicesListPanel({ services }: CatalogServicesListPanelProps) {
   const router = useRouter();
   const [query, setQuery] = React.useState("");
+  const [statusFilter, setStatusFilter] = React.useState<ServiceStatusFilter>("all");
+  const [typeFilter, setTypeFilter] = React.useState<ServiceTypeFilter>("all");
   const [addOpen, setAddOpen] = React.useState(false);
   const [pendingId, setPendingId] = React.useState<string | null>(null);
 
@@ -105,8 +120,10 @@ export function CatalogServicesListPanel({ services }: CatalogServicesListPanelP
 
   const filtered = React.useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return services;
     return services.filter((service) => {
+      if (!matchesStatusFilter(service, statusFilter)) return false;
+      if (!matchesTypeFilter(service, typeFilter)) return false;
+      if (!q) return true;
       const hay = [
         service.name,
         service.slug,
@@ -122,7 +139,7 @@ export function CatalogServicesListPanel({ services }: CatalogServicesListPanelP
         .toLowerCase();
       return hay.includes(q);
     });
-  }, [services, query]);
+  }, [services, query, statusFilter, typeFilter]);
 
   return (
     <div className="space-y-8">
@@ -153,18 +170,55 @@ export function CatalogServicesListPanel({ services }: CatalogServicesListPanelP
       <section className="overflow-hidden rounded-xl border border-border/80 bg-card/80 shadow-sm backdrop-blur-sm">
         <div className="flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <h2 className="shrink-0 text-sm font-semibold text-foreground">Directory</h2>
-          <div className="relative min-w-0 flex-1 sm:max-w-md">
-            <Search
-              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-              aria-hidden
-            />
-            <Input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search name, status, slug, Stripe id..."
-              className="h-9 rounded-full border-border/80 bg-background/60 pl-9 text-[14px] text-foreground placeholder:text-muted-foreground"
-              aria-label="Search services"
-            />
+          <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-2">
+            <div className="relative min-w-0 flex-1 sm:max-w-xs md:max-w-md">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden
+              />
+              <Input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search name, status, slug, Stripe id..."
+                className="h-9 rounded-full border-border/80 bg-background/60 pl-9 text-[14px] text-foreground placeholder:text-muted-foreground"
+                aria-label="Search services"
+              />
+            </div>
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
+              <div className="relative">
+                <Filter
+                  className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
+                  aria-hidden
+                />
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value as ServiceStatusFilter)}
+                  className={cn(
+                    "h-9 appearance-none rounded-full border border-border/80 bg-background/60 py-0 pl-8 pr-8 text-[13px] font-medium text-foreground",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  )}
+                  aria-label="Filter by status"
+                >
+                  <option value="all">All statuses</option>
+                  <option value="active">Active</option>
+                  <option value="draft">Draft</option>
+                  <option value="archived">Archived</option>
+                </select>
+                <select
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value as ServiceTypeFilter)}
+                  className={cn(
+                    "h-9 appearance-none rounded-full border border-border/80 bg-background/60 py-0 sm:pl-3 pr-8 text-[13px] font-medium text-foreground",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  )}
+                  aria-label="Filter by type"
+                >
+                  <option value="all">All types</option>
+                  <option value="plan">Plan</option>
+                  <option value="addon">Add-on</option>
+                </select>
+              </div>
+            </div>
           </div>
         </div>
 

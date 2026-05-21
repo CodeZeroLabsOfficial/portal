@@ -86,18 +86,22 @@ export function AccountDetailView({ account }: AccountDetailViewProps) {
                     href={`/admin/customers/${c.id}`}
                     className="flex flex-col gap-0.5 px-4 py-3 transition-colors hover:bg-muted/40"
                   >
-                    <span className="font-medium text-foreground">{c.name.trim() || c.email}</span>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="min-w-0 truncate font-medium text-foreground">
+                        {c.name.trim() || c.email}
+                      </span>
+                      <span
+                        className={cn(
+                          "inline-flex shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium capitalize",
+                          c.status === "archived"
+                            ? "bg-muted text-muted-foreground"
+                            : "bg-emerald-500/15 text-emerald-400",
+                        )}
+                      >
+                        {c.status}
+                      </span>
+                    </div>
                     <span className="truncate text-xs text-muted-foreground">{c.email}</span>
-                    <span
-                      className={cn(
-                        "mt-1 inline-flex w-fit rounded-full px-2 py-0.5 text-[11px] font-medium capitalize",
-                        c.status === "archived"
-                          ? "bg-muted text-muted-foreground"
-                          : "bg-emerald-500/15 text-emerald-400",
-                      )}
-                    >
-                      {c.status}
-                    </span>
                   </Link>
                 </li>
               ))}
