@@ -150,6 +150,11 @@ function parseCustomerRecord(id: string, data: Record<string, unknown>): Custome
     customFields,
     portalUserId: asString(data.portalUserId),
     stripeCustomerId: asString(data.stripeCustomerId),
+    ...(typeof data.stripeSyncedAt === "number" && Number.isFinite(data.stripeSyncedAt)
+      ? { stripeSyncedAt: data.stripeSyncedAt }
+      : millisFromFirestore(data, "stripeSyncedAt") > 0
+        ? { stripeSyncedAt: millisFromFirestore(data, "stripeSyncedAt") }
+        : {}),
     avatarUrl: asString(data.avatarUrl),
     crmType,
     status,
@@ -1070,6 +1075,7 @@ export async function createCustomerDocument(
       if (created) {
         await docRef.update({
           stripeCustomerId,
+          stripeSyncedAt: Date.now(),
           updatedAt: FieldValue.serverTimestamp(),
         });
       }
@@ -1359,7 +1365,10 @@ export async function persistStripeCustomerIdOnCustomer(
   await db
     .collection(COLLECTIONS.customers)
     .doc(id)
-    .set({ stripeCustomerId: sid, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    .set(
+      { stripeCustomerId: sid, stripeSyncedAt: Date.now(), updatedAt: FieldValue.serverTimestamp() },
+      { merge: true },
+    );
   await syncStripeCustomerIdFromCrmCustomerDoc(db, id);
 }
 
@@ -1375,7 +1384,11 @@ export async function syncStripeCustomerBasics(
   await db
     .collection(COLLECTIONS.customers)
     .doc(customerId)
-    .update({ stripeCustomerId, updatedAt: FieldValue.serverTimestamp() });
+    .update({
+      stripeCustomerId,
+      stripeSyncedAt: Date.now(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
   await db.collection(COLLECTIONS.customerActivities).add({
     customerId,
     type: "stripe_sync",

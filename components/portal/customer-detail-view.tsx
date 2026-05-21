@@ -84,14 +84,20 @@ function formatMinor(amount: number, currency: string): string {
   }
 }
 
-function rollupFromSubscriptions(subs: SubscriptionRecord[]): string {
-  if (subs.length === 0) return "No active Stripe subscriptions";
-  const productNames = [...new Set(subs.map((s) => (s.productName ?? "").trim()).filter(Boolean))];
-  if (productNames.length === 1) return `Subscription · ${productNames[0]}`;
-  if (productNames.length > 1) return `Subscriptions · ${productNames.join(", ")}`;
-  const statuses = [...new Set(subs.map((s) => s.status))];
-  if (statuses.length === 1) return `Subscription · ${statuses[0]}`;
-  return `Subscriptions · ${statuses.join(", ")}`;
+function customerStripeLastSyncedAt(
+  customer: CustomerRecord,
+  activities: CustomerActivityRecord[],
+): number | null {
+  if (customer.stripeSyncedAt && Number.isFinite(customer.stripeSyncedAt)) {
+    return customer.stripeSyncedAt;
+  }
+  let latest = 0;
+  for (const activity of activities) {
+    if (activity.type === "stripe_sync" && activity.createdAt > latest) {
+      latest = activity.createdAt;
+    }
+  }
+  return latest > 0 ? latest : null;
 }
 
 const CUSTOMER_DETAIL_TAB_VALUES = [
@@ -212,6 +218,11 @@ export function CustomerDetailView({
       setPortalSetupLink(null);
     }
   }
+
+  const stripeLastSyncedAt = React.useMemo(
+    () => customerStripeLastSyncedAt(customer, activities),
+    [customer, activities],
+  );
 
   const timeline = React.useMemo(() => {
     // Notes are also written to `customer_activities` (e.g. "Note added"); merging both sources
@@ -458,7 +469,19 @@ export function CustomerDetailView({
                     <Badge variant="secondary">Not linked</Badge>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground">{rollupFromSubscriptions(subscriptions)}</p>
+                {stripeLastSyncedAt ? (
+                  <p className="text-xs text-muted-foreground">
+                    Last synced{" "}
+                    {new Date(stripeLastSyncedAt).toLocaleString(undefined, {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })}
+                  </p>
+                ) : !customer.stripeCustomerId?.trim() ? (
+                  <p className="text-xs text-muted-foreground">
+                    Link a Stripe customer id to sync subscriptions and invoices.
+                  </p>
+                ) : null}
               </div>
               {customer.stripeCustomerId?.trim() ? (
                 <div className="flex flex-wrap gap-2">
@@ -527,7 +550,11 @@ export function CustomerDetailView({
                     disabled={portalSetupBusy}
                     onClick={() => void generatePortalPasswordSetupLink()}
                   >
-                    {portalSetupBusy ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden /> : null}
+                    {portalSetupBusy ? (
+                      <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                    ) : (
+                      <KeyRound className="h-4 w-4 shrink-0" aria-hidden />
+                    )}
                     Generate password link
                   </Button>
                 ) : (

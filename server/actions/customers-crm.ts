@@ -225,7 +225,10 @@ export async function pullStripeCustomerProfileAction(
       [sc.metadata?.first_name, sc.metadata?.last_name].filter(Boolean).join(" ").trim();
     const emailFromStripe = typeof sc.email === "string" ? sc.email.trim().toLowerCase() : "";
 
-    const patch: Record<string, unknown> = { updatedAt: FieldValue.serverTimestamp() };
+    const patch: Record<string, unknown> = {
+      updatedAt: FieldValue.serverTimestamp(),
+      stripeSyncedAt: Date.now(),
+    };
     if (nameFromStripe && !customer.name?.trim()) patch.name = nameFromStripe;
     if (emailFromStripe && !customer.email?.trim()) patch.email = emailFromStripe;
     if (sc.phone && !customer.phone?.trim()) patch.phone = sc.phone;
@@ -236,17 +239,17 @@ export async function pullStripeCustomerProfileAction(
     if (sc.address?.postal_code && !customer.postalCode?.trim()) patch.postalCode = sc.address.postal_code;
     if (sc.address?.country && !customer.country?.trim()) patch.country = sc.address.country;
 
-    const changedFields = Object.keys(patch).filter((k) => k !== "updatedAt");
-    if (changedFields.length === 0) {
-      return { ok: true };
-    }
-
     await db.collection(COLLECTIONS.customers).doc(customerId).update(patch);
 
+    const profileFieldsChanged = Object.keys(patch).filter(
+      (k) => k !== "updatedAt" && k !== "stripeSyncedAt",
+    ).length;
     await db.collection(COLLECTIONS.customerActivities).add({
       customerId,
       type: "stripe_sync",
-      title: "Synced profile fields from Stripe",
+      title: profileFieldsChanged
+        ? "Synced profile fields from Stripe"
+        : "Resynced Stripe customer",
       actorUid: user.uid,
       createdAt: FieldValue.serverTimestamp(),
     });

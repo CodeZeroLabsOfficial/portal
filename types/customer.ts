@@ -40,6 +40,8 @@ export interface CustomerRecord {
   customFields: Record<string, string>;
   portalUserId?: string;
   stripeCustomerId?: string;
+  /** Epoch millis — last successful Stripe link or profile resync from CRM. */
+  stripeSyncedAt?: number;
   avatarUrl?: string;
   /** Defaults to `contact` when absent in Firestore (existing rows). */
   crmType: CustomerCrmType;

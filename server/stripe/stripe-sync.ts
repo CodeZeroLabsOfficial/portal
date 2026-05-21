@@ -158,6 +158,7 @@ async function linkStripeCustomerToCrm(db: Firestore, customer: Stripe.Customer)
       await doc.ref.set(
         {
           stripeCustomerId: customer.id,
+          stripeSyncedAt: Date.now(),
           updatedAt: FieldValue.serverTimestamp(),
         },
         { merge: true },
