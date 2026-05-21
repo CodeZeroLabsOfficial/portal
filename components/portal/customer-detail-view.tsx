@@ -13,6 +13,7 @@ import {
   CreditCard,
   Download,
   ExternalLink,
+  RefreshCw,
   Eye,
   FileText,
   FolderOpen,
@@ -40,6 +41,7 @@ import {
   enableCustomerPortalAccessAction,
   generatePortalPasswordResetLinkAction,
   getSignedAgreementModalPayloadAction,
+  pullStripeCustomerProfileAction,
 } from "@/server/actions/customers-crm";
 import { deleteProposalAction } from "@/server/actions/proposal-builder";
 import { createDraftProposalFromCustomerAction } from "@/server/actions/proposals-crm";
@@ -188,6 +190,8 @@ export function CustomerDetailView({
   const [portalSetupBusy, setPortalSetupBusy] = React.useState(false);
   const [enableAccessBusy, setEnableAccessBusy] = React.useState(false);
   const [portalSetupError, setPortalSetupError] = React.useState<string | null>(null);
+  const [stripeIntegrationsBusy, setStripeIntegrationsBusy] = React.useState(false);
+  const [stripeIntegrationsError, setStripeIntegrationsError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     setPortalSetupLink(null);
@@ -195,6 +199,8 @@ export function CustomerDetailView({
     setPortalSetupError(null);
     setPortalSetupBusy(false);
     setEnableAccessBusy(false);
+    setStripeIntegrationsBusy(false);
+    setStripeIntegrationsError(null);
   }, [customer.id]);
 
   function onPortalPasswordLinkModalOpenChange(open: boolean) {
@@ -297,6 +303,21 @@ export function CustomerDetailView({
       router.refresh();
     } finally {
       setEnableAccessBusy(false);
+    }
+  }
+
+  async function resyncStripeCustomer() {
+    setStripeIntegrationsError(null);
+    setStripeIntegrationsBusy(true);
+    try {
+      const res = await pullStripeCustomerProfileAction(customer.id);
+      if (!res.ok) {
+        setStripeIntegrationsError(res.message);
+        return;
+      }
+      router.refresh();
+    } finally {
+      setStripeIntegrationsBusy(false);
     }
   }
 
@@ -422,10 +443,10 @@ export function CustomerDetailView({
                 Integrations
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-4 text-sm">
-              <div className="rounded-xl border border-border/60 bg-background/40 p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-muted-foreground">Stripe</span>
+            <CardContent className="space-y-4 p-6">
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <Label>Stripe</Label>
                   {customer.stripeCustomerId?.trim() ? (
                     <Badge variant="outline" className="border-emerald-500/40 text-emerald-600 dark:text-emerald-400">
                       Linked
@@ -434,8 +455,42 @@ export function CustomerDetailView({
                     <Badge variant="secondary">Not linked</Badge>
                   )}
                 </div>
-                <div className="mt-2 text-xs text-muted-foreground">{rollupFromSubscriptions(subscriptions)}</div>
+                <p className="text-xs text-muted-foreground">{rollupFromSubscriptions(subscriptions)}</p>
               </div>
+              {customer.stripeCustomerId?.trim() ? (
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="gap-2"
+                    disabled={stripeIntegrationsBusy}
+                    onClick={() =>
+                      window.open(
+                        `https://dashboard.stripe.com/customers/${customer.stripeCustomerId?.trim()}`,
+                        "_blank",
+                      )
+                    }
+                  >
+                    <ExternalLink className="h-4 w-4 shrink-0" aria-hidden />
+                    Open in Stripe
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="gap-2"
+                    disabled={stripeIntegrationsBusy}
+                    onClick={() => void resyncStripeCustomer()}
+                  >
+                    {stripeIntegrationsBusy ? (
+                      <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                    ) : (
+                      <RefreshCw className="h-4 w-4 shrink-0" aria-hidden />
+                    )}
+                    Resync Stripe
+                  </Button>
+                </div>
+              ) : null}
+              {stripeIntegrationsError ? <p className="text-sm text-destructive">{stripeIntegrationsError}</p> : null}
             </CardContent>
           </Card>
 
