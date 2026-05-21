@@ -9,7 +9,6 @@ import type { CustomerListRow } from "@/lib/customer-list";
 import type { CustomerSubscriptionRollup } from "@/types/customer";
 import { archiveCustomerAction, deleteCustomerAction } from "@/server/actions/customers-crm";
 import { AddCustomerModal } from "@/components/portal/add-customer-modal";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -25,19 +24,40 @@ import {
 } from "@/lib/workspace-page-typography";
 import { cn } from "@/lib/utils";
 
-function subscriptionBadgeVariant(
+function subscriptionBadge(
   rollup: CustomerSubscriptionRollup,
-): "default" | "secondary" | "destructive" | "outline" {
-  if (rollup === "active" || rollup === "trialing") return "default";
-  if (rollup === "past_due" || rollup === "canceled") return "destructive";
-  if (rollup === "mixed") return "secondary";
-  return "outline";
-}
-
-function subscriptionLabel(rollup: CustomerSubscriptionRollup): string {
-  if (rollup === "none") return "No subscription";
-  if (rollup === "mixed") return "Scheduled";
-  return rollup.replace(/_/g, " ");
+): { label: string; className: string } {
+  if (rollup === "none") {
+    return { label: "No subscription", className: "bg-muted text-muted-foreground" };
+  }
+  if (rollup === "active" || rollup === "trialing") {
+    return {
+      label: rollup === "trialing" ? "Trialing" : "Active",
+      className: "bg-emerald-500/15 text-emerald-400",
+    };
+  }
+  if (rollup === "scheduled") {
+    return {
+      label: "Scheduled",
+      className: "bg-sky-500/10 text-sky-700 dark:text-sky-300",
+    };
+  }
+  if (rollup === "past_due" || rollup === "unpaid") {
+    return {
+      label: rollup === "past_due" ? "Past due" : "Unpaid",
+      className: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
+    };
+  }
+  if (rollup === "canceled") {
+    return { label: "Canceled", className: "bg-muted text-muted-foreground" };
+  }
+  if (rollup === "paused") {
+    return { label: "Paused", className: "bg-muted text-muted-foreground" };
+  }
+  return {
+    label: rollup.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+    className: "bg-muted text-muted-foreground",
+  };
 }
 
 export interface CustomerListPanelProps {
@@ -313,7 +333,9 @@ export function CustomerListPanel({ rows }: CustomerListPanelProps) {
                 </tr>
               ) : (
                 <AnimatePresence initial={false}>
-                  {filtered.map((row, index) => (
+                  {filtered.map((row, index) => {
+                    const sub = subscriptionBadge(row.subscriptionRollup);
+                    return (
                     <motion.tr
                       key={row.id}
                       layout
@@ -356,9 +378,14 @@ export function CustomerListPanel({ rows }: CustomerListPanelProps) {
                         {row.email}
                       </td>
                       <td className="px-4 py-3 align-middle">
-                        <Badge variant={subscriptionBadgeVariant(row.subscriptionRollup)} className="font-normal capitalize">
-                          {subscriptionLabel(row.subscriptionRollup)}
-                        </Badge>
+                        <span
+                          className={cn(
+                            "rounded-full px-2 py-0.5 text-[11px] font-medium",
+                            sub.className,
+                          )}
+                        >
+                          {sub.label}
+                        </span>
                       </td>
                       <td className="max-w-[180px] px-4 py-3 align-middle">
                         <div className="flex flex-wrap gap-1">
@@ -440,7 +467,8 @@ export function CustomerListPanel({ rows }: CustomerListPanelProps) {
                         </DropdownMenu>
                       </td>
                     </motion.tr>
-                  ))}
+                    );
+                  })}
                 </AnimatePresence>
               )}
             </tbody>

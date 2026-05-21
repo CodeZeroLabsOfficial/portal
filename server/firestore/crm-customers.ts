@@ -28,7 +28,7 @@ import { ensureStripeCustomer } from "@/server/stripe/proposal-billing";
 import { parseProposalRecord } from "@/server/firestore/parse-proposal";
 import { parseSignedAgreementRecord } from "@/server/firestore/parse-signed-agreement";
 import { parseTaskRecord } from "@/server/firestore/parse-task";
-import type { SubscriptionRecord } from "@/types/subscription";
+import type { SubscriptionRecord, SubscriptionStatus } from "@/types/subscription";
 import type { TaskRecord } from "@/types/task";
 import type { PortalUser } from "@/types/user";
 import type { SignedAgreementRecord } from "@/types/signed-agreement";
@@ -150,6 +150,19 @@ function parseCustomerRecord(id: string, data: Record<string, unknown>): Custome
   };
 }
 
+/** When a customer has multiple subscriptions, show the most actionable status first. */
+const SUBSCRIPTION_ROLLUP_PRIORITY: SubscriptionStatus[] = [
+  "past_due",
+  "unpaid",
+  "incomplete",
+  "active",
+  "trialing",
+  "scheduled",
+  "paused",
+  "canceled",
+  "incomplete_expired",
+];
+
 function rollupForStripeCustomer(
   stripeCustomerId: string | undefined,
   subscriptions: SubscriptionRecord[],
@@ -157,18 +170,14 @@ function rollupForStripeCustomer(
   if (!stripeCustomerId) return "none";
   const rel = subscriptions.filter((s) => s.customerId === stripeCustomerId);
   if (rel.length === 0) return "none";
+
   const statuses = new Set(rel.map((s) => s.status));
-  if (statuses.size > 1) return "mixed";
-  const only = [...statuses][0];
-  if (
-    only === "active" ||
-    only === "trialing" ||
-    only === "past_due" ||
-    only === "canceled"
-  ) {
-    return only;
+  if (statuses.size === 1) return [...statuses][0]!;
+
+  for (const status of SUBSCRIPTION_ROLLUP_PRIORITY) {
+    if (statuses.has(status)) return status;
   }
-  return "mixed";
+  return "active";
 }
 
 function customerToListRow(

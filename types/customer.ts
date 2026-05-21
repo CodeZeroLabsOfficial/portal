@@ -1,17 +1,13 @@
+import type { SubscriptionStatus } from "./subscription";
+
 /** CRM customer document in `customers/{customerId}` (Firestore). */
 export type CustomerLifecycleStatus = "active" | "archived";
 
 /** Unified CRM row type — leads promote to contacts without changing document id. */
 export type CustomerCrmType = "lead" | "contact";
 
-/** Subscription rollup for profile header — derived from Stripe-mirrored `subscriptions` rows. */
-export type CustomerSubscriptionRollup =
-  | "none"
-  | "active"
-  | "trialing"
-  | "past_due"
-  | "canceled"
-  | "mixed";
+/** Subscription rollup for customer list — derived from Stripe-mirrored `subscriptions` rows. */
+export type CustomerSubscriptionRollup = SubscriptionStatus | "none";
 
 export interface CustomerRecord {
   id: string;
