@@ -2,9 +2,6 @@ import type { UpdateCustomerFormInput } from "@/lib/schemas/customer";
 import type { CustomerRecord } from "@/types/customer";
 
 export function customerToFormDefaults(customer: CustomerRecord): UpdateCustomerFormInput {
-  const customFields = Object.entries(customer.customFields)
-    .filter(([k]) => k.trim().length > 0)
-    .map(([key, value]) => ({ key, value }));
   return {
     id: customer.id,
     name: customer.name,
@@ -29,9 +26,6 @@ export function customerToFormDefaults(customer: CustomerRecord): UpdateCustomer
     postalCode: customer.postalCode ?? "",
     country: customer.country ?? "",
     tags: customer.tags,
-    customFields,
-    linkAuthByEmail: Boolean(customer.portalUserId),
-    createAuthUserIfMissing: false,
   };
 }
 

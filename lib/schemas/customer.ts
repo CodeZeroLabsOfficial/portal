@@ -28,12 +28,7 @@ export const companyWebsiteField = z
     message: "Website must be at most 2048 characters",
   });
 
-export const customFieldPairSchema = z.object({
-  key: trimmed.min(1, "Key is required").max(64),
-  value: z.string().max(2000).default(""),
-});
-
-export const createCustomerSchema = z.object({
+const customerProfileFieldsSchema = z.object({
   name: trimmed.min(1, "Name is required").max(200),
   email: trimmed.email("Valid email required").max(320),
   company: optionalTrimmed,
@@ -56,22 +51,17 @@ export const createCustomerSchema = z.object({
   postalCode: optionalTrimmed,
   country: optionalTrimmed,
   tags: z.array(trimmed.max(48)).max(20).default([]),
-  customFields: z.array(customFieldPairSchema).max(15).default([]),
-  /** When true, sets `portalUserId` if User Access already exists for `email`. */
-  linkAuthByEmail: z.boolean().default(false),
-  /**
-   * When true (with `linkAuthByEmail` or alone), creates an email/password Firebase user if none exists,
-   * then links `portalUserId`. Use the customer profile **Portal access** card to generate a password setup link.
-   */
-  createAuthUserIfMissing: z.boolean().default(false),
+});
+
+export const createCustomerSchema = customerProfileFieldsSchema.extend({
   /** When true, stores `crmType: "lead"` until converted to a contact. */
   saveAsLead: z.boolean().default(false),
 });
 
 export type CreateCustomerInput = z.infer<typeof createCustomerSchema>;
 
-/** Full profile replace for staff edit form (excludes lead toggle — use convert flow). */
-export const updateCustomerFormSchema = createCustomerSchema.omit({ saveAsLead: true }).extend({
+/** Staff inline/profile updates (excludes lead toggle — use convert flow). */
+export const updateCustomerFormSchema = customerProfileFieldsSchema.extend({
   id: z.string().min(1),
 });
 

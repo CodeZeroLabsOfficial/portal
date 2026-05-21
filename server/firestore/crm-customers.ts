@@ -987,24 +987,6 @@ export async function createCustomerDocument(
     return { ok: false, message: "CRM is only available to admin or team members." };
   }
   const customFields: Record<string, string> = {};
-  for (const pair of input.customFields ?? []) {
-    if (pair.key.trim()) customFields[pair.key.trim()] = pair.value ?? "";
-  }
-
-  let portalUserId: string | undefined;
-  let linkedNewFirebaseUser = false;
-  const shouldResolveAuth = input.linkAuthByEmail || input.createAuthUserIfMissing;
-  if (shouldResolveAuth) {
-    const resolved = await resolveOrCreateFirebaseUserByEmail(input.email.trim().toLowerCase(), {
-      active: true,
-      createIfMissing: input.createAuthUserIfMissing,
-    });
-    if (!resolved.ok) {
-      return { ok: false, message: resolved.message };
-    }
-    portalUserId = resolved.uid ?? undefined;
-    linkedNewFirebaseUser = resolved.createdNew;
-  }
 
   const crmType: CustomerCrmType = input.saveAsLead ? "lead" : "contact";
 
@@ -1029,7 +1011,7 @@ export async function createCustomerDocument(
     ...contactAddressPayloadFromInput(input),
     tags: input.tags ?? [],
     customFields,
-    portalUserId: portalUserId ?? null,
+    portalUserId: null,
     stripeCustomerId: null,
     avatarUrl: null,
     status: "active",
@@ -1109,17 +1091,6 @@ export async function createCustomerDocument(
     createdAt: firstActivityAt,
   });
 
-  if (portalUserId) {
-    await db.collection(COLLECTIONS.customerActivities).add({
-      customerId: docRef.id,
-      type: "auth_linked",
-      title: linkedNewFirebaseUser ? "Created User Access" : "Linked User Access",
-      detail: input.email.trim().toLowerCase(),
-      actorUid: user.uid,
-      createdAt: Timestamp.fromMillis(firstActivityAt.toMillis() + 1),
-    });
-  }
-
   if (leadOpportunityCreated) {
     await db.collection(COLLECTIONS.customerActivities).add({
       customerId: docRef.id,
@@ -1154,28 +1125,6 @@ export async function updateCustomerDocument(
     return { ok: false, message: "Customer not found." };
   }
 
-  const customFields: Record<string, string> = {};
-  for (const pair of rest.customFields ?? []) {
-    if (pair.key.trim()) {
-      customFields[pair.key.trim()] = pair.value ?? "";
-    }
-  }
-
-  let portalUserId: string | null | undefined;
-  let linkedNewFirebaseUser = false;
-  const shouldResolveAuth = rest.linkAuthByEmail || rest.createAuthUserIfMissing;
-  if (shouldResolveAuth) {
-    const resolved = await resolveOrCreateFirebaseUserByEmail(rest.email.trim().toLowerCase(), {
-      active: true,
-      createIfMissing: rest.createAuthUserIfMissing,
-    });
-    if (!resolved.ok) {
-      return { ok: false, message: resolved.message };
-    }
-    portalUserId = resolved.uid;
-    linkedNewFirebaseUser = resolved.createdNew;
-  }
-
   const payload: Record<string, unknown> = {
     name: rest.name.trim(),
     email: rest.email.trim().toLowerCase(),
@@ -1194,13 +1143,9 @@ export async function updateCustomerDocument(
     phone: rest.phone?.trim() || null,
     ...contactAddressPayloadFromInput(rest),
     tags: rest.tags ?? [],
-    customFields,
+    customFields: existing.customFields ?? {},
     updatedAt: FieldValue.serverTimestamp(),
   };
-
-  if (portalUserId !== undefined) {
-    payload.portalUserId = portalUserId;
-  }
 
   await db.collection(COLLECTIONS.customers).doc(customerId).update(payload);
 
@@ -1212,19 +1157,6 @@ export async function updateCustomerDocument(
     actorUid: user.uid,
     createdAt: updatedAt,
   });
-
-  const authLinked =
-    shouldResolveAuth && portalUserId && typeof portalUserId === "string" && portalUserId !== existing.portalUserId;
-  if (authLinked) {
-    await db.collection(COLLECTIONS.customerActivities).add({
-      customerId,
-      type: "auth_linked",
-      title: linkedNewFirebaseUser ? "Created User Access" : "Linked User Access",
-      detail: rest.email.trim().toLowerCase(),
-      actorUid: user.uid,
-      createdAt: Timestamp.fromMillis(updatedAt.toMillis() + 1),
-    });
-  }
 
   await syncStripeCustomerIdFromCrmCustomerDoc(db, customerId);
 
