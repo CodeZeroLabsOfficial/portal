@@ -52,6 +52,9 @@ import {
   Dialog,
   DialogClose,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -180,16 +183,25 @@ export function CustomerDetailView({
   const [noteError, setNoteError] = React.useState<string | null>(null);
   const [deletingProposalId, setDeletingProposalId] = React.useState<string | null>(null);
   const [portalSetupLink, setPortalSetupLink] = React.useState<string | null>(null);
+  const [portalPasswordLinkModalOpen, setPortalPasswordLinkModalOpen] = React.useState(false);
   const [portalSetupBusy, setPortalSetupBusy] = React.useState(false);
   const [enableAccessBusy, setEnableAccessBusy] = React.useState(false);
   const [portalSetupError, setPortalSetupError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     setPortalSetupLink(null);
+    setPortalPasswordLinkModalOpen(false);
     setPortalSetupError(null);
     setPortalSetupBusy(false);
     setEnableAccessBusy(false);
   }, [customer.id]);
+
+  function onPortalPasswordLinkModalOpenChange(open: boolean) {
+    setPortalPasswordLinkModalOpen(open);
+    if (!open) {
+      setPortalSetupLink(null);
+    }
+  }
 
   const timeline = React.useMemo(() => {
     // Notes are also written to `customer_activities` (e.g. "Note added"); merging both sources
@@ -297,6 +309,7 @@ export function CustomerDetailView({
         return;
       }
       setPortalSetupLink(res.link);
+      setPortalPasswordLinkModalOpen(true);
     } finally {
       setPortalSetupBusy(false);
     }
@@ -477,31 +490,6 @@ export function CustomerDetailView({
               </div>
 
               {portalSetupError ? <p className="text-xs text-destructive">{portalSetupError}</p> : null}
-
-              {portalSetupLink && customer.portalUserId?.trim() ? (
-                <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground">
-                    Share through a secure channel. Anyone with the link can start the password flow for this login
-                    email.
-                  </p>
-                  <Textarea readOnly className="min-h-[5.5rem] resize-none font-mono text-xs" value={portalSetupLink} />
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="gap-1.5"
-                      onClick={() => void navigator.clipboard.writeText(portalSetupLink)}
-                    >
-                      <Copy className="h-3.5 w-3.5" aria-hidden />
-                      Copy link
-                    </Button>
-                    <Button type="button" size="sm" variant="ghost" onClick={() => setPortalSetupLink(null)}>
-                      Clear link
-                    </Button>
-                  </div>
-                </div>
-              ) : null}
             </CardContent>
           </Card>
         </div>
@@ -993,6 +981,39 @@ export function CustomerDetailView({
         </TabsContent>
       </Tabs>
       </div>
+
+      <Dialog open={portalPasswordLinkModalOpen} onOpenChange={onPortalPasswordLinkModalOpenChange}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Password link</DialogTitle>
+            <DialogDescription>
+              Share through a secure channel. Anyone with the link can start the password flow for this login email.
+            </DialogDescription>
+          </DialogHeader>
+          {portalSetupLink ? (
+            <Textarea readOnly className="min-h-[5.5rem] resize-none font-mono text-xs" value={portalSetupLink} />
+          ) : null}
+          <DialogFooter className="gap-2 sm:justify-between">
+            <Button
+              type="button"
+              variant="outline"
+              className="gap-1.5"
+              disabled={!portalSetupLink}
+              onClick={() => {
+                if (portalSetupLink) void navigator.clipboard.writeText(portalSetupLink);
+              }}
+            >
+              <Copy className="h-3.5 w-3.5" aria-hidden />
+              Copy link
+            </Button>
+            <DialogClose asChild>
+              <Button type="button" variant="secondary">
+                Done
+              </Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={signedAgreementModalOpen} onOpenChange={onSignedAgreementModalOpenChange}>
         <DialogContent
