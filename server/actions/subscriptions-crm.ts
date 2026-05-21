@@ -1,6 +1,5 @@
 "use server";
 
-import { FieldValue } from "firebase-admin/firestore";
 import { revalidatePath } from "next/cache";
 import { requireStaffSession } from "@/lib/auth/server-session";
 import { getFirebaseAdminFirestore } from "@/lib/firebase/admin-app";
@@ -13,6 +12,11 @@ import { zodErrorToMessage } from "@/lib/zod-error";
 import { COLLECTIONS } from "@/server/firestore/collections";
 import { getCustomerRecordForOrg, syncStripeCustomerBasics } from "@/server/firestore/crm-customers";
 import { ensureStripeCustomer } from "@/server/stripe/proposal-billing";
+import { cancelSubscriptionAtPeriodEnd } from "@/server/stripe/subscription-cancel-at-period-end";
+import {
+  pauseSubscriptionPaymentCollection,
+  resumeSubscriptionPaymentCollection,
+} from "@/server/stripe/subscription-payment-collection";
 import { upsertSubscriptionMirror } from "@/server/stripe/stripe-sync";
 import {
   createSubscriptionScheduleForCustomer,
@@ -131,28 +135,56 @@ export async function cancelSubscriptionAction(
   const subId = subscriptionId.trim();
   if (!subId.startsWith("sub_")) return { ok: false, message: "Invalid subscription id." };
   try {
-    if (subId.startsWith("sub_sched_")) {
-      await stripe.subscriptionSchedules.cancel(subId);
-      await db.collection(COLLECTIONS.subscriptions).doc(subId).set(
-        {
-          status: "canceled",          updatedAt: FieldValue.serverTimestamp(),
-        },
-        { merge: true },
-      );
-      revalidateSubscriptionPaths();
-      return { ok: true };
-    }
-
-    const updated = await stripe.subscriptions.update(subId, {
-      cancel_at_period_end: true,
-      expand: ["default_payment_method", "items.data.price.product"],
-    });
-    await upsertSubscriptionMirror(db, updated);
+    await cancelSubscriptionAtPeriodEnd(stripe, db, subId);
     revalidateSubscriptionPaths();
     return { ok: true };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not cancel subscription.";
     logError("subscription_cancel_failed", { subscriptionId: subId, message });
+    return { ok: false, message };
+  }
+}
+
+export async function pauseSubscriptionAction(
+  subscriptionId: string,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const user = await requireStaffSession();
+  if (!user) return { ok: false, message: "Unauthorized." };
+  const stripe = getStripe();
+  if (!stripe) return { ok: false, message: "Stripe is not configured on the server." };
+  const db = getFirebaseAdminFirestore();
+  if (!db) return { ok: false, message: "Database unavailable." };
+  const subId = subscriptionId.trim();
+  if (!subId.startsWith("sub_")) return { ok: false, message: "Invalid subscription id." };
+  try {
+    await pauseSubscriptionPaymentCollection(stripe, db, subId);
+    revalidateSubscriptionPaths();
+    return { ok: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not pause subscription.";
+    logError("subscription_pause_failed", { subscriptionId: subId, message });
+    return { ok: false, message };
+  }
+}
+
+export async function resumeSubscriptionAction(
+  subscriptionId: string,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const user = await requireStaffSession();
+  if (!user) return { ok: false, message: "Unauthorized." };
+  const stripe = getStripe();
+  if (!stripe) return { ok: false, message: "Stripe is not configured on the server." };
+  const db = getFirebaseAdminFirestore();
+  if (!db) return { ok: false, message: "Database unavailable." };
+  const subId = subscriptionId.trim();
+  if (!subId.startsWith("sub_")) return { ok: false, message: "Invalid subscription id." };
+  try {
+    await resumeSubscriptionPaymentCollection(stripe, db, subId);
+    revalidateSubscriptionPaths();
+    return { ok: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not resume subscription.";
+    logError("subscription_resume_failed", { subscriptionId: subId, message });
     return { ok: false, message };
   }
 }

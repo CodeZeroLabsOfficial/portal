@@ -24,7 +24,12 @@ import {
 } from "@/lib/workspace-page-typography";
 import { cn } from "@/lib/utils";
 import type { CatalogServicePickerOption } from "@/types/catalog-service";
-import { cancelSubscriptionAction, deleteSubscriptionAction } from "@/server/actions/subscriptions-crm";
+import {
+  cancelSubscriptionAction,
+  deleteSubscriptionAction,
+  pauseSubscriptionAction,
+  resumeSubscriptionAction,
+} from "@/server/actions/subscriptions-crm";
 
 export interface SubscriptionListRow {
   subscription: SubscriptionRecord;
@@ -86,6 +91,31 @@ function collectionMethodDisplay(s: SubscriptionRecord): string {
 
   if (cm === "charge_automatically") return "Automatic charge";
   return "—";
+}
+
+function subscriptionStatusDisplay(s: SubscriptionRecord): { label: string; className: string } {
+  if (s.paymentCollectionPaused && s.status !== "canceled" && s.status !== "scheduled") {
+    return {
+      label: "Payment paused",
+      className: "border-violet-500/35 bg-violet-500/10 text-violet-700 dark:text-violet-300",
+    };
+  }
+  return statusBadge(s.status);
+}
+
+function canPauseSubscription(s: SubscriptionRecord): boolean {
+  if (s.paymentCollectionPaused || s.id.startsWith("sub_sched_")) return false;
+  if (s.status === "scheduled" || s.status === "canceled" || s.status === "paused") return false;
+  return (
+    s.status === "active" ||
+    s.status === "trialing" ||
+    s.status === "past_due" ||
+    s.status === "unpaid"
+  );
+}
+
+function canResumeSubscription(s: SubscriptionRecord): boolean {
+  return Boolean(s.paymentCollectionPaused);
 }
 
 function statusBadge(status: SubscriptionRecord["status"]): { label: string; className: string } {
@@ -246,8 +276,10 @@ export function SubscriptionListPanel({ rows, customerOptions, catalogServiceOpt
                 <AnimatePresence initial={false}>
                   {filtered.map((row, index) => {
                   const s = row.subscription;
-                  const st = statusBadge(s.status);
+                  const st = subscriptionStatusDisplay(s);
                   const monthlyMinor = resolvedMonthlyMinor(s);
+                  const pauseAllowed = canPauseSubscription(s);
+                  const resumeAllowed = canResumeSubscription(s);
                   const accountCell =
                     row.crmCustomerId && row.accountName !== "—" ? (
                       <Link
@@ -260,7 +292,43 @@ export function SubscriptionListPanel({ rows, customerOptions, catalogServiceOpt
                       <span className="text-muted-foreground">{row.accountName}</span>
                     );
 
+                  async function handlePause() {
+                    if (
+                      !window.confirm(
+                        "Pause payment collection for this subscription? Invoices during the pause will be voided and no charges will be collected until you resume.",
+                      )
+                    ) {
+                      return;
+                    }
+                    setPendingId(s.id);
+                    const res = await pauseSubscriptionAction(s.id);
+                    setPendingId(null);
+                    if (!res.ok) {
+                      window.alert(res.message);
+                      return;
+                    }
+                    router.refresh();
+                  }
+
+                  async function handleResume() {
+                    setPendingId(s.id);
+                    const res = await resumeSubscriptionAction(s.id);
+                    setPendingId(null);
+                    if (!res.ok) {
+                      window.alert(res.message);
+                      return;
+                    }
+                    router.refresh();
+                  }
+
                   async function handleCancel() {
+                    if (
+                      !window.confirm(
+                        "Cancel this subscription at the end of the current billing period? No refund will be issued.",
+                      )
+                    ) {
+                      return;
+                    }
                     setPendingId(s.id);
                     const res = await cancelSubscriptionAction(s.id);
                     setPendingId(null);
@@ -347,6 +415,16 @@ export function SubscriptionListPanel({ rows, customerOptions, catalogServiceOpt
                             >
                               Update
                             </DropdownMenuItem>
+                            {pauseAllowed ? (
+                              <DropdownMenuItem onSelect={() => void handlePause()}>
+                                Pause payments
+                              </DropdownMenuItem>
+                            ) : null}
+                            {resumeAllowed ? (
+                              <DropdownMenuItem onSelect={() => void handleResume()}>
+                                Resume payments
+                              </DropdownMenuItem>
+                            ) : null}
                             <DropdownMenuItem onSelect={() => void handleCancel()}>
                               Cancel
                             </DropdownMenuItem>

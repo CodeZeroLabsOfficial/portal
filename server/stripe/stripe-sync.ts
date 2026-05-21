@@ -195,6 +195,7 @@ export async function upsertSubscriptionMirror(db: Firestore, sub: Stripe.Subscr
       ? { currentPeriodEnd: sub.current_period_end * 1000 }
       : {}),
     cancelAtPeriodEnd: Boolean(sub.cancel_at_period_end),
+    paymentCollectionPaused: Boolean(sub.pause_collection?.behavior),
     ...(typeof subscriptionMrrMinor(sub) === "number" ? { mrrAmount: subscriptionMrrMinor(sub) } : {}),
     ...(typeof subscriptionMonthlyAmountMinor(sub) === "number"
       ? { monthlyAmountMinor: subscriptionMonthlyAmountMinor(sub) }

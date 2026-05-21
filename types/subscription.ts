@@ -28,6 +28,8 @@ export interface SubscriptionRecord {
   /** Epoch millis — Firestore `currentPeriodEnd`. */
   currentPeriodEnd?: number;
   cancelAtPeriodEnd?: boolean;
+  /** Stripe `pause_collection` is set — billing paused while subscription stays active. */
+  paymentCollectionPaused?: boolean;
   /** Normalized recurring amount per month (minor units), including from annual prices (÷12). */
   monthlyAmountMinor?: number;
   /** Stripe subscription.created — epoch millis (`createdAt` Timestamp or number). */

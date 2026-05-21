@@ -229,6 +229,8 @@ function parseSubscriptionFirestore(id: string, data: Record<string, unknown>): 
     subscriptionEnd: asNumber(data.subscriptionEnd),
     currentPeriodEnd: asNumber(data.currentPeriodEnd),
     cancelAtPeriodEnd: typeof data.cancelAtPeriodEnd === "boolean" ? data.cancelAtPeriodEnd : undefined,
+    paymentCollectionPaused:
+      typeof data.paymentCollectionPaused === "boolean" ? data.paymentCollectionPaused : undefined,
     monthlyAmountMinor: asNumber(data.monthlyAmountMinor),
     ...(millisFromFirestore(data, "createdAt") > 0
       ? { createdAt: millisFromFirestore(data, "createdAt") }
