@@ -9,6 +9,7 @@ import type { CustomerListRow } from "@/lib/customer-list";
 import type { CustomerSubscriptionRollup } from "@/types/customer";
 import { archiveCustomerAction, deleteCustomerAction } from "@/server/actions/customers-crm";
 import { AddCustomerModal } from "@/components/portal/add-customer-modal";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -386,14 +387,12 @@ export function CustomerListPanel({ rows }: CustomerListPanelProps) {
                         {row.email}
                       </td>
                       <td className="px-4 py-3 align-middle">
-                        <span
-                          className={cn(
-                            "rounded-full px-2 py-0.5 text-[11px] font-medium",
-                            sub.className,
-                          )}
+                        <Badge
+                          variant="outline"
+                          className={cn("border-transparent font-medium", sub.className)}
                         >
                           {sub.label}
-                        </span>
+                        </Badge>
                       </td>
                       <td className="max-w-[180px] px-4 py-3 align-middle">
                         <div className="flex flex-wrap gap-1">
@@ -401,42 +400,45 @@ export function CustomerListPanel({ rows }: CustomerListPanelProps) {
                             <span className="text-muted-foreground">—</span>
                           ) : (
                             row.tags.slice(0, 4).map((t) => (
-                              <span
+                              <Badge
                                 key={t}
-                                className="rounded-md border border-border/60 bg-muted/40 px-1.5 py-0.5 text-[11px] text-muted-foreground"
+                                variant="outline"
+                                className="border-border/60 bg-muted/40 font-normal text-muted-foreground"
                               >
                                 {t}
-                              </span>
+                              </Badge>
                             ))
                           )}
                           {row.tags.length > 4 ? (
-                            <span className="text-[11px] text-muted-foreground">+{row.tags.length - 4}</span>
+                            <span className="text-xs text-muted-foreground">+{row.tags.length - 4}</span>
                           ) : null}
                         </div>
                       </td>
                       <td className="px-4 py-3 align-middle">
-                        <span
+                        <Badge
+                          variant="outline"
                           className={cn(
-                            "rounded-full px-2 py-0.5 text-[11px] font-medium capitalize",
+                            "border-transparent font-medium capitalize",
                             row.crmType === "lead"
                               ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
                               : "bg-sky-500/10 text-sky-700 dark:text-sky-300",
                           )}
                         >
                           {row.crmType}
-                        </span>
+                        </Badge>
                       </td>
                       <td className="px-4 py-3 align-middle">
-                        <span
+                        <Badge
+                          variant="outline"
                           className={cn(
-                            "rounded-full px-2 py-0.5 text-[11px] font-medium",
+                            "border-transparent font-medium",
                             row.status === "archived"
                               ? "bg-muted text-muted-foreground"
                               : "bg-emerald-500/15 text-emerald-400",
                           )}
                         >
                           {row.status}
-                        </span>
+                        </Badge>
                       </td>
                       <td className="px-2 py-3 text-center align-middle">
                         <DropdownMenu>
