@@ -448,7 +448,19 @@ export function CustomerDetailView({
                   )}
                   Link user
                 </Button>
-              ) : null}
+              ) : (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="shrink-0 gap-1.5 text-muted-foreground hover:text-foreground"
+                  disabled={portalSetupBusy}
+                  onClick={() => void generatePortalPasswordSetupLink()}
+                >
+                  {portalSetupBusy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
+                  Generate password link
+                </Button>
+              )}
             </CardHeader>
             <CardContent className="space-y-4 p-4 text-sm">
               <div className="rounded-xl border border-border/60 bg-background/40 p-3">
@@ -462,33 +474,9 @@ export function CustomerDetailView({
                     <Badge variant="secondary">Not linked</Badge>
                   )}
                 </div>
-                {customer.portalUserId?.trim() ? (
-                  <p className="mt-2 break-all font-mono text-[11px] text-muted-foreground">{customer.portalUserId}</p>
-                ) : null}
               </div>
 
               {portalSetupError ? <p className="text-xs text-destructive">{portalSetupError}</p> : null}
-
-              {customer.portalUserId?.trim() ? (
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    className="gap-1.5"
-                    disabled={portalSetupBusy}
-                    onClick={() => void generatePortalPasswordSetupLink()}
-                  >
-                    {portalSetupBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : null}
-                    Generate password setup link
-                  </Button>
-                  {portalSetupLink ? (
-                    <Button type="button" size="sm" variant="ghost" onClick={() => setPortalSetupLink(null)}>
-                      Clear link
-                    </Button>
-                  ) : null}
-                </div>
-              ) : null}
 
               {portalSetupLink && customer.portalUserId?.trim() ? (
                 <div className="space-y-2">
@@ -497,16 +485,21 @@ export function CustomerDetailView({
                     email.
                   </p>
                   <Textarea readOnly className="min-h-[5.5rem] resize-none font-mono text-xs" value={portalSetupLink} />
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="gap-1.5"
-                    onClick={() => void navigator.clipboard.writeText(portalSetupLink)}
-                  >
-                    <Copy className="h-3.5 w-3.5" aria-hidden />
-                    Copy link
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5"
+                      onClick={() => void navigator.clipboard.writeText(portalSetupLink)}
+                    >
+                      <Copy className="h-3.5 w-3.5" aria-hidden />
+                      Copy link
+                    </Button>
+                    <Button type="button" size="sm" variant="ghost" onClick={() => setPortalSetupLink(null)}>
+                      Clear link
+                    </Button>
+                  </div>
                 </div>
               ) : null}
             </CardContent>
