@@ -13,7 +13,7 @@ export const PROPOSAL_STAGE_BADGE_CLASS: Record<ProposalStageBadgeKey, string> =
   draft: "bg-amber-500/10 text-amber-900 dark:bg-amber-500/15 dark:text-amber-200",
   published: "bg-sky-500/10 text-sky-900 dark:bg-sky-500/15 dark:text-sky-200",
   viewed: "bg-violet-500/10 text-violet-900 dark:bg-violet-500/15 dark:text-violet-200",
-  accepted: "bg-emerald-600/12 text-emerald-950 dark:bg-emerald-600/18 dark:text-emerald-100",
+  accepted: "bg-emerald-500/15 text-emerald-400",
   declined: "bg-destructive/10 text-destructive dark:text-destructive",
   expired: "bg-muted/50 text-muted-foreground",
 };

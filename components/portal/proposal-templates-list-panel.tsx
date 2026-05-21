@@ -61,7 +61,7 @@ function lastEditedMs(entry: TemplatesListEntry): number {
 }
 
 const TEMPLATE_STAGE_BADGE: Record<ProposalTemplateStage, string> = {
-  draft: "bg-slate-500/10 text-slate-800 dark:bg-slate-500/15 dark:text-slate-200",
+  draft: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
   published: "bg-sky-500/10 text-sky-900 dark:bg-sky-500/15 dark:text-sky-200",
 };
 
