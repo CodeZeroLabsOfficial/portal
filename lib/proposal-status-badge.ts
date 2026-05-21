@@ -11,7 +11,7 @@ export type ProposalStageBadgeKey =
 /** Shared outline badge colours for proposal status across hub, customer detail, and proposal editor. */
 export const PROPOSAL_STAGE_BADGE_CLASS: Record<ProposalStageBadgeKey, string> = {
   draft:
-    "border-slate-500/45 bg-slate-500/10 text-slate-800 dark:border-slate-500/35 dark:bg-slate-500/15 dark:text-slate-200",
+    "border-amber-500/45 bg-amber-500/10 text-amber-900 dark:border-amber-500/35 dark:bg-amber-500/15 dark:text-amber-200",
   published:
     "border-sky-500/45 bg-sky-500/10 text-sky-900 dark:border-sky-500/35 dark:bg-sky-500/15 dark:text-sky-200",
   viewed:
