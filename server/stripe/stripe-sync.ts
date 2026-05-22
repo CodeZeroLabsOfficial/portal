@@ -102,15 +102,47 @@ function mapCollectionMethod(
   return undefined;
 }
 
+function stripeSubscriptionIdRef(value: unknown): string | undefined {
+  if (typeof value === "string" && value.startsWith("sub_")) {
+    return value;
+  }
+  if (value && typeof value === "object" && typeof (value as { id?: unknown }).id === "string") {
+    const id = (value as { id: string }).id;
+    if (id.startsWith("sub_")) return id;
+  }
+  return undefined;
+}
+
 /** Stripe subscription id (`sub_…`) when the invoice belongs to a subscription billing cycle. */
 function subscriptionIdFromInvoice(invoice: Stripe.Invoice): string | undefined {
-  const sub = invoice.subscription;
-  if (typeof sub === "string" && sub.startsWith("sub_")) {
-    return sub;
+  type InvoiceParent = {
+    type?: string;
+    subscription_details?: { subscription?: unknown };
+  };
+  type LineParent = {
+    type?: string;
+    subscription_item_details?: { subscription?: unknown };
+  };
+
+  const parent = (invoice as Stripe.Invoice & { parent?: InvoiceParent }).parent;
+  if (parent?.type === "subscription_details") {
+    const fromParent = stripeSubscriptionIdRef(parent.subscription_details?.subscription);
+    if (fromParent) return fromParent;
   }
-  if (sub && typeof sub === "object" && typeof sub.id === "string" && sub.id.startsWith("sub_")) {
-    return sub.id;
+
+  const fromLegacy = stripeSubscriptionIdRef(
+    (invoice as Stripe.Invoice & { subscription?: unknown }).subscription,
+  );
+  if (fromLegacy) return fromLegacy;
+
+  for (const line of invoice.lines?.data ?? []) {
+    const lineParent = (line as Stripe.InvoiceLineItem & { parent?: LineParent }).parent;
+    if (lineParent?.type === "subscription_item_details") {
+      const fromLine = stripeSubscriptionIdRef(lineParent.subscription_item_details?.subscription);
+      if (fromLine) return fromLine;
+    }
   }
+
   return undefined;
 }
 
