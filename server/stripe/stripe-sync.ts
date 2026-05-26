@@ -209,6 +209,75 @@ function productLabelFromSubscription(sub: Stripe.Subscription): string | undefi
   return undefined;
 }
 
+function scheduleIdFromSubscription(sub: Stripe.Subscription): string | undefined {
+  const schedule = sub.schedule;
+  if (typeof schedule === "string" && schedule.startsWith("sub_sched_")) return schedule;
+  if (
+    schedule &&
+    typeof schedule === "object" &&
+    typeof (schedule as { id?: unknown }).id === "string"
+  ) {
+    const id = (schedule as { id: string }).id;
+    if (id.startsWith("sub_sched_")) return id;
+  }
+  return undefined;
+}
+
+/**
+ * When a SubscriptionSchedule starts, Stripe creates a `sub_…` object but our pre-start mirror
+ * lives under `sub_sched_…`. Merge schedule-only fields into the subscription record and remove
+ * the placeholder doc so the directory shows one active row.
+ */
+async function reconcileSchedulePlaceholderMirror(
+  db: Firestore,
+  sub: Stripe.Subscription,
+  record: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  const scheduleId = scheduleIdFromSubscription(sub);
+  if (!scheduleId) return record;
+
+  const scheduleSnap = await db.collection(COLLECTIONS.subscriptions).doc(scheduleId).get();
+  if (!scheduleSnap.exists) return record;
+
+  const scheduleData = scheduleSnap.data() ?? {};
+  if (scheduleData.status !== "scheduled" && scheduleSnap.id !== scheduleId) {
+    return record;
+  }
+
+  const merged: Record<string, unknown> = {
+    ...record,
+    stripeScheduleId: scheduleId,
+  };
+
+  if (typeof scheduleData.plannedDurationMonths === "number") {
+    merged.plannedDurationMonths = scheduleData.plannedDurationMonths;
+  }
+  if (merged.organizationId == null && typeof scheduleData.organizationId === "string") {
+    merged.organizationId = scheduleData.organizationId;
+  }
+  if (merged.subscriptionStart == null && typeof scheduleData.subscriptionStart === "number") {
+    merged.subscriptionStart = scheduleData.subscriptionStart;
+  }
+  if (merged.subscriptionEnd == null && typeof scheduleData.subscriptionEnd === "number") {
+    merged.subscriptionEnd = scheduleData.subscriptionEnd;
+  }
+  if (
+    merged.collectionMethod == null &&
+    (scheduleData.collectionMethod === "charge_automatically" ||
+      scheduleData.collectionMethod === "send_invoice")
+  ) {
+    merged.collectionMethod = scheduleData.collectionMethod;
+  }
+  if (!merged.productName && typeof scheduleData.productName === "string") {
+    merged.productName = scheduleData.productName;
+  }
+
+  const customerId = typeof merged.customerId === "string" ? merged.customerId : "";
+  await deleteSubscriptionMirrorFromFirestore(db, scheduleId, customerId);
+
+  return merged;
+}
+
 export async function upsertStripeCustomerMirror(db: Firestore, customer: Stripe.Customer): Promise<void> {
   const ref = db.collection(COLLECTIONS.stripeCustomers).doc(customer.id);
   await ref.set(
@@ -283,14 +352,22 @@ export async function upsertSubscriptionMirror(db: Firestore, sub: Stripe.Subscr
       : {}),
     ...(defaultPaymentMethodTypeFromSubscription(sub)
       ? { defaultPaymentMethodType: defaultPaymentMethodTypeFromSubscription(sub) }
-      : {}),    updatedAt: FieldValue.serverTimestamp(),
+      : {}),
+    updatedAt: FieldValue.serverTimestamp(),
   };
 
-  await ref.set(record, { merge: true });
+  const reconciled = await reconcileSchedulePlaceholderMirror(db, sub, record);
 
-  const uid = await resolvePortalUserIdForStripeCustomer(db, record.customerId as string);
+  await ref.set(reconciled, { merge: true });
+
+  const uid = await resolvePortalUserIdForStripeCustomer(db, reconciled.customerId as string);
   if (uid) {
-    await db.collection(COLLECTIONS.users).doc(uid).collection("subscriptions").doc(sub.id).set(record, { merge: true });
+    await db
+      .collection(COLLECTIONS.users)
+      .doc(uid)
+      .collection("subscriptions")
+      .doc(sub.id)
+      .set(reconciled, { merge: true });
   }
 }
 
