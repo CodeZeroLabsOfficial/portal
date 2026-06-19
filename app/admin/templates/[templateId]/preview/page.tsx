@@ -7,7 +7,10 @@ import { syncProposalDocumentPackageTiersFromCatalog } from "@/lib/proposal-pack
 import { listCatalogServicePickerOptionsForOrg } from "@/server/firestore/catalog-services";
 import { hydrateAgreementBlocksInDocument } from "@/server/proposal/hydrate-agreement-contract-templates";
 import { ProposalDocumentView } from "@/components/proposal/proposal-document-view";
-import { PROPOSAL_PUBLIC_DOCUMENT_OUTER_CLASSES } from "@/lib/proposal-public-layout";
+import {
+  PROPOSAL_PUBLIC_DOCUMENT_OUTER_CLASSES,
+  PROPOSAL_PUBLIC_PAGE_COLUMN_CLASSES,
+} from "@/lib/proposal-public-layout";
 import { proposalEndsInFullBleedBand } from "@/lib/proposal-blocks";
 import { Button } from "@/components/ui/button";
 
@@ -51,8 +54,8 @@ export default async function ProposalTemplatePublicPreviewPage({ params }: Page
 
   return (
     <div className="relative min-h-dvh bg-background">
-      <header className="fixed inset-x-0 top-0 z-50 border-b border-border/80 bg-background/85 px-4 py-3 shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-background/70">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-border/80 bg-background/85 py-3 shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-background/70">
+        <div className={`${PROPOSAL_PUBLIC_PAGE_COLUMN_CLASSES} flex flex-wrap items-center justify-between gap-3`}>
           <p className="text-sm text-muted-foreground">
             <span className="font-medium text-foreground">Public preview</span>
             {" — "}

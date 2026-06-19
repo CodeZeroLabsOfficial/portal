@@ -4,13 +4,15 @@
  * non-section roots, gates, and footers; grouped `section` blocks span `w-full` edge-to-edge.
  */
 
+/** Shared horizontal track for public proposal chrome (matches site header / preview bars). */
+export const PROPOSAL_PUBLIC_PAGE_COLUMN_CLASSES = "mx-auto w-full max-w-6xl px-4 sm:px-6";
+
 /** Typography / imagery column (logo, stray root blocks, footers). */
-export const PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES =
-  "mx-auto w-full max-w-5xl px-6 sm:px-12 lg:px-20 xl:px-28";
+export const PROPOSAL_PUBLIC_INNER_COLUMN_CLASSES = PROPOSAL_PUBLIC_PAGE_COLUMN_CLASSES;
 
 /**
  * Proposal *editor* section/packages backdrop canvas — matches the width of other blocks in the
- * builder (no `max-w-5xl` cap; light horizontal padding only).
+ * builder (no page-column cap; light horizontal padding only).
  */
 export const PROPOSAL_EDITOR_BLOCK_CANVAS_INNER_CLASSES =
   "mx-auto w-full min-w-0 max-w-none px-3 sm:px-4 md:px-6";

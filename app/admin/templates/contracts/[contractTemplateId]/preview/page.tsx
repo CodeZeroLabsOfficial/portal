@@ -5,6 +5,7 @@ import { getCurrentSessionUser, isStaff } from "@/lib/auth/server-session";
 import { contractTemplateRecordToDocument } from "@/lib/contract-template-document";
 import { getContractTemplateForStaff } from "@/server/firestore/contract-templates";
 import { ContractTemplateAgreementPreview } from "@/components/portal/contract-template-agreement-preview";
+import { PROPOSAL_PUBLIC_PAGE_COLUMN_CLASSES } from "@/lib/proposal-public-layout";
 import { Button } from "@/components/ui/button";
 
 interface PageProps {
@@ -30,8 +31,8 @@ export default async function ContractTemplatePreviewPage({ params }: PageProps)
 
   return (
     <div className="relative min-h-dvh bg-zinc-100">
-      <header className="fixed inset-x-0 top-0 z-50 border-b border-border/80 bg-background/85 px-4 py-3 shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-background/70">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-border/80 bg-background/85 py-3 shadow-sm backdrop-blur-md supports-[backdrop-filter]:bg-background/70">
+        <div className={`${PROPOSAL_PUBLIC_PAGE_COLUMN_CLASSES} flex flex-wrap items-center justify-between gap-3`}>
           <p className="text-sm text-muted-foreground">
             <span className="font-medium text-foreground">Agreement preview</span>
             {" — "}
